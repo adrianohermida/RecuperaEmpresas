@@ -1,0 +1,16 @@
+{
+  "bootstrap": {
+    "allowMissingBillingIndices": true,
+    "seedProductsScript": "npm run seed:hmadv-products"
+  },
+  "sync": {
+    "contactsScript": "npm run sync:freshsales-contacts",
+    "dealsScript": "npm run sync:freshsales-deals",
+    "productsScript": "npm run sync:freshsales-products",
+    "bidirectionalDealsScript": "npm run sync:hmadv-deals-bidirectional"
+  },
+  "support": {
+    "ticketPortalBaseUrl": "https://hmdesk.freshdesk.com/support/tickets",
+    "newTicketUrl": "https://hmdesk.freshdesk.com/support/tickets/new"
+  }
+}

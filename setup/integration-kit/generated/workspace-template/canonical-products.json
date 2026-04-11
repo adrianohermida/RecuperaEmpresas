@@ -1,0 +1,62 @@
+[
+  {
+    "name": "Honorarios Unitarios",
+    "category": "honorarios",
+    "billing_type": "unitario",
+    "currency": "BRL",
+    "late_fee_percent_default": 10,
+    "interest_percent_month_default": 1,
+    "monetary_index_default": "IGP-M",
+    "status": "active"
+  },
+  {
+    "name": "Honorarios Recorrentes",
+    "category": "honorarios",
+    "billing_type": "recorrente",
+    "currency": "BRL",
+    "late_fee_percent_default": 10,
+    "interest_percent_month_default": 1,
+    "monetary_index_default": "IGP-M",
+    "status": "active"
+  },
+  {
+    "name": "Parcela Contratual",
+    "category": "parcelamento",
+    "billing_type": "parcelado",
+    "currency": "BRL",
+    "late_fee_percent_default": 10,
+    "interest_percent_month_default": 1,
+    "monetary_index_default": "IGP-M",
+    "status": "active"
+  },
+  {
+    "name": "Fatura Avulsa",
+    "category": "fatura",
+    "billing_type": "unitario",
+    "currency": "BRL",
+    "late_fee_percent_default": 10,
+    "interest_percent_month_default": 1,
+    "monetary_index_default": "IGP-M",
+    "status": "active"
+  },
+  {
+    "name": "Despesa do Cliente",
+    "category": "despesa",
+    "billing_type": "reembolso",
+    "currency": "BRL",
+    "late_fee_percent_default": 0,
+    "interest_percent_month_default": 0,
+    "monetary_index_default": "IGP-M",
+    "status": "active"
+  },
+  {
+    "name": "Encargos de Atraso",
+    "category": "encargos",
+    "billing_type": "encargo",
+    "currency": "BRL",
+    "late_fee_percent_default": 10,
+    "interest_percent_month_default": 1,
+    "monetary_index_default": "IGP-M",
+    "status": "active"
+  }
+]

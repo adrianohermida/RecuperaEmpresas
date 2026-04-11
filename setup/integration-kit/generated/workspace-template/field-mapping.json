@@ -1,0 +1,26 @@
+{
+  "freshsales": {
+    "dealFieldMap": {
+      "invoice_number": "cf_referencia_fatura",
+      "billing_type": "cf_tipo_fatura",
+      "balance_due": "cf_saldo_a_pagar",
+      "correction_amount": "cf_acrscimo_de_correcao",
+      "late_fee_amount": "cf_acrscimo_de_multa",
+      "interest_mora_amount": "cf_juros_de_mora",
+      "interest_compensatory_amount": "cf_juros_compensatrios_valor"
+    },
+    "dealTypeMap": {},
+    "financialEventStageMap": {
+      "deal_published": "proposal_pending",
+      "deal_publish_failed": null,
+      "pago": "client_active",
+      "parcial": "proposal_pending",
+      "em_aberto": "proposal_pending",
+      "vencido": "contract_sent"
+    },
+    "financeAccountProcessFields": [],
+    "financeAccountStatusFields": [],
+    "financeDealStageFields": [],
+    "financeDealTypeFields": []
+  }
+}

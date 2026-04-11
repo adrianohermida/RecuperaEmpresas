@@ -1,0 +1,215 @@
+{
+  "generatedAt": "2026-04-11T16:39:02.284Z",
+  "workspaceSlug": "workspace-template",
+  "diagnostics": {
+    "org_base_url": "https://hmadv-org.myfreshworks.com",
+    "freshsales_api_base": "https://hmadv-org.myfreshworks.com/crm/sales/api",
+    "freshdesk_domain": "https://hmdesk.freshdesk.com",
+    "freshchat_base_url": "https://msdk.eu.freshchat.com",
+    "authorize_url": "https://hmadv-org.myfreshworks.com/org/oauth/v2/authorize",
+    "token_url": "https://hmadv-org.myfreshworks.com/org/oauth/v2/token",
+    "redirect_uri": "https://sspvizogbcyigquqycsz.supabase.co/functions/v1/oauth",
+    "scopes": "freshchat.reports.create freshsales.products.delete freshsales.contacts.fields.view freshsales.contacts.edit freshsales.appointments.delete freshsales.documents.view freshsales.job_statuses.view freshsales.deals.fields.view freshsales.custom_module_records.edit freshchat.file.create freshchat.conversation.create freshsales.tasks.edit freshsales.files.create freshsales.sales_activities.delete freshsales.marketing_lists.contacts.view freshsales.custom_module_filters.view freshsales.call_logs.create freshsales.marketing_lists.create freshsales.selectors.view freshchat.account.view freshsales.appointments.view freshsales.sales_activities.view freshsales.documents.edit freshsales.deals.filters.view freshchat.business_hours.view freshchat.conversation.edit freshsales.custom_module_records.delete freshsales.sales_accounts.upsert freshchat.image.create freshsales.tasks.delete freshsales.notes.delete freshchat.reports.view freshchat.groups.view freshsales.contacts.create freshsales.deals.delete freshsales.custom_fields.create freshchat.conversation.view freshsales.documents.delete freshsales.notes.edit freshchat.roles.view freshsales.deals.view freshsales.sales_accounts.view freshsales.tasks.create freshsales.custom_modules.edit freshsales.fields.view freshsales.contacts.delete freshsales.sales_activities.create freshsales.products.edit freshsales.products.view freshsales.deals.edit freshsales.document_links.create freshsales.custom_modules.delete freshsales.sales_accounts.delete freshsales.appointments.edit freshchat.conversation.message.create freshsales.deals.upsert freshsales.marketing_lists.view freshchat.dashboard.view freshchat.conversation.properties.view freshsales.appointments.create freshsales.custom_modules.create freshsales.records.search freshsales.sales_accounts.create freshsales.contacts.upsert freshsales.lookup.search freshsales.custom_modules.view freshsales.products.create freshsales.sales_accounts.edit freshsales.notes.create freshsales.deals.create freshsales.documents.create freshchat.channels.view freshchat.csat.create freshsales.contacts.filters.view freshsales.sales_activities.edit freshsales.sales_activities.fields.view freshchat.conversation.messages.view freshsales.sales_accounts.filters.view freshsales.tasks.view freshsales.contacts.activities.view freshsales.custom_module_records.create freshsales.custom_module_records.view freshsales.marketing_lists.edit freshsales.contacts.view",
+    "has_client_id": true,
+    "has_client_secret": true,
+    "has_access_token": true,
+    "has_refresh_token": true,
+    "has_freshdesk_api_key": true,
+    "has_freshsales_api_key": false,
+    "has_supabase_service_role": true
+  },
+  "setupChecklist": [
+    "Criar um novo projeto Supabase e aplicar as migrations do diretorio supabase/migrations.",
+    "Cadastrar as variaveis do Freshworks, Freshdesk e Freshchat no ambiente local e no deploy.",
+    "Gerar a authorize URL OAuth, autorizar a conta e persistir o refresh token.",
+    "Revisar os field mappings exportados e ajustar ids de owner, stage e pipeline para a nova conta.",
+    "Executar o doctor e depois o init para validar o ambiente antes de sincronizar dados reais."
+  ],
+  "files": {
+    "integration.config.json": {
+      "starterVersion": 1,
+      "packageName": "freshworks-supabase-starter",
+      "workspace": {
+        "slug": "workspace-template",
+        "displayName": "workspace-template",
+        "domainModel": {
+          "entityPrefix": "workspace_template",
+          "sourceSystem": "supabase",
+          "crmSystem": "freshsales",
+          "supportSystem": "freshdesk"
+        }
+      },
+      "providers": {
+        "supabase": {
+          "url": "https://sspvizogbcyigquqycsz.supabase.co",
+          "redirectUri": "https://sspvizogbcyigquqycsz.supabase.co/functions/v1/oauth",
+          "migrationsPath": "supabase/migrations"
+        },
+        "freshworks": {
+          "orgBaseUrl": "https://hmadv-org.myfreshworks.com",
+          "freshsalesApiBase": "https://hmadv-org.myfreshworks.com/crm/sales/api",
+          "freshdeskDomain": "https://hmdesk.freshdesk.com",
+          "freshchatBaseUrl": "https://msdk.eu.freshchat.com",
+          "oauth": {
+            "authorizeUrl": "https://hmadv-org.myfreshworks.com/org/oauth/v2/authorize",
+            "tokenUrl": "https://hmadv-org.myfreshworks.com/org/oauth/v2/token",
+            "scopes": [
+              "freshchat.reports.create",
+              "freshsales.products.delete",
+              "freshsales.contacts.fields.view",
+              "freshsales.contacts.edit",
+              "freshsales.appointments.delete",
+              "freshsales.documents.view",
+              "freshsales.job_statuses.view",
+              "freshsales.deals.fields.view",
+              "freshsales.custom_module_records.edit",
+              "freshchat.file.create",
+              "freshchat.conversation.create",
+              "freshsales.tasks.edit",
+              "freshsales.files.create",
+              "freshsales.sales_activities.delete",
+              "freshsales.marketing_lists.contacts.view",
+              "freshsales.custom_module_filters.view",
+              "freshsales.call_logs.create",
+              "freshsales.marketing_lists.create",
+              "freshsales.selectors.view",
+              "freshchat.account.view",
+              "freshsales.appointments.view",
+              "freshsales.sales_activities.view",
+              "freshsales.documents.edit",
+              "freshsales.deals.filters.view",
+              "freshchat.business_hours.view",
+              "freshchat.conversation.edit",
+              "freshsales.custom_module_records.delete",
+              "freshsales.sales_accounts.upsert",
+              "freshchat.image.create",
+              "freshsales.tasks.delete",
+              "freshsales.notes.delete",
+              "freshchat.reports.view",
+              "freshchat.groups.view",
+              "freshsales.contacts.create",
+              "freshsales.deals.delete",
+              "freshsales.custom_fields.create",
+              "freshchat.conversation.view",
+              "freshsales.documents.delete",
+              "freshsales.notes.edit",
+              "freshchat.roles.view",
+              "freshsales.deals.view",
+              "freshsales.sales_accounts.view",
+              "freshsales.tasks.create",
+              "freshsales.custom_modules.edit",
+              "freshsales.fields.view",
+              "freshsales.contacts.delete",
+              "freshsales.sales_activities.create",
+              "freshsales.products.edit",
+              "freshsales.products.view",
+              "freshsales.deals.edit",
+              "freshsales.document_links.create",
+              "freshsales.custom_modules.delete",
+              "freshsales.sales_accounts.delete",
+              "freshsales.appointments.edit",
+              "freshchat.conversation.message.create",
+              "freshsales.deals.upsert",
+              "freshsales.marketing_lists.view",
+              "freshchat.dashboard.view",
+              "freshchat.conversation.properties.view",
+              "freshsales.appointments.create",
+              "freshsales.custom_modules.create",
+              "freshsales.records.search",
+              "freshsales.sales_accounts.create",
+              "freshsales.contacts.upsert",
+              "freshsales.lookup.search",
+              "freshsales.custom_modules.view",
+              "freshsales.products.create",
+              "freshsales.sales_accounts.edit",
+              "freshsales.notes.create",
+              "freshsales.deals.create",
+              "freshsales.documents.create",
+              "freshchat.channels.view",
+              "freshchat.csat.create",
+              "freshsales.contacts.filters.view",
+              "freshsales.sales_activities.edit",
+              "freshsales.sales_activities.fields.view",
+              "freshchat.conversation.messages.view",
+              "freshsales.sales_accounts.filters.view",
+              "freshsales.tasks.view",
+              "freshsales.contacts.activities.view",
+              "freshsales.custom_module_records.create",
+              "freshsales.custom_module_records.view",
+              "freshsales.marketing_lists.edit",
+              "freshsales.contacts.view"
+            ]
+          }
+        }
+      },
+      "mappings": {
+        "dealFieldMap": {
+          "invoice_number": "cf_referencia_fatura",
+          "billing_type": "cf_tipo_fatura",
+          "balance_due": "cf_saldo_a_pagar",
+          "correction_amount": "cf_acrscimo_de_correcao",
+          "late_fee_amount": "cf_acrscimo_de_multa",
+          "interest_mora_amount": "cf_juros_de_mora",
+          "interest_compensatory_amount": "cf_juros_compensatrios_valor"
+        },
+        "dealTypeMap": {},
+        "eventStageMap": {
+          "deal_published": "proposal_pending",
+          "deal_publish_failed": null,
+          "pago": "client_active",
+          "parcial": "proposal_pending",
+          "em_aberto": "proposal_pending",
+          "vencido": "contract_sent"
+        }
+      },
+      "defaults": {
+        "dealStageId": "31000423211",
+        "ownerId": "31000147944",
+        "supportChannel": "whatsapp",
+        "widgetChatEnabled": true
+      }
+    },
+    "field-mapping.json": {
+      "freshsales": {
+        "dealFieldMap": {
+          "invoice_number": "cf_referencia_fatura",
+          "billing_type": "cf_tipo_fatura",
+          "balance_due": "cf_saldo_a_pagar",
+          "correction_amount": "cf_acrscimo_de_correcao",
+          "late_fee_amount": "cf_acrscimo_de_multa",
+          "interest_mora_amount": "cf_juros_de_mora",
+          "interest_compensatory_amount": "cf_juros_compensatrios_valor"
+        },
+        "dealTypeMap": {},
+        "financialEventStageMap": {
+          "deal_published": "proposal_pending",
+          "deal_publish_failed": null,
+          "pago": "client_active",
+          "parcial": "proposal_pending",
+          "em_aberto": "proposal_pending",
+          "vencido": "contract_sent"
+        },
+        "financeAccountProcessFields": [],
+        "financeAccountStatusFields": [],
+        "financeDealStageFields": [],
+        "financeDealTypeFields": []
+      }
+    },
+    "business-rules.json": {
+      "bootstrap": {
+        "allowMissingBillingIndices": true,
+        "seedProductsScript": "npm run seed:hmadv-products"
+      },
+      "sync": {
+        "contactsScript": "npm run sync:freshsales-contacts",
+        "dealsScript": "npm run sync:freshsales-deals",
+        "productsScript": "npm run sync:freshsales-products",
+        "bidirectionalDealsScript": "npm run sync:hmadv-deals-bidirectional"
+      },
+      "support": {
+        "ticketPortalBaseUrl": "https://hmdesk.freshdesk.com/support/tickets",
+        "newTicketUrl": "https://hmdesk.freshdesk.com/support/tickets/new"
+      }
+    }
+  }
+}
