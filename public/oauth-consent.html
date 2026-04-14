@@ -139,10 +139,12 @@
   }
 
   // ── decide(allow) — redirect to Supabase with authorization_id + decision ───
-  // Supabase uses the authorization_id to look up the original OAuth request.
+  // Supabase requires client_id even when using authorization_id.
+  // client_id is injected by the dynamic /js/config.js served by Express.
   window.decide = function (allow) {
     const params = new URLSearchParams({
       authorization_id: authorizationId,
+      client_id:        window.RE_OAUTH_CLIENT_ID || '',
       allow:            allow ? 'true' : 'false',
     });
     window.location.href = authorizeEndpoint + '?' + params.toString();
