@@ -90,6 +90,10 @@
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
         Financeiro
       </button>
+      <button class="sidebar-link" id="docsSideLink" onclick="showSection('documentos',this)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        Documentos
+      </button>
     </div>
   </nav>
 
@@ -464,6 +468,78 @@
       </div>
     </div>
 
+    <!-- DOCUMENTOS -->
+    <div id="sec-documentos" class="tab-content">
+      <div class="section-header">
+        <div>
+          <div class="section-title">Documentos</div>
+          <div class="section-sub">Envie e acompanhe o status de análise dos seus documentos</div>
+        </div>
+        <button class="btn-primary" style="font-size:13px;" onclick="toggleDocUploadForm()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Enviar documento
+        </button>
+      </div>
+
+      <!-- Upload form -->
+      <div class="portal-card" id="docUploadCard" style="display:none;margin-bottom:16px;">
+        <div class="portal-card-header">
+          <span class="portal-card-title">Novo documento</span>
+          <button class="btn-ghost" style="font-size:13px;" onclick="toggleDocUploadForm()">Cancelar</button>
+        </div>
+        <div class="portal-card-body" style="padding:20px;">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+            <div>
+              <label class="form-label-sm">Tipo de documento</label>
+              <select class="portal-select" id="docTypeSelect">
+                <option value="dre">DRE (Demonstrativo de Resultado)</option>
+                <option value="balanco">Balanço Patrimonial</option>
+                <option value="fluxo_caixa">Fluxo de Caixa</option>
+                <option value="contrato_social">Contrato Social</option>
+                <option value="procuracao">Procuração</option>
+                <option value="certidao">Certidão (CNPJ/Dívida)</option>
+                <option value="extrato">Extrato Bancário</option>
+                <option value="nota_fiscal">Nota Fiscal</option>
+                <option value="outros" selected>Outros</option>
+              </select>
+            </div>
+            <div>
+              <label class="form-label-sm">Nome / descrição <span style="color:var(--text-muted);font-weight:400;">(opcional)</span></label>
+              <input type="text" class="portal-input" id="docNameInput" placeholder="Ex: DRE Jan–Dez 2024"/>
+            </div>
+          </div>
+          <div id="docDropZone" style="border:2px dashed var(--border);border-radius:10px;padding:28px;text-align:center;cursor:pointer;transition:all .2s;"
+               onclick="document.getElementById('docFileInput').click()"
+               ondragover="event.preventDefault();this.style.borderColor='var(--primary)'"
+               ondragleave="this.style.borderColor='var(--border)'"
+               ondrop="handleDocDrop(event)">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5" style="margin-bottom:8px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            <div style="font-size:13px;color:var(--text-muted);" id="docDropLabel">Clique ou arraste o arquivo aqui</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">PDF, Word, Excel, imagem — até 30 MB</div>
+          </div>
+          <input type="file" id="docFileInput" style="display:none"
+                 accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.zip,.rar"
+                 onchange="handleDocFileSelect(this)"/>
+          <div style="margin-top:12px;text-align:right;">
+            <button class="btn-primary" id="docSubmitBtn" onclick="submitDocument()" disabled style="opacity:.5;">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              Enviar
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Documents list -->
+      <div class="portal-card">
+        <div class="portal-card-body" id="docList">
+          <div class="empty-state">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            <p>Carregando documentos...</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </main>
 </div>
 
@@ -555,8 +631,9 @@ function showSection(name, clickedEl) {
   }
   window.scrollTo({ top:0, behavior:'instant' });
   if (name === 'support')    loadSupport();
-  if (name === 'agenda')     loadAppointments();
-  if (name === 'financeiro') loadFinanceiro();
+  if (name === 'agenda')      loadAppointments();
+  if (name === 'financeiro')  loadFinanceiro();
+  if (name === 'documentos')  loadDocuments();
 }
 
 // ── Progress ring ─────────────────────────────────────────────────────────────
@@ -1057,6 +1134,154 @@ async function loadData() {
   if (planRes.ok)     { const p = await planRes.json(); renderPlan(p.chapters||[]); }
   if (tasksRes.ok)    { const t = await tasksRes.json(); renderTasks(t.tasks||[]); }
   if (msgsRes.ok)     { const m = await msgsRes.json(); renderMessages(m.messages||[]); }
+}
+
+// ── Documentos ───────────────────────────────────────────────────────────────
+const DOC_STATUS_CLIENT = {
+  pendente:          { label: 'Aguardando análise', cls: 'badge-gray'  },
+  em_analise:        { label: 'Em análise',         cls: 'badge-blue'  },
+  aprovado:          { label: 'Aprovado',           cls: 'badge-green' },
+  reprovado:         { label: 'Reprovado',          cls: 'badge-red'   },
+  ajuste_solicitado: { label: 'Ajuste solicitado',  cls: 'badge-amber' },
+};
+const DOC_TYPES_CLIENT = {
+  dre:'DRE', balanco:'Balanço Patrimonial', fluxo_caixa:'Fluxo de Caixa',
+  contrato_social:'Contrato Social', procuracao:'Procuração',
+  certidao:'Certidão', extrato:'Extrato Bancário',
+  nota_fiscal:'Nota Fiscal', outros:'Outros',
+};
+
+let _selectedDocFile = null;
+
+function toggleDocUploadForm() {
+  const card = document.getElementById('docUploadCard');
+  card.style.display = card.style.display === 'none' ? 'block' : 'none';
+  if (card.style.display === 'none') {
+    _selectedDocFile = null;
+    document.getElementById('docFileInput').value = '';
+    document.getElementById('docNameInput').value = '';
+    document.getElementById('docDropLabel').textContent = 'Clique ou arraste o arquivo aqui';
+    document.getElementById('docSubmitBtn').disabled = true;
+    document.getElementById('docSubmitBtn').style.opacity = '.5';
+  }
+}
+
+function handleDocFileSelect(input) {
+  if (input.files && input.files[0]) {
+    _selectedDocFile = input.files[0];
+    document.getElementById('docDropLabel').textContent = _selectedDocFile.name;
+    document.getElementById('docSubmitBtn').disabled = false;
+    document.getElementById('docSubmitBtn').style.opacity = '1';
+  }
+}
+
+function handleDocDrop(event) {
+  event.preventDefault();
+  document.getElementById('docDropZone').style.borderColor = 'var(--border)';
+  const file = event.dataTransfer.files[0];
+  if (!file) return;
+  _selectedDocFile = file;
+  document.getElementById('docDropLabel').textContent = file.name;
+  document.getElementById('docSubmitBtn').disabled = false;
+  document.getElementById('docSubmitBtn').style.opacity = '1';
+}
+
+async function submitDocument() {
+  if (!_selectedDocFile) return;
+  const btn = document.getElementById('docSubmitBtn');
+  btn.disabled = true; btn.textContent = 'Enviando...';
+
+  const formData = new FormData();
+  formData.append('file', _selectedDocFile);
+  formData.append('docType', document.getElementById('docTypeSelect').value);
+  const name = document.getElementById('docNameInput').value.trim();
+  if (name) formData.append('name', name);
+
+  try {
+    const res = await fetch('/api/documents/upload', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + getToken() },
+      body: formData,
+    });
+    const json = await res.json();
+    if (json.success) {
+      showToast('Documento enviado com sucesso!', 'success');
+      toggleDocUploadForm();
+      loadDocuments();
+    } else {
+      showToast(json.error || 'Erro ao enviar.', 'error');
+    }
+  } catch (e) {
+    showToast('Erro de conexão.', 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Enviar';
+  }
+}
+
+async function deleteDocument(docId) {
+  if (!confirm('Remover este documento?')) return;
+  const res = await fetch(`/api/documents/${docId}`, { method: 'DELETE', headers: authH() });
+  const json = await res.json();
+  if (json.success) { showToast('Documento removido.', 'success'); loadDocuments(); }
+  else showToast(json.error || 'Não foi possível remover.', 'error');
+}
+
+async function loadDocuments() {
+  const el = document.getElementById('docList');
+  if (!el) return;
+  el.innerHTML = '<div style="padding:16px;color:var(--text-muted);font-size:14px;">Carregando...</div>';
+
+  const res = await fetch('/api/documents', { headers: authH() });
+  if (!res.ok) { el.innerHTML = '<div class="empty-state"><p>Erro ao carregar documentos.</p></div>'; return; }
+
+  const { documents } = await res.json();
+  if (!documents.length) {
+    el.innerHTML = `<div class="empty-state">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      <p>Nenhum documento enviado. Clique em "Enviar documento" para começar.</p>
+    </div>`;
+    return;
+  }
+
+  el.innerHTML = documents.map(doc => {
+    const st = DOC_STATUS_CLIENT[doc.status] || DOC_STATUS_CLIENT.pendente;
+    const tipo = DOC_TYPES_CLIENT[doc.docType] || doc.docType;
+    const date = new Date(doc.createdAt).toLocaleDateString('pt-BR');
+    const size = doc.fileSize ? (doc.fileSize / 1024 < 1000
+      ? (doc.fileSize / 1024).toFixed(0) + ' KB'
+      : (doc.fileSize / 1048576).toFixed(1) + ' MB') : '';
+    const canDelete = ['pendente','ajuste_solicitado'].includes(doc.status);
+    const comments = (doc.comments || []).filter(c => c.from === 'admin');
+
+    return `<div style="display:flex;align-items:flex-start;gap:14px;padding:14px 0;border-bottom:1px solid var(--border);">
+      <div style="background:#F1F5F9;border-radius:8px;padding:10px;flex-shrink:0;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      </div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-weight:600;font-size:13px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${doc.name}</div>
+        <div style="font-size:11px;color:var(--text-muted);">${tipo} &nbsp;·&nbsp; ${date}${size ? ' &nbsp;·&nbsp; ' + size : ''}</div>
+        ${comments.length ? `<div style="margin-top:8px;">
+          ${comments.map(c => `<div style="background:#FFFBEB;border-left:3px solid #FCD34D;padding:6px 10px;border-radius:0 6px 6px 0;font-size:12px;color:#78350F;margin-top:4px;">
+            <strong>Equipe:</strong> ${c.text}
+          </div>`).join('')}
+        </div>` : ''}
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;flex-shrink:0;">
+        <span class="badge ${st.cls}">${st.label}</span>
+        <div style="display:flex;gap:6px;">
+          <a href="/api/documents/${doc.id}/file?token=${getToken()}" target="_blank"
+             style="font-size:11px;color:var(--primary);text-decoration:none;display:flex;align-items:center;gap:3px;">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Baixar
+          </a>
+          ${canDelete ? `<button onclick="deleteDocument('${doc.id}')" style="font-size:11px;color:var(--error);background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:3px;">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+            Remover
+          </button>` : ''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
 }
 
 // ── Freshchat identity ────────────────────────────────────────────────────────

@@ -256,6 +256,7 @@
     <button class="drawer-tab" onclick="switchDrawerTab('tasks',this)">Tarefas</button>
     <button class="drawer-tab" onclick="switchDrawerTab('messages',this)">Mensagens</button>
     <button class="drawer-tab" onclick="switchDrawerTab('agenda',this)">Agenda</button>
+    <button class="drawer-tab" onclick="switchDrawerTab('docs',this)">Documentos</button>
     <button class="drawer-tab" onclick="switchDrawerTab('data',this)">Dados</button>
   </div>
   <div class="drawer-body" id="drawerBody"></div>
@@ -478,7 +479,7 @@ function stepIconTodo() {
   return `<span class="step-row-icon step-icon-todo"></span>`;
 }
 
-function renderDrawerTab(tab) {
+async function renderDrawerTab(tab) {
   const body = document.getElementById('drawerBody');
   const { user, onboarding, tasks, plan, messages } = _currentClientData;
 
@@ -655,6 +656,85 @@ function renderDrawerTab(tab) {
       }).join('');
     }
     body.innerHTML = html;
+  }
+
+  if (tab === 'docs') {
+    body.innerHTML = '<div style="padding:16px;color:var(--text-muted);font-size:14px;">Carregando...</div>';
+    const res = await fetch(`/api/admin/client/${_currentClientId}/documents`, { headers: authH() });
+    if (!res.ok) { body.innerHTML = '<div class="empty-state"><p>Erro ao carregar documentos.</p></div>'; return; }
+    const { documents } = await res.json();
+
+    const DOC_ST = {
+      pendente:          { label:'Pendente',          cls:'badge-gray'  },
+      em_analise:        { label:'Em análise',        cls:'badge-blue'  },
+      aprovado:          { label:'Aprovado',          cls:'badge-green' },
+      reprovado:         { label:'Reprovado',         cls:'badge-red'   },
+      ajuste_solicitado: { label:'Ajuste solicitado', cls:'badge-amber' },
+    };
+    const DOC_TYPES = {
+      dre:'DRE', balanco:'Balanço', fluxo_caixa:'Fluxo de Caixa',
+      contrato_social:'Contrato Social', procuracao:'Procuração',
+      certidao:'Certidão', extrato:'Extrato', nota_fiscal:'NF', outros:'Outros',
+    };
+
+    if (!documents.length) {
+      body.innerHTML = `<div class="empty-state">
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        <p>Cliente ainda não enviou documentos.</p>
+      </div>`;
+      return;
+    }
+
+    body.innerHTML = `
+      <div style="font-size:13px;font-weight:700;margin-bottom:12px;">
+        ${documents.length} documento(s) — clique no status para alterar
+      </div>
+      ${documents.map(doc => {
+        const st = DOC_ST[doc.status] || DOC_ST.pendente;
+        const tipo = DOC_TYPES[doc.docType] || doc.docType;
+        const date = new Date(doc.createdAt).toLocaleDateString('pt-BR');
+        const comments = doc.comments || [];
+        return `<div style="border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:12px;">
+          <div style="display:flex;align-items:flex-start;gap:10px;">
+            <div style="flex:1;">
+              <div style="font-weight:600;font-size:13px;">${doc.name}</div>
+              <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">${tipo} · ${date}</div>
+            </div>
+            <span class="badge ${st.cls}">${st.label}</span>
+          </div>
+
+          <!-- Admin action form -->
+          <div style="margin-top:12px;display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end;">
+            <div>
+              <label class="form-label-sm" style="font-size:11px;">Alterar status</label>
+              <select class="portal-select" id="docSt_${doc.id}" style="font-size:12px;">
+                ${Object.entries(DOC_ST).map(([v,{label}])=>`<option value="${v}"${doc.status===v?' selected':''}>${label}</option>`).join('')}
+              </select>
+            </div>
+            <button class="btn-sm btn-sm-approve" onclick="updateDocStatus('${doc.id}')">Salvar</button>
+          </div>
+          <div style="margin-top:8px;">
+            <input type="text" class="portal-input" id="docCmt_${doc.id}" placeholder="Comentário para o cliente (opcional)" style="font-size:12px;"/>
+          </div>
+
+          <!-- Download link -->
+          <div style="margin-top:10px;display:flex;gap:12px;align-items:center;">
+            <a href="/api/documents/${doc.id}/file?token=${getToken()}" target="_blank"
+               style="font-size:12px;color:var(--primary);text-decoration:none;display:flex;align-items:center;gap:4px;">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Visualizar / baixar
+            </a>
+          </div>
+
+          <!-- Comment history -->
+          ${comments.length ? `<div style="margin-top:10px;border-top:1px solid var(--border);padding-top:8px;">
+            ${comments.map(c=>`<div style="font-size:11px;background:#F8FAFC;padding:6px 8px;border-radius:6px;margin-top:4px;">
+              <strong>${c.from==='admin'?'Equipe':'Cliente'}</strong>: ${c.text}
+              <span style="float:right;color:var(--text-muted);">${new Date(c.ts).toLocaleDateString('pt-BR')}</span>
+            </div>`).join('')}
+          </div>` : ''}
+        </div>`;
+      }).join('')}`;
   }
 
   if (tab === 'data') {
@@ -1127,6 +1207,25 @@ async function sendAdminMessage() {
   if (res.ok) {
     const r = await fetch(`/api/admin/client/${_currentClientId}`, { headers: authH() });
     if (r.ok) { _currentClientData = await r.json(); renderDrawerTab('messages'); }
+  }
+}
+
+async function updateDocStatus(docId) {
+  const statusEl  = document.getElementById(`docSt_${docId}`);
+  const commentEl = document.getElementById(`docCmt_${docId}`);
+  if (!statusEl) return;
+  const status  = statusEl.value;
+  const comment = commentEl ? commentEl.value.trim() : '';
+  const res = await fetch(`/api/admin/client/${_currentClientId}/documents/${docId}`, {
+    method: 'PUT', headers: authH(),
+    body: JSON.stringify({ status, comment }),
+  });
+  if (res.ok) {
+    showToast('Status do documento atualizado.', 'success');
+    if (commentEl) commentEl.value = '';
+    renderDrawerTab('docs');
+  } else {
+    showToast('Erro ao atualizar.', 'error');
   }
 }
 
