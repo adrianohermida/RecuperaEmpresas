@@ -69,7 +69,7 @@ const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || 'contato@recuperaempresas.com.
 const SUPABASE_URL = (
   process.env.VITE_SUPABASE_URL ||
   process.env.SUPABASE_URL      ||
-  'https://sspvizogbcyigquqycsz.supabase.co'
+  'https://riiajjmnzgagntiqqshs.supabase.co'
 );
 const SUPABASE_SERVICE_KEY = (
   process.env.VITE_SUPABASE_SERVICE_ROLE  ||
@@ -80,16 +80,21 @@ const SUPABASE_ANON_KEY = (
   process.env.VITE_SUPABASE_ANON_KEY                 ||
   process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY    ||
   process.env.SUPABASE_ANON_KEY                       ||
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNzcHZpem9nYmN5aWdxdXF5Y3N6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc3OTYxNTYsImV4cCI6MjA4MzM3MjE1Nn0.C1P4wlanONGA9EDNR4nBujJ136sSXlZCioFyd_CWIfs'
+  ''
 );
 
 // Service role bypasses RLS — OBRIGATÓRIO para queries server-side
 const SUPABASE_KEY = SUPABASE_SERVICE_KEY || SUPABASE_ANON_KEY;
+if (!SUPABASE_ANON_KEY) {
+  console.error('[SUPABASE] ❌  VITE_SUPABASE_ANON_KEY não definido — login/register vão falhar!');
+  console.error('[SUPABASE] ❌  Defina VITE_SUPABASE_ANON_KEY no .env ou nas env vars do Render.');
+}
 if (!SUPABASE_SERVICE_KEY) {
   console.warn('[SUPABASE] ⚠️  VITE_SUPABASE_SERVICE_ROLE não definido — usando anon key.');
   console.warn('[SUPABASE] ⚠️  Queries de escrita/leitura admin serão bloqueadas por RLS.');
   console.warn('[SUPABASE] ⚠️  Defina VITE_SUPABASE_SERVICE_ROLE no .env para operação completa.');
 }
+console.log(`[SUPABASE] Projeto: ${SUPABASE_URL}`);
 
 // sb = service role (DB + Auth admin operations)
 const sb = createClient(SUPABASE_URL, SUPABASE_KEY, {
@@ -574,6 +579,17 @@ app.use((req, res, next) => {
 app.use('/api/stripe/webhook', express.raw({ type: 'application/json' }));
 
 app.use(express.json({ limit: '5mb' }));
+
+// Serve config.js dynamically so the browser gets the correct Supabase URL/key
+app.get('/js/config.js', (req, res) => {
+  res.setHeader('Content-Type', 'application/javascript');
+  res.setHeader('Cache-Control', 'no-store');
+  res.send(`window.RE_API_BASE = '';
+window.RE_SUPABASE_URL  = ${JSON.stringify(SUPABASE_URL)};
+window.RE_SUPABASE_ANON = ${JSON.stringify(SUPABASE_ANON_KEY)};
+`);
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 const storage = multer.diskStorage({
