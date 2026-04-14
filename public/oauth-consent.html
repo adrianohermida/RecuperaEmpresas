@@ -91,27 +91,12 @@
 
     <div class="divider">sua decisão é irrevogável nesta sessão</div>
 
-    <!--
-      IMPORTANT: The form POSTs directly to Supabase's OAuth authorize endpoint.
-      The browser will automatically include the Supabase session cookie, which
-      is what Supabase uses to validate the consent decision.
-      action is set dynamically via JS using window.RE_SUPABASE_URL.
-    -->
-    <form id="consentForm" method="POST">
-      <input type="hidden" name="client_id"             id="f_client_id"/>
-      <input type="hidden" name="response_type"         id="f_response_type"/>
-      <input type="hidden" name="redirect_uri"          id="f_redirect_uri"/>
-      <input type="hidden" name="scope"                 id="f_scope"/>
-      <input type="hidden" name="state"                 id="f_state"/>
-      <input type="hidden" name="code_challenge"        id="f_code_challenge"/>
-      <input type="hidden" name="code_challenge_method" id="f_code_challenge_method"/>
-      <input type="hidden" name="allow"                 id="f_allow" value="true"/>
-
-      <div class="consent-actions">
-        <button type="submit" class="btn-allow" onclick="setAllow('true')">Autorizar</button>
-        <button type="submit" class="btn-deny"  onclick="setAllow('false')">Negar acesso</button>
-      </div>
-    </form>
+    <!-- Supabase /auth/v1/oauth/authorize only accepts GET.
+         Buttons build the URL with all params + allow=true/false and redirect. -->
+    <div class="consent-actions">
+      <button type="button" class="btn-allow" onclick="decide(true)">Autorizar</button>
+      <button type="button" class="btn-deny"  onclick="decide(false)">Negar acesso</button>
+    </div>
 
     <div class="consent-footer">
       Ao autorizar, o aplicativo terá acesso aos dados listados acima em seu nome.<br/>
@@ -121,26 +106,29 @@
 </div>
 
 <script>
-function setAllow(v) { document.getElementById('f_allow').value = v; }
-
-// ── Set the form action to Supabase's authorize endpoint ─────────────────────
-// The form POSTs directly to Supabase so the session cookie is forwarded automatically.
+// ── Config ────────────────────────────────────────────────────────────────────
 const supabaseUrl = (window.RE_SUPABASE_URL || 'https://riiajjmnzgagntiqqshs.supabase.co').replace(/\/$/, '');
-document.getElementById('consentForm').action = supabaseUrl + '/auth/v1/oauth/authorize';
+const authorizeEndpoint = supabaseUrl + '/auth/v1/oauth/authorize';
 
 // ── Read OAuth params from the current URL query string ──────────────────────
 const q = new URLSearchParams(window.location.search);
 
-document.getElementById('f_client_id').value             = q.get('client_id')             || '';
-document.getElementById('f_response_type').value         = q.get('response_type')         || 'code';
-document.getElementById('f_redirect_uri').value          = q.get('redirect_uri')          || '';
-document.getElementById('f_scope').value                 = q.get('scope')                 || '';
-document.getElementById('f_state').value                 = q.get('state')                 || '';
-document.getElementById('f_code_challenge').value        = q.get('code_challenge')        || '';
-document.getElementById('f_code_challenge_method').value = q.get('code_challenge_method') || '';
+// ── decide(allow) — redirect to Supabase as a GET with all params + allow ────
+// Supabase /auth/v1/oauth/authorize only accepts GET.
+// The browser sends the Supabase session cookie automatically on the redirect.
+function decide(allow) {
+  const params = new URLSearchParams();
+  const passThrough = [
+    'client_id', 'response_type', 'redirect_uri', 'scope',
+    'state', 'code_challenge', 'code_challenge_method'
+  ];
+  passThrough.forEach(k => { if (q.get(k)) params.set(k, q.get(k)); });
+  params.set('allow', allow ? 'true' : 'false');
+  window.location.href = authorizeEndpoint + '?' + params.toString();
+}
 
 // ── Show app name / domain from client_id / redirect_uri ─────────────────────
-const clientId   = q.get('client_id')    || '';
+const clientId    = q.get('client_id')    || '';
 const redirectUri = q.get('redirect_uri') || '';
 
 if (clientId) {
@@ -169,10 +157,7 @@ const list     = document.getElementById('scopeList');
 
 list.innerHTML = scopes.map(s => {
   const def = SCOPE_LABELS[s] || { icon: '🔹', text: `Acesso: ${s}` };
-  return `<li>
-    <span class="scope-icon">${def.icon}</span>
-    ${def.text}
-  </li>`;
+  return `<li><span class="scope-icon">${def.icon}</span>${def.text}</li>`;
 }).join('');
 </script>
 </body>
