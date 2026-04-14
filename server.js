@@ -880,7 +880,7 @@ function _codeChallenge(v) {
 // Optional query params: scope (default "openid email profile")
 app.get('/api/auth/oauth/start', (req, res) => {
   const clientId = process.env.OAUTH_CLIENT_ID || '';
-  if (!clientId) return res.status(500).send('OAUTH_CLIENT_ID não configurado.');
+  if (!clientId) return res.status(500).send('OAUTH_CLIENT_ID não configurado no Render.');
 
   _pkceClean();
   const verifier   = _codeVerifier();
@@ -897,6 +897,22 @@ app.get('/api/auth/oauth/start', (req, res) => {
     code_challenge:        challenge,
     code_challenge_method: 'S256',
   });
+  res.redirect(`${SUPABASE_URL}/auth/v1/oauth/authorize?${params}`);
+});
+
+// ─── OAuth Decide — server proxies the consent decision to Supabase ───────────
+// The browser calls GET /api/auth/oauth/decide?authorization_id=...&allow=true
+// The server adds client_id from env var (never exposed to the browser this way)
+// then redirects to Supabase's authorize endpoint.
+app.get('/api/auth/oauth/decide', (req, res) => {
+  const clientId        = process.env.OAUTH_CLIENT_ID || '';
+  const authorizationId = req.query.authorization_id  || '';
+  const allow           = req.query.allow === 'true' ? 'true' : 'false';
+
+  if (!clientId)        return res.status(500).send('OAUTH_CLIENT_ID não configurado no Render.');
+  if (!authorizationId) return res.status(400).send('authorization_id ausente.');
+
+  const params = new URLSearchParams({ authorization_id: authorizationId, client_id: clientId, allow });
   res.redirect(`${SUPABASE_URL}/auth/v1/oauth/authorize?${params}`);
 });
 

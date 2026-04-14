@@ -138,16 +138,15 @@
     return;
   }
 
-  // ── decide(allow) — redirect to Supabase with authorization_id + decision ───
-  // Supabase requires client_id even when using authorization_id.
-  // client_id is injected by the dynamic /js/config.js served by Express.
+  // ── decide(allow) — proxy through our server so client_id comes from env var ─
+  // Browser → GET /api/auth/oauth/decide?authorization_id=...&allow=true
+  // Server  → GET supabase.../authorize?authorization_id=...&client_id=...&allow=true
   window.decide = function (allow) {
     const params = new URLSearchParams({
       authorization_id: authorizationId,
-      client_id:        window.RE_OAUTH_CLIENT_ID || '',
       allow:            allow ? 'true' : 'false',
     });
-    window.location.href = authorizeEndpoint + '?' + params.toString();
+    window.location.href = '/api/auth/oauth/decide?' + params.toString();
   };
 
   // ── Show app info (from known OAuth App — name comes from Supabase dashboard) ─
