@@ -925,7 +925,12 @@ app.get('/api/auth/oauth/decide', (req, res) => {
   if (!clientId)        return res.status(500).send('OAUTH_CLIENT_ID não configurado no Render.');
   if (!authorizationId) return res.status(400).send('authorization_id ausente.');
 
-  const params = new URLSearchParams({ authorization_id: authorizationId, client_id: clientId, allow });
+  const params = new URLSearchParams({
+    authorization_id: authorizationId,
+    client_id:        clientId,
+    redirect_uri:     `${BASE_URL}/api/auth/oauth/callback`,
+    allow,
+  });
   res.redirect(`${SUPABASE_URL}/auth/v1/oauth/authorize?${params}`);
 });
 
