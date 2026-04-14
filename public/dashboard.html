@@ -348,65 +348,63 @@
     <div id="sec-agenda" class="tab-content">
       <div class="section-header">
         <div>
-          <div class="section-title">Agenda</div>
-          <div class="section-sub">Agende reuniões com a equipe Recupera Empresas</div>
+          <div class="section-title">Agenda de Consultorias</div>
+          <div class="section-sub">Reserve horários usando seus créditos de consultoria</div>
         </div>
-        <button class="btn-primary" onclick="toggleApptForm()">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Agendar reunião
-        </button>
-      </div>
-
-      <!-- New appointment form -->
-      <div class="portal-card" id="apptFormCard" style="display:none;">
-        <div class="portal-card-header">
-          <span class="portal-card-title">Nova reunião</span>
-          <button class="btn-ghost" onclick="toggleApptForm()">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        <!-- Credits badge -->
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div id="creditsBadge" style="background:#1e3a5f;color:#fff;padding:8px 16px;border-radius:24px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:7px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+            <span id="creditsCount">—</span> crédito(s)
+          </div>
+          <button class="btn-primary" onclick="buyCredits()" style="font-size:13px;padding:8px 14px;">
+            Comprar créditos
           </button>
         </div>
-        <div class="portal-card-body" style="padding:20px;">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
-            <div>
-              <label class="form-label-sm">Data</label>
-              <input class="portal-input" type="date" id="apptDate"/>
-            </div>
-            <div>
-              <label class="form-label-sm">Horário</label>
-              <input class="portal-input" type="time" id="apptTime"/>
-            </div>
+      </div>
+
+      <!-- Buy credits info -->
+      <div id="creditsBuyPanel" style="display:none;background:#EFF6FF;border:1px solid #BFDBFE;border-radius:10px;padding:18px;margin-bottom:20px;">
+        <div style="font-weight:700;font-size:14px;color:#1e3a5f;margin-bottom:12px;">Pacotes de créditos</div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;">
+          <div onclick="checkoutCredits(1)"  style="cursor:pointer;background:#fff;border:2px solid #BFDBFE;border-radius:8px;padding:12px;text-align:center;transition:border-color .2s;" onmouseover="this.style.borderColor='#2563eb'" onmouseout="this.style.borderColor='#BFDBFE'">
+            <div style="font-size:22px;font-weight:800;color:#1e3a5f;">1</div>
+            <div style="font-size:11px;color:#64748b;margin:2px 0;">crédito</div>
+            <div style="font-size:13px;font-weight:700;color:#2563eb;">R$ 297</div>
           </div>
-          <div style="margin-bottom:14px;">
-            <label class="form-label-sm">Tipo de reunião</label>
-            <select class="portal-input" id="apptType">
-              <option value="diagnostico">Diagnóstico inicial</option>
-              <option value="revisao">Revisão do Business Plan</option>
-              <option value="financeiro">Análise financeira</option>
-              <option value="estrategia">Planejamento estratégico</option>
-              <option value="outro">Outro</option>
-            </select>
+          <div onclick="checkoutCredits(3)"  style="cursor:pointer;background:#fff;border:2px solid #BFDBFE;border-radius:8px;padding:12px;text-align:center;transition:border-color .2s;" onmouseover="this.style.borderColor='#2563eb'" onmouseout="this.style.borderColor='#BFDBFE'">
+            <div style="font-size:22px;font-weight:800;color:#1e3a5f;">3</div>
+            <div style="font-size:11px;color:#64748b;margin:2px 0;">créditos</div>
+            <div style="font-size:13px;font-weight:700;color:#2563eb;">R$ 797</div>
           </div>
-          <div style="margin-bottom:14px;">
-            <label class="form-label-sm">Observações</label>
-            <textarea class="portal-input" id="apptNotes" rows="3" placeholder="Tópicos a discutir, preferências de formato..."></textarea>
+          <div onclick="checkoutCredits(5)"  style="cursor:pointer;background:#fff;border:2px solid #BFDBFE;border-radius:8px;padding:12px;text-align:center;position:relative;transition:border-color .2s;border-color:#2563eb;" onmouseover="this.style.borderColor='#1e3a5f'" onmouseout="this.style.borderColor='#2563eb'">
+            <div style="position:absolute;top:-8px;left:50%;transform:translateX(-50%);background:#2563eb;color:#fff;font-size:9px;font-weight:700;padding:2px 8px;border-radius:10px;">POPULAR</div>
+            <div style="font-size:22px;font-weight:800;color:#1e3a5f;">5</div>
+            <div style="font-size:11px;color:#64748b;margin:2px 0;">créditos</div>
+            <div style="font-size:13px;font-weight:700;color:#2563eb;">R$ 1.197</div>
           </div>
-          <div style="display:flex;gap:8px;justify-content:flex-end;">
-            <button class="btn-ghost" onclick="toggleApptForm()">Cancelar</button>
-            <button class="btn-primary" onclick="submitAppt()">Confirmar agendamento</button>
+          <div onclick="checkoutCredits(10)" style="cursor:pointer;background:#fff;border:2px solid #BFDBFE;border-radius:8px;padding:12px;text-align:center;transition:border-color .2s;" onmouseover="this.style.borderColor='#2563eb'" onmouseout="this.style.borderColor='#BFDBFE'">
+            <div style="font-size:22px;font-weight:800;color:#1e3a5f;">10</div>
+            <div style="font-size:11px;color:#64748b;margin:2px 0;">créditos</div>
+            <div style="font-size:13px;font-weight:700;color:#2563eb;">R$ 1.970</div>
           </div>
+        </div>
+        <button class="btn-ghost" onclick="toggleCreditsPanel()" style="font-size:12px;">Fechar</button>
+      </div>
+
+      <!-- Slots list -->
+      <div id="slotsList">
+        <div class="empty-state">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          <p>Carregando horários disponíveis...</p>
         </div>
       </div>
 
-      <!-- Appointments list -->
-      <div class="portal-card">
-        <div class="portal-card-header">
-          <span class="portal-card-title">Próximas Reuniões</span>
-        </div>
-        <div class="portal-card-body" id="apptList">
-          <div class="empty-state">
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-            <p>Nenhuma reunião agendada.</p>
-          </div>
+      <!-- Credit history -->
+      <div style="margin-top:24px;">
+        <div style="font-size:14px;font-weight:700;color:#1e3a5f;margin-bottom:10px;">Histórico de créditos</div>
+        <div id="creditsHistory">
+          <div style="padding:12px;color:var(--text-muted);font-size:13px;">Carregando...</div>
         </div>
       </div>
     </div>
@@ -689,7 +687,7 @@ function showSection(name, clickedEl) {
   }
   window.scrollTo({ top:0, behavior:'instant' });
   if (name === 'support')    loadSupport();
-  if (name === 'agenda')      loadAppointments();
+  if (name === 'agenda')      loadAgendaSlots();
   if (name === 'financeiro')  loadFinanceiro();
   if (name === 'documentos')  loadDocuments();
   if (name === 'equipe')      loadMembers();
@@ -1521,6 +1519,142 @@ async function removeMember(memberId, name) {
   });
   if (res.ok) { showToast('Membro removido.', 'success'); loadMembers(); }
   else { const j = await res.json(); showToast(j.error || 'Erro ao remover.', 'error'); }
+}
+
+// ── Agenda com créditos ───────────────────────────────────────────────────────
+const MONTH_PT = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+function fmtSlotDate(iso) {
+  const d = new Date(iso);
+  return `${String(d.getDate()).padStart(2,'0')} ${MONTH_PT[d.getMonth()]} ${d.getFullYear()}`;
+}
+function fmtSlotTime(iso) {
+  const d = new Date(iso);
+  return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+}
+
+async function loadAgendaSlots() {
+  const el = document.getElementById('slotsList');
+  const histEl = document.getElementById('creditsHistory');
+  if (!el) return;
+  el.innerHTML = '<div style="padding:16px;color:var(--text-muted);font-size:14px;">Carregando...</div>';
+
+  const [slotsRes, histRes] = await Promise.all([
+    fetch('/api/agenda/slots', { headers: authH() }),
+    fetch('/api/credits/history', { headers: authH() }),
+  ]);
+
+  if (slotsRes.ok) {
+    const { slots, credits_balance } = await slotsRes.json();
+    // Update credits badge
+    document.getElementById('creditsCount').textContent = credits_balance ?? 0;
+
+    if (!slots.length) {
+      el.innerHTML = `<div class="empty-state">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        <p>Nenhum horário disponível no momento.<br><small>A equipe publicará novos horários em breve.</small></p>
+      </div>`;
+    } else {
+      const bal = credits_balance ?? 0;
+      el.innerHTML = `<div style="display:flex;flex-direction:column;gap:10px;">
+        ${slots.map(s => {
+          const past    = new Date(s.starts_at) < new Date();
+          const noSlots = !s.available && !s.my_booking;
+          const canBook = s.available && !s.my_booking && bal >= s.credits_cost && !past;
+          return `
+          <div style="background:#fff;border:1px solid ${s.my_booking?'#2563eb':'#E2E8F0'};border-radius:10px;padding:14px 18px;display:flex;align-items:center;gap:14px;${past?'opacity:.6':''}">
+            <div style="min-width:58px;text-align:center;background:${s.my_booking?'#EFF6FF':'#F8FAFC'};border-radius:8px;padding:8px 4px;">
+              <div style="font-size:20px;font-weight:800;color:#1e3a5f;line-height:1;">${new Date(s.starts_at).getDate()}</div>
+              <div style="font-size:10px;color:#64748b;font-weight:600;">${MONTH_PT[new Date(s.starts_at).getMonth()]}</div>
+            </div>
+            <div style="flex:1;">
+              <div style="font-weight:700;font-size:14px;color:#1e293b;">${s.title}</div>
+              <div style="font-size:12px;color:#64748b;margin-top:2px;">
+                ${fmtSlotTime(s.starts_at)} – ${fmtSlotTime(s.ends_at)} &nbsp;·&nbsp; ${s.duration_min}min
+                &nbsp;·&nbsp; ${s.credits_cost} crédito${s.credits_cost>1?'s':''}
+              </div>
+            </div>
+            ${s.my_booking ? `
+              <span style="background:#EFF6FF;color:#2563eb;font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px;">Reservado</span>
+              <button onclick="cancelBooking('${s.id}')" style="background:none;border:1px solid #fecaca;color:#ef4444;border-radius:6px;padding:5px 10px;font-size:11px;cursor:pointer;">Cancelar</button>
+            ` : noSlots ? `
+              <span style="background:#F1F5F9;color:#94a3b8;font-size:11px;padding:4px 12px;border-radius:20px;">Lotado</span>
+            ` : past ? `
+              <span style="background:#F1F5F9;color:#94a3b8;font-size:11px;padding:4px 12px;border-radius:20px;">Encerrado</span>
+            ` : bal < s.credits_cost ? `
+              <button onclick="buyCredits()" style="background:#FEF3C7;color:#92400e;border:1px solid #FDE68A;border-radius:6px;padding:6px 12px;font-size:11px;cursor:pointer;font-weight:600;">Comprar créditos</button>
+            ` : `
+              <button onclick="bookSlot('${s.id}',${s.credits_cost})" style="background:#1e3a5f;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:12px;cursor:pointer;font-weight:600;">Reservar</button>
+            `}
+          </div>`;
+        }).join('')}
+      </div>`;
+    }
+  }
+
+  if (histRes.ok && histEl) {
+    const { transactions } = await histRes.json();
+    if (!transactions.length) {
+      histEl.innerHTML = '<div style="font-size:13px;color:var(--text-muted);padding:8px 0;">Nenhuma movimentação ainda.</div>';
+    } else {
+      histEl.innerHTML = `<div style="display:flex;flex-direction:column;gap:6px;">
+        ${transactions.slice(0,10).map(t => `
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:#F8FAFC;border-radius:8px;font-size:13px;">
+          <span style="font-weight:700;${t.delta>0?'color:#16a34a':'color:#dc2626'}">${t.delta>0?'+':''}${t.delta}</span>
+          <span style="flex:1;color:#374151;">${t.reason === 'purchase' ? 'Compra de créditos' : t.reason === 'booking' ? 'Sessão reservada' : t.reason === 'refund' ? 'Reembolso de cancelamento' : t.reason}</span>
+          <span style="color:#94a3b8;font-size:11px;">${new Date(t.created_at).toLocaleDateString('pt-BR')}</span>
+          <span style="font-weight:600;color:#1e293b;">${t.balance_after} crédito${t.balance_after!==1?'s':''}</span>
+        </div>`).join('')}
+      </div>`;
+    }
+  }
+}
+
+async function bookSlot(slotId, cost) {
+  if (!confirm(`Reservar esta sessão usando ${cost} crédito${cost>1?'s':''}?`)) return;
+  const res = await fetch(`/api/agenda/book/${slotId}`, { method: 'POST', headers: authH(), body: JSON.stringify({}) });
+  const j   = await res.json();
+  if (res.ok) {
+    showToast('Sessão reservada com sucesso!', 'success');
+    document.getElementById('creditsCount').textContent = j.credits_balance;
+    loadAgendaSlots();
+  } else {
+    showToast(j.error || 'Erro ao reservar.', 'error');
+    if (j.credits_needed) setTimeout(() => buyCredits(), 800);
+  }
+}
+
+async function cancelBooking(slotId) {
+  // Find booking id from current slots
+  if (!confirm('Cancelar esta reserva? Seus créditos serão devolvidos.')) return;
+  // We need booking id — refetch slots to get it, but the cancel endpoint uses bookingId
+  // Use the slot approach: re-fetch bookings
+  const res = await fetch('/api/agenda/slots', { headers: authH() });
+  if (!res.ok) return;
+  const { slots } = await res.json();
+  const slot = slots.find(s => s.id === slotId);
+  // We don't store booking id on client — use a dedicated cancel-by-slot endpoint
+  // For now call DELETE /api/agenda/book/:bookingId — need to get booking id first
+  // Workaround: add slot-based cancel endpoint
+  const cancelRes = await fetch(`/api/agenda/cancel-slot/${slotId}`, { method: 'DELETE', headers: authH() });
+  const j = await cancelRes.json();
+  if (cancelRes.ok) { showToast('Reserva cancelada. Créditos devolvidos.', 'success'); loadAgendaSlots(); }
+  else showToast(j.error || 'Erro ao cancelar.', 'error');
+}
+
+function buyCredits()        { toggleCreditsPanel(); }
+function toggleCreditsPanel() {
+  const p = document.getElementById('creditsBuyPanel');
+  p.style.display = p.style.display === 'none' ? 'block' : 'none';
+}
+
+async function checkoutCredits(pack) {
+  const res = await fetch('/api/credits/checkout', {
+    method: 'POST', headers: authH(),
+    body: JSON.stringify({ pack: String(pack) })
+  });
+  const j = await res.json();
+  if (j.url) window.location.href = j.url;
+  else showToast(j.error || 'Erro ao iniciar pagamento.', 'error');
 }
 </script>
 

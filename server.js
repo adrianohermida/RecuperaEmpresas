@@ -1426,6 +1426,268 @@ app.get('/api/admin/client/:id/members', requireAdmin, async (req, res) => {
   res.json({ members: data || [] });
 });
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// AGENDA + CRÉDITOS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// ── Credit helpers ────────────────────────────────────────────────────────────
+async function getCredits(userId) {
+  const { data } = await sb.from('re_users').select('credits_balance').eq('id', userId).single();
+  return data?.credits_balance ?? 0;
+}
+
+async function adjustCredits(userId, delta, reason, refId = null) {
+  const current = await getCredits(userId);
+  const newBal  = current + delta;
+  await sb.from('re_users').update({ credits_balance: newBal }).eq('id', userId);
+  await sb.from('re_credit_transactions').insert({
+    user_id: userId, delta, reason, ref_id: refId, balance_after: newBal
+  });
+  return newBal;
+}
+
+// ── Client: view available slots + own balance ────────────────────────────────
+app.get('/api/agenda/slots', requireAuth, async (req, res) => {
+  const userId = req.user.id;
+  const from = req.query.from || new Date().toISOString();
+  const { data: slots } = await sb.from('re_agenda_slots')
+    .select('id,starts_at,ends_at,duration_min,title,credits_cost,max_bookings')
+    .gte('starts_at', from)
+    .order('starts_at', { ascending: true })
+    .limit(60);
+
+  // Count bookings per slot
+  const slotIds = (slots||[]).map(s => s.id);
+  let bookingCounts = {};
+  if (slotIds.length) {
+    const { data: counts } = await sb.from('re_bookings')
+      .select('slot_id')
+      .in('slot_id', slotIds)
+      .neq('status', 'cancelled');
+    (counts||[]).forEach(b => { bookingCounts[b.slot_id] = (bookingCounts[b.slot_id]||0) + 1; });
+  }
+
+  // Client's own bookings
+  const { data: myBookings } = await sb.from('re_bookings')
+    .select('slot_id,status')
+    .eq('user_id', userId)
+    .in('slot_id', slotIds.length ? slotIds : ['00000000-0000-0000-0000-000000000000']);
+
+  const mySlotIds = new Set((myBookings||[]).filter(b => b.status !== 'cancelled').map(b => b.slot_id));
+  const credits = await getCredits(userId);
+
+  const enriched = (slots||[]).map(s => ({
+    ...s,
+    booked_count: bookingCounts[s.id] || 0,
+    available: (bookingCounts[s.id] || 0) < s.max_bookings,
+    my_booking: mySlotIds.has(s.id),
+  }));
+
+  res.json({ slots: enriched, credits_balance: credits });
+});
+
+// ── Client: book a slot (spend credits) ──────────────────────────────────────
+app.post('/api/agenda/book/:slotId', requireAuth, async (req, res) => {
+  const userId = req.user.id;
+  const { slotId } = req.params;
+  const { notes } = req.body;
+
+  const { data: slot } = await sb.from('re_agenda_slots').select('*').eq('id', slotId).single();
+  if (!slot) return res.status(404).json({ error: 'Slot não encontrado.' });
+  if (new Date(slot.starts_at) < new Date()) return res.status(400).json({ error: 'Horário já passou.' });
+
+  // Check capacity
+  const { count } = await sb.from('re_bookings')
+    .select('id', { count: 'exact', head: true })
+    .eq('slot_id', slotId).neq('status', 'cancelled');
+  if ((count||0) >= slot.max_bookings) return res.status(400).json({ error: 'Horário lotado.' });
+
+  // Check duplicate
+  const { data: dup } = await sb.from('re_bookings')
+    .select('id').eq('slot_id', slotId).eq('user_id', userId).neq('status', 'cancelled').single();
+  if (dup) return res.status(409).json({ error: 'Você já tem reserva neste horário.' });
+
+  // Check credits
+  const credits = await getCredits(userId);
+  if (credits < slot.credits_cost) return res.status(402).json({
+    error: `Créditos insuficientes. Necessário: ${slot.credits_cost}, disponível: ${credits}.`,
+    credits_needed: slot.credits_cost - credits
+  });
+
+  const { data: booking, error } = await sb.from('re_bookings').insert({
+    slot_id: slotId, user_id: userId,
+    status: 'confirmed', credits_spent: slot.credits_cost, notes: notes || null,
+  }).select().single();
+  if (error) return res.status(500).json({ error: error.message });
+
+  const newBal = await adjustCredits(userId, -slot.credits_cost, 'booking', booking.id);
+  res.json({ success: true, booking, credits_balance: newBal });
+});
+
+// ── Client: cancel a booking (refund credits) ────────────────────────────────
+app.delete('/api/agenda/book/:bookingId', requireAuth, async (req, res) => {
+  const userId = req.user.id;
+  const { data: booking } = await sb.from('re_bookings')
+    .select('*').eq('id', req.params.bookingId).eq('user_id', userId).single();
+  if (!booking) return res.status(404).json({ error: 'Reserva não encontrada.' });
+  if (booking.status === 'cancelled') return res.status(400).json({ error: 'Reserva já cancelada.' });
+
+  // Only allow cancel if slot hasn't started
+  const { data: slot } = await sb.from('re_agenda_slots').select('starts_at').eq('id', booking.slot_id).single();
+  if (slot && new Date(slot.starts_at) < new Date()) return res.status(400).json({ error: 'Sessão já iniciada.' });
+
+  await sb.from('re_bookings').update({ status: 'cancelled' }).eq('id', booking.id);
+  const newBal = await adjustCredits(userId, booking.credits_spent, 'refund', booking.id);
+  res.json({ success: true, credits_balance: newBal });
+});
+
+// ── Client: credit history ────────────────────────────────────────────────────
+app.get('/api/credits/history', requireAuth, async (req, res) => {
+  const { data } = await sb.from('re_credit_transactions')
+    .select('*').eq('user_id', req.user.id)
+    .order('created_at', { ascending: false }).limit(50);
+  const balance = await getCredits(req.user.id);
+  res.json({ transactions: data || [], balance });
+});
+
+// ── Stripe: create checkout session to purchase credits ───────────────────────
+app.post('/api/credits/checkout', requireAuth, async (req, res) => {
+  if (!STRIPE_SECRET_KEY) return res.status(503).json({ error: 'Pagamentos não configurados.' });
+
+  const PACKS = {
+    '1':  { credits: 1,  price_brl: 29700 },   // R$ 297
+    '3':  { credits: 3,  price_brl: 79700 },   // R$ 797
+    '5':  { credits: 5,  price_brl: 119700 },  // R$ 1.197
+    '10': { credits: 10, price_brl: 197000 },  // R$ 1.970
+  };
+  const { pack = '1', success_url, cancel_url } = req.body;
+  const chosen = PACKS[String(pack)];
+  if (!chosen) return res.status(400).json({ error: 'Pacote inválido. Opções: 1, 3, 5, 10.' });
+
+  const Stripe = require('stripe');
+  const stripe = Stripe(STRIPE_SECRET_KEY);
+  const user   = req.user;
+
+  // Ensure Stripe customer
+  let customerId = user.stripe_customer_id;
+  if (!customerId) {
+    const customer = await stripe.customers.create({ email: user.email, name: user.name || user.email });
+    customerId = customer.id;
+    await sb.from('re_users').update({ stripe_customer_id: customerId }).eq('id', user.id);
+  }
+
+  const session = await stripe.checkout.sessions.create({
+    customer:    customerId,
+    mode:        'payment',
+    line_items:  [{
+      price_data: {
+        currency:     'brl',
+        unit_amount:  chosen.price_brl,
+        product_data: { name: `${chosen.credits} crédito${chosen.credits > 1 ? 's' : ''} de consultoria` },
+      },
+      quantity: 1,
+    }],
+    metadata: { user_id: user.id, credits: String(chosen.credits) },
+    success_url: success_url || `${BASE_URL}/dashboard.html?credits=success`,
+    cancel_url:  cancel_url  || `${BASE_URL}/dashboard.html?credits=cancel`,
+  });
+
+  res.json({ url: session.url, session_id: session.id });
+});
+
+// ── Stripe webhook: credit the account on payment ────────────────────────────
+app.post('/api/stripe/webhook',
+  express.raw({ type: 'application/json' }),
+  async (req, res) => {
+    if (!STRIPE_SECRET_KEY || !STRIPE_WEBHOOK_SECRET) return res.sendStatus(400);
+    const Stripe = require('stripe');
+    const stripe = Stripe(STRIPE_SECRET_KEY);
+    let event;
+    try {
+      event = stripe.webhooks.constructEvent(req.body, req.headers['stripe-signature'], STRIPE_WEBHOOK_SECRET);
+    } catch (err) {
+      console.error('[STRIPE WEBHOOK]', err.message);
+      return res.status(400).send(`Webhook Error: ${err.message}`);
+    }
+
+    if (event.type === 'checkout.session.completed') {
+      const session = event.data.object;
+      const { user_id, credits } = session.metadata || {};
+      if (user_id && credits) {
+        const delta = parseInt(credits, 10);
+        await adjustCredits(user_id, delta, 'purchase', session.payment_intent);
+        console.log(`[CREDITS] +${delta} créditos para user ${user_id}`);
+      }
+    }
+    res.json({ received: true });
+  }
+);
+
+// ── Admin: agenda slots management ───────────────────────────────────────────
+app.get('/api/admin/agenda/slots', requireAdmin, async (req, res) => {
+  const from = req.query.from || new Date(Date.now() - 7*24*60*60*1000).toISOString();
+  const { data: slots } = await sb.from('re_agenda_slots')
+    .select('*').gte('starts_at', from).order('starts_at', { ascending: true }).limit(100);
+
+  const slotIds = (slots||[]).map(s => s.id);
+  let bookings = [];
+  if (slotIds.length) {
+    const { data } = await sb.from('re_bookings')
+      .select('slot_id,user_id,status,re_users(name,email,company)')
+      .in('slot_id', slotIds).neq('status', 'cancelled');
+    bookings = data || [];
+  }
+  const bySlot = {};
+  bookings.forEach(b => { (bySlot[b.slot_id] = bySlot[b.slot_id]||[]).push(b); });
+
+  res.json({ slots: (slots||[]).map(s => ({ ...s, bookings: bySlot[s.id]||[] })) });
+});
+
+app.post('/api/admin/agenda/slots', requireAdmin, async (req, res) => {
+  const { starts_at, ends_at, title, credits_cost, max_bookings, duration_min } = req.body;
+  if (!starts_at || !ends_at) return res.status(400).json({ error: 'starts_at e ends_at são obrigatórios.' });
+  const { data, error } = await sb.from('re_agenda_slots').insert({
+    starts_at, ends_at, title: title || 'Consultoria',
+    credits_cost: credits_cost || 1,
+    max_bookings: max_bookings || 1,
+    duration_min: duration_min || 60,
+    created_by: req.user.id,
+  }).select().single();
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ success: true, slot: data });
+});
+
+app.delete('/api/admin/agenda/slots/:slotId', requireAdmin, async (req, res) => {
+  await sb.from('re_agenda_slots').delete().eq('id', req.params.slotId);
+  res.json({ success: true });
+});
+
+// Client: cancel booking by slot id (convenience — finds the booking first)
+app.delete('/api/agenda/cancel-slot/:slotId', requireAuth, async (req, res) => {
+  const userId = req.user.id;
+  const { data: booking } = await sb.from('re_bookings')
+    .select('*').eq('slot_id', req.params.slotId).eq('user_id', userId)
+    .neq('status', 'cancelled').single();
+  if (!booking) return res.status(404).json({ error: 'Reserva não encontrada.' });
+
+  const { data: slot } = await sb.from('re_agenda_slots').select('starts_at').eq('id', booking.slot_id).single();
+  if (slot && new Date(slot.starts_at) < new Date()) return res.status(400).json({ error: 'Sessão já iniciada — não é possível cancelar.' });
+
+  await sb.from('re_bookings').update({ status: 'cancelled' }).eq('id', booking.id);
+  const newBal = await adjustCredits(userId, booking.credits_spent, 'refund', booking.id);
+  res.json({ success: true, credits_balance: newBal });
+});
+
+// Admin: adjust credits manually
+app.post('/api/admin/client/:id/credits', requireAdmin, async (req, res) => {
+  const { delta, reason } = req.body;
+  if (!delta || !reason) return res.status(400).json({ error: 'delta e reason obrigatórios.' });
+  const user = await findUserById(req.params.id);
+  if (!user) return res.status(404).json({ error: 'Cliente não encontrado.' });
+  const newBal = await adjustCredits(user.id, parseInt(delta), reason, `admin:${req.user.id}`);
+  res.json({ success: true, credits_balance: newBal });
+});
+
 app.get('/api/admin/logs', requireAdmin, async (req, res) => {
   const { data: logs } = await sb.from('re_access_log')
     .select('*').order('ts', { ascending: false }).limit(500);
@@ -1730,9 +1992,33 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'login.html'));
 });
 
-app.listen(PORT, () => {
+// ─── Startup: seed admin accounts ────────────────────────────────────────────
+async function seedAdminAccounts() {
+  const defaultPwd = process.env.ADMIN_DEFAULT_PASSWORD || 'RecuperaAdmin@2025';
+  const hash = await bcrypt.hash(defaultPwd, 10);
+  for (const email of ADMIN_EMAILS) {
+    const existing = await findUserByEmail(email);
+    if (!existing) {
+      const { data, error } = await sb.from('re_users').insert({
+        name:          email.split('@')[0],
+        email,
+        company:       'Recupera Empresas',
+        password_hash: hash,
+        is_admin:      true,
+      }).select().single();
+      if (data) console.log(`[SEED] Admin criado: ${email}`);
+      if (error) console.warn(`[SEED] Erro ao criar ${email}:`, error.message);
+    } else if (!existing.is_admin) {
+      await sb.from('re_users').update({ is_admin: true }).eq('id', existing.id);
+      console.log(`[SEED] Admin promovido: ${email}`);
+    }
+  }
+}
+
+app.listen(PORT, async () => {
   console.log(`\n  Recupera Empresas — Portal http://localhost:${PORT}`);
   console.log(`  Login:     http://localhost:${PORT}/login.html`);
   console.log(`  Dashboard: http://localhost:${PORT}/dashboard.html`);
   console.log(`  Admin:     http://localhost:${PORT}/admin.html\n`);
+  await seedAdminAccounts();
 });
