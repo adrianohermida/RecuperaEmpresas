@@ -84,6 +84,14 @@
       <h1 class="auth-card-title">Bem-vindo de volta</h1>
       <p class="auth-card-subtitle">Acesse o portal para continuar o seu onboarding</p>
 
+      <!-- Success (email confirmed, etc.) -->
+      <div class="alert alert-success" id="alertSuccess" style="display:none;background:#ECFDF5;border:1px solid #A7F3D0;color:#065F46;border-radius:8px;padding:12px 14px;font-size:13px;display:none;align-items:flex-start;gap:10px;margin-bottom:16px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;margin-top:1px">
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
+        </svg>
+        <span id="alertSuccessMsg"></span>
+      </div>
+
       <div class="alert alert-error" id="alertError">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;margin-top:1px">
           <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
@@ -189,9 +197,24 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
       localStorage.setItem('re_user', JSON.stringify(json.user));
       window.location.href = json.user?.isAdmin ? 'admin.html' : 'dashboard.html';
     } else {
-      const alertEl = document.getElementById('alertError');
-      document.getElementById('alertErrorMsg').textContent = json.error || 'Credenciais inválidas.';
-      alertEl.classList.add('show');
+      const msg = json.error || 'Credenciais inválidas.';
+      // Email not confirmed — offer to resend
+      if (msg.toLowerCase().includes('not confirmed') || msg.toLowerCase().includes('confirmar')) {
+        document.getElementById('alertErrorMsg').innerHTML =
+          'Confirme seu e-mail antes de entrar. ' +
+          '<a href="#" id="resendLink" style="color:#B91C1C;font-weight:600;text-decoration:underline;">Reenviar confirmação</a>';
+        document.getElementById('resendLink')?.addEventListener('click', async (ev) => {
+          ev.preventDefault();
+          await fetch('/api/auth/resend-confirmation', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email })
+          });
+          document.getElementById('alertErrorMsg').textContent = 'E-mail de confirmação reenviado. Verifique sua caixa de entrada.';
+        });
+      } else {
+        document.getElementById('alertErrorMsg').textContent = msg;
+      }
+      document.getElementById('alertError').classList.add('show');
       btn.disabled = false;
       btn.textContent = 'Entrar no Portal';
     }
@@ -203,11 +226,43 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
   }
 });
 
-// Show timeout notice if redirected here from an auth guard timeout
-if (new URLSearchParams(window.location.search).get('err') === 'timeout') {
-  document.getElementById('alertErrorMsg').textContent =
-    'O servidor demorou para responder. Tente fazer login novamente.';
-  document.getElementById('alertError').classList.add('show');
+// ── Handle URL params & hash tokens on page load ──────────────────────────────
+(async () => {
+  const params      = new URLSearchParams(window.location.search);
+  const hash        = Object.fromEntries(new URLSearchParams(window.location.hash.slice(1)));
+  const accessToken = hash.access_token || '';
+  const hashType    = hash.type         || '';
+
+  // Came back from email confirmation link → auto-login with the hash tokens
+  if (accessToken && (hashType === 'signup' || hashType === 'magiclink')) {
+    try {
+      const res  = await fetch('/api/auth/confirm', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ access_token: accessToken, refresh_token: hash.refresh_token || '' })
+      });
+      const json = await res.json();
+      if (json.token) {
+        localStorage.setItem('re_token', json.token);
+        localStorage.setItem('re_user', JSON.stringify(json.user));
+        window.location.href = json.user?.isAdmin ? 'admin.html' : 'dashboard.html';
+        return;
+      }
+    } catch {}
+    // Auto-login failed — fall back to showing a success message so they log in manually
+    showSuccess('E-mail confirmado! Faça login para continuar.');
+  } else if (params.get('confirmed') === '1') {
+    showSuccess('E-mail confirmado com sucesso! Faça login para continuar.');
+  } else if (params.get('err') === 'timeout') {
+    document.getElementById('alertErrorMsg').textContent =
+      'O servidor demorou para responder. Tente fazer login novamente.';
+    document.getElementById('alertError').classList.add('show');
+  }
+})();
+
+function showSuccess(msg) {
+  const el = document.getElementById('alertSuccess');
+  document.getElementById('alertSuccessMsg').textContent = msg;
+  el.style.display = 'flex';
 }
 
 // Redirect if already logged in

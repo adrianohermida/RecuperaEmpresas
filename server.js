@@ -663,7 +663,10 @@ app.post('/api/auth/register', async (req, res) => {
     // Create Supabase Auth account
     const { data: authData, error: signUpErr } = await sbAnon.auth.signUp({
       email, password,
-      options: { data: { name, company: company || '' } }
+      options: {
+        data: { name, company: company || '' },
+        emailRedirectTo: `${BASE_URL}/login.html?confirmed=1`,
+      }
     });
     if (signUpErr) {
       if (signUpErr.message?.toLowerCase().includes('already registered') ||
@@ -789,6 +792,75 @@ app.post('/api/auth/reset', async (req, res) => {
   } catch(e) {
     console.error('[RESET]', e.message);
     res.status(500).json({ error: 'Erro interno.' });
+  }
+});
+
+// /api/auth/confirm — auto-login after user clicks email confirmation / magic-link
+// Receives the Supabase access_token from the URL hash fragment and exchanges it for our JWT
+app.post('/api/auth/confirm', async (req, res) => {
+  try {
+    const { access_token, refresh_token } = req.body;
+    if (!access_token) return res.status(400).json({ error: 'Token ausente.' });
+
+    const { data, error } = await sbAnon.auth.setSession({
+      access_token,
+      refresh_token: refresh_token || access_token,
+    });
+    if (error || !data?.user) return res.status(401).json({ error: 'Token de confirmação inválido ou expirado.' });
+
+    const profile = await upsertProfileFromAuth(data.user);
+    await sbAnon.auth.signOut().catch(() => {}); // clear Supabase session — we use our own JWT
+    logAccess(profile.id, profile.email, 'confirm', req.ip);
+    const token = signToken({ userId: profile.id, email: profile.email });
+    res.json({ success: true, token, user: safeUser(profile) });
+  } catch(e) {
+    console.error('[CONFIRM]', e.message);
+    res.status(500).json({ error: 'Erro interno.' });
+  }
+});
+
+// /api/auth/resend-confirmation — resend Supabase confirmation email
+app.post('/api/auth/resend-confirmation', async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: 'Informe o e-mail.' });
+    await sbAnon.auth.resend({
+      type: 'signup',
+      email,
+      options: { emailRedirectTo: `${BASE_URL}/login.html?confirmed=1` },
+    });
+    res.json({ success: true });
+  } catch(e) {
+    console.error('[RESEND]', e.message);
+    res.status(500).json({ error: 'Erro ao reenviar.' });
+  }
+});
+
+// ─── OAuth Consent (Supabase OAuth Server) ────────────────────────────────────
+// GET /oauth/consent — serve the consent UI
+app.get('/oauth/consent', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'oauth-consent.html'));
+});
+
+// POST /oauth/consent — user approved; forward decision to Supabase and redirect
+app.post('/oauth/consent', express.urlencoded({ extended: false }), async (req, res) => {
+  try {
+    const { allow, ...params } = req.body; // allow = '1' or '0'
+    const qs = new URLSearchParams(params).toString();
+    const supabaseAuthorize = `${SUPABASE_URL}/auth/v1/oauth/authorize?${qs}&allow=${allow === '1' ? 'true' : 'false'}`;
+
+    // Proxy the decision to Supabase and follow their redirect
+    const r = await fetch(supabaseAuthorize, {
+      method: 'GET',
+      redirect: 'manual',
+      headers: { apikey: SUPABASE_ANON_KEY },
+    });
+    const location = r.headers.get('location');
+    if (location) return res.redirect(302, location);
+    res.status(400).send('Não foi possível processar a autorização.');
+  } catch(e) {
+    console.error('[OAUTH CONSENT]', e.message);
+    res.status(500).send('Erro interno.');
   }
 });
 
