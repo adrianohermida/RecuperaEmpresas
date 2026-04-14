@@ -106,77 +106,77 @@
 </div>
 
 <script>
-// ── Config ────────────────────────────────────────────────────────────────────
-const supabaseUrl = (window.RE_SUPABASE_URL || 'https://riiajjmnzgagntiqqshs.supabase.co').replace(/\/$/, '');
-const authorizeEndpoint = supabaseUrl + '/auth/v1/oauth/authorize';
+(function () {
+  // ── Config ──────────────────────────────────────────────────────────────────
+  const supabaseUrl       = (window.RE_SUPABASE_URL || 'https://riiajjmnzgagntiqqshs.supabase.co').replace(/\/$/, '');
+  const authorizeEndpoint = supabaseUrl + '/auth/v1/oauth/authorize';
+  const q                 = new URLSearchParams(window.location.search);
 
-// ── Read OAuth params from the current URL query string ──────────────────────
-const q = new URLSearchParams(window.location.search);
+  // ── Guard: must arrive via Supabase OAuth flow (client_id required) ─────────
+  if (!q.get('client_id')) {
+    const card = document.querySelector('.auth-card');
+    if (card) {
+      card.innerHTML = `
+        <div style="text-align:center;padding:20px 0;">
+          <div style="width:56px;height:56px;background:#FEF2F2;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#DC2626" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="12" y1="8" x2="12" y2="12"/>
+              <line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+          </div>
+          <h2 style="font-size:18px;font-weight:700;color:#0F172A;margin-bottom:8px;">Acesso inválido</h2>
+          <p style="color:#64748B;font-size:14px;line-height:1.6;margin-bottom:20px;">
+            Esta página só pode ser acessada via fluxo OAuth.<br/>
+            Inicie a autorização pelo aplicativo que solicitou acesso.
+          </p>
+          <a href="/login.html" style="color:#1A56DB;font-size:14px;font-weight:600;text-decoration:none;">← Voltar ao login</a>
+        </div>`;
+    }
+    return; // stop — don't run the rest of the script
+  }
 
-// ── Guard: page must be reached via Supabase OAuth flow (needs client_id) ────
-if (!q.get('client_id')) {
-  document.querySelector('.auth-card').innerHTML = `
-    <div style="text-align:center;padding:20px 0;">
-      <div style="width:56px;height:56px;background:#FEF2F2;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#DC2626" stroke-width="2">
-          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-        </svg>
-      </div>
-      <h2 style="font-size:18px;font-weight:700;color:#0F172A;margin-bottom:8px;">Acesso inválido</h2>
-      <p style="color:#64748B;font-size:14px;line-height:1.6;margin-bottom:20px;">
-        Esta página só pode ser acessada via fluxo OAuth.<br/>
-        Inicie a autorização pelo aplicativo que solicitou acesso.
-      </p>
-      <a href="/login.html" style="color:#1A56DB;font-size:14px;font-weight:600;text-decoration:none;">← Voltar ao login</a>
-    </div>`;
-}
+  // ── decide(allow) — GET redirect to Supabase with all params + allow ────────
+  window.decide = function (allow) {
+    const params = new URLSearchParams();
+    ['client_id','response_type','redirect_uri','scope','state','code_challenge','code_challenge_method']
+      .forEach(k => { if (q.get(k)) params.set(k, q.get(k)); });
+    params.set('allow', allow ? 'true' : 'false');
+    window.location.href = authorizeEndpoint + '?' + params.toString();
+  };
 
-// ── decide(allow) — redirect to Supabase as a GET with all params + allow ────
-// Supabase /auth/v1/oauth/authorize only accepts GET.
-// The browser sends the Supabase session cookie automatically on the redirect.
-function decide(allow) {
-  const params = new URLSearchParams();
-  const passThrough = [
-    'client_id', 'response_type', 'redirect_uri', 'scope',
-    'state', 'code_challenge', 'code_challenge_method'
-  ];
-  passThrough.forEach(k => { if (q.get(k)) params.set(k, q.get(k)); });
-  params.set('allow', allow ? 'true' : 'false');
-  window.location.href = authorizeEndpoint + '?' + params.toString();
-}
+  // ── Show app name / domain ───────────────────────────────────────────────────
+  const clientId    = q.get('client_id')    || '';
+  const redirectUri = q.get('redirect_uri') || '';
 
-// ── Show app name / domain from client_id / redirect_uri ─────────────────────
-const clientId    = q.get('client_id')    || '';
-const redirectUri = q.get('redirect_uri') || '';
+  if (clientId) {
+    document.getElementById('appIcon').textContent = clientId.charAt(0).toUpperCase();
+    document.getElementById('appName').textContent = clientId;
+  }
+  if (redirectUri) {
+    try {
+      document.getElementById('appDomain').textContent = new URL(redirectUri).hostname;
+    } catch {}
+  }
 
-if (clientId) {
-  document.getElementById('appIcon').textContent = clientId.charAt(0).toUpperCase();
-  document.getElementById('appName').textContent = clientId;
-}
-if (redirectUri) {
-  try {
-    const u = new URL(redirectUri);
-    document.getElementById('appDomain').textContent = u.hostname;
-  } catch {}
-}
+  // ── Render scope list ────────────────────────────────────────────────────────
+  const SCOPE_LABELS = {
+    openid:         { icon: '🔑', text: 'Identificação OpenID Connect' },
+    email:          { icon: '✉️', text: 'Ver seu endereço de e-mail' },
+    profile:        { icon: '👤', text: 'Ver seu nome e informações de perfil' },
+    offline_access: { icon: '🔄', text: 'Manter acesso mesmo quando você não estiver usando o app' },
+    phone:          { icon: '📱', text: 'Ver seu número de telefone' },
+  };
 
-// ── Render scope list ─────────────────────────────────────────────────────────
-const SCOPE_LABELS = {
-  openid:         { icon: '🔑', text: 'Identificação OpenID Connect' },
-  email:          { icon: '✉️', text: 'Ver seu endereço de e-mail' },
-  profile:        { icon: '👤', text: 'Ver seu nome e informações de perfil' },
-  offline_access: { icon: '🔄', text: 'Manter acesso mesmo quando você não estiver usando o app' },
-  phone:          { icon: '📱', text: 'Ver seu número de telefone' },
-};
-
-const scopeStr = q.get('scope') || 'openid email profile';
-const scopes   = scopeStr.split(/\s+/).filter(Boolean);
-const list     = document.getElementById('scopeList');
-
-list.innerHTML = scopes.map(s => {
-  const def = SCOPE_LABELS[s] || { icon: '🔹', text: `Acesso: ${s}` };
-  return `<li><span class="scope-icon">${def.icon}</span>${def.text}</li>`;
-}).join('');
+  const scopes = (q.get('scope') || 'openid email profile').split(/\s+/).filter(Boolean);
+  const list   = document.getElementById('scopeList');
+  if (list) {
+    list.innerHTML = scopes.map(s => {
+      const def = SCOPE_LABELS[s] || { icon: '🔹', text: `Acesso: ${s}` };
+      return `<li><span class="scope-icon">${def.icon}</span>${def.text}</li>`;
+    }).join('');
+  }
+})();
 </script>
 </body>
 </html>
