@@ -1,14 +1,15 @@
 'use strict';
 require('dotenv').config();
 
-const express  = require('express');
-const multer   = require('multer');
-const bcrypt   = require('bcryptjs');
-const jwt      = require('jsonwebtoken');
-const crypto   = require('crypto');
-const path     = require('path');
-const fs       = require('fs');
-const https    = require('https');
+const express      = require('express');
+const cookieParser = require('cookie-parser');
+const multer       = require('multer');
+const bcrypt       = require('bcryptjs');
+const jwt          = require('jsonwebtoken');
+const crypto       = require('crypto');
+const path         = require('path');
+const fs           = require('fs');
+const https        = require('https');
 const { createClient } = require('@supabase/supabase-js');
 const XLSX    = require('xlsx');
 const PDFDoc  = require('pdfkit');
@@ -578,6 +579,7 @@ app.use((req, res, next) => {
 // Stripe webhook needs raw body — must be before express.json()
 app.use('/api/stripe/webhook', express.raw({ type: 'application/json' }));
 
+app.use(cookieParser());
 app.use(express.json({ limit: '5mb' }));
 
 // Serve config.js dynamically so the browser gets the correct Supabase URL/key
@@ -887,7 +889,13 @@ app.get('/api/auth/oauth/start', (req, res) => {
   const verifier  = _codeVerifier();
   const challenge = _codeChallenge(verifier);
   const state     = crypto.randomBytes(16).toString('hex');
-  _pkceStore.set(state, { verifier, exp: Date.now() + 10 * 60 * 1000 });
+  _pkceStore.set(state, { verifier, challenge, exp: Date.now() + 10 * 60 * 1000 });
+
+  // Cookie carries the state through the consent redirect so /api/auth/oauth/decide
+  // can look up code_challenge and include it in the Supabase authorize call.
+  res.cookie('_oauth_st', state, {
+    httpOnly: true, secure: true, sameSite: 'lax', maxAge: 10 * 60 * 1000,
+  });
 
   const params = new URLSearchParams({
     client_id:             clientId,
@@ -913,12 +921,25 @@ app.get('/api/auth/oauth/decide', (req, res) => {
   if (!clientId)        return res.status(500).send('OAUTH_CLIENT_ID não configurado no Render.');
   if (!authorizationId) return res.status(400).send('authorization_id ausente.');
 
+  // Retrieve the original code_challenge from the PKCE store via the state cookie.
+  // Supabase requires all original PKCE params even on the consent-decision call.
+  const state = req.cookies?._oauth_st || '';
+  const pkce  = state ? _pkceStore.get(state) : null;
+
   const params = new URLSearchParams({
     authorization_id: authorizationId,
     client_id:        clientId,
     redirect_uri:     `${BASE_URL}/api/auth/oauth/callback`,
     allow,
   });
+
+  if (pkce?.challenge) {
+    params.set('code_challenge',        pkce.challenge);
+    params.set('code_challenge_method', 'S256');
+  } else {
+    console.warn('[OAUTH DECIDE] code_challenge not found — state cookie missing or expired');
+  }
+
   res.redirect(`${SUPABASE_URL}/auth/v1/oauth/authorize?${params}`);
 });
 
