@@ -1383,7 +1383,7 @@ async function initFreshchat(user) {
     clearTimeout(timeout);
   } catch (err) {
     clearTimeout(warmTimer);
-    location.href = '/login.html?err=timeout';
+    location.href = 'login.html?err=timeout';
     return;
   }
   clearTimeout(warmTimer);
