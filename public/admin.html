@@ -147,48 +147,55 @@
     <div id="sec-agenda" class="tab-content">
       <div class="section-header">
         <div>
-          <div class="section-title">Agenda</div>
-          <div class="section-sub">Reuniões solicitadas pelos clientes</div>
+          <div class="section-title">Agenda de Consultorias</div>
+          <div class="section-sub">Publicar horários disponíveis e acompanhar reservas dos clientes</div>
         </div>
-        <button class="btn-ghost" onclick="loadAdminAgenda()">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/></svg>
-          Atualizar
+        <button class="btn-primary" onclick="toggleSlotForm()" style="font-size:13px;padding:8px 14px;gap:6px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Novo horário
         </button>
       </div>
 
-      <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:24px;">
-        <div class="stat-card blue">
-          <div class="stat-icon">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      <!-- New slot form -->
+      <div id="slotFormCard" style="display:none;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px;padding:20px;margin-bottom:20px;">
+        <div style="font-weight:700;font-size:14px;color:#1e3a5f;margin-bottom:14px;">Publicar novo horário</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px;">
+          <div>
+            <label style="font-size:12px;color:#64748b;font-weight:500;display:block;margin-bottom:4px;">Título</label>
+            <input id="slotTitle" type="text" value="Consultoria" style="width:100%;padding:8px 10px;border:1px solid #CBD5E1;border-radius:6px;font-size:13px;box-sizing:border-box;">
           </div>
-          <div class="stat-value" id="agTotal">—</div>
-          <div class="stat-label">Total agendamentos</div>
+          <div>
+            <label style="font-size:12px;color:#64748b;font-weight:500;display:block;margin-bottom:4px;">Data e hora início *</label>
+            <input id="slotStart" type="datetime-local" style="width:100%;padding:8px 10px;border:1px solid #CBD5E1;border-radius:6px;font-size:13px;box-sizing:border-box;">
+          </div>
+          <div>
+            <label style="font-size:12px;color:#64748b;font-weight:500;display:block;margin-bottom:4px;">Data e hora fim *</label>
+            <input id="slotEnd" type="datetime-local" style="width:100%;padding:8px 10px;border:1px solid #CBD5E1;border-radius:6px;font-size:13px;box-sizing:border-box;">
+          </div>
+          <div>
+            <label style="font-size:12px;color:#64748b;font-weight:500;display:block;margin-bottom:4px;">Duração (min)</label>
+            <input id="slotDuration" type="number" value="60" min="15" step="15" style="width:100%;padding:8px 10px;border:1px solid #CBD5E1;border-radius:6px;font-size:13px;box-sizing:border-box;">
+          </div>
+          <div>
+            <label style="font-size:12px;color:#64748b;font-weight:500;display:block;margin-bottom:4px;">Créditos necessários</label>
+            <input id="slotCredits" type="number" value="1" min="1" style="width:100%;padding:8px 10px;border:1px solid #CBD5E1;border-radius:6px;font-size:13px;box-sizing:border-box;">
+          </div>
+          <div>
+            <label style="font-size:12px;color:#64748b;font-weight:500;display:block;margin-bottom:4px;">Vagas máximas</label>
+            <input id="slotMax" type="number" value="1" min="1" style="width:100%;padding:8px 10px;border:1px solid #CBD5E1;border-radius:6px;font-size:13px;box-sizing:border-box;">
+          </div>
         </div>
-        <div class="stat-card amber">
-          <div class="stat-icon">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-          </div>
-          <div class="stat-value" id="agPendente">—</div>
-          <div class="stat-label">Aguardando confirmação</div>
-        </div>
-        <div class="stat-card green">
-          <div class="stat-icon">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
-          </div>
-          <div class="stat-value" id="agConfirmado">—</div>
-          <div class="stat-label">Confirmadas</div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn-primary" onclick="createSlot()" style="font-size:13px;padding:8px 16px;">Publicar horário</button>
+          <button class="btn-ghost" onclick="toggleSlotForm()" style="font-size:13px;padding:8px 14px;">Cancelar</button>
         </div>
       </div>
 
-      <div class="portal-card">
-        <div class="portal-card-header">
-          <span class="portal-card-title">Todos os Agendamentos</span>
-        </div>
-        <div class="portal-card-body" id="adminAgendaList">
-          <div class="empty-state">
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-            <p>Carregando agendamentos...</p>
-          </div>
+      <!-- Slots list -->
+      <div id="adminSlotsList">
+        <div class="empty-state">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          <p>Carregando horários...</p>
         </div>
       </div>
     </div>
@@ -359,77 +366,108 @@ function renderClientTable(clients) {
   }).join('');
 }
 
-// ── Admin Agenda ──────────────────────────────────────────────────────────────
+// ── Admin Agenda (slots + créditos) ──────────────────────────────────────────
+const SLOT_MONTHS = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+
 async function loadAdminAgenda() {
-  const el = document.getElementById('adminAgendaList');
+  const el = document.getElementById('adminSlotsList');
   if (el) el.innerHTML = '<div style="padding:16px;color:var(--text-muted);font-size:14px;">Carregando...</div>';
 
-  const res = await fetch('/api/admin/appointments', { headers: authH() });
-  if (!res.ok) {
-    if (el) el.innerHTML = '<div class="empty-state"><p>Erro ao carregar agenda.</p></div>';
-    return;
-  }
-  const { appointments } = await res.json();
-
-  const total      = appointments.length;
-  const pendente   = appointments.filter(a=>!a.status||a.status==='pendente').length;
-  const confirmado = appointments.filter(a=>a.status==='confirmado').length;
-
-  const agTotal = document.getElementById('agTotal');
-  const agPend  = document.getElementById('agPendente');
-  const agConf  = document.getElementById('agConfirmado');
-  if (agTotal) agTotal.textContent = total;
-  if (agPend)  agPend.textContent  = pendente;
-  if (agConf)  agConf.textContent  = confirmado;
+  const res = await fetch('/api/admin/agenda/slots', { headers: authH() });
+  if (!res.ok) { if (el) el.innerHTML = '<div class="empty-state"><p>Erro ao carregar.</p></div>'; return; }
+  const { slots } = await res.json();
 
   if (!el) return;
-  if (!appointments.length) {
+  if (!slots.length) {
     el.innerHTML = `<div class="empty-state">
       <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-      <p>Nenhum agendamento encontrado.</p>
+      <p>Nenhum horário publicado. Clique em "Novo horário" para começar.</p>
     </div>`;
     return;
   }
 
-  const sorted = [...appointments].sort((a,b)=>a.date.localeCompare(b.date));
-  let html = '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:1px solid var(--border);">';
-  html += '<th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-weight:600;">Cliente</th>';
-  html += '<th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-weight:600;">Tipo</th>';
-  html += '<th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-weight:600;">Data</th>';
-  html += '<th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-weight:600;">Horário</th>';
-  html += '<th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-weight:600;">Status</th>';
-  html += '<th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-weight:600;">Ação</th>';
-  html += '</tr></thead><tbody>';
-  sorted.forEach(a => {
-    const stBadge = a.status==='confirmado' ? 'badge-green' : a.status==='cancelado' ? 'badge-red' : 'badge-amber';
-    const stLabel = a.status==='confirmado' ? 'Confirmada' : a.status==='cancelado' ? 'Cancelada' : 'Solicitada';
-    const dateStr = new Date(a.date+'T12:00:00').toLocaleDateString('pt-BR');
-    html += `<tr style="border-bottom:1px solid var(--border-light,#F1F5F9);">
-      <td style="padding:10px 12px;">
-        <div style="font-weight:600;">${a.clientName||'—'}</div>
-        <div style="font-size:11px;color:var(--text-muted);">${a.clientEmail||''}</div>
-      </td>
-      <td style="padding:10px 12px;">${APPT_TYPES[a.type]||a.type||'—'}</td>
-      <td style="padding:10px 12px;color:var(--text-muted);">${dateStr}</td>
-      <td style="padding:10px 12px;color:var(--text-muted);">${a.time||'—'}</td>
-      <td style="padding:10px 12px;"><span class="badge ${stBadge}">${stLabel}</span></td>
-      <td style="padding:10px 12px;">
-        ${a.status!=='confirmado' && a.status!=='cancelado'
-          ? `<button class="btn-sm btn-sm-approve" onclick="confirmAppt('${a.userId}','${a.id}')">Confirmar</button>`
-          : ''}
-      </td>
-    </tr>`;
-  });
-  html += '</tbody></table></div>';
-  el.innerHTML = html;
+  el.innerHTML = `<div style="display:flex;flex-direction:column;gap:10px;">
+    ${slots.map(s => {
+      const d = new Date(s.starts_at);
+      const past = d < new Date();
+      const bookings = s.bookings || [];
+      return `
+      <div style="background:#fff;border:1px solid #E2E8F0;border-radius:10px;padding:14px 18px;${past?'opacity:.65':''}">
+        <div style="display:flex;align-items:center;gap:14px;">
+          <div style="min-width:52px;text-align:center;background:#F8FAFC;border-radius:8px;padding:6px 4px;">
+            <div style="font-size:18px;font-weight:800;color:#1e3a5f;">${d.getDate()}</div>
+            <div style="font-size:10px;color:#64748b;font-weight:600;">${SLOT_MONTHS[d.getMonth()]} ${d.getFullYear()}</div>
+          </div>
+          <div style="flex:1;">
+            <div style="font-weight:700;font-size:14px;color:#1e293b;">${s.title}</div>
+            <div style="font-size:12px;color:#64748b;margin-top:2px;">
+              ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}
+              – ${String(new Date(s.ends_at).getHours()).padStart(2,'0')}:${String(new Date(s.ends_at).getMinutes()).padStart(2,'0')}
+              &nbsp;·&nbsp; ${s.duration_min}min &nbsp;·&nbsp; ${s.credits_cost} crédito${s.credits_cost>1?'s':''}
+              &nbsp;·&nbsp; ${bookings.length}/${s.max_bookings} vagas
+            </div>
+          </div>
+          <span style="font-size:11px;padding:3px 10px;border-radius:20px;${past?'background:#F1F5F9;color:#94a3b8;':bookings.length>=s.max_bookings?'background:#FEE2E2;color:#DC2626;':'background:#DCFCE7;color:#16A34A;'}">
+            ${past ? 'Encerrado' : bookings.length >= s.max_bookings ? 'Lotado' : 'Disponível'}
+          </span>
+          <button onclick="deleteSlot('${s.id}')" title="Remover horário"
+            style="background:none;border:1px solid #fecaca;border-radius:6px;padding:5px 8px;cursor:pointer;color:#ef4444;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+          </button>
+        </div>
+        ${bookings.length ? `
+        <div style="margin-top:10px;padding-top:10px;border-top:1px solid #F1F5F9;">
+          <div style="font-size:11px;font-weight:600;color:#64748b;margin-bottom:6px;">RESERVAS</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;">
+            ${bookings.map(b => `
+            <span style="background:#EFF6FF;color:#1e3a5f;font-size:11px;padding:3px 10px;border-radius:20px;font-weight:500;">
+              ${b.re_users?.name||b.re_users?.email||'Cliente'}
+            </span>`).join('')}
+          </div>
+        </div>` : ''}
+      </div>`;
+    }).join('')}
+  </div>`;
 }
 
-async function confirmAppt(userId, apptId) {
-  const res = await fetch(`/api/admin/appointments/${userId}/${apptId}`, {
-    method:'PUT', headers: authH(), body: JSON.stringify({ status:'confirmado' })
+function toggleSlotForm() {
+  const f = document.getElementById('slotFormCard');
+  f.style.display = f.style.display === 'none' ? 'block' : 'none';
+  if (f.style.display === 'block') {
+    // Pre-fill with tomorrow at 10:00
+    const tm = new Date(); tm.setDate(tm.getDate()+1); tm.setHours(10,0,0,0);
+    const te = new Date(tm); te.setHours(11,0,0,0);
+    const fmt = d => d.toISOString().slice(0,16);
+    document.getElementById('slotStart').value = fmt(tm);
+    document.getElementById('slotEnd').value   = fmt(te);
+    document.getElementById('slotTitle').focus();
+  }
+}
+
+async function createSlot() {
+  const starts_at    = document.getElementById('slotStart').value;
+  const ends_at      = document.getElementById('slotEnd').value;
+  const title        = document.getElementById('slotTitle').value.trim() || 'Consultoria';
+  const credits_cost = parseInt(document.getElementById('slotCredits').value) || 1;
+  const max_bookings = parseInt(document.getElementById('slotMax').value) || 1;
+  const duration_min = parseInt(document.getElementById('slotDuration').value) || 60;
+  if (!starts_at || !ends_at) { showToast('Preencha data/hora de início e fim.', 'error'); return; }
+  if (new Date(ends_at) <= new Date(starts_at)) { showToast('Fim deve ser após o início.', 'error'); return; }
+
+  const res = await fetch('/api/admin/agenda/slots', {
+    method: 'POST', headers: authH(),
+    body: JSON.stringify({ starts_at: new Date(starts_at).toISOString(), ends_at: new Date(ends_at).toISOString(), title, credits_cost, max_bookings, duration_min })
   });
-  if (res.ok) { showToast('Reunião confirmada!', 'success'); loadAdminAgenda(); }
-  else showToast('Erro ao confirmar.', 'error');
+  const j = await res.json();
+  if (res.ok) { showToast('Horário publicado!', 'success'); toggleSlotForm(); loadAdminAgenda(); }
+  else showToast(j.error || 'Erro ao publicar.', 'error');
+}
+
+async function deleteSlot(slotId) {
+  if (!confirm('Remover este horário? Reservas existentes serão canceladas.')) return;
+  const res = await fetch(`/api/admin/agenda/slots/${slotId}`, { method: 'DELETE', headers: authH() });
+  if (res.ok) { showToast('Horário removido.', 'success'); loadAdminAgenda(); }
+  else showToast('Erro ao remover.', 'error');
 }
 
 // ── Drawer ────────────────────────────────────────────────────────────────────
