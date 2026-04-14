@@ -1,0 +1,1688 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="robots" content="noindex, nofollow"/>
+  <title>Portal do Cliente — Recupera Empresas</title>
+  <link rel="stylesheet" href="./css/portal.css"/>
+  <script src="./js/config.js"></script>
+  <script src="./js/api-base.js"></script>
+</head>
+<body>
+
+<!-- Auth guard -->
+<div id="authGuard" style="position:fixed;inset:0;background:#0F172A;display:flex;align-items:center;justify-content:center;z-index:9999;">
+  <div style="text-align:center;color:#fff;">
+    <svg width="44" height="36" viewBox="0 0 44 36" fill="none" style="margin-bottom:16px;">
+      <rect x="0"  y="26" width="8" height="10" rx="4" fill="#4B9EFF"/>
+      <rect x="12" y="18" width="8" height="18" rx="4" fill="#2B7FFF"/>
+      <rect x="24" y="10" width="8" height="26" rx="4" fill="#1A56DB"/>
+      <rect x="36" y="2"  width="8" height="34" rx="4" fill="#1244AB"/>
+    </svg>
+    <div style="font-size:15px;color:#64748B;">Verificando acesso...</div>
+  </div>
+</div>
+
+<!-- Header -->
+<header class="header">
+  <div class="header-inner">
+    <div class="logo">
+      <svg width="36" height="30" viewBox="0 0 44 36" fill="none">
+        <rect x="0"  y="26" width="8" height="10" rx="4" fill="#4B9EFF"/>
+        <rect x="12" y="18" width="8" height="18" rx="4" fill="#2B7FFF"/>
+        <rect x="24" y="10" width="8" height="26" rx="4" fill="#1A56DB"/>
+        <rect x="36" y="2"  width="8" height="34" rx="4" fill="#1244AB"/>
+      </svg>
+      <div>
+        <div class="logo-text">Recupera Empresas</div>
+        <div class="logo-sub">Portal do Cliente</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="user-chip" id="userChip">
+        <div class="user-avatar" id="userAvatar">?</div>
+        <span id="userName">Carregando...</span>
+      </div>
+      <button class="btn-logout" onclick="logout()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+        </svg>
+        Sair
+      </button>
+    </div>
+  </div>
+</header>
+
+<div class="portal-layout">
+
+  <!-- Sidebar -->
+  <nav class="sidebar" id="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Menu</div>
+      <button class="sidebar-link active" onclick="showSection('dashboard',this)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        Dashboard
+      </button>
+      <button class="sidebar-link" onclick="showSection('onboarding',this)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        Onboarding
+      </button>
+      <button class="sidebar-link" onclick="showSection('plan',this)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        Business Plan
+      </button>
+      <button class="sidebar-link" id="tasksSideLink" onclick="showSection('tasks',this)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+        Tarefas
+      </button>
+      <button class="sidebar-link" id="msgsSideLink" onclick="showSection('messages',this)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        Mensagens
+      </button>
+      <button class="sidebar-link" id="supportSideLink" onclick="showSection('support',this)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        Suporte
+      </button>
+      <button class="sidebar-link" onclick="showSection('agenda',this)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        Agenda
+      </button>
+      <button class="sidebar-link" onclick="showSection('financeiro',this)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        Financeiro
+      </button>
+      <button class="sidebar-link" id="docsSideLink" onclick="showSection('documentos',this)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        Documentos
+      </button>
+      <button class="sidebar-link" id="equipeSideLink" onclick="showSection('equipe',this)" id="equipeNavBtn" style="display:none;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Equipe
+      </button>
+    </div>
+  </nav>
+
+  <!-- Main -->
+  <main class="portal-main">
+
+    <!-- DASHBOARD -->
+    <div id="sec-dashboard" class="tab-content active">
+      <div class="section-header">
+        <div>
+          <div class="section-title" id="welcomeTitle">Olá!</div>
+          <div class="section-sub" id="welcomeSub">Bem-vindo ao seu portal</div>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-grid" id="statsGrid">
+        <div class="stat-card blue">
+          <div class="stat-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+          </div>
+          <div class="stat-value" id="statProgress">0%</div>
+          <div class="stat-label">Progresso do onboarding</div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+          </div>
+          <div class="stat-value" id="statStep">1/14</div>
+          <div class="stat-label">Etapas concluídas</div>
+        </div>
+        <div class="stat-card amber">
+          <div class="stat-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+          </div>
+          <div class="stat-value" id="statTasks">0</div>
+          <div class="stat-label">Tarefas pendentes</div>
+        </div>
+        <div class="stat-card blue">
+          <div class="stat-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          </div>
+          <div class="stat-value" id="statMsgs">0</div>
+          <div class="stat-label">Mensagens</div>
+        </div>
+      </div>
+
+      <!-- Progress + continue -->
+      <div class="portal-card">
+        <div class="portal-card-header">
+          <span class="portal-card-title">Progresso do Onboarding</span>
+          <span class="badge" id="onboardingBadge">—</span>
+        </div>
+        <div class="progress-ring-wrap">
+          <svg class="progress-ring" width="90" height="90">
+            <circle class="progress-ring-bg"   cx="45" cy="45" r="38" stroke-width="7"/>
+            <circle class="progress-ring-fill" cx="45" cy="45" r="38" stroke-width="7"
+                    id="progressRing" stroke-dasharray="238.76" stroke-dashoffset="238.76"/>
+          </svg>
+          <div class="progress-ring-info">
+            <div class="progress-pct" id="progressPct">0%</div>
+            <div class="progress-step" id="progressStep">Etapa 1 de 14</div>
+            <div class="progress-steps-bar" style="margin-top:10px;max-width:240px;">
+              <div class="progress-steps-fill" id="progressBar" style="width:0%"></div>
+            </div>
+            <div style="margin-top:14px;" id="actionBtnWrap">
+              <a href="./index.html" class="btn-primary" style="display:inline-flex;align-items:center;gap:6px;text-decoration:none;font-size:13px;padding:9px 18px;" id="continueBtn">
+                Continuar onboarding
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Business Plan preview -->
+      <div class="portal-card">
+        <div class="portal-card-header">
+          <span class="portal-card-title">Business Plan</span>
+          <button class="btn-ghost" style="font-size:13px;padding:6px 12px;" onclick="showSection('plan',null)">Ver tudo</button>
+        </div>
+        <div class="portal-card-body" id="planPreview">
+          <div class="empty-state">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            <p>O Business Plan será elaborado após a conclusão do onboarding.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tasks preview -->
+      <div class="portal-card">
+        <div class="portal-card-header">
+          <span class="portal-card-title">Tarefas Pendentes</span>
+          <button class="btn-ghost" style="font-size:13px;padding:6px 12px;" onclick="showSection('tasks',null)">Ver todas</button>
+        </div>
+        <div class="portal-card-body" id="tasksPreview">
+          <div class="empty-state">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+            <p>Nenhuma tarefa pendente.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ONBOARDING -->
+    <div id="sec-onboarding" class="tab-content">
+      <div class="section-header">
+        <div>
+          <div class="section-title">Onboarding</div>
+          <div class="section-sub">Status de preenchimento do formulário</div>
+        </div>
+        <a href="./index.html" class="btn-primary" style="text-decoration:none;font-size:14px;" id="onboardingBtn">Continuar</a>
+      </div>
+      <div class="portal-card">
+        <div class="portal-card-body" id="stepsList"></div>
+      </div>
+    </div>
+
+    <!-- BUSINESS PLAN -->
+    <div id="sec-plan" class="tab-content">
+      <div class="section-header">
+        <div>
+          <div class="section-title">Business Plan</div>
+          <div class="section-sub">Acompanhe o progresso de elaboração do seu plano</div>
+        </div>
+      </div>
+      <div class="portal-card">
+        <div class="portal-card-body">
+          <div class="chapter-list" id="chapterList">
+            <div class="empty-state"><p>Carregando...</p></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Chapter comment modal -->
+      <div id="commentModal" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:500;align-items:center;justify-content:center;">
+        <div style="background:#fff;border-radius:14px;padding:28px;max-width:480px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.2);">
+          <h3 style="font-size:16px;font-weight:700;margin-bottom:12px;" id="commentModalTitle">Adicionar comentário</h3>
+          <textarea id="commentText" class="portal-input" rows="4" style="resize:vertical;" placeholder="Descreva sua solicitação ou comentário..."></textarea>
+          <div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end;">
+            <button class="btn-ghost" onclick="closeCommentModal()">Cancelar</button>
+            <button class="btn-primary" onclick="submitComment()">Enviar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TASKS -->
+    <div id="sec-tasks" class="tab-content">
+      <div class="section-header">
+        <div>
+          <div class="section-title">Tarefas</div>
+          <div class="section-sub">Ações necessárias para avançar no plano</div>
+        </div>
+      </div>
+      <div class="portal-card">
+        <div class="portal-card-header">
+          <span class="portal-card-title">Minhas Tarefas</span>
+        </div>
+        <div class="portal-card-body">
+          <div class="task-list" id="taskList">
+            <div class="empty-state">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+              <p>Nenhuma tarefa atribuída.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MESSAGES -->
+    <div id="sec-messages" class="tab-content">
+      <div class="section-header">
+        <div>
+          <div class="section-title">Mensagens</div>
+          <div class="section-sub">Comunicação com a equipe Recupera Empresas</div>
+        </div>
+      </div>
+      <div class="portal-card">
+        <div class="portal-card-body">
+          <div class="message-thread" id="messageThread">
+            <div class="empty-state"><p>Nenhuma mensagem ainda. Dúvidas? Escreva para nós.</p></div>
+          </div>
+          <div class="message-input-row">
+            <input type="text" class="message-input" id="msgInput" placeholder="Escreva sua mensagem..." onkeydown="if(event.key==='Enter')sendMessage()"/>
+            <button class="btn-send" onclick="sendMessage()">Enviar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SUPORTE -->
+    <div id="sec-support" class="tab-content">
+      <div class="section-header">
+        <div>
+          <div class="section-title">Suporte</div>
+          <div class="section-sub">Gerencie seus chamados de atendimento</div>
+        </div>
+        <button class="btn-primary" onclick="toggleNewTicketForm()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Novo chamado
+        </button>
+      </div>
+
+      <!-- New ticket form -->
+      <div class="portal-card" id="newTicketCard" style="display:none;">
+        <div class="portal-card-header">
+          <span class="portal-card-title">Abrir novo chamado</span>
+          <button class="btn-ghost" onclick="toggleNewTicketForm()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+        <div class="portal-card-body" style="padding:20px;">
+          <div class="form-row" style="margin-bottom:14px;">
+            <label class="form-label-sm">Assunto</label>
+            <input class="portal-input" id="ticketSubject" placeholder="Descreva brevemente o problema"/>
+          </div>
+          <div class="form-row" style="margin-bottom:14px;">
+            <label class="form-label-sm">Descrição</label>
+            <textarea class="portal-input" id="ticketDesc" rows="4" placeholder="Forneça detalhes sobre sua solicitação..."></textarea>
+          </div>
+          <div style="display:flex;gap:8px;justify-content:flex-end;">
+            <button class="btn-ghost" onclick="toggleNewTicketForm()">Cancelar</button>
+            <button class="btn-primary" onclick="submitTicket()">Enviar chamado</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Ticket list -->
+      <div class="portal-card">
+        <div class="portal-card-header">
+          <span class="portal-card-title">Meus Chamados</span>
+          <button class="btn-ghost" style="font-size:13px;" onclick="loadSupport()">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/></svg>
+            Atualizar
+          </button>
+        </div>
+        <div class="portal-card-body" id="ticketList">
+          <div class="empty-state">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            <p>Carregando chamados...</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AGENDA -->
+    <div id="sec-agenda" class="tab-content">
+      <div class="section-header">
+        <div>
+          <div class="section-title">Agenda de Consultorias</div>
+          <div class="section-sub">Reserve horários usando seus créditos de consultoria</div>
+        </div>
+        <!-- Credits badge -->
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div id="creditsBadge" style="background:#1e3a5f;color:#fff;padding:8px 16px;border-radius:24px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:7px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+            <span id="creditsCount">—</span> crédito(s)
+          </div>
+          <button class="btn-primary" onclick="buyCredits()" style="font-size:13px;padding:8px 14px;">
+            Comprar créditos
+          </button>
+        </div>
+      </div>
+
+      <!-- Buy credits info -->
+      <div id="creditsBuyPanel" style="display:none;background:#EFF6FF;border:1px solid #BFDBFE;border-radius:10px;padding:18px;margin-bottom:20px;">
+        <div style="font-weight:700;font-size:14px;color:#1e3a5f;margin-bottom:12px;">Pacotes de créditos</div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;">
+          <div onclick="checkoutCredits(1)"  style="cursor:pointer;background:#fff;border:2px solid #BFDBFE;border-radius:8px;padding:12px;text-align:center;transition:border-color .2s;" onmouseover="this.style.borderColor='#2563eb'" onmouseout="this.style.borderColor='#BFDBFE'">
+            <div style="font-size:22px;font-weight:800;color:#1e3a5f;">1</div>
+            <div style="font-size:11px;color:#64748b;margin:2px 0;">crédito</div>
+            <div style="font-size:13px;font-weight:700;color:#2563eb;">R$ 297</div>
+          </div>
+          <div onclick="checkoutCredits(3)"  style="cursor:pointer;background:#fff;border:2px solid #BFDBFE;border-radius:8px;padding:12px;text-align:center;transition:border-color .2s;" onmouseover="this.style.borderColor='#2563eb'" onmouseout="this.style.borderColor='#BFDBFE'">
+            <div style="font-size:22px;font-weight:800;color:#1e3a5f;">3</div>
+            <div style="font-size:11px;color:#64748b;margin:2px 0;">créditos</div>
+            <div style="font-size:13px;font-weight:700;color:#2563eb;">R$ 797</div>
+          </div>
+          <div onclick="checkoutCredits(5)"  style="cursor:pointer;background:#fff;border:2px solid #BFDBFE;border-radius:8px;padding:12px;text-align:center;position:relative;transition:border-color .2s;border-color:#2563eb;" onmouseover="this.style.borderColor='#1e3a5f'" onmouseout="this.style.borderColor='#2563eb'">
+            <div style="position:absolute;top:-8px;left:50%;transform:translateX(-50%);background:#2563eb;color:#fff;font-size:9px;font-weight:700;padding:2px 8px;border-radius:10px;">POPULAR</div>
+            <div style="font-size:22px;font-weight:800;color:#1e3a5f;">5</div>
+            <div style="font-size:11px;color:#64748b;margin:2px 0;">créditos</div>
+            <div style="font-size:13px;font-weight:700;color:#2563eb;">R$ 1.197</div>
+          </div>
+          <div onclick="checkoutCredits(10)" style="cursor:pointer;background:#fff;border:2px solid #BFDBFE;border-radius:8px;padding:12px;text-align:center;transition:border-color .2s;" onmouseover="this.style.borderColor='#2563eb'" onmouseout="this.style.borderColor='#BFDBFE'">
+            <div style="font-size:22px;font-weight:800;color:#1e3a5f;">10</div>
+            <div style="font-size:11px;color:#64748b;margin:2px 0;">créditos</div>
+            <div style="font-size:13px;font-weight:700;color:#2563eb;">R$ 1.970</div>
+          </div>
+        </div>
+        <button class="btn-ghost" onclick="toggleCreditsPanel()" style="font-size:12px;">Fechar</button>
+      </div>
+
+      <!-- Slots list -->
+      <div id="slotsList">
+        <div class="empty-state">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          <p>Carregando horários disponíveis...</p>
+        </div>
+      </div>
+
+      <!-- Credit history -->
+      <div style="margin-top:24px;">
+        <div style="font-size:14px;font-weight:700;color:#1e3a5f;margin-bottom:10px;">Histórico de créditos</div>
+        <div id="creditsHistory">
+          <div style="padding:12px;color:var(--text-muted);font-size:13px;">Carregando...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FINANCEIRO -->
+    <div id="sec-financeiro" class="tab-content">
+      <div class="section-header">
+        <div>
+          <div class="section-title">Financeiro</div>
+          <div class="section-sub">Acompanhe pagamentos e documentos financeiros</div>
+        </div>
+      </div>
+
+      <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:24px;">
+        <div class="stat-card green">
+          <div class="stat-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <div class="stat-value" id="finPaid">0</div>
+          <div class="stat-label">Pagamentos em dia</div>
+        </div>
+        <div class="stat-card amber">
+          <div class="stat-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          </div>
+          <div class="stat-value" id="finPending">0</div>
+          <div class="stat-label">Aguardando pagamento</div>
+        </div>
+        <div class="stat-card blue">
+          <div class="stat-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          </div>
+          <div class="stat-value" id="finTotal">0</div>
+          <div class="stat-label">Total de boletos</div>
+        </div>
+      </div>
+
+      <!-- Invoice list -->
+      <div class="portal-card">
+        <div class="portal-card-header">
+          <span class="portal-card-title">Boletos e Faturas</span>
+          <button class="btn-primary" style="font-size:13px;padding:7px 14px;" onclick="requestInvoice()">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Solicitar 2ª via
+          </button>
+        </div>
+        <div class="portal-card-body" id="invoiceList">
+          <div class="empty-state">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            <p>Nenhum boleto encontrado. O módulo financeiro será ativado após a assinatura do contrato.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stripe info banner -->
+      <div class="portal-card" id="stripeNotice" style="display:none;">
+        <div class="portal-card-body" style="padding:20px;">
+          <div style="display:flex;align-items:center;gap:12px;color:var(--text-muted);font-size:13px;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            Os pagamentos online via cartão de crédito estarão disponíveis em breve.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DOCUMENTOS -->
+    <div id="sec-documentos" class="tab-content">
+      <div class="section-header">
+        <div>
+          <div class="section-title">Documentos</div>
+          <div class="section-sub">Envie e acompanhe o status de análise dos seus documentos</div>
+        </div>
+        <button class="btn-primary" style="font-size:13px;" onclick="toggleDocUploadForm()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Enviar documento
+        </button>
+      </div>
+
+      <!-- Upload form -->
+      <div class="portal-card" id="docUploadCard" style="display:none;margin-bottom:16px;">
+        <div class="portal-card-header">
+          <span class="portal-card-title">Novo documento</span>
+          <button class="btn-ghost" style="font-size:13px;" onclick="toggleDocUploadForm()">Cancelar</button>
+        </div>
+        <div class="portal-card-body" style="padding:20px;">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+            <div>
+              <label class="form-label-sm">Tipo de documento</label>
+              <select class="portal-select" id="docTypeSelect">
+                <option value="dre">DRE (Demonstrativo de Resultado)</option>
+                <option value="balanco">Balanço Patrimonial</option>
+                <option value="fluxo_caixa">Fluxo de Caixa</option>
+                <option value="contrato_social">Contrato Social</option>
+                <option value="procuracao">Procuração</option>
+                <option value="certidao">Certidão (CNPJ/Dívida)</option>
+                <option value="extrato">Extrato Bancário</option>
+                <option value="nota_fiscal">Nota Fiscal</option>
+                <option value="outros" selected>Outros</option>
+              </select>
+            </div>
+            <div>
+              <label class="form-label-sm">Nome / descrição <span style="color:var(--text-muted);font-weight:400;">(opcional)</span></label>
+              <input type="text" class="portal-input" id="docNameInput" placeholder="Ex: DRE Jan–Dez 2024"/>
+            </div>
+          </div>
+          <div id="docDropZone" style="border:2px dashed var(--border);border-radius:10px;padding:28px;text-align:center;cursor:pointer;transition:all .2s;"
+               onclick="document.getElementById('docFileInput').click()"
+               ondragover="event.preventDefault();this.style.borderColor='var(--primary)'"
+               ondragleave="this.style.borderColor='var(--border)'"
+               ondrop="handleDocDrop(event)">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5" style="margin-bottom:8px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            <div style="font-size:13px;color:var(--text-muted);" id="docDropLabel">Clique ou arraste o arquivo aqui</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">PDF, Word, Excel, imagem — até 30 MB</div>
+          </div>
+          <input type="file" id="docFileInput" style="display:none"
+                 accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.zip,.rar"
+                 onchange="handleDocFileSelect(this)"/>
+          <div style="margin-top:12px;text-align:right;">
+            <button class="btn-primary" id="docSubmitBtn" onclick="submitDocument()" disabled style="opacity:.5;">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              Enviar
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Documents list -->
+      <div class="portal-card">
+        <div class="portal-card-body" id="docList">
+          <div class="empty-state">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            <p>Carregando documentos...</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- EQUIPE -->
+    <div id="sec-equipe" class="tab-content">
+      <div class="section-header">
+        <div>
+          <div class="section-title">Equipe da Empresa</div>
+          <div class="section-sub">Gerencie os usuários com acesso ao portal desta empresa.</div>
+        </div>
+        <button class="btn-primary" id="addMemberBtn" onclick="toggleMemberForm()" style="font-size:13px;padding:8px 14px;gap:6px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Adicionar membro
+        </button>
+      </div>
+
+      <!-- Add member form -->
+      <div id="memberForm" style="display:none;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px;padding:20px;margin-bottom:20px;">
+        <div style="font-weight:600;font-size:14px;color:#1e3a5f;margin-bottom:14px;">Novo membro</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div>
+            <label style="font-size:12px;color:#64748b;font-weight:500;display:block;margin-bottom:4px;">Nome completo *</label>
+            <input id="memberName" type="text" placeholder="Nome do usuário" style="width:100%;padding:8px 10px;border:1px solid #CBD5E1;border-radius:6px;font-size:13px;box-sizing:border-box;">
+          </div>
+          <div>
+            <label style="font-size:12px;color:#64748b;font-weight:500;display:block;margin-bottom:4px;">E-mail *</label>
+            <input id="memberEmail" type="email" placeholder="email@empresa.com" style="width:100%;padding:8px 10px;border:1px solid #CBD5E1;border-radius:6px;font-size:13px;box-sizing:border-box;">
+          </div>
+          <div>
+            <label style="font-size:12px;color:#64748b;font-weight:500;display:block;margin-bottom:4px;">Perfil de acesso *</label>
+            <select id="memberRole" style="width:100%;padding:8px 10px;border:1px solid #CBD5E1;border-radius:6px;font-size:13px;background:#fff;box-sizing:border-box;">
+              <option value="operacional">Operacional</option>
+              <option value="financeiro">Financeiro</option>
+              <option value="contador">Contador</option>
+              <option value="visualizador">Visualizador (somente leitura)</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:12px;color:#64748b;font-weight:500;display:block;margin-bottom:4px;">Senha inicial *</label>
+            <input id="memberPassword" type="password" placeholder="Mínimo 6 caracteres" style="width:100%;padding:8px 10px;border:1px solid #CBD5E1;border-radius:6px;font-size:13px;box-sizing:border-box;">
+          </div>
+        </div>
+        <div style="margin-top:14px;display:flex;gap:8px;">
+          <button class="btn-primary" onclick="addMember()" style="font-size:13px;padding:8px 16px;">Adicionar</button>
+          <button class="btn-ghost" onclick="toggleMemberForm()" style="font-size:13px;padding:8px 14px;">Cancelar</button>
+        </div>
+      </div>
+
+      <!-- Members list -->
+      <div id="membersList">
+        <div class="empty-state">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          <p>Carregando equipe...</p>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+
+const STEP_TITLES = {
+  1:'Consentimento LGPD', 2:'Dados da Empresa', 3:'Sócios',
+  4:'Estrutura Operacional', 5:'Quadro de Funcionários', 6:'Ativos',
+  7:'Dados Financeiros', 8:'Dívidas e Credores', 9:'Histórico da Crise',
+  10:'Diagnóstico Estratégico', 11:'Mercado e Operação',
+  12:'Expectativas e Estratégia', 13:'Documentos', 14:'Confirmação'
+};
+
+const CHAPTER_STATUS = {
+  pendente:       { label: 'Aguardando dados',  cls: 'badge-gray'   },
+  em_elaboracao:  { label: 'Em elaboração',     cls: 'badge-blue'   },
+  aguardando:     { label: 'Aguardando cliente',cls: 'badge-amber'  },
+  em_revisao:     { label: 'Em revisão',        cls: 'badge-purple' },
+  aprovado:       { label: 'Aprovado',          cls: 'badge-green'  },
+};
+
+const FD_STATUS = {
+  2: { label: 'Aberto',       cls: 'badge-blue'   },
+  3: { label: 'Pendente',     cls: 'badge-amber'  },
+  4: { label: 'Resolvido',    cls: 'badge-green'  },
+  5: { label: 'Fechado',      cls: 'badge-gray'   },
+};
+
+const APPT_TYPES = {
+  diagnostico: 'Diagnóstico inicial',
+  revisao:     'Revisão do Business Plan',
+  financeiro:  'Análise financeira',
+  estrategia:  'Planejamento estratégico',
+  outro:       'Outro',
+};
+
+// ── Impersonation token handling ──────────────────────────────────────────────
+(function() {
+  const p = new URLSearchParams(window.location.search);
+  const t = p.get('impersonate');
+  if (t) {
+    sessionStorage.setItem('re_impersonate_token', t);
+    window.history.replaceState({}, '', 'dashboard.html');
+  }
+})();
+
+function getToken()  {
+  return sessionStorage.getItem('re_impersonate_token') || localStorage.getItem('re_token');
+}
+function getUser()   { try { return JSON.parse(localStorage.getItem('re_user')||'{}'); } catch { return {}; } }
+function authH()     { return { 'Content-Type':'application/json', 'Authorization':'Bearer '+getToken() }; }
+function logout() {
+  if (sessionStorage.getItem('re_impersonate_token')) {
+    sessionStorage.removeItem('re_impersonate_token');
+    window.close();
+    return;
+  }
+  ['re_token','re_user','recupera_onboarding_v2'].forEach(k=>localStorage.removeItem(k));
+  location.href='login.html';
+}
+
+function exitImpersonation() {
+  sessionStorage.removeItem('re_impersonate_token');
+  window.close();
+}
+
+function showToast(msg, type='', ms=3000) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'toast show ' + type;
+  setTimeout(() => { t.className = 'toast'; }, ms);
+}
+
+function showSection(name, clickedEl) {
+  document.querySelectorAll('.tab-content').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
+  const sec = document.getElementById('sec-'+name);
+  if (sec) sec.classList.add('active');
+  if (clickedEl) {
+    clickedEl.classList.add('active');
+  } else {
+    document.querySelectorAll('.sidebar-link').forEach(l => {
+      if (l.getAttribute('onclick') && l.getAttribute('onclick').includes("'"+name+"'")) {
+        l.classList.add('active');
+      }
+    });
+  }
+  window.scrollTo({ top:0, behavior:'instant' });
+  if (name === 'support')    loadSupport();
+  if (name === 'agenda')      loadAgendaSlots();
+  if (name === 'financeiro')  loadFinanceiro();
+  if (name === 'documentos')  loadDocuments();
+  if (name === 'equipe')      loadMembers();
+}
+
+// ── Progress ring ─────────────────────────────────────────────────────────────
+function setRing(pct) {
+  const circumference = 238.76;
+  const offset = circumference - (pct / 100) * circumference;
+  const ring = document.getElementById('progressRing');
+  if (ring) ring.style.strokeDashoffset = offset;
+}
+
+// ── Step icon SVGs ─────────────────────────────────────────────────────────────
+function stepIconDone() {
+  return `<span class="step-row-icon step-icon-done">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+  </span>`;
+}
+function stepIconActive() {
+  return `<span class="step-row-icon step-icon-active">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+  </span>`;
+}
+function stepIconTodo() {
+  return `<span class="step-row-icon step-icon-todo"></span>`;
+}
+
+// ── Render functions ──────────────────────────────────────────────────────────
+function renderProgress(progress) {
+  const step = progress.step || 1;
+  const completed = progress.completed || false;
+  const pct  = Math.min(100, Math.round((step - 1) / 14 * 100));
+  const displayPct = completed ? 100 : pct;
+
+  document.getElementById('statProgress').textContent = displayPct + '%';
+  document.getElementById('statStep').textContent     = (completed ? 14 : step-1) + '/14';
+  document.getElementById('progressPct').textContent  = displayPct + '%';
+  document.getElementById('progressStep').textContent = completed
+    ? 'Onboarding concluído'
+    : `Etapa ${step} de 14`;
+  document.getElementById('progressBar').style.width = displayPct + '%';
+  setRing(displayPct);
+
+  const badge   = document.getElementById('onboardingBadge');
+  const btnWrap = document.getElementById('actionBtnWrap');
+  const ob      = document.getElementById('onboardingBtn');
+
+  if (completed) {
+    badge.textContent = 'Concluído'; badge.className = 'badge badge-green';
+    btnWrap.innerHTML = `<span style="color:var(--success);font-weight:600;font-size:13px;display:flex;align-items:center;gap:6px;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+      Onboarding enviado
+    </span>`;
+    if (ob) { ob.textContent = 'Ver respostas'; }
+  } else if (step > 1) {
+    badge.textContent = 'Em andamento'; badge.className = 'badge badge-blue';
+  } else {
+    badge.textContent = 'Não iniciado'; badge.className = 'badge badge-gray';
+  }
+
+  // Steps list
+  const list = document.getElementById('stepsList');
+  if (list) {
+    let html = '<div class="steps-list">';
+    for (let i=1; i<=14; i++) {
+      const done   = completed || i < step;
+      const active = !completed && i === step;
+      const cls    = done ? 'done' : active ? 'active' : 'todo';
+      const icon   = done ? stepIconDone() : active ? stepIconActive() : stepIconTodo();
+      html += `<div class="step-row ${cls}">
+        ${icon}
+        <span>Etapa ${i} — ${STEP_TITLES[i]}</span>
+      </div>`;
+    }
+    html += '</div>';
+    list.innerHTML = html;
+  }
+}
+
+function renderPlan(chapters) {
+  const list    = document.getElementById('chapterList');
+  const preview = document.getElementById('planPreview');
+
+  const hasContent = chapters.some(c => c.status !== 'pendente');
+
+  if (!hasContent) {
+    const emptyHtml = `<div class="empty-state">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      <p>O Business Plan será elaborado após a conclusão do onboarding.</p>
+    </div>`;
+    if (list)    list.innerHTML    = emptyHtml;
+    if (preview) preview.innerHTML = emptyHtml;
+    return;
+  }
+
+  let html = '';
+  let previewHtml = '<div class="chapter-list">';
+  chapters.forEach(ch => {
+    const st   = CHAPTER_STATUS[ch.status] || CHAPTER_STATUS.pendente;
+    const done = ch.status === 'aprovado';
+    const checkIcon = done
+      ? `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>`
+      : ch.id;
+    const actions = (ch.status === 'aguardando' || ch.status === 'em_revisao')
+      ? `<div class="chapter-actions">
+          <button class="btn-sm btn-sm-approve" onclick="chapterAction(${ch.id},'approve')">Aprovar</button>
+          <button class="btn-sm btn-sm-comment" onclick="openCommentModal(${ch.id},'Comentário — ${ch.title.replace(/'/g,"\\'")}')">Comentar</button>
+          <button class="btn-sm btn-sm-change"  onclick="openCommentModal(${ch.id},'Solicitar alteração — ${ch.title.replace(/'/g,"\\'")}','request_change')">Alterar</button>
+        </div>` : '';
+    html += `<div class="chapter-item">
+      <div class="chapter-num${done?' done':''}">${checkIcon}</div>
+      <div class="chapter-title">${ch.title}</div>
+      <span class="badge ${st.cls}">${st.label}</span>
+      ${actions}
+    </div>`;
+  });
+
+  if (list) list.innerHTML = html;
+
+  // Preview: show first 4
+  const previewItems = chapters.slice(0,4);
+  previewItems.forEach(ch => {
+    const st = CHAPTER_STATUS[ch.status] || CHAPTER_STATUS.pendente;
+    const done = ch.status === 'aprovado';
+    const checkIcon = done
+      ? `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>`
+      : ch.id;
+    previewHtml += `<div class="chapter-item" style="margin-bottom:6px;">
+      <div class="chapter-num${done?' done':''}">${checkIcon}</div>
+      <div class="chapter-title">${ch.title}</div>
+      <span class="badge ${st.cls}">${st.label}</span>
+    </div>`;
+  });
+  previewHtml += '</div>';
+  if (preview) preview.innerHTML = previewHtml;
+}
+
+function renderTasks(tasks) {
+  const list    = document.getElementById('taskList');
+  const preview = document.getElementById('tasksPreview');
+  const stat    = document.getElementById('statTasks');
+
+  const pending = tasks.filter(t => t.status === 'pendente');
+  if (stat) stat.textContent = pending.length;
+
+  if (!tasks.length) {
+    const empty = `<div class="empty-state">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      <p>Nenhuma tarefa atribuída.</p>
+    </div>`;
+    if (list) list.innerHTML = empty;
+    if (preview) preview.innerHTML = empty;
+    return;
+  }
+
+  let html = '';
+  tasks.forEach(t => {
+    const done = t.status === 'concluido';
+    html += `<div class="task-item">
+      <input type="checkbox" class="task-check" ${done?'checked':''} onchange="toggleTask('${t.id}',this.checked)"/>
+      <div>
+        <div class="task-title" style="${done?'text-decoration:line-through;color:var(--text-muted)':''}">${t.title}</div>
+        ${t.description?`<div style="font-size:12px;color:var(--text-muted);margin-top:2px;">${t.description}</div>`:''}
+      </div>
+      ${t.dueDate?`<div class="task-due">${new Date(t.dueDate).toLocaleDateString('pt-BR')}</div>`:''}
+      <span class="badge ${done?'badge-green':'badge-amber'}">${done?'Concluída':'Pendente'}</span>
+    </div>`;
+  });
+
+  if (list) list.innerHTML = html;
+
+  // Preview: pending only, max 3
+  const previewTasks = pending.slice(0,3);
+  if (preview) {
+    if (!previewTasks.length) {
+      preview.innerHTML = `<div style="color:var(--success);font-weight:600;font-size:14px;display:flex;align-items:center;gap:6px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        Sem tarefas pendentes
+      </div>`;
+    } else {
+      let ph = '<div class="task-list">';
+      previewTasks.forEach(t => {
+        ph += `<div class="task-item">
+          <div class="task-dot pendente"></div>
+          <div class="task-title">${t.title}</div>
+          ${t.dueDate?`<div class="task-due">${new Date(t.dueDate).toLocaleDateString('pt-BR')}</div>`:''}
+          <span class="badge badge-amber">Pendente</span>
+        </div>`;
+      });
+      ph += '</div>';
+      preview.innerHTML = ph;
+    }
+  }
+}
+
+function renderMessages(messages) {
+  const thread = document.getElementById('messageThread');
+  const stat   = document.getElementById('statMsgs');
+  if (stat) stat.textContent = messages.length;
+
+  if (!messages.length) {
+    thread.innerHTML = '<div class="empty-state"><p>Nenhuma mensagem ainda. Dúvidas? Escreva para nós.</p></div>';
+    return;
+  }
+  thread.innerHTML = messages.map(m => `
+    <div>
+      <div class="message-bubble from-${m.from}">
+        <div class="message-from">${m.from==='admin'?'Recupera Empresas':m.fromName||'Você'}</div>
+        ${m.text}
+        <div class="message-ts">${new Date(m.ts).toLocaleString('pt-BR')}</div>
+      </div>
+    </div>
+  `).join('');
+  thread.scrollTop = thread.scrollHeight;
+}
+
+// ── Suporte ───────────────────────────────────────────────────────────────────
+function toggleNewTicketForm() {
+  const card = document.getElementById('newTicketCard');
+  card.style.display = card.style.display === 'none' ? 'block' : 'none';
+}
+
+async function loadSupport() {
+  const el = document.getElementById('ticketList');
+  el.innerHTML = '<div style="padding:16px;color:var(--text-muted);font-size:14px;">Carregando...</div>';
+  const res = await fetch('/api/support/tickets', { headers: authH() });
+  if (!res.ok) {
+    el.innerHTML = '<div class="empty-state"><p>Erro ao carregar chamados.</p></div>';
+    return;
+  }
+  const { tickets } = await res.json();
+  if (!tickets || !tickets.length) {
+    el.innerHTML = `<div class="empty-state">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      <p>Nenhum chamado encontrado. Clique em "Novo chamado" para abrir uma solicitação.</p>
+    </div>`;
+    return;
+  }
+  let html = '<div style="overflow-x:auto;">';
+  html += `<table style="width:100%;border-collapse:collapse;font-size:13px;">
+    <thead>
+      <tr style="border-bottom:1px solid var(--border);">
+        <th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-weight:600;">#</th>
+        <th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-weight:600;">Assunto</th>
+        <th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-weight:600;">Status</th>
+        <th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-weight:600;">Criado em</th>
+      </tr>
+    </thead>
+    <tbody>`;
+  tickets.forEach(t => {
+    const st = FD_STATUS[t.status] || { label: 'Desconhecido', cls: 'badge-gray' };
+    html += `<tr style="border-bottom:1px solid var(--border-light, #F1F5F9);">
+      <td style="padding:10px 12px;color:var(--text-muted);">#${t.id}</td>
+      <td style="padding:10px 12px;font-weight:500;">${t.subject || '-'}</td>
+      <td style="padding:10px 12px;"><span class="badge ${st.cls}">${st.label}</span></td>
+      <td style="padding:10px 12px;color:var(--text-muted);">${t.created_at ? new Date(t.created_at).toLocaleDateString('pt-BR') : '-'}</td>
+    </tr>`;
+  });
+  html += '</tbody></table></div>';
+  el.innerHTML = html;
+}
+
+async function submitTicket() {
+  const subject = document.getElementById('ticketSubject').value.trim();
+  const desc    = document.getElementById('ticketDesc').value.trim();
+  if (!subject) { showToast('Informe o assunto do chamado.', 'error'); return; }
+
+  const res = await fetch('/api/support/ticket', {
+    method: 'POST', headers: authH(),
+    body: JSON.stringify({ subject, description: desc })
+  });
+  const json = await res.json();
+  if (json.success) {
+    showToast('Chamado aberto com sucesso!', 'success');
+    document.getElementById('ticketSubject').value = '';
+    document.getElementById('ticketDesc').value = '';
+    toggleNewTicketForm();
+    loadSupport();
+  } else {
+    showToast(json.error || 'Erro ao abrir chamado.', 'error');
+  }
+}
+
+// ── Agenda ────────────────────────────────────────────────────────────────────
+function toggleApptForm() {
+  const card = document.getElementById('apptFormCard');
+  card.style.display = card.style.display === 'none' ? 'block' : 'none';
+  if (card.style.display === 'block') {
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('apptDate').min = today;
+  }
+}
+
+async function loadAppointments() {
+  const el = document.getElementById('apptList');
+  el.innerHTML = '<div style="padding:16px;color:var(--text-muted);font-size:14px;">Carregando...</div>';
+  const res = await fetch('/api/appointments', { headers: authH() });
+  if (!res.ok) {
+    el.innerHTML = '<div class="empty-state"><p>Erro ao carregar agenda.</p></div>';
+    return;
+  }
+  const { appointments } = await res.json();
+  if (!appointments || !appointments.length) {
+    el.innerHTML = `<div class="empty-state">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      <p>Nenhuma reunião agendada. Clique em "Agendar reunião" para solicitar uma.</p>
+    </div>`;
+    return;
+  }
+  const now = new Date();
+  const upcoming = appointments
+    .filter(a => new Date(a.date + 'T' + (a.time||'23:59')) >= now)
+    .sort((a,b) => a.date.localeCompare(b.date));
+  const past = appointments
+    .filter(a => new Date(a.date + 'T' + (a.time||'23:59')) < now)
+    .sort((a,b) => b.date.localeCompare(a.date));
+
+  let html = '';
+  if (upcoming.length) {
+    html += '<div style="margin-bottom:20px;">';
+    upcoming.forEach(a => {
+      const st = a.status === 'confirmado' ? { label:'Confirmada', cls:'badge-green' }
+               : a.status === 'cancelado'  ? { label:'Cancelada',  cls:'badge-red'  }
+               : { label:'Solicitada', cls:'badge-amber' };
+      html += apptCard(a, st);
+    });
+    html += '</div>';
+  }
+  if (past.length) {
+    html += `<div style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;">Histórico</div>`;
+    past.slice(0,5).forEach(a => {
+      const st = a.status === 'confirmado' ? { label:'Realizada', cls:'badge-green' }
+               : a.status === 'cancelado'  ? { label:'Cancelada', cls:'badge-red'  }
+               : { label:'Expirada', cls:'badge-gray' };
+      html += apptCard(a, st, true);
+    });
+  }
+  el.innerHTML = html || `<div class="empty-state"><p>Nenhuma reunião agendada.</p></div>`;
+}
+
+function apptCard(a, st, muted=false) {
+  const dateStr = new Date(a.date + 'T12:00:00').toLocaleDateString('pt-BR', { weekday:'long', day:'numeric', month:'long' });
+  return `<div style="display:flex;align-items:flex-start;gap:14px;padding:14px 0;border-bottom:1px solid var(--border);">
+    <div style="background:var(--bg-alt,#F8FAFC);border-radius:10px;padding:10px 14px;text-align:center;min-width:54px;opacity:${muted?'0.6':'1'}">
+      <div style="font-size:20px;font-weight:700;line-height:1;color:var(--primary);">${new Date(a.date+'T12:00:00').getDate()}</div>
+      <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;">${new Date(a.date+'T12:00:00').toLocaleDateString('pt-BR',{month:'short'})}</div>
+    </div>
+    <div style="flex:1;">
+      <div style="font-weight:600;font-size:14px;margin-bottom:2px;">${APPT_TYPES[a.type]||a.type}</div>
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px;">${dateStr}${a.time?' às '+a.time:''}</div>
+      ${a.notes?`<div style="font-size:12px;color:var(--text-muted);font-style:italic;">${a.notes}</div>`:''}
+    </div>
+    <span class="badge ${st.cls}">${st.label}</span>
+  </div>`;
+}
+
+async function submitAppt() {
+  const date  = document.getElementById('apptDate').value;
+  const time  = document.getElementById('apptTime').value;
+  const type  = document.getElementById('apptType').value;
+  const notes = document.getElementById('apptNotes').value.trim();
+
+  if (!date) { showToast('Selecione a data.', 'error'); return; }
+
+  const res = await fetch('/api/appointments', {
+    method: 'POST', headers: authH(),
+    body: JSON.stringify({ date, time, type, notes })
+  });
+  const json = await res.json();
+  if (json.success) {
+    showToast('Reunião solicitada! Aguarde confirmação da equipe.', 'success');
+    document.getElementById('apptDate').value = '';
+    document.getElementById('apptTime').value = '';
+    document.getElementById('apptNotes').value = '';
+    toggleApptForm();
+    loadAppointments();
+  } else {
+    showToast(json.error || 'Erro ao agendar.', 'error');
+  }
+}
+
+// ── Financeiro ────────────────────────────────────────────────────────────────
+async function loadFinanceiro() {
+  const el = document.getElementById('invoiceList');
+  el.innerHTML = '<div style="padding:16px;color:var(--text-muted);font-size:14px;">Carregando...</div>';
+  const res = await fetch('/api/financial/invoices', { headers: authH() });
+  if (!res.ok) {
+    el.innerHTML = '<div class="empty-state"><p>Erro ao carregar faturas.</p></div>';
+    return;
+  }
+  const { invoices, stripeConfigured } = await res.json();
+
+  const noticeEl = document.getElementById('stripeNotice');
+  if (noticeEl && !stripeConfigured) noticeEl.style.display = 'block';
+
+  document.getElementById('finTotal').textContent   = invoices.length;
+  document.getElementById('finPaid').textContent    = invoices.filter(i=>i.status==='paid').length;
+  document.getElementById('finPending').textContent = invoices.filter(i=>i.status!=='paid').length;
+
+  if (!invoices.length) {
+    el.innerHTML = `<div class="empty-state">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+      <p>Nenhum boleto encontrado. O módulo financeiro será ativado após a assinatura do contrato.</p>
+    </div>`;
+    return;
+  }
+  let html = '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:1px solid var(--border);">';
+  html += '<th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-weight:600;">Descrição</th>';
+  html += '<th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-weight:600;">Valor</th>';
+  html += '<th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-weight:600;">Vencimento</th>';
+  html += '<th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-weight:600;">Status</th>';
+  html += '</tr></thead><tbody>';
+  invoices.forEach(inv => {
+    const stBadge = inv.status === 'paid' ? 'badge-green' : inv.status === 'open' ? 'badge-amber' : 'badge-gray';
+    const stLabel = inv.status === 'paid' ? 'Pago' : inv.status === 'open' ? 'Em aberto' : 'Vencido';
+    html += `<tr style="border-bottom:1px solid var(--border-light,#F1F5F9);">
+      <td style="padding:10px 12px;font-weight:500;">${inv.description||'Fatura'}</td>
+      <td style="padding:10px 12px;">R$ ${(inv.amount/100).toFixed(2).replace('.',',')}</td>
+      <td style="padding:10px 12px;color:var(--text-muted);">${inv.dueDate?new Date(inv.dueDate).toLocaleDateString('pt-BR'):'-'}</td>
+      <td style="padding:10px 12px;"><span class="badge ${stBadge}">${stLabel}</span></td>
+    </tr>`;
+  });
+  html += '</tbody></table></div>';
+  el.innerHTML = html;
+}
+
+async function requestInvoice() {
+  const res = await fetch('/api/financial/request-invoice', { method:'POST', headers: authH() });
+  const json = await res.json();
+  if (json.success) {
+    showToast('Solicitação enviada! Nossa equipe entrará em contato.', 'success');
+  } else {
+    showToast(json.error || 'Erro ao solicitar. Tente novamente.', 'error');
+  }
+}
+
+// ── Actions ───────────────────────────────────────────────────────────────────
+let _commentChapterId = null;
+let _commentAction    = 'approve_comment';
+
+function openCommentModal(chId, title, action='approve_comment') {
+  _commentChapterId = chId;
+  _commentAction    = action;
+  document.getElementById('commentModalTitle').textContent = title;
+  document.getElementById('commentText').value = '';
+  const modal = document.getElementById('commentModal');
+  modal.style.display = 'flex';
+}
+function closeCommentModal() {
+  document.getElementById('commentModal').style.display = 'none';
+}
+async function submitComment() {
+  const text = document.getElementById('commentText').value.trim();
+  if (!text) return;
+  await fetch(`/api/plan/chapter/${_commentChapterId}`, {
+    method:'PUT', headers: authH(),
+    body: JSON.stringify({ clientAction: _commentAction, comment: text })
+  });
+  closeCommentModal();
+  showToast('Comentário enviado.', 'success');
+  loadData();
+}
+async function chapterAction(chId, action) {
+  await fetch(`/api/plan/chapter/${chId}`, {
+    method:'PUT', headers: authH(),
+    body: JSON.stringify({ clientAction: action })
+  });
+  showToast(action === 'approve' ? 'Capítulo aprovado!' : 'Solicitação enviada.', 'success');
+  loadData();
+}
+
+async function toggleTask(id, done) {
+  await fetch(`/api/tasks/${id}`, {
+    method:'PUT', headers: authH(),
+    body: JSON.stringify({ status: done ? 'concluido' : 'pendente' })
+  });
+  showToast(done ? 'Tarefa concluída!' : 'Tarefa reaberta.', done?'success':'');
+  loadData();
+}
+
+async function sendMessage() {
+  const input = document.getElementById('msgInput');
+  const text  = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  await fetch('/api/messages', { method:'POST', headers: authH(), body: JSON.stringify({ text }) });
+  loadData();
+}
+
+// ── Load main data ─────────────────────────────────────────────────────────────
+async function loadData() {
+  const [progressRes, planRes, tasksRes, msgsRes] = await Promise.all([
+    fetch('/api/progress',  { headers: authH() }),
+    fetch('/api/plan',      { headers: authH() }),
+    fetch('/api/tasks',     { headers: authH() }),
+    fetch('/api/messages',  { headers: authH() }),
+  ]);
+
+  if (progressRes.ok) renderProgress(await progressRes.json());
+  if (planRes.ok)     { const p = await planRes.json(); renderPlan(p.chapters||[]); }
+  if (tasksRes.ok)    { const t = await tasksRes.json(); renderTasks(t.tasks||[]); }
+  if (msgsRes.ok)     { const m = await msgsRes.json(); renderMessages(m.messages||[]); }
+}
+
+// ── Documentos ───────────────────────────────────────────────────────────────
+const DOC_STATUS_CLIENT = {
+  pendente:          { label: 'Aguardando análise', cls: 'badge-gray'  },
+  em_analise:        { label: 'Em análise',         cls: 'badge-blue'  },
+  aprovado:          { label: 'Aprovado',           cls: 'badge-green' },
+  reprovado:         { label: 'Reprovado',          cls: 'badge-red'   },
+  ajuste_solicitado: { label: 'Ajuste solicitado',  cls: 'badge-amber' },
+};
+const DOC_TYPES_CLIENT = {
+  dre:'DRE', balanco:'Balanço Patrimonial', fluxo_caixa:'Fluxo de Caixa',
+  contrato_social:'Contrato Social', procuracao:'Procuração',
+  certidao:'Certidão', extrato:'Extrato Bancário',
+  nota_fiscal:'Nota Fiscal', outros:'Outros',
+};
+
+let _selectedDocFile = null;
+
+function toggleDocUploadForm() {
+  const card = document.getElementById('docUploadCard');
+  card.style.display = card.style.display === 'none' ? 'block' : 'none';
+  if (card.style.display === 'none') {
+    _selectedDocFile = null;
+    document.getElementById('docFileInput').value = '';
+    document.getElementById('docNameInput').value = '';
+    document.getElementById('docDropLabel').textContent = 'Clique ou arraste o arquivo aqui';
+    document.getElementById('docSubmitBtn').disabled = true;
+    document.getElementById('docSubmitBtn').style.opacity = '.5';
+  }
+}
+
+function handleDocFileSelect(input) {
+  if (input.files && input.files[0]) {
+    _selectedDocFile = input.files[0];
+    document.getElementById('docDropLabel').textContent = _selectedDocFile.name;
+    document.getElementById('docSubmitBtn').disabled = false;
+    document.getElementById('docSubmitBtn').style.opacity = '1';
+  }
+}
+
+function handleDocDrop(event) {
+  event.preventDefault();
+  document.getElementById('docDropZone').style.borderColor = 'var(--border)';
+  const file = event.dataTransfer.files[0];
+  if (!file) return;
+  _selectedDocFile = file;
+  document.getElementById('docDropLabel').textContent = file.name;
+  document.getElementById('docSubmitBtn').disabled = false;
+  document.getElementById('docSubmitBtn').style.opacity = '1';
+}
+
+async function submitDocument() {
+  if (!_selectedDocFile) return;
+  const btn = document.getElementById('docSubmitBtn');
+  btn.disabled = true; btn.textContent = 'Enviando...';
+
+  const formData = new FormData();
+  formData.append('file', _selectedDocFile);
+  formData.append('docType', document.getElementById('docTypeSelect').value);
+  const name = document.getElementById('docNameInput').value.trim();
+  if (name) formData.append('name', name);
+
+  try {
+    const res = await fetch('/api/documents/upload', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + getToken() },
+      body: formData,
+    });
+    const json = await res.json();
+    if (json.success) {
+      showToast('Documento enviado com sucesso!', 'success');
+      toggleDocUploadForm();
+      loadDocuments();
+    } else {
+      showToast(json.error || 'Erro ao enviar.', 'error');
+    }
+  } catch (e) {
+    showToast('Erro de conexão.', 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Enviar';
+  }
+}
+
+async function deleteDocument(docId) {
+  if (!confirm('Remover este documento?')) return;
+  const res = await fetch(`/api/documents/${docId}`, { method: 'DELETE', headers: authH() });
+  const json = await res.json();
+  if (json.success) { showToast('Documento removido.', 'success'); loadDocuments(); }
+  else showToast(json.error || 'Não foi possível remover.', 'error');
+}
+
+async function loadDocuments() {
+  const el = document.getElementById('docList');
+  if (!el) return;
+  el.innerHTML = '<div style="padding:16px;color:var(--text-muted);font-size:14px;">Carregando...</div>';
+
+  const res = await fetch('/api/documents', { headers: authH() });
+  if (!res.ok) { el.innerHTML = '<div class="empty-state"><p>Erro ao carregar documentos.</p></div>'; return; }
+
+  const { documents } = await res.json();
+  if (!documents.length) {
+    el.innerHTML = `<div class="empty-state">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      <p>Nenhum documento enviado. Clique em "Enviar documento" para começar.</p>
+    </div>`;
+    return;
+  }
+
+  el.innerHTML = documents.map(doc => {
+    const st = DOC_STATUS_CLIENT[doc.status] || DOC_STATUS_CLIENT.pendente;
+    const tipo = DOC_TYPES_CLIENT[doc.docType] || doc.docType;
+    const date = new Date(doc.createdAt).toLocaleDateString('pt-BR');
+    const size = doc.fileSize ? (doc.fileSize / 1024 < 1000
+      ? (doc.fileSize / 1024).toFixed(0) + ' KB'
+      : (doc.fileSize / 1048576).toFixed(1) + ' MB') : '';
+    const canDelete = ['pendente','ajuste_solicitado'].includes(doc.status);
+    const comments = (doc.comments || []).filter(c => c.from === 'admin');
+
+    return `<div style="display:flex;align-items:flex-start;gap:14px;padding:14px 0;border-bottom:1px solid var(--border);">
+      <div style="background:#F1F5F9;border-radius:8px;padding:10px;flex-shrink:0;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      </div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-weight:600;font-size:13px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${doc.name}</div>
+        <div style="font-size:11px;color:var(--text-muted);">${tipo} &nbsp;·&nbsp; ${date}${size ? ' &nbsp;·&nbsp; ' + size : ''}</div>
+        ${comments.length ? `<div style="margin-top:8px;">
+          ${comments.map(c => `<div style="background:#FFFBEB;border-left:3px solid #FCD34D;padding:6px 10px;border-radius:0 6px 6px 0;font-size:12px;color:#78350F;margin-top:4px;">
+            <strong>Equipe:</strong> ${c.text}
+          </div>`).join('')}
+        </div>` : ''}
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;flex-shrink:0;">
+        <span class="badge ${st.cls}">${st.label}</span>
+        <div style="display:flex;gap:6px;">
+          <a href="${(window.RE_API_BASE || '').replace(/\/+$/, '')}/api/documents/${doc.id}/file?token=${getToken()}" target="_blank"
+             style="font-size:11px;color:var(--primary);text-decoration:none;display:flex;align-items:center;gap:3px;">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Baixar
+          </a>
+          ${canDelete ? `<button onclick="deleteDocument('${doc.id}')" style="font-size:11px;color:var(--error);background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:3px;">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+            Remover
+          </button>` : ''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Freshchat identity ────────────────────────────────────────────────────────
+async function initFreshchat(user) {
+  try {
+    const res  = await fetch('/api/freshchat-token', { headers: authH() });
+    const json = await res.json();
+    if (!json.token) return;
+    if (typeof fcWidget !== 'undefined') {
+      fcWidget.setExternalId(user.id || user.email);
+      fcWidget.user.setFirstName(user.name ? user.name.split(' ')[0] : '');
+      fcWidget.user.setLastName(user.name ? user.name.split(' ').slice(1).join(' ') : '');
+      fcWidget.user.setEmail(user.email);
+      fcWidget.authenticate({ token: json.token, callback: (err) => { if(err) console.warn('Freshchat auth:', err); } });
+    }
+  } catch(e) { console.warn('Freshchat init:', e); }
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+(async function init() {
+  const token = getToken();
+  if (!token) { location.href='login.html'; return; }
+
+  const isImpersonating = !!sessionStorage.getItem('re_impersonate_token');
+
+  // Show warming message after 4 s (Render free tier cold start)
+  const warmTimer = setTimeout(() => {
+    const guard = document.getElementById('authGuard');
+    if (guard) guard.querySelector('div').lastElementChild.textContent = 'Servidor aquecendo, aguarde...';
+  }, 4000);
+
+  let res;
+  try {
+    const ctrl    = new AbortController();
+    const timeout = setTimeout(() => ctrl.abort(), 55000);
+    res = await fetch('/api/auth/verify', {
+      headers: { Authorization: 'Bearer ' + token },
+      signal: ctrl.signal,
+    });
+    clearTimeout(timeout);
+  } catch (err) {
+    clearTimeout(warmTimer);
+    location.href = 'login.html?err=timeout';
+    return;
+  }
+  clearTimeout(warmTimer);
+
+  if (!res.ok) {
+    if (isImpersonating) sessionStorage.removeItem('re_impersonate_token');
+    location.href='login.html';
+    return;
+  }
+
+  const { user } = await res.json();
+
+  // Admins go to admin panel, unless viewing as client
+  if (user.isAdmin && !isImpersonating) { location.href='admin.html'; return; }
+
+  // Show impersonation banner
+  if (isImpersonating) {
+    const banner = document.createElement('div');
+    banner.id = 'impersonateBanner';
+    banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:10000;background:#1e40af;color:#fff;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:12px;padding:10px 16px;';
+    banner.innerHTML = `
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+      Visualizando portal como <strong style="margin:0 4px;">${user.name || user.email}</strong>
+      <button onclick="exitImpersonation()" style="background:rgba(255,255,255,0.2);border:none;color:#fff;font-size:12px;font-weight:600;padding:4px 12px;border-radius:6px;cursor:pointer;">
+        Voltar ao painel admin
+      </button>`;
+    document.body.prepend(banner);
+    // Push content down to make room for banner
+    document.querySelector('.header').style.marginTop = '41px';
+  }
+
+  // Set header
+  document.getElementById('userName').textContent   = user.name || user.email;
+  document.getElementById('userAvatar').textContent = (user.name||user.email||'?')[0].toUpperCase();
+
+  // Welcome
+  const firstName = (user.name||'').split(' ')[0] || '';
+  document.getElementById('welcomeTitle').textContent = `Olá, ${firstName}!`;
+  document.getElementById('welcomeSub').textContent   = user.company || 'Bem-vindo ao seu portal';
+
+  // Remove auth guard
+  document.getElementById('authGuard')?.remove();
+
+  // Load portal data
+  await loadData();
+
+  // Show Equipe nav only for the owner (no company_id in token = is the owner)
+  if (!user.company_id) {
+    document.getElementById('equipeNavBtn')?.style && (document.getElementById('equipeNavBtn').style.display = '');
+  }
+
+  // Init Freshchat after widget loads (skip when impersonating)
+  if (!isImpersonating) {
+    setTimeout(() => initFreshchat(user), 2000);
+  }
+})();
+
+// ── Equipe (multi-user) ───────────────────────────────────────────────────────
+const ROLE_LABELS = {
+  financeiro: 'Financeiro', contador: 'Contador',
+  operacional: 'Operacional', visualizador: 'Visualizador'
+};
+const ROLE_COLORS = {
+  financeiro: '#2563eb', contador: '#7c3aed',
+  operacional: '#059669', visualizador: '#6b7280'
+};
+
+async function loadMembers() {
+  const el = document.getElementById('membersList');
+  if (!el) return;
+  el.innerHTML = '<div style="padding:16px;color:var(--text-muted);font-size:14px;">Carregando...</div>';
+  const res = await fetch('/api/company/members', { headers: authH() });
+  if (!res.ok) { el.innerHTML = '<div style="padding:16px;color:#ef4444;">Erro ao carregar equipe.</div>'; return; }
+  const { members } = await res.json();
+  if (!members.length) {
+    el.innerHTML = `<div class="empty-state">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+      <p>Nenhum membro cadastrado. Adicione o primeiro membro da equipe.</p>
+    </div>`;
+    return;
+  }
+  el.innerHTML = `<div style="display:flex;flex-direction:column;gap:10px;">
+    ${members.map(m => `
+    <div style="background:#fff;border:1px solid #E2E8F0;border-radius:10px;padding:14px 16px;display:flex;align-items:center;gap:14px;">
+      <div style="width:40px;height:40px;border-radius:50%;background:${ROLE_COLORS[m.role]||'#6b7280'}22;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;color:${ROLE_COLORS[m.role]||'#6b7280'}">
+        ${(m.name||'?')[0].toUpperCase()}
+      </div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-weight:600;font-size:14px;color:#1e293b;">${m.name}</div>
+        <div style="font-size:12px;color:#64748b;">${m.email}</div>
+      </div>
+      <span style="background:${ROLE_COLORS[m.role]||'#6b7280'}18;color:${ROLE_COLORS[m.role]||'#6b7280'};font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;">
+        ${ROLE_LABELS[m.role]||m.role}
+      </span>
+      <span style="font-size:11px;padding:3px 10px;border-radius:20px;${m.active ? 'background:#dcfce7;color:#16a34a;' : 'background:#fee2e2;color:#dc2626;'}">
+        ${m.active ? 'Ativo' : 'Inativo'}
+      </span>
+      <div style="display:flex;gap:6px;">
+        <button onclick="toggleMemberActive('${m.id}',${!m.active})" title="${m.active ? 'Desativar' : 'Ativar'}"
+          style="background:none;border:1px solid #E2E8F0;border-radius:6px;padding:5px 8px;cursor:pointer;color:#64748b;font-size:11px;">
+          ${m.active ? 'Desativar' : 'Ativar'}
+        </button>
+        <button onclick="removeMember('${m.id}','${m.name.replace(/'/g,"\\'")}'))"
+          title="Remover membro"
+          style="background:none;border:1px solid #fecaca;border-radius:6px;padding:5px 8px;cursor:pointer;color:#ef4444;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+        </button>
+      </div>
+    </div>`).join('')}
+  </div>`;
+}
+
+function toggleMemberForm() {
+  const f = document.getElementById('memberForm');
+  f.style.display = f.style.display === 'none' ? 'block' : 'none';
+  if (f.style.display === 'block') document.getElementById('memberName').focus();
+}
+
+async function addMember() {
+  const name     = document.getElementById('memberName').value.trim();
+  const email    = document.getElementById('memberEmail').value.trim();
+  const role     = document.getElementById('memberRole').value;
+  const password = document.getElementById('memberPassword').value;
+  if (!name || !email || !password) { showToast('Preencha todos os campos obrigatórios.', 'error'); return; }
+  if (password.length < 6) { showToast('Senha deve ter pelo menos 6 caracteres.', 'error'); return; }
+  const res = await fetch('/api/company/members', {
+    method: 'POST', headers: authH(),
+    body: JSON.stringify({ name, email, role, password })
+  });
+  const json = await res.json();
+  if (res.ok) {
+    showToast(`${name} adicionado com sucesso!`, 'success');
+    document.getElementById('memberName').value = '';
+    document.getElementById('memberEmail').value = '';
+    document.getElementById('memberPassword').value = '';
+    toggleMemberForm();
+    loadMembers();
+  } else {
+    showToast(json.error || 'Erro ao adicionar membro.', 'error');
+  }
+}
+
+async function toggleMemberActive(memberId, active) {
+  const res = await fetch(`/api/company/members/${memberId}`, {
+    method: 'PUT', headers: authH(),
+    body: JSON.stringify({ active })
+  });
+  if (res.ok) { showToast(active ? 'Membro ativado.' : 'Membro desativado.', 'success'); loadMembers(); }
+  else { const j = await res.json(); showToast(j.error || 'Erro.', 'error'); }
+}
+
+async function removeMember(memberId, name) {
+  if (!confirm(`Remover ${name} da equipe? Esta ação não pode ser desfeita.`)) return;
+  const res = await fetch(`/api/company/members/${memberId}`, {
+    method: 'DELETE', headers: authH()
+  });
+  if (res.ok) { showToast('Membro removido.', 'success'); loadMembers(); }
+  else { const j = await res.json(); showToast(j.error || 'Erro ao remover.', 'error'); }
+}
+
+// ── Agenda com créditos ───────────────────────────────────────────────────────
+const MONTH_PT = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+function fmtSlotDate(iso) {
+  const d = new Date(iso);
+  return `${String(d.getDate()).padStart(2,'0')} ${MONTH_PT[d.getMonth()]} ${d.getFullYear()}`;
+}
+function fmtSlotTime(iso) {
+  const d = new Date(iso);
+  return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+}
+
+async function loadAgendaSlots() {
+  const el = document.getElementById('slotsList');
+  const histEl = document.getElementById('creditsHistory');
+  if (!el) return;
+  el.innerHTML = '<div style="padding:16px;color:var(--text-muted);font-size:14px;">Carregando...</div>';
+
+  const [slotsRes, histRes] = await Promise.all([
+    fetch('/api/agenda/slots', { headers: authH() }),
+    fetch('/api/credits/history', { headers: authH() }),
+  ]);
+
+  if (slotsRes.ok) {
+    const { slots, credits_balance } = await slotsRes.json();
+    // Update credits badge
+    document.getElementById('creditsCount').textContent = credits_balance ?? 0;
+
+    if (!slots.length) {
+      el.innerHTML = `<div class="empty-state">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        <p>Nenhum horário disponível no momento.<br><small>A equipe publicará novos horários em breve.</small></p>
+      </div>`;
+    } else {
+      const bal = credits_balance ?? 0;
+      el.innerHTML = `<div style="display:flex;flex-direction:column;gap:10px;">
+        ${slots.map(s => {
+          const past    = new Date(s.starts_at) < new Date();
+          const noSlots = !s.available && !s.my_booking;
+          const canBook = s.available && !s.my_booking && bal >= s.credits_cost && !past;
+          return `
+          <div style="background:#fff;border:1px solid ${s.my_booking?'#2563eb':'#E2E8F0'};border-radius:10px;padding:14px 18px;display:flex;align-items:center;gap:14px;${past?'opacity:.6':''}">
+            <div style="min-width:58px;text-align:center;background:${s.my_booking?'#EFF6FF':'#F8FAFC'};border-radius:8px;padding:8px 4px;">
+              <div style="font-size:20px;font-weight:800;color:#1e3a5f;line-height:1;">${new Date(s.starts_at).getDate()}</div>
+              <div style="font-size:10px;color:#64748b;font-weight:600;">${MONTH_PT[new Date(s.starts_at).getMonth()]}</div>
+            </div>
+            <div style="flex:1;">
+              <div style="font-weight:700;font-size:14px;color:#1e293b;">${s.title}</div>
+              <div style="font-size:12px;color:#64748b;margin-top:2px;">
+                ${fmtSlotTime(s.starts_at)} – ${fmtSlotTime(s.ends_at)} &nbsp;·&nbsp; ${s.duration_min}min
+                &nbsp;·&nbsp; ${s.credits_cost} crédito${s.credits_cost>1?'s':''}
+              </div>
+            </div>
+            ${s.my_booking ? `
+              <span style="background:#EFF6FF;color:#2563eb;font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px;">Reservado</span>
+              <button onclick="cancelBooking('${s.id}')" style="background:none;border:1px solid #fecaca;color:#ef4444;border-radius:6px;padding:5px 10px;font-size:11px;cursor:pointer;">Cancelar</button>
+            ` : noSlots ? `
+              <span style="background:#F1F5F9;color:#94a3b8;font-size:11px;padding:4px 12px;border-radius:20px;">Lotado</span>
+            ` : past ? `
+              <span style="background:#F1F5F9;color:#94a3b8;font-size:11px;padding:4px 12px;border-radius:20px;">Encerrado</span>
+            ` : bal < s.credits_cost ? `
+              <button onclick="buyCredits()" style="background:#FEF3C7;color:#92400e;border:1px solid #FDE68A;border-radius:6px;padding:6px 12px;font-size:11px;cursor:pointer;font-weight:600;">Comprar créditos</button>
+            ` : `
+              <button onclick="bookSlot('${s.id}',${s.credits_cost})" style="background:#1e3a5f;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:12px;cursor:pointer;font-weight:600;">Reservar</button>
+            `}
+          </div>`;
+        }).join('')}
+      </div>`;
+    }
+  }
+
+  if (histRes.ok && histEl) {
+    const { transactions } = await histRes.json();
+    if (!transactions.length) {
+      histEl.innerHTML = '<div style="font-size:13px;color:var(--text-muted);padding:8px 0;">Nenhuma movimentação ainda.</div>';
+    } else {
+      histEl.innerHTML = `<div style="display:flex;flex-direction:column;gap:6px;">
+        ${transactions.slice(0,10).map(t => `
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:#F8FAFC;border-radius:8px;font-size:13px;">
+          <span style="font-weight:700;${t.delta>0?'color:#16a34a':'color:#dc2626'}">${t.delta>0?'+':''}${t.delta}</span>
+          <span style="flex:1;color:#374151;">${t.reason === 'purchase' ? 'Compra de créditos' : t.reason === 'booking' ? 'Sessão reservada' : t.reason === 'refund' ? 'Reembolso de cancelamento' : t.reason}</span>
+          <span style="color:#94a3b8;font-size:11px;">${new Date(t.created_at).toLocaleDateString('pt-BR')}</span>
+          <span style="font-weight:600;color:#1e293b;">${t.balance_after} crédito${t.balance_after!==1?'s':''}</span>
+        </div>`).join('')}
+      </div>`;
+    }
+  }
+}
+
+async function bookSlot(slotId, cost) {
+  if (!confirm(`Reservar esta sessão usando ${cost} crédito${cost>1?'s':''}?`)) return;
+  const res = await fetch(`/api/agenda/book/${slotId}`, { method: 'POST', headers: authH(), body: JSON.stringify({}) });
+  const j   = await res.json();
+  if (res.ok) {
+    showToast('Sessão reservada com sucesso!', 'success');
+    document.getElementById('creditsCount').textContent = j.credits_balance;
+    loadAgendaSlots();
+  } else {
+    showToast(j.error || 'Erro ao reservar.', 'error');
+    if (j.credits_needed) setTimeout(() => buyCredits(), 800);
+  }
+}
+
+async function cancelBooking(slotId) {
+  // Find booking id from current slots
+  if (!confirm('Cancelar esta reserva? Seus créditos serão devolvidos.')) return;
+  // We need booking id — refetch slots to get it, but the cancel endpoint uses bookingId
+  // Use the slot approach: re-fetch bookings
+  const res = await fetch('/api/agenda/slots', { headers: authH() });
+  if (!res.ok) return;
+  const { slots } = await res.json();
+  const slot = slots.find(s => s.id === slotId);
+  // We don't store booking id on client — use a dedicated cancel-by-slot endpoint
+  // For now call DELETE /api/agenda/book/:bookingId — need to get booking id first
+  // Workaround: add slot-based cancel endpoint
+  const cancelRes = await fetch(`/api/agenda/cancel-slot/${slotId}`, { method: 'DELETE', headers: authH() });
+  const j = await cancelRes.json();
+  if (cancelRes.ok) { showToast('Reserva cancelada. Créditos devolvidos.', 'success'); loadAgendaSlots(); }
+  else showToast(j.error || 'Erro ao cancelar.', 'error');
+}
+
+function buyCredits()        { toggleCreditsPanel(); }
+function toggleCreditsPanel() {
+  const p = document.getElementById('creditsBuyPanel');
+  p.style.display = p.style.display === 'none' ? 'block' : 'none';
+}
+
+async function checkoutCredits(pack) {
+  const res = await fetch('/api/credits/checkout', {
+    method: 'POST', headers: authH(),
+    body: JSON.stringify({ pack: String(pack) })
+  });
+  const j = await res.json();
+  if (j.url) window.location.href = j.url;
+  else showToast(j.error || 'Erro ao iniciar pagamento.', 'error');
+}
+</script>
+
+<!-- Freshchat client widget -->
+<script src='//fw-cdn.com/16078787/7064112.js' chat='true'></script>
+
+</body>
+</html>

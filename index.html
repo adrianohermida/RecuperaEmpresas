@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="robots" content="noindex, nofollow"/>
+  <title>Onboarding — Recupera Empresas</title>
+  <link rel="stylesheet" href="./css/style.css"/>
+  <script src="./js/config.js"></script>
+  <script src="./js/api-base.js"></script>
+</head>
+<body>
+
+  <!-- Auth guard overlay -->
+  <div id="authGuard" style="position:fixed;inset:0;background:#0F172A;display:flex;align-items:center;justify-content:center;z-index:9999;">
+    <div style="text-align:center;color:#fff;">
+      <svg width="44" height="36" viewBox="0 0 44 36" fill="none" style="margin-bottom:16px;">
+        <rect x="0"  y="26" width="8" height="10" rx="4" fill="#4B9EFF"/>
+        <rect x="12" y="18" width="8" height="18" rx="4" fill="#2B7FFF"/>
+        <rect x="24" y="10" width="8" height="26" rx="4" fill="#1A56DB"/>
+        <rect x="36" y="2"  width="8" height="34" rx="4" fill="#1244AB"/>
+      </svg>
+      <div style="font-size:15px;color:#64748B;">Verificando acesso...</div>
+    </div>
+  </div>
+
+  <!-- Header -->
+  <header class="header">
+    <div class="header-inner">
+      <div class="logo">
+        <svg width="36" height="30" viewBox="0 0 44 36" fill="none" aria-hidden="true">
+          <rect x="0"  y="26" width="8" height="10" rx="4" fill="#4B9EFF"/>
+          <rect x="12" y="18" width="8" height="18" rx="4" fill="#2B7FFF"/>
+          <rect x="24" y="10" width="8" height="26" rx="4" fill="#1A56DB"/>
+          <rect x="36" y="2"  width="8" height="34" rx="4" fill="#1244AB"/>
+        </svg>
+        <div>
+          <div class="logo-text">Recupera Empresas</div>
+          <div class="logo-sub">Portal do Cliente</div>
+        </div>
+      </div>
+      <div class="header-right">
+        <div class="user-chip" id="userChip">
+          <div class="user-avatar" id="userAvatar">?</div>
+          <span id="userName">Carregando...</span>
+        </div>
+        <button class="btn-logout" onclick="logout()" title="Sair">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+            <polyline points="16 17 21 12 16 7"/>
+            <line x1="21" y1="12" x2="9" y2="12"/>
+          </svg>
+          Sair
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Progress -->
+  <div class="progress-wrapper" id="progressWrapper">
+    <div class="progress-meta">
+      <span id="progressLabel" class="progress-label-text">Etapa 1 de 14</span>
+      <span id="progressPct" class="progress-pct-text">0% concluído</span>
+    </div>
+    <div class="progress-track">
+      <div class="progress-fill" id="progressFill" style="width:0%"></div>
+    </div>
+    <div class="steps-dots" id="stepsDots"></div>
+  </div>
+
+  <!-- Main content -->
+  <main class="main" id="mainContent"></main>
+
+  <!-- Nav buttons -->
+  <div class="nav-bar" id="navBar">
+    <button class="btn btn-ghost" id="btnBack" onclick="app.prevStep()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="15 18 9 12 15 6"/>
+      </svg>
+      Voltar
+    </button>
+    <button class="btn btn-link" id="btnSave" onclick="app.saveProgress()">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+        <polyline points="17 21 17 13 7 13"/><polyline points="7 3 7 8 15 8"/>
+      </svg>
+      Salvar progresso
+    </button>
+    <button class="btn btn-primary" id="btnNext" onclick="app.nextStep()">
+      Próximo
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="9 18 15 12 9 6"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <script src="./js/app.js"></script>
+</body>
+</html>
