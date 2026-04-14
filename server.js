@@ -860,31 +860,11 @@ app.post('/api/auth/resend-confirmation', async (req, res) => {
 });
 
 // ─── OAuth Consent (Supabase OAuth Server) ────────────────────────────────────
-// GET /oauth/consent — serve the consent UI
+// The consent UI (oauth-consent.html) submits the user's decision DIRECTLY to
+// Supabase's authorize endpoint so the browser session cookie is preserved.
+// This GET route just serves the HTML page.
 app.get('/oauth/consent', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'oauth-consent.html'));
-});
-
-// POST /oauth/consent — user approved; forward decision to Supabase and redirect
-app.post('/oauth/consent', express.urlencoded({ extended: false }), async (req, res) => {
-  try {
-    const { allow, ...params } = req.body; // allow = '1' or '0'
-    const qs = new URLSearchParams(params).toString();
-    const supabaseAuthorize = `${SUPABASE_URL}/auth/v1/oauth/authorize?${qs}&allow=${allow === '1' ? 'true' : 'false'}`;
-
-    // Proxy the decision to Supabase and follow their redirect
-    const r = await fetch(supabaseAuthorize, {
-      method: 'GET',
-      redirect: 'manual',
-      headers: { apikey: SUPABASE_ANON_KEY },
-    });
-    const location = r.headers.get('location');
-    if (location) return res.redirect(302, location);
-    res.status(400).send('Não foi possível processar a autorização.');
-  } catch(e) {
-    console.error('[OAUTH CONSENT]', e.message);
-    res.status(500).send('Erro interno.');
-  }
 });
 
 // ─── Admin: impersonate a client (view portal as client) ──────────────────────

@@ -6,6 +6,8 @@
   <meta name="robots" content="noindex, nofollow"/>
   <title>Autorizar Acesso — Recupera Empresas</title>
   <link rel="stylesheet" href="./css/auth.css"/>
+  <!-- config.js injeta window.RE_SUPABASE_URL e window.RE_SUPABASE_ANON -->
+  <script src="./js/config.js"></script>
   <style>
     .consent-card { max-width: 440px; }
     .app-badge {
@@ -25,7 +27,7 @@
       display: flex; align-items: center; gap: 10px;
       font-size: 14px; color: #1E293B;
     }
-    .scope-list li svg { flex-shrink: 0; }
+    .scope-list li span.scope-icon { flex-shrink: 0; font-size: 16px; }
     .consent-actions { display: flex; gap: 12px; }
     .btn-allow {
       flex: 1; background: #1A56DB; color: #fff; border: none;
@@ -41,7 +43,14 @@
     }
     .btn-deny:hover { border-color: #94A3B8; color: #1E293B; }
     .consent-footer {
-      text-align: center; font-size: 12px; color: #94A3B8; margin-top: 20px;
+      text-align: center; font-size: 12px; color: #94A3B8; margin-top: 20px; line-height: 1.6;
+    }
+    .divider {
+      display: flex; align-items: center; gap: 10px;
+      margin: 20px 0; color: #CBD5E1; font-size: 12px;
+    }
+    .divider::before, .divider::after {
+      content: ''; flex: 1; height: 1px; background: #E2E8F0;
     }
   </style>
 </head>
@@ -62,7 +71,7 @@
 
     <h1 class="auth-card-title" style="margin-bottom:6px;">Autorizar acesso</h1>
     <p class="auth-card-subtitle" style="margin-bottom:20px;">
-      O aplicativo abaixo está solicitando acesso à sua conta.
+      O aplicativo abaixo está solicitando acesso à sua conta Recupera Empresas.
     </p>
 
     <!-- App requesting access -->
@@ -75,43 +84,49 @@
     </div>
 
     <!-- Scopes being requested -->
-    <p style="font-size:13px;font-weight:600;color:#64748B;margin-bottom:10px;">PERMISSÕES SOLICITADAS</p>
+    <p style="font-size:11px;font-weight:700;color:#94A3B8;letter-spacing:.05em;margin-bottom:10px;">PERMISSÕES SOLICITADAS</p>
     <ul class="scope-list" id="scopeList">
-      <li>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1A56DB" stroke-width="2">
-          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-          <circle cx="12" cy="7" r="4"/>
-        </svg>
-        Ver seu nome e e-mail
-      </li>
+      <!-- filled by JS -->
     </ul>
 
-    <!-- Hidden form — submitted on approve/deny -->
-    <form id="consentForm" method="POST" action="/oauth/consent">
-      <input type="hidden" name="client_id"     id="f_client_id"/>
-      <input type="hidden" name="response_type" id="f_response_type"/>
-      <input type="hidden" name="redirect_uri"  id="f_redirect_uri"/>
-      <input type="hidden" name="scope"         id="f_scope"/>
-      <input type="hidden" name="state"         id="f_state"/>
+    <div class="divider">sua decisão é irrevogável nesta sessão</div>
+
+    <!--
+      IMPORTANT: The form POSTs directly to Supabase's OAuth authorize endpoint.
+      The browser will automatically include the Supabase session cookie, which
+      is what Supabase uses to validate the consent decision.
+      action is set dynamically via JS using window.RE_SUPABASE_URL.
+    -->
+    <form id="consentForm" method="POST">
+      <input type="hidden" name="client_id"             id="f_client_id"/>
+      <input type="hidden" name="response_type"         id="f_response_type"/>
+      <input type="hidden" name="redirect_uri"          id="f_redirect_uri"/>
+      <input type="hidden" name="scope"                 id="f_scope"/>
+      <input type="hidden" name="state"                 id="f_state"/>
       <input type="hidden" name="code_challenge"        id="f_code_challenge"/>
       <input type="hidden" name="code_challenge_method" id="f_code_challenge_method"/>
-      <input type="hidden" name="allow"         id="f_allow" value="1"/>
+      <input type="hidden" name="allow"                 id="f_allow" value="true"/>
 
       <div class="consent-actions">
-        <button type="submit" class="btn-allow" onclick="setAllow(1)">Autorizar</button>
-        <button type="submit" class="btn-deny"  onclick="setAllow(0)">Negar</button>
+        <button type="submit" class="btn-allow" onclick="setAllow('true')">Autorizar</button>
+        <button type="submit" class="btn-deny"  onclick="setAllow('false')">Negar acesso</button>
       </div>
     </form>
 
     <div class="consent-footer">
-      Ao autorizar, o aplicativo poderá acessar os dados listados acima em seu nome.<br/>
-      Você pode revogar o acesso a qualquer momento em Configurações.
+      Ao autorizar, o aplicativo terá acesso aos dados listados acima em seu nome.<br/>
+      Você pode revogar o acesso a qualquer momento nas suas configurações de conta.
     </div>
   </div>
 </div>
 
 <script>
-function setAllow(v) { document.getElementById('f_allow').value = String(v); }
+function setAllow(v) { document.getElementById('f_allow').value = v; }
+
+// ── Set the form action to Supabase's authorize endpoint ─────────────────────
+// The form POSTs directly to Supabase so the session cookie is forwarded automatically.
+const supabaseUrl = (window.RE_SUPABASE_URL || 'https://riiajjmnzgagntiqqshs.supabase.co').replace(/\/$/, '');
+document.getElementById('consentForm').action = supabaseUrl + '/auth/v1/oauth/authorize';
 
 // ── Read OAuth params from the current URL query string ──────────────────────
 const q = new URLSearchParams(window.location.search);
@@ -124,8 +139,8 @@ document.getElementById('f_state').value                 = q.get('state')       
 document.getElementById('f_code_challenge').value        = q.get('code_challenge')        || '';
 document.getElementById('f_code_challenge_method').value = q.get('code_challenge_method') || '';
 
-// ── Show app name from client_id (try to look it up) ─────────────────────────
-const clientId = q.get('client_id') || '';
+// ── Show app name / domain from client_id / redirect_uri ─────────────────────
+const clientId   = q.get('client_id')    || '';
 const redirectUri = q.get('redirect_uri') || '';
 
 if (clientId) {
@@ -139,27 +154,26 @@ if (redirectUri) {
   } catch {}
 }
 
-// ── Render scope badges ───────────────────────────────────────────────────────
+// ── Render scope list ─────────────────────────────────────────────────────────
 const SCOPE_LABELS = {
-  openid:  { icon: '🔑', text: 'Identificação OpenID' },
-  email:   { icon: '✉️', text: 'Ver seu endereço de e-mail' },
-  profile: { icon: '👤', text: 'Ver seu nome e informações de perfil' },
-  offline_access: { icon: '🔄', text: 'Manter o acesso mesmo quando você não estiver usando o app' },
+  openid:         { icon: '🔑', text: 'Identificação OpenID Connect' },
+  email:          { icon: '✉️', text: 'Ver seu endereço de e-mail' },
+  profile:        { icon: '👤', text: 'Ver seu nome e informações de perfil' },
+  offline_access: { icon: '🔄', text: 'Manter acesso mesmo quando você não estiver usando o app' },
+  phone:          { icon: '📱', text: 'Ver seu número de telefone' },
 };
 
 const scopeStr = q.get('scope') || 'openid email profile';
 const scopes   = scopeStr.split(/\s+/).filter(Boolean);
 const list     = document.getElementById('scopeList');
 
-if (scopes.length) {
-  list.innerHTML = scopes.map(s => {
-    const def = SCOPE_LABELS[s] || { icon: '🔹', text: `Escopo: ${s}` };
-    return `<li>
-      <span style="font-size:16px;flex-shrink:0;">${def.icon}</span>
-      ${def.text}
-    </li>`;
-  }).join('');
-}
+list.innerHTML = scopes.map(s => {
+  const def = SCOPE_LABELS[s] || { icon: '🔹', text: `Acesso: ${s}` };
+  return `<li>
+    <span class="scope-icon">${def.icon}</span>
+    ${def.text}
+  </li>`;
+}).join('');
 </script>
 </body>
 </html>
