@@ -101,7 +101,7 @@
         <div class="form-group">
           <label class="form-label" for="password" style="display:flex;justify-content:space-between;">
             Senha
-            <a href="/forgot-password.html" style="font-weight:400;font-size:13px;color:#1A56DB;">Esqueci a senha</a>
+            <a href="./forgot-password.html" style="font-weight:400;font-size:13px;color:#1A56DB;">Esqueci a senha</a>
           </label>
           <div class="form-control-wrap">
             <input class="form-control" type="password" id="password" placeholder="••••••••" autocomplete="current-password"/>
@@ -122,7 +122,7 @@
 
       <div class="auth-links">
         Não tem conta?
-        <a href="/register.html">Criar acesso</a>
+        <a href="./register.html">Criar acesso</a>
       </div>
     </div>
   </div>
@@ -187,7 +187,7 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
     if (json.token || json.success) {
       localStorage.setItem('re_token', json.token);
       localStorage.setItem('re_user', JSON.stringify(json.user));
-      window.location.href = json.user?.isAdmin ? '/admin.html' : '/dashboard.html';
+      window.location.href = json.user?.isAdmin ? 'admin.html' : 'dashboard.html';
     } else {
       const alertEl = document.getElementById('alertError');
       document.getElementById('alertErrorMsg').textContent = json.error || 'Credenciais inválidas.';
@@ -203,15 +203,30 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
   }
 });
 
+// Show timeout notice if redirected here from an auth guard timeout
+if (new URLSearchParams(window.location.search).get('err') === 'timeout') {
+  document.getElementById('alertErrorMsg').textContent =
+    'O servidor demorou para responder. Tente fazer login novamente.';
+  document.getElementById('alertError').classList.add('show');
+}
+
 // Redirect if already logged in
 (async () => {
   const token = localStorage.getItem('re_token');
   if (!token) return;
-  const res = await fetch('/api/auth/verify', { headers: { Authorization: 'Bearer ' + token } });
-  if (res.ok) {
-    const { user } = await res.json();
-    window.location.href = user.isAdmin ? '/admin.html' : '/dashboard.html';
-  }
+  try {
+    const ctrl    = new AbortController();
+    const timeout = setTimeout(() => ctrl.abort(), 20000);
+    const res     = await fetch('/api/auth/verify', {
+      headers: { Authorization: 'Bearer ' + token },
+      signal: ctrl.signal,
+    });
+    clearTimeout(timeout);
+    if (res.ok) {
+      const { user } = await res.json();
+      window.location.href = user.isAdmin ? 'admin.html' : 'dashboard.html';
+    }
+  } catch { /* server offline or slow — stay on login page */ }
 })();
 </script>
 </body>

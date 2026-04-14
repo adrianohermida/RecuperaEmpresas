@@ -308,7 +308,7 @@ const APPT_TYPES = {
 
 function getToken()  { return localStorage.getItem('re_token'); }
 function authH()     { return { 'Content-Type':'application/json', 'Authorization':'Bearer '+getToken() }; }
-function logout()    { ['re_token','re_user'].forEach(k=>localStorage.removeItem(k)); location.href='/login.html'; }
+function logout()    { ['re_token','re_user'].forEach(k=>localStorage.removeItem(k)); location.href='login.html'; }
 
 function showToast(msg, type='', ms=3000) {
   const t = document.getElementById('toast');
@@ -764,7 +764,7 @@ async function renderDrawerTab(tab) {
 
           <!-- Download link -->
           <div style="margin-top:10px;display:flex;gap:12px;align-items:center;">
-            <a href="/api/documents/${doc.id}/file?token=${getToken()}" target="_blank"
+            <a href="${(window.RE_API_BASE || '').replace(/\/+$/, '')}/api/documents/${doc.id}/file?token=${getToken()}" target="_blank"
                style="font-size:12px;color:var(--primary);text-decoration:none;display:flex;align-items:center;gap:4px;">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
               Visualizar / baixar
@@ -1420,7 +1420,7 @@ async function impersonateClient(clientId) {
     });
     if (!res.ok) { showToast('Erro ao gerar token de visualização.', 'error'); return; }
     const { token } = await res.json();
-    const url = `/dashboard.html?impersonate=${encodeURIComponent(token)}`;
+    const url = `dashboard.html?impersonate=${encodeURIComponent(token)}`;
     window.open(url, '_blank');
   } catch (e) {
     showToast('Erro ao visualizar como cliente.', 'error');
@@ -1449,13 +1449,34 @@ function initFreshchatOperator(user) {
 // ── Init ──────────────────────────────────────────────────────────────────────
 (async function init() {
   const token = getToken();
-  if (!token) { location.href='/login.html'; return; }
+  if (!token) { location.href='login.html'; return; }
 
-  const res = await fetch('/api/auth/verify', { headers: { Authorization:'Bearer '+token } });
-  if (!res.ok) { location.href='/login.html'; return; }
+  // Show warming message after 4 s (Render free tier cold start)
+  const warmTimer = setTimeout(() => {
+    const guard = document.getElementById('authGuard');
+    if (guard) guard.querySelector('div').lastElementChild.textContent = 'Servidor aquecendo, aguarde...';
+  }, 4000);
+
+  let res;
+  try {
+    const ctrl    = new AbortController();
+    const timeout = setTimeout(() => ctrl.abort(), 55000);
+    res = await fetch('/api/auth/verify', {
+      headers: { Authorization: 'Bearer ' + token },
+      signal: ctrl.signal,
+    });
+    clearTimeout(timeout);
+  } catch (err) {
+    clearTimeout(warmTimer);
+    location.href = '/login.html?err=timeout';
+    return;
+  }
+  clearTimeout(warmTimer);
+
+  if (!res.ok) { location.href='login.html'; return; }
 
   const { user } = await res.json();
-  if (!user.isAdmin) { location.href='/dashboard.html'; return; }
+  if (!user.isAdmin) { location.href='dashboard.html'; return; }
 
   document.getElementById('userName').textContent   = user.name || user.email;
   document.getElementById('userAvatar').textContent = (user.name||user.email||'?')[0].toUpperCase();

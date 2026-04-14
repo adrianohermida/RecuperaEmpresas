@@ -19,7 +19,7 @@ function logout() {
   localStorage.removeItem('re_token');
   localStorage.removeItem('re_user');
   localStorage.removeItem(LS_KEY);
-  window.location.href = '/login.html';
+  window.location.href = 'login.html';
 }
 
 // ─── State ───────────────────────────────────────────────────────────────────
@@ -1487,7 +1487,7 @@ function showSuccessScreen() {
         você receberá um contato para alinhamento das próximas etapas.
       </div>
       <p style="margin-top:24px;">
-        <a href="/dashboard.html" style="display:inline-flex;align-items:center;gap:8px;background:#1A56DB;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px;">
+        <a href="./dashboard.html" style="display:inline-flex;align-items:center;gap:8px;background:#1A56DB;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px;">
           Acessar o Portal
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
         </a>
@@ -1495,17 +1495,17 @@ function showSuccessScreen() {
     </div>
   `);
   // Auto-redirect after 6 seconds
-  setTimeout(() => { window.location.href = '/dashboard.html'; }, 6000);
+  setTimeout(() => { window.location.href = 'dashboard.html'; }, 6000);
 }
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
 (async function init() {
   // Auth guard
   const token = getToken();
-  if (!token) { window.location.href = '/login.html'; return; }
+  if (!token) { window.location.href = 'login.html'; return; }
 
   const res = await fetch('/api/auth/verify', { headers: { Authorization: 'Bearer ' + token } });
-  if (!res.ok) { window.location.href = '/login.html'; return; }
+  if (!res.ok) { window.location.href = 'login.html'; return; }
 
   const { user } = await res.json();
 
@@ -1520,7 +1520,7 @@ function showSuccessScreen() {
   if (guard) guard.remove();
 
   // Redirect admin to admin panel
-  if (user.isAdmin) { window.location.href = '/admin.html'; return; }
+  if (user.isAdmin) { window.location.href = 'admin.html'; return; }
 
   // Load server-side progress
   try {
@@ -1528,7 +1528,7 @@ function showSuccessScreen() {
     if (pRes.ok) {
       const serverProgress = await pRes.json();
       // If already completed, go to dashboard
-      if (serverProgress.completed) { window.location.href = '/dashboard.html'; return; }
+      if (serverProgress.completed) { window.location.href = 'dashboard.html'; return; }
       if (serverProgress.step > 1 && serverProgress.data) {
         Object.assign(state.data, serverProgress.data);
         state.step = serverProgress.step;

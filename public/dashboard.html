@@ -166,7 +166,7 @@
               <div class="progress-steps-fill" id="progressBar" style="width:0%"></div>
             </div>
             <div style="margin-top:14px;" id="actionBtnWrap">
-              <a href="/index.html" class="btn-primary" style="display:inline-flex;align-items:center;gap:6px;text-decoration:none;font-size:13px;padding:9px 18px;" id="continueBtn">
+              <a href="./index.html" class="btn-primary" style="display:inline-flex;align-items:center;gap:6px;text-decoration:none;font-size:13px;padding:9px 18px;" id="continueBtn">
                 Continuar onboarding
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
               </a>
@@ -211,7 +211,7 @@
           <div class="section-title">Onboarding</div>
           <div class="section-sub">Status de preenchimento do formulário</div>
         </div>
-        <a href="/index.html" class="btn-primary" style="text-decoration:none;font-size:14px;" id="onboardingBtn">Continuar</a>
+        <a href="./index.html" class="btn-primary" style="text-decoration:none;font-size:14px;" id="onboardingBtn">Continuar</a>
       </div>
       <div class="portal-card">
         <div class="portal-card-body" id="stepsList"></div>
@@ -643,7 +643,7 @@ const APPT_TYPES = {
   const t = p.get('impersonate');
   if (t) {
     sessionStorage.setItem('re_impersonate_token', t);
-    window.history.replaceState({}, '', '/dashboard.html');
+    window.history.replaceState({}, '', 'dashboard.html');
   }
 })();
 
@@ -659,7 +659,7 @@ function logout() {
     return;
   }
   ['re_token','re_user','recupera_onboarding_v2'].forEach(k=>localStorage.removeItem(k));
-  location.href='/login.html';
+  location.href='login.html';
 }
 
 function exitImpersonation() {
@@ -1328,7 +1328,7 @@ async function loadDocuments() {
       <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;flex-shrink:0;">
         <span class="badge ${st.cls}">${st.label}</span>
         <div style="display:flex;gap:6px;">
-          <a href="/api/documents/${doc.id}/file?token=${getToken()}" target="_blank"
+          <a href="${(window.RE_API_BASE || '').replace(/\/+$/, '')}/api/documents/${doc.id}/file?token=${getToken()}" target="_blank"
              style="font-size:11px;color:var(--primary);text-decoration:none;display:flex;align-items:center;gap:3px;">
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             Baixar
@@ -1362,21 +1362,42 @@ async function initFreshchat(user) {
 // ── Init ──────────────────────────────────────────────────────────────────────
 (async function init() {
   const token = getToken();
-  if (!token) { location.href='/login.html'; return; }
+  if (!token) { location.href='login.html'; return; }
 
   const isImpersonating = !!sessionStorage.getItem('re_impersonate_token');
 
-  const res = await fetch('/api/auth/verify', { headers: { Authorization:'Bearer '+token } });
+  // Show warming message after 4 s (Render free tier cold start)
+  const warmTimer = setTimeout(() => {
+    const guard = document.getElementById('authGuard');
+    if (guard) guard.querySelector('div').lastElementChild.textContent = 'Servidor aquecendo, aguarde...';
+  }, 4000);
+
+  let res;
+  try {
+    const ctrl    = new AbortController();
+    const timeout = setTimeout(() => ctrl.abort(), 55000);
+    res = await fetch('/api/auth/verify', {
+      headers: { Authorization: 'Bearer ' + token },
+      signal: ctrl.signal,
+    });
+    clearTimeout(timeout);
+  } catch (err) {
+    clearTimeout(warmTimer);
+    location.href = '/login.html?err=timeout';
+    return;
+  }
+  clearTimeout(warmTimer);
+
   if (!res.ok) {
     if (isImpersonating) sessionStorage.removeItem('re_impersonate_token');
-    location.href='/login.html';
+    location.href='login.html';
     return;
   }
 
   const { user } = await res.json();
 
   // Admins go to admin panel, unless viewing as client
-  if (user.isAdmin && !isImpersonating) { location.href='/admin.html'; return; }
+  if (user.isAdmin && !isImpersonating) { location.href='admin.html'; return; }
 
   // Show impersonation banner
   if (isImpersonating) {

@@ -149,7 +149,7 @@
 
       <div class="auth-links">
         Já tem conta?
-        <a href="/login.html">Fazer login</a>
+        <a href="./login.html">Fazer login</a>
       </div>
     </div>
   </div>
@@ -226,7 +226,7 @@ document.getElementById('registerForm').addEventListener('submit', async (e) => 
     if (json.success) {
       localStorage.setItem('re_token', json.token);
       localStorage.setItem('re_user', JSON.stringify(json.user));
-      window.location.href = '/index.html'; // new users go to onboarding first
+      window.location.href = 'index.html'; // new users go to onboarding first
     } else {
       document.getElementById('alertErrorMsg').textContent = json.error || 'Erro ao criar conta.';
       document.getElementById('alertError').classList.add('show');
