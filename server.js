@@ -859,81 +859,113 @@ app.post('/api/auth/resend-confirmation', async (req, res) => {
   }
 });
 
-// ─── OAuth Consent (Supabase OAuth Server) ────────────────────────────────────
-// The consent UI (oauth-consent.html) submits the user's decision DIRECTLY to
-// Supabase's authorize endpoint so the browser session cookie is preserved.
-// This GET route just serves the HTML page.
+// ─── OAuth PKCE store (in-memory, TTL 10 min) ─────────────────────────────────
+const _pkceStore = new Map();
+function _pkceClean() {
+  const now = Date.now();
+  for (const [k, v] of _pkceStore) if (v.exp < now) _pkceStore.delete(k);
+}
+function _b64url(buf) {
+  return buf.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+}
+function _codeVerifier() { return _b64url(crypto.randomBytes(32)); }
+function _codeChallenge(v) {
+  return _b64url(crypto.createHash('sha256').update(v).digest());
+}
+
+// ─── OAuth Start — generates PKCE and redirects to Supabase authorize ──────────
+// Use this URL to initiate the OAuth flow instead of calling Supabase directly:
+//   https://recuperaempresas.onrender.com/api/auth/oauth/start
+// Optional query params: scope (default "openid email profile")
+app.get('/api/auth/oauth/start', (req, res) => {
+  const clientId = process.env.OAUTH_CLIENT_ID || '';
+  if (!clientId) return res.status(500).send('OAUTH_CLIENT_ID não configurado.');
+
+  _pkceClean();
+  const verifier   = _codeVerifier();
+  const challenge  = _codeChallenge(verifier);
+  const state      = crypto.randomBytes(16).toString('hex');
+  _pkceStore.set(state, { verifier, exp: Date.now() + 10 * 60 * 1000 });
+
+  const params = new URLSearchParams({
+    client_id:             clientId,
+    response_type:         'code',
+    redirect_uri:          `${BASE_URL}/api/auth/oauth/callback`,
+    scope:                 req.query.scope || 'openid email profile',
+    state,
+    code_challenge:        challenge,
+    code_challenge_method: 'S256',
+  });
+  res.redirect(`${SUPABASE_URL}/auth/v1/oauth/authorize?${params}`);
+});
+
+// ─── OAuth Consent page ────────────────────────────────────────────────────────
 app.get('/oauth/consent', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'oauth-consent.html'));
 });
 
-// ─── OAuth Callback — receives the auth code after user approves consent ───────
-// Redirect URI registered in the Supabase OAuth App must point here:
+// ─── OAuth Callback — exchanges code for tokens using stored PKCE verifier ─────
+// Registered Redirect URI in Supabase OAuth App:
 //   https://recuperaempresas.onrender.com/api/auth/oauth/callback
-//
-// For Public Client (PKCE) apps: the consuming app handles PKCE and exchanges
-// the code itself — this endpoint just shows a success page and signals the
-// opener window if opened via popup.
-//
-// For server-side / confidential client apps: set Public Client OFF in Supabase
-// and exchange the code for tokens here with the client_secret.
 app.get('/api/auth/oauth/callback', async (req, res) => {
-  const { code, error, error_description } = req.query;
+  const { code, state, error, error_description } = req.query;
 
   if (error) {
     console.error('[OAUTH CALLBACK] error:', error, error_description);
     return res.redirect(`/login.html?err=oauth&desc=${encodeURIComponent(error_description || error)}`);
   }
+  if (!code) return res.redirect('/login.html?err=oauth&desc=no_code');
 
-  if (!code) {
-    return res.redirect('/login.html?err=oauth&desc=no_code');
-  }
+  const clientId     = process.env.OAUTH_CLIENT_ID     || '';
+  const clientSecret = process.env.OAUTH_CLIENT_SECRET || '';
+  const pkce         = state ? _pkceStore.get(state) : null;
+  if (pkce) _pkceStore.delete(state);
 
   try {
-    // Exchange the authorization code for tokens using the Supabase token endpoint.
-    // Works for confidential clients (client_secret) — for public clients (PKCE)
-    // the consuming app must send the code_verifier; here we try without it first
-    // and if it fails redirect to login with the code in the hash so the frontend
-    // Supabase JS SDK can complete the PKCE exchange.
-    const OAUTH_CLIENT_ID     = process.env.OAUTH_CLIENT_ID     || '';
-    const OAUTH_CLIENT_SECRET = process.env.OAUTH_CLIENT_SECRET || '';
+    const body = new URLSearchParams({
+      grant_type:   'authorization_code',
+      code,
+      redirect_uri: `${BASE_URL}/api/auth/oauth/callback`,
+      client_id:    clientId,
+    });
 
-    if (OAUTH_CLIENT_SECRET) {
-      // Confidential client: exchange server-side
-      const tokenRes = await fetch(`${SUPABASE_URL}/auth/v1/oauth/token`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded', apikey: SUPABASE_ANON_KEY },
-        body: new URLSearchParams({
-          grant_type:   'authorization_code',
-          code,
-          redirect_uri: `${BASE_URL}/api/auth/oauth/callback`,
-          client_id:    OAUTH_CLIENT_ID,
-          client_secret: OAUTH_CLIENT_SECRET,
-        }),
-      });
-      const tokenData = await tokenRes.json();
-      if (tokenData.access_token) {
-        // Set a Supabase session and issue a portal JWT
-        const { data } = await sbAnon.auth.setSession({
-          access_token:  tokenData.access_token,
-          refresh_token: tokenData.refresh_token || tokenData.access_token,
-        });
-        if (data?.user) {
-          const profile = await upsertProfileFromAuth(data.user);
-          const portalToken = signToken({ userId: profile.id, email: profile.email });
-          // Redirect to dashboard with token in hash so login.html can store it
-          return res.redirect(
-            `/login.html#oauth_token=${encodeURIComponent(portalToken)}&oauth_user=${encodeURIComponent(JSON.stringify(safeUser(profile)))}`
-          );
-        }
-      }
-      console.error('[OAUTH CALLBACK] token exchange failed:', tokenData);
+    if (pkce?.verifier) {
+      // Public client (PKCE) — use stored code_verifier
+      body.set('code_verifier', pkce.verifier);
+    } else if (clientSecret) {
+      // Confidential client — use client_secret
+      body.set('client_secret', clientSecret);
+    } else {
+      console.error('[OAUTH CALLBACK] no verifier or secret — cannot exchange code');
+      return res.redirect('/login.html?err=oauth&desc=session_expired_retry');
     }
 
-    // Public client (PKCE) or no client_secret — redirect to login.html with the
-    // code so the frontend Supabase JS SDK can complete the exchange using the
-    // code_verifier it stored before initiating the flow.
-    return res.redirect(`/login.html#code=${encodeURIComponent(code)}`);
+    const tokenRes  = await fetch(`${SUPABASE_URL}/auth/v1/oauth/token`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded', apikey: SUPABASE_ANON_KEY },
+      body,
+    });
+    const tokenData = await tokenRes.json();
+    console.log('[OAUTH CALLBACK] token response:', JSON.stringify(tokenData).slice(0, 200));
+
+    if (!tokenData.access_token) {
+      console.error('[OAUTH CALLBACK] token exchange failed:', tokenData);
+      return res.redirect('/login.html?err=oauth&desc=' + encodeURIComponent(tokenData.error_description || tokenData.msg || 'token_exchange_failed'));
+    }
+
+    const { data } = await sbAnon.auth.setSession({
+      access_token:  tokenData.access_token,
+      refresh_token: tokenData.refresh_token || tokenData.access_token,
+    });
+    if (!data?.user) return res.redirect('/login.html?err=oauth&desc=no_user');
+
+    const profile     = await upsertProfileFromAuth(data.user);
+    const portalToken = signToken({ userId: profile.id, email: profile.email });
+
+    // Pass token to browser via hash — login.html will store and redirect
+    return res.redirect(
+      `/login.html#oauth_token=${encodeURIComponent(portalToken)}&oauth_user=${encodeURIComponent(JSON.stringify(safeUser(profile)))}`
+    );
   } catch (e) {
     console.error('[OAUTH CALLBACK]', e.message);
     return res.redirect('/login.html?err=oauth&desc=' + encodeURIComponent(e.message));

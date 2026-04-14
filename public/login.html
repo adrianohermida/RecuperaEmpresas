@@ -233,6 +233,18 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
   const accessToken = hash.access_token || '';
   const hashType    = hash.type         || '';
 
+  // Came back from OAuth callback — server already exchanged code, passes portal token in hash
+  if (hash.oauth_token) {
+    try {
+      const user = JSON.parse(decodeURIComponent(hash.oauth_user || '{}'));
+      localStorage.setItem('re_token', decodeURIComponent(hash.oauth_token));
+      localStorage.setItem('re_user', JSON.stringify(user));
+      history.replaceState(null, '', window.location.pathname + window.location.search);
+      window.location.href = user?.isAdmin ? 'admin.html' : 'dashboard.html';
+      return;
+    } catch {}
+  }
+
   // Came back from email confirmation link → auto-login with the hash tokens
   if (accessToken && (hashType === 'signup' || hashType === 'magiclink')) {
     try {
@@ -255,6 +267,13 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
   } else if (params.get('err') === 'timeout') {
     document.getElementById('alertErrorMsg').textContent =
       'O servidor demorou para responder. Tente fazer login novamente.';
+    document.getElementById('alertError').classList.add('show');
+  } else if (params.get('err') === 'oauth') {
+    const desc = params.get('desc') || 'Erro na autorização OAuth.';
+    document.getElementById('alertErrorMsg').textContent =
+      desc === 'session_expired_retry'
+        ? 'Sessão OAuth expirada. Inicie o fluxo novamente.'
+        : `Erro OAuth: ${desc}`;
     document.getElementById('alertError').classList.add('show');
   }
 })();
