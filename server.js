@@ -693,7 +693,15 @@ app.post('/api/auth/register', async (req, res) => {
       }
     }).catch(() => {});
 
-    // Welcome email
+    logAccess(profile.id, email, 'register', req.ip);
+
+    // If Supabase requires email confirmation, session is null.
+    // Return pending_confirmation so the frontend shows "check your email".
+    if (!authData.session) {
+      return res.json({ success: true, pending_confirmation: true, email });
+    }
+
+    // Email confirmation disabled (or admin bypass) → issue JWT immediately
     sendMail(email, 'Bem-vindo ao Portal Recupera Empresas',
       emailWrapper('Acesso criado com sucesso', `
         <p>Olá, <b>${name}</b>!</p>
@@ -705,7 +713,6 @@ app.post('/api/auth/register', async (req, res) => {
       `)
     ).catch(() => {});
 
-    logAccess(profile.id, email, 'register', req.ip);
     const token = signToken({ userId: profile.id, email: profile.email });
     res.json({ success: true, token, user: safeUser(profile) });
   } catch(e) {
