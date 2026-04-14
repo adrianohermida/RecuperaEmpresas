@@ -91,7 +91,13 @@ if (!SUPABASE_SERVICE_KEY) {
   console.warn('[SUPABASE] ⚠️  Defina VITE_SUPABASE_SERVICE_ROLE no .env para operação completa.');
 }
 
+// sb = service role (DB + Auth admin operations)
 const sb = createClient(SUPABASE_URL, SUPABASE_KEY, {
+  auth: { autoRefreshToken: false, persistSession: false }
+});
+
+// sbAnon = anon key (Supabase Auth sign-in/sign-up — validates user credentials)
+const sbAnon = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: { autoRefreshToken: false, persistSession: false }
 });
 
@@ -533,6 +539,40 @@ function buildStepHtml(stepNum, allData, user, timestamp) {
 
 // ─── Express ──────────────────────────────────────────────────────────────────
 const app = express();
+
+// ── CORS — allow the GitHub Pages frontend (and local dev) to call this API ──
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || '')
+  .split(',').map(s => s.trim()).filter(Boolean);
+
+// Always allow localhost and the Render service itself
+const DEFAULT_ORIGINS = [
+  /^https?:\/\/localhost(:\d+)?$/,
+  /^https?:\/\/127\.0\.0\.1(:\d+)?$/,
+  // GitHub Pages: https://<user>.github.io  (any path)
+  /^https:\/\/[^.]+\.github\.io$/,
+  // Cloudflare Pages: https://<project>.pages.dev
+  /^https:\/\/[^.]+\.pages\.dev$/,
+];
+
+app.use((req, res, next) => {
+  const origin = req.headers.origin || '';
+  const allowed =
+    DEFAULT_ORIGINS.some(re => re.test(origin)) ||
+    ALLOWED_ORIGINS.includes(origin);
+
+  if (allowed) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization');
+  }
+  if (req.method === 'OPTIONS') return res.sendStatus(204);
+  next();
+});
+
+// Stripe webhook needs raw body — must be before express.json()
+app.use('/api/stripe/webhook', express.raw({ type: 'application/json' }));
+
 app.use(express.json({ limit: '5mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -555,11 +595,12 @@ const upload = multer({
 // Helper: safe public user object
 function safeUser(u) {
   return {
-    id:      u.id,
-    name:    u.name || u.full_name || '',
-    email:   u.email,
-    company: u.company || '',
-    isAdmin: u.is_admin || ADMIN_EMAILS.includes((u.email||'').toLowerCase()),
+    id:              u.id,
+    name:            u.name || u.full_name || '',
+    email:           u.email,
+    company:         u.company || '',
+    isAdmin:         u.is_admin || ADMIN_EMAILS.includes((u.email||'').toLowerCase()),
+    credits_balance: u.credits_balance ?? 0,
     freshdeskTicketId:  u.freshdesk_ticket_id  || null,
     freshdeskContactId: u.freshdesk_contact_id || null,
     createdAt: u.created_at,
@@ -570,27 +611,73 @@ function safeUser(u) {
 // AUTH ROUTES
 // ═══════════════════════════════════════════════════════════════════════════════
 
+// ─── Helper: find or create re_users profile from a Supabase Auth user ────────
+async function upsertProfileFromAuth(authUser, extra = {}) {
+  const email   = authUser.email;
+  const isAdmin = ADMIN_EMAILS.includes(email.toLowerCase());
+
+  // Try to find by Supabase Auth UUID first (id column), then by email
+  let { data: profile } = await sb.from('re_users').select('*').eq('id', authUser.id).single();
+  if (!profile) {
+    ({ data: profile } = await sb.from('re_users').select('*').ilike('email', email).limit(1).single());
+  }
+
+  if (profile) {
+    // Sync id + admin flag if needed
+    const updates = {};
+    if (profile.id !== authUser.id) updates.id = authUser.id;
+    if (!profile.is_admin && isAdmin) updates.is_admin = true;
+    if (Object.keys(updates).length) {
+      if (updates.id) {
+        // id changed — insert new row then delete old
+        await sb.from('re_users').insert({ ...profile, ...updates }).catch(() => {});
+        await sb.from('re_users').delete().eq('id', profile.id).catch(() => {});
+      } else {
+        await sb.from('re_users').update(updates).eq('id', profile.id);
+      }
+      profile = { ...profile, ...updates };
+    }
+    return profile;
+  }
+
+  // Create new profile
+  const name    = extra.name || authUser.user_metadata?.name || email.split('@')[0];
+  const company = extra.company || authUser.user_metadata?.company || '';
+  const { data: newProfile, error } = await sb.from('re_users').insert({
+    id:       authUser.id,
+    email,
+    name,
+    company,
+    is_admin: isAdmin,
+  }).select().single();
+  if (error) throw error;
+  return newProfile;
+}
+
 app.post('/api/auth/register', async (req, res) => {
   try {
     const { name, email, company, password } = req.body;
     if (!name||!email||!password) return res.status(400).json({ error: 'Preencha todos os campos.' });
     if (password.length < 8) return res.status(400).json({ error: 'A senha deve ter pelo menos 8 caracteres.' });
 
-    const existing = await findUserByEmail(email);
-    if (existing) return res.status(409).json({ error: 'Este e-mail já está cadastrado.' });
+    // Create Supabase Auth account
+    const { data: authData, error: signUpErr } = await sbAnon.auth.signUp({
+      email, password,
+      options: { data: { name, company: company || '' } }
+    });
+    if (signUpErr) {
+      if (signUpErr.message?.toLowerCase().includes('already registered') ||
+          signUpErr.message?.toLowerCase().includes('already been registered') ||
+          signUpErr.status === 422) {
+        return res.status(409).json({ error: 'Este e-mail já está cadastrado.' });
+      }
+      throw signUpErr;
+    }
 
-    const hash    = await bcrypt.hash(password, 10);
-    const isAdmin = ADMIN_EMAILS.includes(email.toLowerCase());
+    const authUser = authData.user;
+    const profile  = await upsertProfileFromAuth(authUser, { name, company: company || '' });
 
-    const { data: newUser, error: insertErr } = await sb.from('re_users').insert({
-      email, name, company: company || '',
-      password_hash: hash,
-      is_admin: isAdmin,
-    }).select().single();
-
-    if (insertErr) throw insertErr;
-
-    // Freshdesk contact + ticket (fire and forget, update user after)
+    // Freshdesk contact + ticket (fire and forget)
     Promise.all([
       createFreshdeskContact(email, name),
       createFreshdeskTicket(email, name, company)
@@ -599,7 +686,7 @@ app.post('/api/auth/register', async (req, res) => {
         await sb.from('re_users').update({
           freshdesk_contact_id: contactId || null,
           freshdesk_ticket_id:  ticketId  || null,
-        }).eq('id', newUser.id);
+        }).eq('id', profile.id);
       }
     }).catch(() => {});
 
@@ -615,9 +702,9 @@ app.post('/api/auth/register', async (req, res) => {
       `)
     ).catch(() => {});
 
-    logAccess(newUser.id, email, 'register', req.ip);
-    const token = signToken({ userId: newUser.id, email: newUser.email });
-    res.json({ success: true, token, user: safeUser(newUser) });
+    logAccess(profile.id, email, 'register', req.ip);
+    const token = signToken({ userId: profile.id, email: profile.email });
+    res.json({ success: true, token, user: safeUser(profile) });
   } catch(e) {
     console.error('[REGISTER]', e.message);
     res.status(500).json({ error: 'Erro interno ao criar conta.' });
@@ -629,22 +716,19 @@ app.post('/api/auth/login', async (req, res) => {
     const { email, password } = req.body;
     if (!email||!password) return res.status(400).json({ error: 'Preencha todos os campos.' });
 
-    const user = await findUserByEmail(email);
-    if (!user || !user.password_hash) return res.status(401).json({ error: 'E-mail ou senha incorretos.' });
-
-    const ok = await bcrypt.compare(password, user.password_hash);
-    if (!ok) return res.status(401).json({ error: 'E-mail ou senha incorretos.' });
-
-    // Promote to admin if in list but not flagged
-    if (ADMIN_EMAILS.includes(email.toLowerCase()) && !user.is_admin) {
-      await sb.from('re_users').update({ is_admin: true }).eq('id', user.id);
-      user.is_admin = true;
+    // Validate credentials via Supabase Auth
+    const { data: authData, error: signInErr } = await sbAnon.auth.signInWithPassword({ email, password });
+    if (signInErr || !authData?.user) {
+      return res.status(401).json({ error: 'E-mail ou senha incorretos.' });
     }
 
-    logAccess(user.id, email, 'login', req.ip);
+    // Look up / create re_users profile
+    const profile = await upsertProfileFromAuth(authData.user);
 
-    const token = signToken({ userId: user.id, email: user.email });
-    res.json({ success: true, token, user: safeUser(user) });
+    logAccess(profile.id, email, 'login', req.ip);
+
+    const token = signToken({ userId: profile.id, email: profile.email });
+    res.json({ success: true, token, user: safeUser(profile) });
   } catch(e) {
     console.error('[LOGIN]', e.message);
     res.status(500).json({ error: 'Erro interno.' });
@@ -662,46 +746,50 @@ app.post('/api/auth/forgot', async (req, res) => {
   try {
     const { email } = req.body;
     if (!email) return res.status(400).json({ error: 'Informe o e-mail.' });
-    const user = await findUserByEmail(email);
-    if (!user) return res.json({ success: true }); // silent
 
-    const token  = crypto.randomBytes(32).toString('hex');
-    const expiry = new Date(Date.now() + 3600*1000).toISOString();
-    await sb.from('re_users').update({ reset_token: token, reset_expiry: expiry }).eq('id', user.id);
-
-    const resetLink = `${BASE_URL}/reset-password.html?token=${token}`;
-    await sendMail(email, 'Recuperação de senha — Recupera Empresas',
-      emailWrapper('Redefinição de senha', `
-        <p>Olá, <b>${user.name || ''}</b>!</p>
-        <p>Clique abaixo para criar uma nova senha:</p>
-        <p style="text-align:center;margin:24px 0;">
-          <a href="${resetLink}" style="background:#1A56DB;color:#fff;padding:12px 28px;border-radius:6px;text-decoration:none;font-weight:600;">Redefinir Senha</a>
-        </p>
-        <p style="color:#64748B;font-size:13px;">Link válido por 1 hora. Se não solicitou, ignore este e-mail.</p>
-      `)
-    );
+    // Supabase Auth sends the recovery email with a link pointing to redirectTo
+    // The link will contain #access_token=...&type=recovery in the hash fragment
+    const resetRedirect = `${BASE_URL}/reset-password.html`;
+    const { error } = await sbAnon.auth.resetPasswordForEmail(email, {
+      redirectTo: resetRedirect,
+    });
+    // Always respond success to avoid email enumeration
+    if (error) console.warn('[FORGOT]', error.message);
     res.json({ success: true });
   } catch(e) { console.error(e); res.status(500).json({ error: 'Erro ao enviar e-mail.' }); }
 });
 
+// /api/auth/reset — called by reset-password.html with the Supabase access_token
+// from the recovery URL hash fragment.  We validate the token server-side and
+// update the password via the Auth admin API so bcrypt is never involved.
 app.post('/api/auth/reset', async (req, res) => {
   try {
-    const { token, password } = req.body;
-    if (!token||!password) return res.status(400).json({ error: 'Dados inválidos.' });
+    const { access_token, refresh_token, password } = req.body;
+    if (!access_token || !password) return res.status(400).json({ error: 'Dados inválidos.' });
     if (password.length < 8) return res.status(400).json({ error: 'Mínimo 8 caracteres.' });
 
-    const { data: user } = await sb.from('re_users')
-      .select('*').eq('reset_token', token).single();
-    if (!user) return res.status(400).json({ error: 'Token inválido ou já utilizado.' });
-    if (new Date(user.reset_expiry) < new Date()) return res.status(400).json({ error: 'Token expirado.' });
+    // Set session with the recovery tokens
+    const { data: sessionData, error: sessionErr } = await sbAnon.auth.setSession({
+      access_token,
+      refresh_token: refresh_token || access_token,
+    });
+    if (sessionErr || !sessionData?.user) {
+      return res.status(400).json({ error: 'Link inválido ou expirado.' });
+    }
 
-    const hash = await bcrypt.hash(password, 10);
-    await sb.from('re_users').update({
-      password_hash: hash, reset_token: null, reset_expiry: null
-    }).eq('id', user.id);
+    // Update password via admin API (service role)
+    const userId = sessionData.user.id;
+    const { error: updateErr } = await sb.auth.admin.updateUserById(userId, { password });
+    if (updateErr) {
+      console.error('[RESET]', updateErr.message);
+      return res.status(400).json({ error: 'Erro ao atualizar senha. Solicite um novo link.' });
+    }
 
     res.json({ success: true });
-  } catch(e) { res.status(500).json({ error: 'Erro interno.' }); }
+  } catch(e) {
+    console.error('[RESET]', e.message);
+    res.status(500).json({ error: 'Erro interno.' });
+  }
 });
 
 // ─── Admin: impersonate a client (view portal as client) ──────────────────────
@@ -1596,9 +1684,8 @@ app.post('/api/credits/checkout', requireAuth, async (req, res) => {
 });
 
 // ── Stripe webhook: credit the account on payment ────────────────────────────
-app.post('/api/stripe/webhook',
-  express.raw({ type: 'application/json' }),
-  async (req, res) => {
+// Body is already raw Buffer via the global middleware at /api/stripe/webhook
+app.post('/api/stripe/webhook', async (req, res) => {
     if (!STRIPE_SECRET_KEY || !STRIPE_WEBHOOK_SECRET) return res.sendStatus(400);
     const Stripe = require('stripe');
     const stripe = Stripe(STRIPE_SECRET_KEY);
@@ -1987,6 +2074,11 @@ app.post('/api/financial/request-invoice', requireAuth, async (req, res) => {
   res.json({ success: true, message: 'Solicitação enviada. Nossa equipe entrará em contato.' });
 });
 
+// ─── Health check (used by Render.com and uptime monitors) ───────────────────
+app.get(['/api/health', '/healthz'], (req, res) => {
+  res.json({ status: 'ok', ts: new Date().toISOString() });
+});
+
 // ─── Fallback ──────────────────────────────────────────────────────────────────
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'login.html'));
@@ -1994,23 +2086,62 @@ app.get('*', (req, res) => {
 
 // ─── Startup: seed admin accounts ────────────────────────────────────────────
 async function seedAdminAccounts() {
+  if (!SUPABASE_SERVICE_KEY) {
+    console.warn('[SEED] Pulando seed — VITE_SUPABASE_SERVICE_ROLE não definido.');
+    return;
+  }
   const defaultPwd = process.env.ADMIN_DEFAULT_PASSWORD || 'RecuperaAdmin@2025';
-  const hash = await bcrypt.hash(defaultPwd, 10);
+
   for (const email of ADMIN_EMAILS) {
-    const existing = await findUserByEmail(email);
-    if (!existing) {
-      const { data, error } = await sb.from('re_users').insert({
-        name:          email.split('@')[0],
-        email,
-        company:       'Recupera Empresas',
-        password_hash: hash,
-        is_admin:      true,
-      }).select().single();
-      if (data) console.log(`[SEED] Admin criado: ${email}`);
-      if (error) console.warn(`[SEED] Erro ao criar ${email}:`, error.message);
-    } else if (!existing.is_admin) {
-      await sb.from('re_users').update({ is_admin: true }).eq('id', existing.id);
-      console.log(`[SEED] Admin promovido: ${email}`);
+    try {
+      // Check if Supabase Auth account already exists
+      const { data: listData } = await sb.auth.admin.listUsers({ perPage: 1000 });
+      const authUsers   = listData?.users || [];
+      let   authUser    = authUsers.find(u => u.email?.toLowerCase() === email.toLowerCase());
+
+      if (!authUser) {
+        // Create Supabase Auth account with email confirmed
+        const { data: created, error: createErr } = await sb.auth.admin.createUser({
+          email,
+          password:       defaultPwd,
+          email_confirm:  true,
+          user_metadata:  { name: email.split('@')[0], company: 'Recupera Empresas' },
+        });
+        if (createErr) {
+          console.warn(`[SEED] Erro Supabase Auth ao criar ${email}:`, createErr.message);
+          continue;
+        }
+        authUser = created.user;
+        console.log(`[SEED] Supabase Auth criado: ${email}`);
+      }
+
+      // Ensure re_users profile exists and is marked as admin
+      const existing = await findUserByEmail(email);
+      if (!existing) {
+        await sb.from('re_users').insert({
+          id:       authUser.id,
+          name:     authUser.user_metadata?.name || email.split('@')[0],
+          email,
+          company:  'Recupera Empresas',
+          is_admin: true,
+        });
+        console.log(`[SEED] Perfil admin criado: ${email}`);
+      } else {
+        const updates = {};
+        if (existing.id !== authUser.id) updates.id = authUser.id;
+        if (!existing.is_admin)          updates.is_admin = true;
+        if (Object.keys(updates).length) {
+          if (updates.id) {
+            await sb.from('re_users').insert({ ...existing, ...updates }).catch(() => {});
+            await sb.from('re_users').delete().eq('id', existing.id).catch(() => {});
+          } else {
+            await sb.from('re_users').update(updates).eq('id', existing.id);
+          }
+          console.log(`[SEED] Perfil admin sincronizado: ${email}`);
+        }
+      }
+    } catch (err) {
+      console.warn(`[SEED] Erro ao processar ${email}:`, err.message);
     }
   }
 }
