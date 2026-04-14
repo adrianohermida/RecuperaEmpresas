@@ -952,15 +952,16 @@ app.get('/api/auth/oauth/callback', async (req, res) => {
       client_id:    clientId,
     });
 
+    // Supabase requires code_verifier (PKCE) for all clients.
+    // Confidential clients also send client_secret alongside it.
     if (pkce?.verifier) {
-      // Public client (PKCE) — use stored code_verifier
       body.set('code_verifier', pkce.verifier);
-    } else if (clientSecret) {
-      // Confidential client — use client_secret
-      body.set('client_secret', clientSecret);
     } else {
-      console.error('[OAUTH CALLBACK] no verifier or secret — cannot exchange code');
+      console.error('[OAUTH CALLBACK] PKCE verifier missing (state expired or mismatch)');
       return res.redirect('/login.html?err=oauth&desc=session_expired_retry');
+    }
+    if (clientSecret) {
+      body.set('client_secret', clientSecret);
     }
 
     const tokenRes  = await fetch(`${SUPABASE_URL}/auth/v1/oauth/token`, {
