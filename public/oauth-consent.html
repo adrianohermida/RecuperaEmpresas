@@ -113,6 +113,24 @@ const authorizeEndpoint = supabaseUrl + '/auth/v1/oauth/authorize';
 // ── Read OAuth params from the current URL query string ──────────────────────
 const q = new URLSearchParams(window.location.search);
 
+// ── Guard: page must be reached via Supabase OAuth flow (needs client_id) ────
+if (!q.get('client_id')) {
+  document.querySelector('.auth-card').innerHTML = `
+    <div style="text-align:center;padding:20px 0;">
+      <div style="width:56px;height:56px;background:#FEF2F2;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#DC2626" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+      </div>
+      <h2 style="font-size:18px;font-weight:700;color:#0F172A;margin-bottom:8px;">Acesso inválido</h2>
+      <p style="color:#64748B;font-size:14px;line-height:1.6;margin-bottom:20px;">
+        Esta página só pode ser acessada via fluxo OAuth.<br/>
+        Inicie a autorização pelo aplicativo que solicitou acesso.
+      </p>
+      <a href="/login.html" style="color:#1A56DB;font-size:14px;font-weight:600;text-decoration:none;">← Voltar ao login</a>
+    </div>`;
+}
+
 // ── decide(allow) — redirect to Supabase as a GET with all params + allow ────
 // Supabase /auth/v1/oauth/authorize only accepts GET.
 // The browser sends the Supabase session cookie automatically on the redirect.
