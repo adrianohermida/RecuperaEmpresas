@@ -879,24 +879,37 @@ function _codeChallenge(v) {
 //   https://recuperaempresas.onrender.com/api/auth/oauth/start
 // Optional query params: scope (default "openid email profile")
 app.get('/api/auth/oauth/start', (req, res) => {
-  const clientId = process.env.OAUTH_CLIENT_ID || '';
+  const clientId     = process.env.OAUTH_CLIENT_ID     || '';
+  const clientSecret = process.env.OAUTH_CLIENT_SECRET || '';
   if (!clientId) return res.status(500).send('OAUTH_CLIENT_ID não configurado no Render.');
 
-  _pkceClean();
-  const verifier   = _codeVerifier();
-  const challenge  = _codeChallenge(verifier);
-  const state      = crypto.randomBytes(16).toString('hex');
-  _pkceStore.set(state, { verifier, exp: Date.now() + 10 * 60 * 1000 });
+  const state = crypto.randomBytes(16).toString('hex');
+
+  if (clientSecret) {
+    // Confidential client — use client_secret for exchange, no PKCE needed
+    _pkceStore.set(state, { verifier: null, exp: Date.now() + 10 * 60 * 1000 });
+  } else {
+    // Public client — use PKCE
+    _pkceClean();
+    const verifier  = _codeVerifier();
+    const challenge = _codeChallenge(verifier);
+    _pkceStore.set(state, { verifier, exp: Date.now() + 10 * 60 * 1000 });
+  }
 
   const params = new URLSearchParams({
-    client_id:             clientId,
-    response_type:         'code',
-    redirect_uri:          `${BASE_URL}/api/auth/oauth/callback`,
-    scope:                 req.query.scope || 'openid email profile',
+    client_id:     clientId,
+    response_type: 'code',
+    redirect_uri:  `${BASE_URL}/api/auth/oauth/callback`,
+    scope:         req.query.scope || 'openid email profile',
     state,
-    code_challenge:        challenge,
-    code_challenge_method: 'S256',
   });
+
+  if (!clientSecret) {
+    const { verifier } = _pkceStore.get(state);
+    params.set('code_challenge',        _codeChallenge(verifier));
+    params.set('code_challenge_method', 'S256');
+  }
+
   res.redirect(`${SUPABASE_URL}/auth/v1/oauth/authorize?${params}`);
 });
 
