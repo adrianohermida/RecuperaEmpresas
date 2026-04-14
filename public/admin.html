@@ -261,6 +261,7 @@
     <button class="drawer-tab" onclick="switchDrawerTab('messages',this)">Mensagens</button>
     <button class="drawer-tab" onclick="switchDrawerTab('agenda',this)">Agenda</button>
     <button class="drawer-tab" onclick="switchDrawerTab('docs',this)">Documentos</button>
+    <button class="drawer-tab" onclick="switchDrawerTab('equipe',this)">Equipe</button>
     <button class="drawer-tab" onclick="switchDrawerTab('data',this)">Dados</button>
   </div>
   <div class="drawer-body" id="drawerBody"></div>
@@ -739,6 +740,37 @@ async function renderDrawerTab(tab) {
           </div>` : ''}
         </div>`;
       }).join('')}`;
+  }
+
+  if (tab === 'equipe') {
+    body.innerHTML = '<div style="padding:16px;color:var(--text-muted);font-size:14px;">Carregando equipe...</div>';
+    const res = await fetch(`/api/admin/client/${_currentClientId}/members`, { headers: authH() });
+    if (!res.ok) { body.innerHTML = '<div class="empty-state"><p>Erro ao carregar equipe.</p></div>'; return; }
+    const { members } = await res.json();
+    const ROLE_LABELS = { financeiro:'Financeiro', contador:'Contador', operacional:'Operacional', visualizador:'Visualizador' };
+    const ROLE_COLORS = { financeiro:'#2563eb', contador:'#7c3aed', operacional:'#059669', visualizador:'#6b7280' };
+    let html = `<div style="font-size:14px;font-weight:700;color:#1e3a5f;margin-bottom:14px;">Membros da empresa (${members.length})</div>`;
+    if (!members.length) {
+      html += `<div class="empty-state"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg><p>Nenhum membro cadastrado pelo cliente.</p></div>`;
+    } else {
+      html += `<div style="display:flex;flex-direction:column;gap:8px;">
+        ${members.map(m => `
+        <div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:12px;">
+          <div style="width:34px;height:34px;border-radius:50%;background:${ROLE_COLORS[m.role]||'#6b7280'}22;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:${ROLE_COLORS[m.role]||'#6b7280'}">
+            ${(m.name||'?')[0].toUpperCase()}
+          </div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-weight:600;font-size:13px;color:#1e293b;">${m.name}</div>
+            <div style="font-size:11px;color:#64748b;">${m.email}</div>
+          </div>
+          <span style="background:${ROLE_COLORS[m.role]||'#6b7280'}18;color:${ROLE_COLORS[m.role]||'#6b7280'};font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;">${ROLE_LABELS[m.role]||m.role}</span>
+          <span style="font-size:10px;padding:2px 8px;border-radius:20px;${m.active?'background:#dcfce7;color:#16a34a;':'background:#fee2e2;color:#dc2626;'}">${m.active?'Ativo':'Inativo'}</span>
+          <div style="font-size:10px;color:#94a3b8;">${m.last_login ? 'Último login: '+new Date(m.last_login).toLocaleDateString('pt-BR') : 'Nunca logou'}</div>
+        </div>`).join('')}
+      </div>`;
+    }
+    body.innerHTML = html;
+    return;
   }
 
   if (tab === 'data') {

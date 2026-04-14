@@ -94,6 +94,10 @@
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
         Documentos
       </button>
+      <button class="sidebar-link" id="equipeSideLink" onclick="showSection('equipe',this)" id="equipeNavBtn" style="display:none;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Equipe
+      </button>
     </div>
   </nav>
 
@@ -540,6 +544,60 @@
       </div>
     </div>
 
+    <!-- EQUIPE -->
+    <div id="sec-equipe" class="tab-content">
+      <div class="section-header">
+        <div>
+          <div class="section-title">Equipe da Empresa</div>
+          <div class="section-sub">Gerencie os usuários com acesso ao portal desta empresa.</div>
+        </div>
+        <button class="btn-primary" id="addMemberBtn" onclick="toggleMemberForm()" style="font-size:13px;padding:8px 14px;gap:6px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Adicionar membro
+        </button>
+      </div>
+
+      <!-- Add member form -->
+      <div id="memberForm" style="display:none;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px;padding:20px;margin-bottom:20px;">
+        <div style="font-weight:600;font-size:14px;color:#1e3a5f;margin-bottom:14px;">Novo membro</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div>
+            <label style="font-size:12px;color:#64748b;font-weight:500;display:block;margin-bottom:4px;">Nome completo *</label>
+            <input id="memberName" type="text" placeholder="Nome do usuário" style="width:100%;padding:8px 10px;border:1px solid #CBD5E1;border-radius:6px;font-size:13px;box-sizing:border-box;">
+          </div>
+          <div>
+            <label style="font-size:12px;color:#64748b;font-weight:500;display:block;margin-bottom:4px;">E-mail *</label>
+            <input id="memberEmail" type="email" placeholder="email@empresa.com" style="width:100%;padding:8px 10px;border:1px solid #CBD5E1;border-radius:6px;font-size:13px;box-sizing:border-box;">
+          </div>
+          <div>
+            <label style="font-size:12px;color:#64748b;font-weight:500;display:block;margin-bottom:4px;">Perfil de acesso *</label>
+            <select id="memberRole" style="width:100%;padding:8px 10px;border:1px solid #CBD5E1;border-radius:6px;font-size:13px;background:#fff;box-sizing:border-box;">
+              <option value="operacional">Operacional</option>
+              <option value="financeiro">Financeiro</option>
+              <option value="contador">Contador</option>
+              <option value="visualizador">Visualizador (somente leitura)</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:12px;color:#64748b;font-weight:500;display:block;margin-bottom:4px;">Senha inicial *</label>
+            <input id="memberPassword" type="password" placeholder="Mínimo 6 caracteres" style="width:100%;padding:8px 10px;border:1px solid #CBD5E1;border-radius:6px;font-size:13px;box-sizing:border-box;">
+          </div>
+        </div>
+        <div style="margin-top:14px;display:flex;gap:8px;">
+          <button class="btn-primary" onclick="addMember()" style="font-size:13px;padding:8px 16px;">Adicionar</button>
+          <button class="btn-ghost" onclick="toggleMemberForm()" style="font-size:13px;padding:8px 14px;">Cancelar</button>
+        </div>
+      </div>
+
+      <!-- Members list -->
+      <div id="membersList">
+        <div class="empty-state">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          <p>Carregando equipe...</p>
+        </div>
+      </div>
+    </div>
+
   </main>
 </div>
 
@@ -634,6 +692,7 @@ function showSection(name, clickedEl) {
   if (name === 'agenda')      loadAppointments();
   if (name === 'financeiro')  loadFinanceiro();
   if (name === 'documentos')  loadDocuments();
+  if (name === 'equipe')      loadMembers();
 }
 
 // ── Progress ring ─────────────────────────────────────────────────────────────
@@ -1350,11 +1409,119 @@ async function initFreshchat(user) {
   // Load portal data
   await loadData();
 
+  // Show Equipe nav only for the owner (no company_id in token = is the owner)
+  if (!user.company_id) {
+    document.getElementById('equipeNavBtn')?.style && (document.getElementById('equipeNavBtn').style.display = '');
+  }
+
   // Init Freshchat after widget loads (skip when impersonating)
   if (!isImpersonating) {
     setTimeout(() => initFreshchat(user), 2000);
   }
 })();
+
+// ── Equipe (multi-user) ───────────────────────────────────────────────────────
+const ROLE_LABELS = {
+  financeiro: 'Financeiro', contador: 'Contador',
+  operacional: 'Operacional', visualizador: 'Visualizador'
+};
+const ROLE_COLORS = {
+  financeiro: '#2563eb', contador: '#7c3aed',
+  operacional: '#059669', visualizador: '#6b7280'
+};
+
+async function loadMembers() {
+  const el = document.getElementById('membersList');
+  if (!el) return;
+  el.innerHTML = '<div style="padding:16px;color:var(--text-muted);font-size:14px;">Carregando...</div>';
+  const res = await fetch('/api/company/members', { headers: authH() });
+  if (!res.ok) { el.innerHTML = '<div style="padding:16px;color:#ef4444;">Erro ao carregar equipe.</div>'; return; }
+  const { members } = await res.json();
+  if (!members.length) {
+    el.innerHTML = `<div class="empty-state">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+      <p>Nenhum membro cadastrado. Adicione o primeiro membro da equipe.</p>
+    </div>`;
+    return;
+  }
+  el.innerHTML = `<div style="display:flex;flex-direction:column;gap:10px;">
+    ${members.map(m => `
+    <div style="background:#fff;border:1px solid #E2E8F0;border-radius:10px;padding:14px 16px;display:flex;align-items:center;gap:14px;">
+      <div style="width:40px;height:40px;border-radius:50%;background:${ROLE_COLORS[m.role]||'#6b7280'}22;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;color:${ROLE_COLORS[m.role]||'#6b7280'}">
+        ${(m.name||'?')[0].toUpperCase()}
+      </div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-weight:600;font-size:14px;color:#1e293b;">${m.name}</div>
+        <div style="font-size:12px;color:#64748b;">${m.email}</div>
+      </div>
+      <span style="background:${ROLE_COLORS[m.role]||'#6b7280'}18;color:${ROLE_COLORS[m.role]||'#6b7280'};font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;">
+        ${ROLE_LABELS[m.role]||m.role}
+      </span>
+      <span style="font-size:11px;padding:3px 10px;border-radius:20px;${m.active ? 'background:#dcfce7;color:#16a34a;' : 'background:#fee2e2;color:#dc2626;'}">
+        ${m.active ? 'Ativo' : 'Inativo'}
+      </span>
+      <div style="display:flex;gap:6px;">
+        <button onclick="toggleMemberActive('${m.id}',${!m.active})" title="${m.active ? 'Desativar' : 'Ativar'}"
+          style="background:none;border:1px solid #E2E8F0;border-radius:6px;padding:5px 8px;cursor:pointer;color:#64748b;font-size:11px;">
+          ${m.active ? 'Desativar' : 'Ativar'}
+        </button>
+        <button onclick="removeMember('${m.id}','${m.name.replace(/'/g,"\\'")}'))"
+          title="Remover membro"
+          style="background:none;border:1px solid #fecaca;border-radius:6px;padding:5px 8px;cursor:pointer;color:#ef4444;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+        </button>
+      </div>
+    </div>`).join('')}
+  </div>`;
+}
+
+function toggleMemberForm() {
+  const f = document.getElementById('memberForm');
+  f.style.display = f.style.display === 'none' ? 'block' : 'none';
+  if (f.style.display === 'block') document.getElementById('memberName').focus();
+}
+
+async function addMember() {
+  const name     = document.getElementById('memberName').value.trim();
+  const email    = document.getElementById('memberEmail').value.trim();
+  const role     = document.getElementById('memberRole').value;
+  const password = document.getElementById('memberPassword').value;
+  if (!name || !email || !password) { showToast('Preencha todos os campos obrigatórios.', 'error'); return; }
+  if (password.length < 6) { showToast('Senha deve ter pelo menos 6 caracteres.', 'error'); return; }
+  const res = await fetch('/api/company/members', {
+    method: 'POST', headers: authH(),
+    body: JSON.stringify({ name, email, role, password })
+  });
+  const json = await res.json();
+  if (res.ok) {
+    showToast(`${name} adicionado com sucesso!`, 'success');
+    document.getElementById('memberName').value = '';
+    document.getElementById('memberEmail').value = '';
+    document.getElementById('memberPassword').value = '';
+    toggleMemberForm();
+    loadMembers();
+  } else {
+    showToast(json.error || 'Erro ao adicionar membro.', 'error');
+  }
+}
+
+async function toggleMemberActive(memberId, active) {
+  const res = await fetch(`/api/company/members/${memberId}`, {
+    method: 'PUT', headers: authH(),
+    body: JSON.stringify({ active })
+  });
+  if (res.ok) { showToast(active ? 'Membro ativado.' : 'Membro desativado.', 'success'); loadMembers(); }
+  else { const j = await res.json(); showToast(j.error || 'Erro.', 'error'); }
+}
+
+async function removeMember(memberId, name) {
+  if (!confirm(`Remover ${name} da equipe? Esta ação não pode ser desfeita.`)) return;
+  const res = await fetch(`/api/company/members/${memberId}`, {
+    method: 'DELETE', headers: authH()
+  });
+  if (res.ok) { showToast('Membro removido.', 'success'); loadMembers(); }
+  else { const j = await res.json(); showToast(j.error || 'Erro ao remover.', 'error'); }
+}
 </script>
 
 <!-- Freshchat client widget -->

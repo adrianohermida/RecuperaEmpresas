@@ -231,7 +231,29 @@ async function requireAuth(req, res, next) {
     return next();
   }
 
-  const user = await findUserById(decoded.userId);
+  // Member token: has company_id field — look up in re_company_users
+  if (decoded.company_id) {
+    const { data: member } = await sb.from('re_company_users')
+      .select('id,name,email,role,active,company_id')
+      .eq('id', decoded.id)
+      .eq('active', true)
+      .single();
+    if (!member) return res.status(401).json({ error: 'Membro inativo ou não encontrado.' });
+    // Expose company owner id as user.id so all routes read the correct data
+    req.user = {
+      id:         member.company_id,   // data owner = the company owner
+      member_id:  member.id,
+      name:       member.name,
+      email:      member.email,
+      role:       member.role,
+      company_id: member.company_id,
+      is_admin:   false,
+      is_member:  true,
+    };
+    return next();
+  }
+
+  const user = await findUserById(decoded.userId || decoded.id);
   if (!user) return res.status(401).json({ error: 'Usuário não encontrado.' });
   req.user = user;
   next();
@@ -1258,6 +1280,150 @@ app.get('/api/admin/client/:id/export/pdf', requireAdmin, async (req, res) => {
      .text('Recupera Empresas — Documento confidencial. Uso interno.', 50, 790, { align: 'center', width: W });
 
   doc.end();
+});
+
+// ─── Multi-user companies ─────────────────────────────────────────────────────
+// List members of a client company
+app.get('/api/company/members', requireAuth, async (req, res) => {
+  const companyId = req.user.company_id || req.user.id;
+  const { data, error } = await sb.from('re_company_users')
+    .select('id,name,email,role,active,invited_at,last_login')
+    .eq('company_id', companyId)
+    .order('created_at', { ascending: true });
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ members: data || [] });
+});
+
+// Invite / create a new member
+app.post('/api/company/members', requireAuth, async (req, res) => {
+  const companyId = req.user.company_id || req.user.id;
+  // Only the owner (re_users row) may invite
+  if (req.user.company_id) return res.status(403).json({ error: 'Apenas o titular pode convidar membros.' });
+  const { name, email, role, password } = req.body;
+  if (!name || !email || !password) return res.status(400).json({ error: 'name, email e password são obrigatórios.' });
+  const ROLES = ['financeiro','contador','operacional','visualizador'];
+  if (role && !ROLES.includes(role)) return res.status(400).json({ error: 'Papel inválido.' });
+
+  // Check uniqueness
+  const { data: existing } = await sb.from('re_company_users')
+    .select('id').eq('company_id', companyId).eq('email', email.toLowerCase()).single();
+  if (existing) return res.status(409).json({ error: 'E-mail já cadastrado nesta empresa.' });
+
+  const hash = await bcrypt.hash(password, 10);
+  const { data: member, error } = await sb.from('re_company_users').insert({
+    company_id:    companyId,
+    name:          name.trim(),
+    email:         email.toLowerCase().trim(),
+    role:          role || 'operacional',
+    password_hash: hash,
+  }).select('id,name,email,role,active,invited_at').single();
+
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ success: true, member });
+});
+
+// Update member (role / active)
+app.put('/api/company/members/:memberId', requireAuth, async (req, res) => {
+  if (req.user.company_id) return res.status(403).json({ error: 'Apenas o titular pode editar membros.' });
+  const companyId = req.user.id;
+  const { role, active, name } = req.body;
+  const updates = {};
+  if (role   !== undefined) updates.role   = role;
+  if (active !== undefined) updates.active = active;
+  if (name   !== undefined) updates.name   = name.trim();
+  if (!Object.keys(updates).length) return res.status(400).json({ error: 'Nada para atualizar.' });
+
+  const { data, error } = await sb.from('re_company_users')
+    .update(updates)
+    .eq('id', req.params.memberId)
+    .eq('company_id', companyId)
+    .select('id,name,email,role,active').single();
+  if (error) return res.status(500).json({ error: error.message });
+  if (!data)  return res.status(404).json({ error: 'Membro não encontrado.' });
+  res.json({ success: true, member: data });
+});
+
+// Remove a member
+app.delete('/api/company/members/:memberId', requireAuth, async (req, res) => {
+  if (req.user.company_id) return res.status(403).json({ error: 'Apenas o titular pode remover membros.' });
+  const companyId = req.user.id;
+  const { error } = await sb.from('re_company_users')
+    .delete()
+    .eq('id', req.params.memberId)
+    .eq('company_id', companyId);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ success: true });
+});
+
+// Reset member password
+app.post('/api/company/members/:memberId/reset-password', requireAuth, async (req, res) => {
+  if (req.user.company_id) return res.status(403).json({ error: 'Apenas o titular pode redefinir senhas.' });
+  const companyId = req.user.id;
+  const { password } = req.body;
+  if (!password || password.length < 6) return res.status(400).json({ error: 'Senha deve ter ao menos 6 caracteres.' });
+  const hash = await bcrypt.hash(password, 10);
+  const { data, error } = await sb.from('re_company_users')
+    .update({ password_hash: hash })
+    .eq('id', req.params.memberId)
+    .eq('company_id', companyId)
+    .select('id').single();
+  if (error) return res.status(500).json({ error: error.message });
+  if (!data)  return res.status(404).json({ error: 'Membro não encontrado.' });
+  res.json({ success: true });
+});
+
+// ─── Auth: login for company members ─────────────────────────────────────────
+// Member login — generates a JWT with company_id set (marks them as a sub-user)
+app.post('/api/auth/member-login', async (req, res) => {
+  const { email, password } = req.body;
+  if (!email || !password) return res.status(400).json({ error: 'E-mail e senha obrigatórios.' });
+
+  const { data: member, error } = await sb.from('re_company_users')
+    .select('*')
+    .eq('email', email.toLowerCase().trim())
+    .eq('active', true)
+    .single();
+
+  if (error || !member) return res.status(401).json({ error: 'Credenciais inválidas.' });
+  const ok = await bcrypt.compare(password, member.password_hash);
+  if (!ok) return res.status(401).json({ error: 'Credenciais inválidas.' });
+
+  // Update last_login
+  await sb.from('re_company_users').update({ last_login: new Date().toISOString() }).eq('id', member.id);
+
+  // Fetch owner (company) data for context
+  const owner = await findUserById(member.company_id);
+
+  const token = jwt.sign({
+    id:         member.id,
+    email:      member.email,
+    name:       member.name,
+    role:       member.role,
+    company_id: member.company_id,   // ← marks this as a sub-user
+    is_admin:   false,
+  }, JWT_SECRET, { expiresIn: '12h' });
+
+  res.json({
+    token,
+    user: {
+      id:         member.id,
+      name:       member.name,
+      email:      member.email,
+      role:       member.role,
+      company_id: member.company_id,
+      company:    owner?.company || owner?.name || '',
+    },
+  });
+});
+
+// ─── Admin: list members for a client ────────────────────────────────────────
+app.get('/api/admin/client/:id/members', requireAdmin, async (req, res) => {
+  const { data, error } = await sb.from('re_company_users')
+    .select('id,name,email,role,active,invited_at,last_login')
+    .eq('company_id', req.params.id)
+    .order('created_at', { ascending: true });
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ members: data || [] });
 });
 
 app.get('/api/admin/logs', requireAdmin, async (req, res) => {

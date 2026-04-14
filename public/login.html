@@ -163,20 +163,32 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
   btn.innerHTML = '<div class="spinner"></div> Entrando...';
 
   try {
-    const res  = await fetch('/api/auth/login', {
+    // Try owner login first; if it fails try member login
+    let res  = await fetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password })
     });
-    const json = await res.json();
+    let json = await res.json();
 
-    if (json.success) {
+    // If owner login failed, attempt member login
+    if (!json.success && !json.token) {
+      const res2  = await fetch('/api/auth/member-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+      const json2 = await res2.json();
+      if (json2.token) { json = { success: true, token: json2.token, user: json2.user }; res = res2; }
+    }
+
+    if (json.token || json.success) {
       localStorage.setItem('re_token', json.token);
       localStorage.setItem('re_user', JSON.stringify(json.user));
-      window.location.href = json.user.isAdmin ? '/admin.html' : '/dashboard.html';
+      window.location.href = json.user?.isAdmin ? '/admin.html' : '/dashboard.html';
     } else {
       const alertEl = document.getElementById('alertError');
-      document.getElementById('alertErrorMsg').textContent = json.error || 'Erro ao fazer login.';
+      document.getElementById('alertErrorMsg').textContent = json.error || 'Credenciais inválidas.';
       alertEl.classList.add('show');
       btn.disabled = false;
       btn.textContent = 'Entrar no Portal';
