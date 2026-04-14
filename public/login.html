@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="robots" content="noindex, nofollow"/>
+  <title>Login — Recupera Empresas</title>
+  <link rel="stylesheet" href="/css/auth.css"/>
+</head>
+<body>
+<div class="auth-layout">
+
+  <!-- Brand panel -->
+  <div class="auth-brand">
+    <div class="brand-logo">
+      <svg width="44" height="36" viewBox="0 0 44 36" fill="none">
+        <rect x="0"  y="26" width="8" height="10" rx="4" fill="#4B9EFF"/>
+        <rect x="12" y="18" width="8" height="18" rx="4" fill="#2B7FFF"/>
+        <rect x="24" y="10" width="8" height="26" rx="4" fill="#1A56DB"/>
+        <rect x="36" y="2"  width="8" height="34" rx="4" fill="#1244AB"/>
+      </svg>
+      <div class="brand-logo-text">
+        Recupera Empresas
+        <span>PORTAL DO CLIENTE</span>
+      </div>
+    </div>
+
+    <h1 class="brand-heading">
+      Reestruturação empresarial <em>com estratégia</em>
+    </h1>
+    <p class="brand-sub">
+      Acesse o portal para preencher os dados da sua empresa e iniciar o processo de Business Plan e recuperação financeira.
+    </p>
+
+    <div class="brand-features">
+      <div class="brand-feature">
+        <div class="brand-feature-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#60A5FA" stroke-width="2">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+        </div>
+        Dados protegidos pela LGPD (Lei 13.709/2018)
+      </div>
+      <div class="brand-feature">
+        <div class="brand-feature-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#60A5FA" stroke-width="2">
+            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+          </svg>
+        </div>
+        Progresso salvo automaticamente
+      </div>
+      <div class="brand-feature">
+        <div class="brand-feature-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#60A5FA" stroke-width="2">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
+        </div>
+        Equipe especializada acompanha sua jornada
+      </div>
+      <div class="brand-feature">
+        <div class="brand-feature-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#60A5FA" stroke-width="2">
+            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+            <line x1="8" y1="21" x2="16" y2="21"/>
+            <line x1="12" y1="17" x2="12" y2="21"/>
+          </svg>
+        </div>
+        Análise integrada com Business Plan
+      </div>
+    </div>
+
+    <div class="brand-footer">
+      © 2025 Recupera Empresas · recuperaempresas.com.br
+    </div>
+  </div>
+
+  <!-- Form panel -->
+  <div class="auth-panel">
+    <div class="auth-card">
+      <h1 class="auth-card-title">Bem-vindo de volta</h1>
+      <p class="auth-card-subtitle">Acesse o portal para continuar o seu onboarding</p>
+
+      <div class="alert alert-error" id="alertError">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;margin-top:1px">
+          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        <span id="alertErrorMsg"></span>
+      </div>
+
+      <form id="loginForm" novalidate>
+        <div class="form-group">
+          <label class="form-label" for="email">E-mail</label>
+          <input class="form-control" type="email" id="email" placeholder="seu@email.com.br" autocomplete="email"/>
+          <div class="field-error" id="err_email"></div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="password" style="display:flex;justify-content:space-between;">
+            Senha
+            <a href="/forgot-password.html" style="font-weight:400;font-size:13px;color:#1A56DB;">Esqueci a senha</a>
+          </label>
+          <div class="form-control-wrap">
+            <input class="form-control" type="password" id="password" placeholder="••••••••" autocomplete="current-password"/>
+            <button type="button" class="toggle-password" onclick="togglePwd('password',this)" title="Mostrar/ocultar senha">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="eye-icon">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                <circle cx="12" cy="12" r="3"/>
+              </svg>
+            </button>
+          </div>
+          <div class="field-error" id="err_password"></div>
+        </div>
+
+        <button type="submit" class="btn-auth" id="btnLogin">
+          Entrar no Portal
+        </button>
+      </form>
+
+      <div class="auth-links">
+        Não tem conta?
+        <a href="/register.html">Criar acesso</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function togglePwd(id, btn) {
+  const inp = document.getElementById(id);
+  const showing = inp.type === 'text';
+  inp.type = showing ? 'password' : 'text';
+  btn.querySelector('.eye-icon').style.opacity = showing ? '1' : '0.4';
+}
+
+function showError(id, msg) {
+  const el = document.getElementById('err_' + id);
+  const inp = document.getElementById(id);
+  if (el) { el.textContent = msg; el.classList.add('show'); }
+  if (inp) inp.classList.add('is-error');
+}
+function clearErrors() {
+  document.querySelectorAll('.field-error').forEach(e => { e.textContent = ''; e.classList.remove('show'); });
+  document.querySelectorAll('.is-error').forEach(e => e.classList.remove('is-error'));
+  document.getElementById('alertError').classList.remove('show');
+}
+
+document.getElementById('loginForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  clearErrors();
+
+  const email    = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+  let valid = true;
+
+  if (!email)    { showError('email', 'Informe o e-mail.'); valid = false; }
+  if (!password) { showError('password', 'Informe a senha.'); valid = false; }
+  if (!valid) return;
+
+  const btn = document.getElementById('btnLogin');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner"></div> Entrando...';
+
+  try {
+    const res  = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    const json = await res.json();
+
+    if (json.success) {
+      localStorage.setItem('re_token', json.token);
+      localStorage.setItem('re_user', JSON.stringify(json.user));
+      window.location.href = json.user.isAdmin ? '/admin.html' : '/dashboard.html';
+    } else {
+      const alertEl = document.getElementById('alertError');
+      document.getElementById('alertErrorMsg').textContent = json.error || 'Erro ao fazer login.';
+      alertEl.classList.add('show');
+      btn.disabled = false;
+      btn.textContent = 'Entrar no Portal';
+    }
+  } catch {
+    document.getElementById('alertErrorMsg').textContent = 'Erro de conexão. Tente novamente.';
+    document.getElementById('alertError').classList.add('show');
+    btn.disabled = false;
+    btn.textContent = 'Entrar no Portal';
+  }
+});
+
+// Redirect if already logged in
+(async () => {
+  const token = localStorage.getItem('re_token');
+  if (!token) return;
+  const res = await fetch('/api/auth/verify', { headers: { Authorization: 'Bearer ' + token } });
+  if (res.ok) {
+    const { user } = await res.json();
+    window.location.href = user.isAdmin ? '/admin.html' : '/dashboard.html';
+  }
+})();
+</script>
+</body>
+</html>

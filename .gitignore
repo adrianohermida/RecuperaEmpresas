@@ -300,6 +300,8 @@ FakesAssemblies/
 # Node.js Tools for Visual Studio
 .ntvs_analysis.dat
 node_modules/
+uploads/
+.env
 
 # Visual Studio 6 build log
 *.plg
@@ -416,3 +418,7 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+# Project-specific
+data/
+.claude/

@@ -1,0 +1,1276 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="robots" content="noindex, nofollow"/>
+  <title>Painel do Consultor — Recupera Empresas</title>
+  <link rel="stylesheet" href="/css/portal.css"/>
+</head>
+<body>
+
+<!-- Auth guard -->
+<div id="authGuard" style="position:fixed;inset:0;background:#0F172A;display:flex;align-items:center;justify-content:center;z-index:9999;">
+  <div style="text-align:center;color:#fff;">
+    <svg width="44" height="36" viewBox="0 0 44 36" fill="none" style="margin-bottom:16px;">
+      <rect x="0"  y="26" width="8" height="10" rx="4" fill="#4B9EFF"/>
+      <rect x="12" y="18" width="8" height="18" rx="4" fill="#2B7FFF"/>
+      <rect x="24" y="10" width="8" height="26" rx="4" fill="#1A56DB"/>
+      <rect x="36" y="2"  width="8" height="34" rx="4" fill="#1244AB"/>
+    </svg>
+    <div style="font-size:15px;color:#64748B;">Verificando acesso...</div>
+  </div>
+</div>
+
+<!-- Header -->
+<header class="header">
+  <div class="header-inner">
+    <div class="logo">
+      <svg width="36" height="30" viewBox="0 0 44 36" fill="none">
+        <rect x="0"  y="26" width="8" height="10" rx="4" fill="#4B9EFF"/>
+        <rect x="12" y="18" width="8" height="18" rx="4" fill="#2B7FFF"/>
+        <rect x="24" y="10" width="8" height="26" rx="4" fill="#1A56DB"/>
+        <rect x="36" y="2"  width="8" height="34" rx="4" fill="#1244AB"/>
+      </svg>
+      <div>
+        <div class="logo-text">Recupera Empresas</div>
+        <div class="logo-sub">Painel do Consultor</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <span class="admin-badge">Admin</span>
+      <div class="user-chip" id="userChip">
+        <div class="user-avatar" id="userAvatar">?</div>
+        <span id="userName">Carregando...</span>
+      </div>
+      <button class="btn-logout" onclick="logout()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+        </svg>
+        Sair
+      </button>
+    </div>
+  </div>
+</header>
+
+<div class="portal-layout">
+
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Visão Geral</div>
+      <button class="sidebar-link active" onclick="showSection('clients',this)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Clientes
+      </button>
+      <button class="sidebar-link" onclick="showSection('agenda',this)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        Agenda
+      </button>
+      <button class="sidebar-link" onclick="showSection('logs',this)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        Log de Acesso
+      </button>
+    </div>
+  </nav>
+
+  <!-- Main -->
+  <main class="portal-main">
+
+    <!-- CLIENTS -->
+    <div id="sec-clients" class="tab-content active">
+      <div class="section-header">
+        <div>
+          <div class="section-title">Clientes</div>
+          <div class="section-sub" id="clientsSub">Carregando...</div>
+        </div>
+        <div class="search-wrap">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" class="search-input" id="clientSearch" placeholder="Buscar cliente..." oninput="filterClients()"/>
+        </div>
+      </div>
+
+      <!-- Stats bar -->
+      <div class="stats-grid" id="adminStatsGrid" style="grid-template-columns:repeat(4,1fr);">
+        <div class="stat-card blue">
+          <div class="stat-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          </div>
+          <div class="stat-value" id="sTotalClients">—</div>
+          <div class="stat-label">Total de clientes</div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+          </div>
+          <div class="stat-value" id="sConcluido">—</div>
+          <div class="stat-label">Concluídos</div>
+        </div>
+        <div class="stat-card blue">
+          <div class="stat-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          </div>
+          <div class="stat-value" id="sEmAndamento">—</div>
+          <div class="stat-label">Em andamento</div>
+        </div>
+        <div class="stat-card amber">
+          <div class="stat-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          </div>
+          <div class="stat-value" id="sNaoIniciado">—</div>
+          <div class="stat-label">Não iniciados</div>
+        </div>
+      </div>
+
+      <div class="portal-card">
+        <div style="overflow-x:auto;">
+          <table class="client-table" id="clientTable">
+            <thead>
+              <tr>
+                <th>Empresa / Cliente</th>
+                <th>Status</th>
+                <th>Progresso</th>
+                <th>Etapa</th>
+                <th>Última atividade</th>
+                <th>Tarefas</th>
+              </tr>
+            </thead>
+            <tbody id="clientTableBody">
+              <tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:24px;">Carregando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- AGENDA -->
+    <div id="sec-agenda" class="tab-content">
+      <div class="section-header">
+        <div>
+          <div class="section-title">Agenda</div>
+          <div class="section-sub">Reuniões solicitadas pelos clientes</div>
+        </div>
+        <button class="btn-ghost" onclick="loadAdminAgenda()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/></svg>
+          Atualizar
+        </button>
+      </div>
+
+      <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:24px;">
+        <div class="stat-card blue">
+          <div class="stat-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          </div>
+          <div class="stat-value" id="agTotal">—</div>
+          <div class="stat-label">Total agendamentos</div>
+        </div>
+        <div class="stat-card amber">
+          <div class="stat-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          </div>
+          <div class="stat-value" id="agPendente">—</div>
+          <div class="stat-label">Aguardando confirmação</div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <div class="stat-value" id="agConfirmado">—</div>
+          <div class="stat-label">Confirmadas</div>
+        </div>
+      </div>
+
+      <div class="portal-card">
+        <div class="portal-card-header">
+          <span class="portal-card-title">Todos os Agendamentos</span>
+        </div>
+        <div class="portal-card-body" id="adminAgendaList">
+          <div class="empty-state">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            <p>Carregando agendamentos...</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LOGS -->
+    <div id="sec-logs" class="tab-content">
+      <div class="section-header">
+        <div>
+          <div class="section-title">Log de Acesso</div>
+          <div class="section-sub">Últimas 500 entradas</div>
+        </div>
+        <button class="btn-ghost" onclick="loadLogs()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/></svg>
+          Atualizar
+        </button>
+      </div>
+      <div class="portal-card">
+        <div style="overflow-x:auto;">
+          <table class="log-table">
+            <thead>
+              <tr>
+                <th>Data/Hora</th>
+                <th>Usuário</th>
+                <th>Evento</th>
+                <th>IP</th>
+                <th>Detalhe</th>
+              </tr>
+            </thead>
+            <tbody id="logTableBody">
+              <tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:20px;">Carregando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Client Drawer -->
+<div class="drawer-overlay" id="drawerOverlay" onclick="closeDrawer()"></div>
+<div class="drawer" id="clientDrawer">
+  <div class="drawer-header">
+    <div>
+      <div class="drawer-title" id="drawerTitle">Cliente</div>
+      <div style="font-size:13px;color:var(--text-muted);margin-top:2px;" id="drawerSub"></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <button class="btn-ghost" style="font-size:12px;padding:6px 10px;gap:5px;" onclick="exportClientXLS(_currentClientId)" title="Exportar dados em Excel">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Exportar XLS
+      </button>
+      <button class="btn-ghost" style="font-size:12px;padding:6px 10px;gap:5px;" onclick="impersonateClient(_currentClientId)" title="Visualizar portal como este cliente">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        Ver como cliente
+      </button>
+      <button class="drawer-close" onclick="closeDrawer()">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+  </div>
+  <div class="drawer-tabs">
+    <button class="drawer-tab active" onclick="switchDrawerTab('overview',this)">Visão Geral</button>
+    <button class="drawer-tab" onclick="switchDrawerTab('plan',this)">Business Plan</button>
+    <button class="drawer-tab" onclick="switchDrawerTab('tasks',this)">Tarefas</button>
+    <button class="drawer-tab" onclick="switchDrawerTab('messages',this)">Mensagens</button>
+    <button class="drawer-tab" onclick="switchDrawerTab('agenda',this)">Agenda</button>
+    <button class="drawer-tab" onclick="switchDrawerTab('data',this)">Dados</button>
+  </div>
+  <div class="drawer-body" id="drawerBody"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+
+const STEP_TITLES = {
+  1:'LGPD', 2:'Empresa', 3:'Sócios', 4:'Operacional', 5:'Funcionários', 6:'Ativos',
+  7:'Financeiro', 8:'Dívidas', 9:'Histórico da Crise', 10:'Diagnóstico',
+  11:'Mercado', 12:'Expectativas', 13:'Documentos', 14:'Confirmação'
+};
+const CHAPTER_STATUS = {
+  pendente:       { label:'Aguardando dados',   cls:'badge-gray'   },
+  em_elaboracao:  { label:'Em elaboração',      cls:'badge-blue'   },
+  aguardando:     { label:'Aguardando cliente', cls:'badge-amber'  },
+  em_revisao:     { label:'Em revisão',         cls:'badge-purple' },
+  aprovado:       { label:'Aprovado',           cls:'badge-green'  },
+};
+const STATUS_LABELS = {
+  nao_iniciado: { label:'Não iniciado',  cls:'badge-gray'  },
+  em_andamento: { label:'Em andamento',  cls:'badge-blue'  },
+  concluido:    { label:'Concluído',     cls:'badge-green' },
+};
+const APPT_TYPES = {
+  diagnostico: 'Diagnóstico inicial',
+  revisao:     'Revisão do Business Plan',
+  financeiro:  'Análise financeira',
+  estrategia:  'Planejamento estratégico',
+  outro:       'Outro',
+};
+
+function getToken()  { return localStorage.getItem('re_token'); }
+function authH()     { return { 'Content-Type':'application/json', 'Authorization':'Bearer '+getToken() }; }
+function logout()    { ['re_token','re_user'].forEach(k=>localStorage.removeItem(k)); location.href='/login.html'; }
+
+function showToast(msg, type='', ms=3000) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'toast show ' + type;
+  setTimeout(() => { t.className = 'toast'; }, ms);
+}
+
+function showSection(name, el) {
+  document.querySelectorAll('.tab-content').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
+  document.getElementById('sec-'+name)?.classList.add('active');
+  if (el) el.classList.add('active');
+  if (name === 'logs')   loadLogs();
+  if (name === 'agenda') loadAdminAgenda();
+  window.scrollTo({ top:0, behavior:'instant' });
+}
+
+// ── Clients list ──────────────────────────────────────────────────────────────
+let _allClients = [];
+
+function filterClients() {
+  const q = document.getElementById('clientSearch').value.toLowerCase();
+  const filtered = _allClients.filter(c =>
+    (c.company||'').toLowerCase().includes(q) ||
+    (c.name||'').toLowerCase().includes(q) ||
+    (c.email||'').toLowerCase().includes(q)
+  );
+  renderClientTable(filtered);
+}
+
+function renderClientTable(clients) {
+  const tbody = document.getElementById('clientTableBody');
+  if (!clients.length) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:24px;">Nenhum cliente encontrado.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = clients.map(c => {
+    const st      = STATUS_LABELS[c.status] || STATUS_LABELS.nao_iniciado;
+    const pct     = c.completed ? 100 : c.progress;
+    const lastAct = c.lastActivity ? new Date(c.lastActivity).toLocaleDateString('pt-BR') : '—';
+    return `<tr onclick="openClient('${c.id}')">
+      <td>
+        <div class="company-cell">${c.company || c.name}</div>
+        <div class="email-cell">${c.email}</div>
+      </td>
+      <td><span class="badge ${st.cls}">${st.label}</span></td>
+      <td>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div class="mini-progress"><div class="mini-progress-fill" style="width:${pct}%"></div></div>
+          <span style="font-size:13px;font-weight:600;color:var(--primary);">${pct}%</span>
+        </div>
+      </td>
+      <td style="font-size:13px;color:var(--text-muted);">${c.step}/14</td>
+      <td style="font-size:13px;color:var(--text-muted);">${lastAct}</td>
+      <td>${c.pendingTasks ? `<span class="badge badge-amber">${c.pendingTasks}</span>` : '<span style="color:var(--text-muted);font-size:13px;">—</span>'}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Admin Agenda ──────────────────────────────────────────────────────────────
+async function loadAdminAgenda() {
+  const el = document.getElementById('adminAgendaList');
+  if (el) el.innerHTML = '<div style="padding:16px;color:var(--text-muted);font-size:14px;">Carregando...</div>';
+
+  const res = await fetch('/api/admin/appointments', { headers: authH() });
+  if (!res.ok) {
+    if (el) el.innerHTML = '<div class="empty-state"><p>Erro ao carregar agenda.</p></div>';
+    return;
+  }
+  const { appointments } = await res.json();
+
+  const total      = appointments.length;
+  const pendente   = appointments.filter(a=>!a.status||a.status==='pendente').length;
+  const confirmado = appointments.filter(a=>a.status==='confirmado').length;
+
+  const agTotal = document.getElementById('agTotal');
+  const agPend  = document.getElementById('agPendente');
+  const agConf  = document.getElementById('agConfirmado');
+  if (agTotal) agTotal.textContent = total;
+  if (agPend)  agPend.textContent  = pendente;
+  if (agConf)  agConf.textContent  = confirmado;
+
+  if (!el) return;
+  if (!appointments.length) {
+    el.innerHTML = `<div class="empty-state">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      <p>Nenhum agendamento encontrado.</p>
+    </div>`;
+    return;
+  }
+
+  const sorted = [...appointments].sort((a,b)=>a.date.localeCompare(b.date));
+  let html = '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:1px solid var(--border);">';
+  html += '<th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-weight:600;">Cliente</th>';
+  html += '<th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-weight:600;">Tipo</th>';
+  html += '<th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-weight:600;">Data</th>';
+  html += '<th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-weight:600;">Horário</th>';
+  html += '<th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-weight:600;">Status</th>';
+  html += '<th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-weight:600;">Ação</th>';
+  html += '</tr></thead><tbody>';
+  sorted.forEach(a => {
+    const stBadge = a.status==='confirmado' ? 'badge-green' : a.status==='cancelado' ? 'badge-red' : 'badge-amber';
+    const stLabel = a.status==='confirmado' ? 'Confirmada' : a.status==='cancelado' ? 'Cancelada' : 'Solicitada';
+    const dateStr = new Date(a.date+'T12:00:00').toLocaleDateString('pt-BR');
+    html += `<tr style="border-bottom:1px solid var(--border-light,#F1F5F9);">
+      <td style="padding:10px 12px;">
+        <div style="font-weight:600;">${a.clientName||'—'}</div>
+        <div style="font-size:11px;color:var(--text-muted);">${a.clientEmail||''}</div>
+      </td>
+      <td style="padding:10px 12px;">${APPT_TYPES[a.type]||a.type||'—'}</td>
+      <td style="padding:10px 12px;color:var(--text-muted);">${dateStr}</td>
+      <td style="padding:10px 12px;color:var(--text-muted);">${a.time||'—'}</td>
+      <td style="padding:10px 12px;"><span class="badge ${stBadge}">${stLabel}</span></td>
+      <td style="padding:10px 12px;">
+        ${a.status!=='confirmado' && a.status!=='cancelado'
+          ? `<button class="btn-sm btn-sm-approve" onclick="confirmAppt('${a.userId}','${a.id}')">Confirmar</button>`
+          : ''}
+      </td>
+    </tr>`;
+  });
+  html += '</tbody></table></div>';
+  el.innerHTML = html;
+}
+
+async function confirmAppt(userId, apptId) {
+  const res = await fetch(`/api/admin/appointments/${userId}/${apptId}`, {
+    method:'PUT', headers: authH(), body: JSON.stringify({ status:'confirmado' })
+  });
+  if (res.ok) { showToast('Reunião confirmada!', 'success'); loadAdminAgenda(); }
+  else showToast('Erro ao confirmar.', 'error');
+}
+
+// ── Drawer ────────────────────────────────────────────────────────────────────
+let _currentClientId   = null;
+let _currentClientData = null;
+
+async function openClient(id) {
+  _currentClientId = id;
+  document.getElementById('drawerOverlay').classList.add('open');
+  document.getElementById('clientDrawer').classList.add('open');
+  document.getElementById('drawerTitle').textContent = 'Carregando...';
+  document.getElementById('drawerBody').innerHTML    = '<p style="color:var(--text-muted);padding:20px 0;">Carregando dados...</p>';
+
+  const res = await fetch(`/api/admin/client/${id}`, { headers: authH() });
+  if (!res.ok) { showToast('Erro ao carregar cliente.','error'); return; }
+
+  _currentClientData = await res.json();
+  const { user } = _currentClientData;
+
+  document.getElementById('drawerTitle').textContent = user.company || user.name;
+  document.getElementById('drawerSub').textContent   = user.email + (user.freshdeskTicketId ? ` · Ticket #${user.freshdeskTicketId}` : '');
+
+  document.querySelectorAll('.drawer-tab').forEach(t => t.classList.remove('active'));
+  document.querySelector('.drawer-tab').classList.add('active');
+  renderDrawerTab('overview');
+}
+
+function closeDrawer() {
+  document.getElementById('drawerOverlay').classList.remove('open');
+  document.getElementById('clientDrawer').classList.remove('open');
+  _currentClientId   = null;
+  _currentClientData = null;
+}
+
+function switchDrawerTab(tab, el) {
+  document.querySelectorAll('.drawer-tab').forEach(t => t.classList.remove('active'));
+  if (el) el.classList.add('active');
+  renderDrawerTab(tab);
+}
+
+function stepIconDone() {
+  return `<span class="step-row-icon step-icon-done">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+  </span>`;
+}
+function stepIconActive() {
+  return `<span class="step-row-icon step-icon-active">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+  </span>`;
+}
+function stepIconTodo() {
+  return `<span class="step-row-icon step-icon-todo"></span>`;
+}
+
+function renderDrawerTab(tab) {
+  const body = document.getElementById('drawerBody');
+  const { user, onboarding, tasks, plan, messages } = _currentClientData;
+
+  if (tab === 'overview') {
+    const step = onboarding.step || 1;
+    const pct  = onboarding.completed ? 100 : Math.round((step-1)/14*100);
+    const st   = STATUS_LABELS[onboarding.status] || STATUS_LABELS.nao_iniciado;
+    body.innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
+        <div class="stat-card blue" style="margin:0;">
+          <div class="stat-value" style="font-size:22px;">${pct}%</div>
+          <div class="stat-label">Progresso onboarding</div>
+        </div>
+        <div class="stat-card ${onboarding.completed?'green':'amber'}" style="margin:0;">
+          <div class="stat-value" style="font-size:22px;">${step}/14</div>
+          <div class="stat-label">Etapas preenchidas</div>
+        </div>
+      </div>
+      <div style="margin-bottom:16px;">
+        <span class="badge ${st.cls}" style="font-size:13px;">${st.label}</span>
+        ${onboarding.completedAt ? `<span style="font-size:12px;color:var(--text-muted);margin-left:8px;">Concluído em ${onboarding.completedAt}</span>` : ''}
+      </div>
+      <div style="margin-bottom:16px;">
+        <div style="font-size:13px;font-weight:700;color:var(--dark);margin-bottom:8px;">Informações do cliente</div>
+        <table style="width:100%;font-size:13px;border-collapse:collapse;">
+          ${[['Nome',user.name],['E-mail',user.email],['Empresa',user.company||'—'],['Cadastrado em',new Date(user.createdAt).toLocaleDateString('pt-BR')]].map(([k,v])=>
+            `<tr><td style="padding:5px 0;color:var(--text-muted);width:38%;">${k}</td><td style="padding:5px 0;font-weight:500;">${v}</td></tr>`
+          ).join('')}
+        </table>
+      </div>
+      <div style="font-size:13px;font-weight:700;color:var(--dark);margin-bottom:8px;">Etapas do onboarding</div>
+      <div class="steps-list">
+        ${Array.from({length:14},(_,i)=>{
+          const n    = i+1;
+          const done = onboarding.completed || n < step;
+          const act  = !onboarding.completed && n===step;
+          const cls  = done?'done':act?'active':'todo';
+          const icon = done ? stepIconDone() : act ? stepIconActive() : stepIconTodo();
+          return `<div class="step-row ${cls}">${icon}<span>Etapa ${n} — ${STEP_TITLES[n]}</span></div>`;
+        }).join('')}
+      </div>`;
+  }
+
+  if (tab === 'plan') {
+    body.innerHTML = `<div class="chapter-list">
+      ${(plan.chapters||[]).map(ch=>{
+        const st = CHAPTER_STATUS[ch.status]||CHAPTER_STATUS.pendente;
+        const done = ch.status === 'aprovado';
+        const checkIcon = done
+          ? `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>`
+          : ch.id;
+        const comments = (ch.comments||[]).map(c=>`<div style="font-size:12px;background:#F8FAFC;border-radius:6px;padding:8px 10px;margin-top:6px;">
+          <strong>${c.from==='client'?'Cliente':'Equipe'}</strong>: ${c.text}
+          <span style="float:right;color:var(--text-muted);">${new Date(c.ts).toLocaleDateString('pt-BR')}</span>
+        </div>`).join('');
+        return `<div class="chapter-item" style="flex-direction:column;align-items:flex-start;gap:10px;">
+          <div style="display:flex;align-items:center;gap:12px;width:100%;">
+            <div class="chapter-num${done?' done':''}">${checkIcon}</div>
+            <div class="chapter-title" style="flex:1;">${ch.title}</div>
+            <span class="badge ${st.cls}">${st.label}</span>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;padding-left:44px;width:100%;">
+            <select class="portal-select" style="width:auto;flex:1;font-size:13px;" onchange="updateChapterStatus('${_currentClientId}',${ch.id},this.value)">
+              ${Object.entries(CHAPTER_STATUS).map(([v,{label}])=>`<option value="${v}"${ch.status===v?' selected':''}>${label}</option>`).join('')}
+            </select>
+          </div>
+          ${comments ? `<div style="padding-left:44px;width:100%;">${comments}</div>` : ''}
+        </div>`;
+      }).join('')}
+    </div>`;
+  }
+
+  if (tab === 'tasks') {
+    body.innerHTML = `
+      <div style="margin-bottom:16px;">
+        <div style="font-size:14px;font-weight:700;margin-bottom:10px;">Adicionar tarefa</div>
+        <input type="text" class="portal-input" id="newTaskTitle" placeholder="Título da tarefa" style="margin-bottom:8px;"/>
+        <input type="text" class="portal-input" id="newTaskDesc"  placeholder="Descrição (opcional)" style="margin-bottom:8px;"/>
+        <input type="date" class="portal-input" id="newTaskDate"  style="margin-bottom:12px;"/>
+        <button class="btn-primary" onclick="addTask()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right:4px;"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Adicionar tarefa
+        </button>
+      </div>
+      <div style="font-size:14px;font-weight:700;margin-bottom:10px;">Tarefas atribuídas</div>
+      <div class="task-list">
+        ${!tasks.length
+          ? '<div class="empty-state"><p>Nenhuma tarefa criada.</p></div>'
+          : tasks.map(t=>`<div class="task-item">
+              <div class="task-dot ${t.status}"></div>
+              <div style="flex:1;">
+                <div class="task-title" style="${t.status==='concluido'?'text-decoration:line-through;color:var(--text-muted)':''}">${t.title}</div>
+                ${t.description?`<div style="font-size:12px;color:var(--text-muted);">${t.description}</div>`:''}
+              </div>
+              ${t.dueDate?`<div class="task-due">${new Date(t.dueDate).toLocaleDateString('pt-BR')}</div>`:''}
+              <span class="badge ${t.status==='concluido'?'badge-green':'badge-amber'}">${t.status==='concluido'?'Concluída':'Pendente'}</span>
+            </div>`).join('')
+        }
+      </div>`;
+  }
+
+  if (tab === 'messages') {
+    const MSG_TEMPLATES = [
+      { label: 'Solicitar dados pendentes', icon: '📋',
+        text: 'Identificamos que algumas informações estão pendentes no seu cadastro. Para avançarmos na elaboração do Business Plan, precisamos que você complemente os dados do formulário de onboarding. Caso tenha dúvidas, estamos à disposição.' },
+      { label: 'Ajuste de documento', icon: '📄',
+        text: 'O documento enviado apresenta algumas inconsistências. Solicitamos o reenvio com as seguintes correções:\n- Verificar período das informações\n- Incluir detalhamento solicitado\n\nAssim que o ajuste for realizado, daremos continuidade à análise.' },
+      { label: 'Atualização de etapa', icon: '📊',
+        text: 'Informamos que estamos avançando na análise do seu processo. Atualmente, estamos na fase de estruturação do Business Plan. Caso haja qualquer atualização relevante sobre a situação da empresa, por favor nos comunique.' },
+      { label: 'Etapa aprovada', icon: '✅',
+        text: 'Temos uma boa notícia! A etapa de diagnóstico foi concluída com sucesso. A partir de agora, seguiremos para a estruturação da estratégia de recuperação. Em breve entraremos em contato com os próximos passos.' },
+      { label: 'Agendar reunião', icon: '📅',
+        text: 'Gostaríamos de agendar uma reunião para discutir o andamento do seu processo. Por favor, acesse a seção "Agenda" no portal e selecione um horário de sua preferência. Aguardamos sua confirmação.' },
+    ];
+
+    body.innerHTML = `
+      <div class="msg-templates-label">Mensagens rápidas</div>
+      <div class="msg-templates">
+        ${MSG_TEMPLATES.map((t, i) => `
+          <button class="msg-template-btn" onclick="applyMsgTemplate(${i})">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            ${t.label}
+          </button>`).join('')}
+      </div>
+      <div class="message-thread" style="max-height:260px;" id="adminMsgThread">
+        ${!messages.length
+          ? '<div class="empty-state"><p>Nenhuma mensagem.</p></div>'
+          : messages.map(m=>`<div>
+              <div class="message-bubble from-${m.fromRole||m.from}">
+                <div class="message-from">${(m.fromRole||m.from)==='admin'?'Recupera Empresas':m.fromName||'Cliente'}</div>
+                ${m.text}
+                <div class="message-ts">${new Date(m.ts).toLocaleString('pt-BR')}</div>
+              </div>
+            </div>`).join('')
+        }
+      </div>
+      <div class="message-input-row" style="margin-top:12px;">
+        <input type="text" class="message-input" id="adminMsgInput" placeholder="Escrever mensagem ao cliente..."
+               onkeydown="if(event.key==='Enter')sendAdminMessage()"/>
+        <button class="btn-send" onclick="sendAdminMessage()">Enviar</button>
+      </div>`;
+    setTimeout(() => {
+      const t = document.getElementById('adminMsgThread');
+      if (t) t.scrollTop = t.scrollHeight;
+    }, 50);
+
+    window._msgTemplates = MSG_TEMPLATES;
+  }
+
+  if (tab === 'agenda') {
+    const appts = _currentClientData.appointments || [];
+    let html = `<div style="font-size:14px;font-weight:700;margin-bottom:12px;">Agendamentos do cliente</div>`;
+    if (!appts.length) {
+      html += `<div class="empty-state">
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        <p>Nenhum agendamento.</p>
+      </div>`;
+    } else {
+      const sorted = [...appts].sort((a,b)=>a.date.localeCompare(b.date));
+      html += sorted.map(a => {
+        const stBadge = a.status==='confirmado' ? 'badge-green' : a.status==='cancelado' ? 'badge-red' : 'badge-amber';
+        const stLabel = a.status==='confirmado' ? 'Confirmada' : a.status==='cancelado' ? 'Cancelada' : 'Solicitada';
+        return `<div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);">
+          <div style="flex:1;">
+            <div style="font-weight:600;font-size:13px;">${APPT_TYPES[a.type]||a.type}</div>
+            <div style="font-size:12px;color:var(--text-muted);">${new Date(a.date+'T12:00:00').toLocaleDateString('pt-BR')}${a.time?' às '+a.time:''}</div>
+            ${a.notes?`<div style="font-size:11px;color:var(--text-muted);font-style:italic;margin-top:2px;">${a.notes}</div>`:''}
+          </div>
+          <span class="badge ${stBadge}">${stLabel}</span>
+          ${a.status!=='confirmado' && a.status!=='cancelado'
+            ? `<button class="btn-sm btn-sm-approve" onclick="confirmApptDrawer('${a.id}')">Confirmar</button>`
+            : ''}
+        </div>`;
+      }).join('');
+    }
+    body.innerHTML = html;
+  }
+
+  if (tab === 'data') {
+    const d = onboarding.data || {};
+    const score     = calcRecoveryScore(d, onboarding);
+    const insights  = calcInsights(d);
+    const suggests  = calcSuggestions(d, score);
+    const scoreColor = score >= 70 ? '#059669' : score >= 50 ? '#F59E0B' : score >= 30 ? '#EF4444' : '#DC2626';
+    const scoreLabel = score >= 70 ? 'Bom'      : score >= 50 ? 'Moderado' : score >= 30 ? 'Atenção'  : 'Crítico';
+    const pct = onboarding.completed ? 100 : Math.round(((onboarding.step||1)-1)/14*100);
+    const empresa = d.empresa || {};
+
+    // Status badge
+    const statusCls  = score >= 70 ? 'badge-green' : score >= 50 ? 'badge-amber' : 'badge-red';
+    const statusLabel = score >= 70 ? 'Estável'     : score >= 50 ? 'Atenção'     : 'Crítico';
+
+    body.innerHTML = `
+      <div class="exec-header">
+        <div class="exec-company">${empresa.razaoSocial || user.company || '—'}</div>
+        <div class="exec-cnpj">CNPJ: ${empresa.cnpj || '—'} &nbsp;·&nbsp; <span class="badge ${statusCls}" style="font-size:11px;">${statusLabel}</span></div>
+        <div class="exec-kpis">
+          <div class="exec-kpi">
+            <div class="exec-kpi-val" style="color:${scoreColor};">${score}%</div>
+            <div class="exec-kpi-lbl">Score de Recuperação</div>
+            <div class="exec-kpi-sub" style="color:${scoreColor};">${scoreLabel}</div>
+          </div>
+          <div class="exec-kpi exec-divider" style="padding-left:20px;">
+            <div class="exec-kpi-val">${pct}%</div>
+            <div class="exec-kpi-lbl">Onboarding</div>
+            <div class="exec-kpi-sub" style="color:${onboarding.completed?'#34D399':'#93C5FD'};">${onboarding.completed?'Concluído':'Em andamento'}</div>
+          </div>
+          <div class="exec-kpi exec-divider" style="padding-left:20px;">
+            <div class="exec-kpi-val">${calcTotalDebt(d.dividas)}</div>
+            <div class="exec-kpi-lbl">Total dívidas</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="data-tab-bar">
+        ${['Resumo','Financeiro','Dívidas','Operação','Crise','Estratégia','Sócios'].map((t,i)=>
+          `<button class="data-tab-btn${i===0?' active':''}" onclick="switchDataTab(${i},this)">${t}</button>`
+        ).join('')}
+      </div>
+
+      <div id="dataTabContent"></div>
+
+      ${insights.length ? `
+      <div class="insights-box">
+        <div class="insights-title">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          Pontos de atenção identificados
+        </div>
+        <ul class="insights-list">${insights.map(i=>`<li>${i}</li>`).join('')}</ul>
+      </div>` : ''}
+
+      ${suggests.length ? `
+      <div class="suggestions-box">
+        <div class="suggestions-title">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+          Sugestões estratégicas
+        </div>
+        <ul class="suggestions-list">${suggests.map(s=>`<li>${s}</li>`).join('')}</ul>
+      </div>` : ''}
+    `;
+
+    // Store data globally for tab switching
+    window._execData = { d, user, onboarding };
+    switchDataTab(0, body.querySelector('.data-tab-btn'));
+  }
+}
+
+// ── Executive view helpers ─────────────────────────────────────────────────────
+function parseCurrencyVal(v) {
+  if (!v) return 0;
+  return parseFloat(String(v).replace(/[^\d,.-]/g,'').replace(',','.')) || 0;
+}
+
+function fmtCur(v) {
+  const n = parseCurrencyVal(v);
+  if (!n) return null;
+  return 'R$ ' + n.toLocaleString('pt-BR', { minimumFractionDigits:2, maximumFractionDigits:2 });
+}
+
+function fmtVal(v) {
+  if (v === null || v === undefined || v === '') return null;
+  if (v === 'sim') return 'Sim';
+  if (v === 'nao') return 'Não';
+  if (Array.isArray(v)) return v.join(', ');
+  return String(v);
+}
+
+function calcTotalDebt(dividas) {
+  if (!Array.isArray(dividas) || !dividas.length) return '—';
+  const total = dividas.reduce((s, d) => s + parseCurrencyVal(d.saldoAtual || d.valorOriginal), 0);
+  if (!total) return '—';
+  return 'R$ ' + total.toLocaleString('pt-BR', { minimumFractionDigits:2, maximumFractionDigits:2 });
+}
+
+function calcRecoveryScore(d, onb) {
+  let score = 50;
+  const fin  = d.financeiro  || {};
+  const func = d.funcionarios|| {};
+  const crise = d.crise      || {};
+  const ativos = d.ativos    || {};
+
+  // Financial: revenue vs costs
+  const receita  = parseCurrencyVal(fin.receitaMediaMensal);
+  const custos   = parseCurrencyVal(fin.custosFixosMensais) + parseCurrencyVal(fin.custosVariaveis);
+  if (receita > 0 && custos > 0) {
+    const margin = (receita - custos) / receita;
+    if (margin > 0.3) score += 12;
+    else if (margin > 0.1) score += 6;
+    else if (margin < 0) score -= 15;
+  }
+
+  // Debt vs revenue ratio
+  const dividas = d.dividas || [];
+  const totalDebt = dividas.reduce((s, dv) => s + parseCurrencyVal(dv.saldoAtual || dv.valorOriginal), 0);
+  if (receita > 0 && totalDebt > 0) {
+    const ratio = totalDebt / receita;
+    if (ratio < 6)   score += 10;
+    else if (ratio < 12) score += 0;
+    else score -= 15;
+  }
+
+  // Crisis duration
+  const durMap = { menos6m:5, '6a12m':0, '1a2a':-5, '2a3a':-10, mais3a:-15 };
+  score += durMap[crise.inicioDificuldades] || 0;
+
+  // Employees/labor
+  if (func.folhaEmAtraso === 'sim') score -= 8;
+  if (func.acoesTrabalhistasAndamento === 'sim') score -= 5;
+  if (func.demissoesRecentes === 'sim') score -= 4;
+
+  // Assets
+  if (ativos.possuiAtivos === 'sim') score += 5;
+
+  // Financial control
+  if (fin.possuiControleFinanceiro === 'sim') score += 5;
+  else if (fin.possuiControleFinanceiro === 'nao') score -= 5;
+
+  // Onboarding completeness
+  if (onb && onb.completed) score += 8;
+
+  return Math.min(95, Math.max(10, Math.round(score)));
+}
+
+function calcInsights(d) {
+  const insights = [];
+  const fin  = d.financeiro   || {};
+  const func = d.funcionarios || {};
+  const crise = d.crise       || {};
+  const op   = d.operacional  || {};
+  const dividas = d.dividas   || [];
+
+  const receita = parseCurrencyVal(fin.receitaMediaMensal);
+  const custos  = parseCurrencyVal(fin.custosFixosMensais) + parseCurrencyVal(fin.custosVariaveis);
+  if (receita > 0 && custos > 0 && custos > receita)
+    insights.push('Custos operacionais superam a receita — empresa operando no negativo');
+  else if (receita > 0 && custos > 0 && (receita - custos) / receita < 0.1)
+    insights.push('Margem de contribuição muito estreita — risco elevado de insolvência');
+
+  const totalDebt = dividas.reduce((s, dv) => s + parseCurrencyVal(dv.saldoAtual || dv.valorOriginal), 0);
+  if (receita > 0 && totalDebt > receita * 12)
+    insights.push('Endividamento superior a 12 meses de receita — reestruturação urgente');
+  else if (receita > 0 && totalDebt > receita * 6)
+    insights.push('Dívida elevada (>6× receita mensal) — priorizar renegociação');
+
+  const judicializadas = dividas.filter(dv => dv.estaJudicializada === 'sim');
+  if (judicializadas.length > 0)
+    insights.push(`${judicializadas.length} dívida(s) judicializadas — risco de penhora de ativos`);
+
+  if (func.folhaEmAtraso === 'sim')
+    insights.push('Folha de pagamento em atraso — risco trabalhista imediato');
+  if (func.acoesTrabalhistasAndamento === 'sim')
+    insights.push('Ações trabalhistas em andamento — passivo oculto a quantificar');
+  if (func.demissoesRecentes === 'sim')
+    insights.push('Demissões em massa recentes — avaliar impacto operacional e trabalhista');
+
+  if (['mais3a','2a3a'].includes(crise.inicioDificuldades))
+    insights.push('Crise financeira prolongada — risco de insolvência sem intervenção estruturada');
+
+  const causas = crise.causasCrise || [];
+  if (causas.includes('endividamento') && causas.includes('queda_receita'))
+    insights.push('Dupla pressão: queda de receita + endividamento crescente — cenário crítico');
+
+  return insights;
+}
+
+function calcSuggestions(d, score) {
+  const s = [];
+  const fin = d.financeiro || {};
+  const dividas = d.dividas || [];
+  const func = d.funcionarios || {};
+
+  if (score < 40) s.push('Iniciar processo de recuperação judicial extrajudicial imediatamente');
+  if (dividas.length > 0) s.push('Elaborar proposta de parcelamento para credores prioritários');
+
+  const receita = parseCurrencyVal(fin.receitaMediaMensal);
+  const custos  = parseCurrencyVal(fin.custosFixosMensais);
+  if (receita > 0 && custos > receita * 0.7)
+    s.push('Revisão urgente da estrutura de custos fixos — meta: reduzir para <60% da receita');
+
+  if (fin.possuiControleFinanceiro === 'nao')
+    s.push('Implementar controle financeiro sistemático (Conta Azul, Omie ou planilha estruturada)');
+
+  if (func.demissoesRecentes !== 'sim' && func.folhaEmAtraso !== 'sim')
+    s.push('Manter equipe estável — capital humano é ativo crítico na recuperação');
+
+  if (score >= 50 && score < 70)
+    s.push('Focar em renegociação extrajudicial — evitar judicialização desnecessária');
+
+  return s;
+}
+
+function execSectionHtml(title, rows) {
+  const valid = rows.filter(([, v]) => v !== null && v !== undefined && v !== '' && v !== '—');
+  if (!valid.length) return '';
+  return `<div class="exec-section">
+    <div class="exec-section-title">${title}</div>
+    <table class="exec-table">
+      ${valid.map(([k, v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join('')}
+    </table>
+  </div>`;
+}
+
+function switchDataTab(idx, el) {
+  document.querySelectorAll('.data-tab-btn').forEach(b => b.classList.remove('active'));
+  if (el) el.classList.add('active');
+  const content = document.getElementById('dataTabContent');
+  if (!content || !window._execData) return;
+
+  const { d, user } = window._execData;
+  const fin   = d.financeiro   || {};
+  const op    = d.operacional  || {};
+  const func  = d.funcionarios || {};
+  const crise = d.crise        || {};
+  const diag  = d.diagnostico  || {};
+  const merc  = d.mercado      || {};
+  const exp   = d.expectativas || {};
+  const emp   = d.empresa      || {};
+  const resp  = d.responsavel  || {};
+  const ativos = d.ativos      || {};
+  const dividas = Array.isArray(d.dividas) ? d.dividas : [];
+
+  const DURATION_LABELS = { menos6m:'Menos de 6 meses', '6a12m':'6 a 12 meses', '1a2a':'1 a 2 anos', '2a3a':'2 a 3 anos', mais3a:'Mais de 3 anos' };
+  const RAMO_LABELS = { comercio:'Comércio', industria:'Indústria', servicos:'Serviços', agronegocio:'Agronegócio', construcao:'Construção Civil', outros:'Outros' };
+  const TEMPO_LABELS = { menos1:'Menos de 1 ano', '1a3':'1 a 3 anos', '3a5':'3 a 5 anos', '5a10':'5 a 10 anos', mais10:'Mais de 10 anos' };
+  const TIPO_LABELS  = { banco:'Banco/Financeira', fornecedor:'Fornecedor', tributo:'Tributo', trabalhista:'Trabalhista', aluguel:'Aluguel', outros:'Outros' };
+
+  const tabs = ['resumo','financeiro','dividas','operacao','crise','estrategia','socios'];
+  const tab  = tabs[idx] || 'resumo';
+
+  let html = '';
+
+  if (tab === 'resumo') {
+    html += execSectionHtml('Empresa', [
+      ['Razão Social',      fmtVal(emp.razaoSocial)],
+      ['Nome Fantasia',     fmtVal(emp.nomeFantasia)],
+      ['CNPJ',              fmtVal(emp.cnpj)],
+      ['Endereço',          fmtVal(emp.endereco)],
+      ['Cidade / UF',       emp.cidade && emp.estado ? `${emp.cidade} / ${emp.estado}` : fmtVal(emp.cidade || emp.estado)],
+      ['CEP',               fmtVal(emp.cep)],
+      ['E-mail',            fmtVal(emp.email || emp.email2)],
+      ['Telefone',          fmtVal(emp.telefone || emp.tel2)],
+    ]);
+    html += execSectionHtml('Responsável pelo Cadastro', [
+      ['Nome',     fmtVal(resp.nome)],
+      ['CPF',      fmtVal(resp.cpf)],
+      ['Cargo',    fmtVal(resp.cargo)],
+      ['E-mail',   fmtVal(resp.email)],
+      ['Telefone', fmtVal(resp.telefone)],
+    ]);
+  }
+
+  if (tab === 'financeiro') {
+    html += execSectionHtml('Receitas', [
+      ['Receita média mensal',       fmtCur(fin.receitaMediaMensal)],
+      ['Principais fontes de receita', fmtVal(fin.principaisFontesReceita)],
+    ]);
+    html += execSectionHtml('Custos', [
+      ['Custos fixos mensais',       fmtCur(fin.custosFixosMensais)],
+      ['Custos variáveis mensais',   fmtCur(fin.custosVariaveis)],
+      ['Principais despesas',        fmtVal(fin.principaisDespesas)],
+    ]);
+    html += execSectionHtml('Controle Financeiro', [
+      ['Possui controle sistemático', fmtVal(fin.possuiControleFinanceiro)],
+      ['Sistema utilizado',           fmtVal(fin.sistemaControle)],
+    ]);
+    // Margin calc
+    const rec = parseCurrencyVal(fin.receitaMediaMensal);
+    const cst = parseCurrencyVal(fin.custosFixosMensais) + parseCurrencyVal(fin.custosVariaveis);
+    if (rec > 0 && cst > 0) {
+      const margin = ((rec - cst) / rec * 100).toFixed(1);
+      const marginColor = parseFloat(margin) > 20 ? 'var(--success)' : parseFloat(margin) > 0 ? '#F59E0B' : 'var(--error)';
+      html += `<div class="exec-section">
+        <div class="exec-section-title">Indicadores calculados</div>
+        <table class="exec-table">
+          <tr><td>Margem de contribuição estimada</td><td style="color:${marginColor};font-weight:700;">${margin}%</td></tr>
+          <tr><td>Resultado mensal estimado</td><td style="color:${marginColor};font-weight:600;">${fmtCur(rec - cst)}</td></tr>
+        </table>
+      </div>`;
+    }
+  }
+
+  if (tab === 'dividas') {
+    if (!dividas.length) {
+      html = '<div class="empty-state" style="padding:24px 0;"><p>Nenhuma dívida cadastrada.</p></div>';
+    } else {
+      const total = dividas.reduce((s, dv) => s + parseCurrencyVal(dv.saldoAtual || dv.valorOriginal), 0);
+      const judicializadas = dividas.filter(dv => dv.estaJudicializada === 'sim').length;
+      html += `<div class="exec-section">
+        <div class="exec-section-title">Resumo</div>
+        <table class="exec-table">
+          <tr><td>Total de credores</td><td><strong>${dividas.length}</strong></td></tr>
+          <tr><td>Total estimado de dívidas</td><td style="font-weight:700;color:var(--error);">R$ ${total.toLocaleString('pt-BR',{minimumFractionDigits:2})}</td></tr>
+          <tr><td>Dívidas judicializadas</td><td>${judicializadas > 0 ? `<span class="badge badge-red">${judicializadas}</span>` : '<span class="badge badge-green">Nenhuma</span>'}</td></tr>
+        </table>
+      </div>`;
+      html += `<div class="exec-section">
+        <div class="exec-section-title">Detalhamento</div>
+        <div style="overflow-x:auto;">
+          <table class="debt-table">
+            <thead><tr>
+              <th>Credor</th><th>Tipo</th><th>Valor original</th><th>Saldo atual</th><th>Garantia</th><th>Judicial</th>
+            </tr></thead>
+            <tbody>
+              ${dividas.map(dv => `<tr>
+                <td style="font-weight:500;">${dv.nomeCredor||'—'}</td>
+                <td>${TIPO_LABELS[dv.tipoDivida]||dv.tipoDivida||'—'}</td>
+                <td>${fmtCur(dv.valorOriginal)||'—'}</td>
+                <td style="font-weight:600;color:var(--error);">${fmtCur(dv.saldoAtual)||'—'}</td>
+                <td>${dv.possuiGarantia==='sim'?'<span class="badge badge-amber">Sim</span>':'<span class="badge badge-gray">Não</span>'}</td>
+                <td>${dv.estaJudicializada==='sim'?'<span class="badge badge-red">Sim</span>':'<span class="badge badge-green">Não</span>'}</td>
+              </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>`;
+    }
+  }
+
+  if (tab === 'operacao') {
+    html += execSectionHtml('Estrutura Operacional', [
+      ['Ramo de atividade',       RAMO_LABELS[op.ramoAtividade] || fmtVal(op.ramoAtividade)],
+      ['Atividade principal',     fmtVal(op.atividadePrincipal)],
+      ['Tempo de operação',       TEMPO_LABELS[op.tempoOperacao] || fmtVal(op.tempoOperacao)],
+      ['Nº de unidades',          fmtVal(op.quantidadeUnidades)],
+      ['Possui filiais',          fmtVal(op.possuiFiliais)],
+      ['Descrição da operação',   fmtVal(op.descricaoOperacao)],
+    ]);
+    html += execSectionHtml('Quadro de Funcionários', [
+      ['Total de funcionários',   fmtVal(func.total)],
+      ['Administrativo',          fmtVal(func.administrativo)],
+      ['Operacional',             fmtVal(func.operacional)],
+      ['Comercial',               fmtVal(func.comercial)],
+      ['Folha em atraso',         fmtVal(func.folhaEmAtraso)],
+      ['Ações trabalhistas',      fmtVal(func.acoesTrabalhistasAndamento)],
+      ['Demissões recentes',      fmtVal(func.demissoesRecentes)],
+      ['Detalhe demissões',       fmtVal(func.detalheDemissoes)],
+    ]);
+    html += execSectionHtml('Ativos', [
+      ['Possui ativos relevantes',      fmtVal(ativos.possuiAtivos)],
+      ['Descrição dos ativos',          fmtVal(ativos.descricaoAtivos)],
+      ['Estimativa de valor',           fmtCur(ativos.estimativaValor)],
+      ['Ativos financiados/alienados',  fmtVal(ativos.ativosFinanciadosAliendados)],
+      ['Ativos ociosos',                fmtVal(ativos.ativosOciosos)],
+      ['Descrição ociosos',             fmtVal(ativos.descricaoAtivosOciosos)],
+    ]);
+  }
+
+  if (tab === 'crise') {
+    html += execSectionHtml('Histórico da Crise', [
+      ['Início das dificuldades', DURATION_LABELS[crise.inicioDificuldades] || fmtVal(crise.inicioDificuldades)],
+      ['Principais eventos',      fmtVal(crise.principaisEventos)],
+      ['Causas identificadas',    Array.isArray(crise.causasCrise) ? crise.causasCrise.join(', ') : fmtVal(crise.causasCrise)],
+      ['Eventos últimos 24 meses',Array.isArray(crise.eventos24m)  ? crise.eventos24m.join(', ')  : fmtVal(crise.eventos24m)],
+      ['Medidas já tomadas',      fmtVal(crise.medidasJaTomadas)],
+    ]);
+    html += execSectionHtml('Diagnóstico Estratégico', [
+      ['Análise SWOT — Forças',     fmtVal(diag.forcas)],
+      ['Análise SWOT — Fraquezas',  fmtVal(diag.fraquezas)],
+      ['Análise SWOT — Oportunidades', fmtVal(diag.oportunidades)],
+      ['Análise SWOT — Ameaças',    fmtVal(diag.ameacas)],
+    ]);
+    html += execSectionHtml('Mercado', [
+      ['Descrição do mercado',    fmtVal(merc.descricaoMercado)],
+      ['Principais concorrentes', fmtVal(merc.principaisConcorrentes)],
+      ['Diferenciais',            fmtVal(merc.diferenciais)],
+    ]);
+  }
+
+  if (tab === 'estrategia') {
+    html += execSectionHtml('Expectativas e Estratégia', [
+      ['Objetivos',                fmtVal(exp.objetivos)],
+      ['Estratégia de recuperação', fmtVal(exp.estrategia)],
+      ['Prazo esperado',           fmtVal(exp.prazoEsperado)],
+      ['Investimento previsto',    fmtCur(exp.investimentoPrevisto)],
+      ['Parceiros estratégicos',   fmtVal(exp.parceiros)],
+    ]);
+  }
+
+  if (tab === 'socios') {
+    const socios = Array.isArray(d.socios) ? d.socios : [];
+    if (!socios.length) {
+      html = '<div class="empty-state" style="padding:24px 0;"><p>Nenhum sócio cadastrado.</p></div>';
+    } else {
+      socios.forEach((sc, i) => {
+        html += execSectionHtml(`Sócio ${i + 1}`, [
+          ['Nome',              fmtVal(sc.nome)],
+          ['CPF',               fmtVal(sc.cpf)],
+          ['Data de nascimento',fmtVal(sc.dataNascimento)],
+          ['Endereço',          fmtVal(sc.endereco)],
+          ['E-mail',            fmtVal(sc.email)],
+          ['Telefone',          fmtVal(sc.telefone)],
+          ['Participação',      sc.participacao ? sc.participacao + '%' : null],
+          ['Cargo',             fmtVal(sc.cargo)],
+        ]);
+      });
+    }
+  }
+
+  content.innerHTML = html || '<p style="color:var(--text-muted);font-size:13px;padding:12px 0;">Dados não preenchidos nesta seção.</p>';
+}
+
+// renderObjTable removed — replaced by executive view helpers above
+
+// ── Admin actions ─────────────────────────────────────────────────────────────
+async function updateChapterStatus(clientId, chapterId, status) {
+  const res = await fetch(`/api/admin/client/${clientId}/plan/chapter/${chapterId}`, {
+    method:'PUT', headers: authH(), body: JSON.stringify({ status })
+  });
+  if (res.ok) showToast('Status atualizado.', 'success');
+  else showToast('Erro ao atualizar.', 'error');
+  const r = await fetch(`/api/admin/client/${clientId}`, { headers: authH() });
+  if (r.ok) _currentClientData = await r.json();
+}
+
+async function addTask() {
+  const title = document.getElementById('newTaskTitle').value.trim();
+  const desc  = document.getElementById('newTaskDesc').value.trim();
+  const date  = document.getElementById('newTaskDate').value;
+  if (!title) { showToast('Informe o título da tarefa.', 'error'); return; }
+  const res = await fetch(`/api/admin/client/${_currentClientId}/task`, {
+    method:'POST', headers: authH(),
+    body: JSON.stringify({ title, description: desc, dueDate: date || null })
+  });
+  if (res.ok) {
+    showToast('Tarefa criada!', 'success');
+    const r = await fetch(`/api/admin/client/${_currentClientId}`, { headers: authH() });
+    if (r.ok) { _currentClientData = await r.json(); renderDrawerTab('tasks'); }
+  } else showToast('Erro ao criar tarefa.', 'error');
+}
+
+function applyMsgTemplate(idx) {
+  const tpl = (window._msgTemplates || [])[idx];
+  if (!tpl) return;
+  const input = document.getElementById('adminMsgInput');
+  if (input) { input.value = tpl.text; input.focus(); }
+}
+
+async function sendAdminMessage() {
+  const input = document.getElementById('adminMsgInput');
+  const text  = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  const res = await fetch(`/api/admin/client/${_currentClientId}/message`, {
+    method:'POST', headers: authH(), body: JSON.stringify({ text })
+  });
+  if (res.ok) {
+    const r = await fetch(`/api/admin/client/${_currentClientId}`, { headers: authH() });
+    if (r.ok) { _currentClientData = await r.json(); renderDrawerTab('messages'); }
+  }
+}
+
+async function confirmApptDrawer(apptId) {
+  const res = await fetch(`/api/admin/appointments/${_currentClientId}/${apptId}`, {
+    method:'PUT', headers: authH(), body: JSON.stringify({ status:'confirmado' })
+  });
+  if (res.ok) {
+    showToast('Reunião confirmada!', 'success');
+    const r = await fetch(`/api/admin/client/${_currentClientId}`, { headers: authH() });
+    if (r.ok) { _currentClientData = await r.json(); renderDrawerTab('agenda'); }
+  } else showToast('Erro ao confirmar.', 'error');
+}
+
+// ── Logs ─────────────────────────────────────────────────────────────────────
+const EVENT_LABELS = {
+  login:'Login', register:'Cadastro', verify:'Verificação',
+  step_complete:'Etapa concluída', submit:'Envio final'
+};
+async function loadLogs() {
+  const res = await fetch('/api/admin/logs', { headers: authH() });
+  if (!res.ok) return;
+  const { logs } = await res.json();
+  const tbody = document.getElementById('logTableBody');
+  if (!logs.length) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:20px;">Nenhum log registrado.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = logs.map(l => `<tr>
+    <td>${new Date(l.ts).toLocaleString('pt-BR')}</td>
+    <td style="color:var(--primary);">${l.email}</td>
+    <td><span class="badge ${l.event==='login'?'badge-blue':l.event==='submit'?'badge-green':'badge-gray'}">${EVENT_LABELS[l.event]||l.event}</span></td>
+    <td style="color:var(--text-muted);">${l.ip}</td>
+    <td style="color:var(--text-muted);">${l.step ? `Etapa ${l.step}` : '—'}</td>
+  </tr>`).join('');
+}
+
+// ── Load all ──────────────────────────────────────────────────────────────────
+async function loadAdminData() {
+  const [clientsRes, statsRes] = await Promise.all([
+    fetch('/api/admin/clients', { headers: authH() }),
+    fetch('/api/admin/stats',   { headers: authH() }),
+  ]);
+
+  if (clientsRes.ok) {
+    const { clients } = await clientsRes.json();
+    _allClients = clients;
+    renderClientTable(clients);
+    document.getElementById('clientsSub').textContent = `${clients.length} cliente${clients.length!==1?'s':''} cadastrado${clients.length!==1?'s':''}`;
+  }
+  if (statsRes.ok) {
+    const s = await statsRes.json();
+    document.getElementById('sTotalClients').textContent = s.total;
+    document.getElementById('sConcluido').textContent    = s.concluido;
+    document.getElementById('sEmAndamento').textContent  = s.emAndamento;
+    document.getElementById('sNaoIniciado').textContent  = s.naoIniciado;
+  }
+}
+
+// ── XLS Export ────────────────────────────────────────────────────────────────
+function exportClientXLS(clientId) {
+  if (!clientId) return;
+  const url = `/api/admin/client/${clientId}/export/xlsx`;
+  const a = document.createElement('a');
+  a.href = url;
+  a.setAttribute('download', '');
+  // Need auth header — use fetch + blob
+  fetch(url, { headers: authH() })
+    .then(r => {
+      if (!r.ok) { showToast('Erro ao exportar.', 'error'); return null; }
+      return r.blob();
+    })
+    .then(blob => {
+      if (!blob) return;
+      const objUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = objUrl;
+      link.download = `recupera_${clientId}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(objUrl);
+    })
+    .catch(() => showToast('Erro ao exportar.', 'error'));
+}
+
+// ── Impersonation ─────────────────────────────────────────────────────────────
+async function impersonateClient(clientId) {
+  if (!clientId) return;
+  try {
+    const res = await fetch(`/api/admin/impersonate/${clientId}`, {
+      method: 'POST', headers: authH()
+    });
+    if (!res.ok) { showToast('Erro ao gerar token de visualização.', 'error'); return; }
+    const { token } = await res.json();
+    const url = `/dashboard.html?impersonate=${encodeURIComponent(token)}`;
+    window.open(url, '_blank');
+  } catch (e) {
+    showToast('Erro ao visualizar como cliente.', 'error');
+  }
+}
+
+// ── Freshchat operator widget init ─────────────────────────────────────────────
+function initFreshchatOperator(user) {
+  try {
+    window.fcSettings = {
+      token:  'b487776b-ed4f-4b81-9240-16403eb40d5a',
+      host:   'https://msdk.freshchat.com',
+      siteId: 'e1458f85-7f7b-46cc-8a00-32871dbdc352',
+      config: { headerProperty: { appName: 'Recupera Empresas — Operador' } },
+      firstName: user.name ? user.name.split(' ')[0] : '',
+      lastName:  user.name ? user.name.split(' ').slice(1).join(' ') : '',
+      email:     user.email,
+      externalId: user.id || user.email,
+    };
+    if (typeof window.fcWidget !== 'undefined') {
+      fcWidget.init(window.fcSettings);
+    }
+  } catch(e) { console.warn('Freshchat operator init:', e); }
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+(async function init() {
+  const token = getToken();
+  if (!token) { location.href='/login.html'; return; }
+
+  const res = await fetch('/api/auth/verify', { headers: { Authorization:'Bearer '+token } });
+  if (!res.ok) { location.href='/login.html'; return; }
+
+  const { user } = await res.json();
+  if (!user.isAdmin) { location.href='/dashboard.html'; return; }
+
+  document.getElementById('userName').textContent   = user.name || user.email;
+  document.getElementById('userAvatar').textContent = (user.name||user.email||'?')[0].toUpperCase();
+  document.getElementById('authGuard')?.remove();
+
+  await loadAdminData();
+
+  setTimeout(() => initFreshchatOperator(user), 2000);
+})();
+</script>
+
+<!-- Freshchat operator widget -->
+<script src="https://wchat.freshchat.com/js/widget.js" async></script>
+
+</body>
+</html>
