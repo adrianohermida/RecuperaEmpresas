@@ -944,12 +944,23 @@ async function selectWithColumnFallback(table, options) {
 async function insertWithColumnFallback(table, payload, options = {}) {
   const candidate = { ...payload };
   const requiredColumns = new Set(options.requiredColumns || []);
+  let returningColumns = [...(options.returningColumns || [])];
+  const requiredReturningColumns = new Set(options.requiredReturningColumns || []);
 
   for (let attempt = 0; attempt < 10; attempt += 1) {
-    const { data, error } = await sb.from(table).insert(candidate).select().single();
+    let query = sb.from(table).insert(candidate);
+    if (returningColumns.length) query = query.select(returningColumns.join(','));
+    else query = query.select();
+    const { data, error } = await query.single();
     if (!error) return { data, error: null, payload: candidate };
 
     const missingColumn = extractMissingColumnName(error.message);
+    if (missingColumn && returningColumns.includes(missingColumn) && !requiredReturningColumns.has(missingColumn)) {
+      returningColumns = returningColumns.filter((column) => column !== missingColumn);
+      console.warn(`[SCHEMA FALLBACK] ${table}: coluna ausente removida do retorno do insert: ${missingColumn}`);
+      continue;
+    }
+
     if (!missingColumn || !(missingColumn in candidate) || requiredColumns.has(missingColumn)) {
       return { data: null, error, payload: candidate };
     }
@@ -964,16 +975,26 @@ async function insertWithColumnFallback(table, payload, options = {}) {
 async function updateWithColumnFallback(table, match, payload, options = {}) {
   let candidate = { ...payload };
   const requiredColumns = new Set(options.requiredColumns || []);
+  let returningColumns = [...(options.returningColumns || [])];
+  const requiredReturningColumns = new Set(options.requiredReturningColumns || []);
 
   for (let attempt = 0; attempt < 10; attempt += 1) {
     let query = sb.from(table).update(candidate);
     Object.entries(match || {}).forEach(([column, value]) => {
       query = query.eq(column, value);
     });
-    const { data, error } = await query.select().single();
+    if (returningColumns.length) query = query.select(returningColumns.join(','));
+    else query = query.select();
+    const { data, error } = await query.single();
     if (!error) return { data, error: null, payload: candidate };
 
     const missingColumn = extractMissingColumnName(error.message);
+    if (missingColumn && returningColumns.includes(missingColumn) && !requiredReturningColumns.has(missingColumn)) {
+      returningColumns = returningColumns.filter((column) => column !== missingColumn);
+      console.warn(`[SCHEMA FALLBACK] ${table}: coluna ausente removida do retorno do update: ${missingColumn}`);
+      continue;
+    }
+
     if (!missingColumn || !(missingColumn in candidate) || requiredColumns.has(missingColumn)) {
       return { data: null, error, payload: candidate };
     }
@@ -5027,7 +5048,7 @@ app.post('/api/admin/services', requireAdmin, async (req, res) => {
   try {
     const { name, description, category, price_cents, delivery_days, features, featured, journey_id } = req.body;
     if (!name || !price_cents) return res.status(400).json({ error: 'name e price_cents são obrigatórios.' });
-    const { data: svc, error } = await insertWithColumnFallback('re_services', {
+    const basePayload = {
       name, title: name,
       description, category,
       price_cents: parseInt(price_cents),
@@ -5038,7 +5059,42 @@ app.post('/api/admin/services', requireAdmin, async (req, res) => {
       journey_id: journey_id || null,
       active: true,
       created_by: req.user.id,
-    }, { requiredColumns: ['name', 'price_cents', 'active'] });
+    };
+    const serviceReturningColumns = ['id', 'name', 'title', 'description', 'category', 'price_cents', 'price', 'delivery_days', 'features', 'featured', 'journey_id', 'active', 'created_by', 'created_at', 'updated_at'];
+    let insertResult = await insertWithColumnFallback('re_services', basePayload, {
+      requiredColumns: ['name', 'price_cents', 'active'],
+      returningColumns: serviceReturningColumns,
+      requiredReturningColumns: ['id', 'name', 'price_cents', 'active'],
+    });
+
+    if (insertResult.error && /invalid input value.*category|violates .*category/i.test(String(insertResult.error.message || ''))) {
+      const retryPayload = { ...basePayload, category: null };
+      insertResult = await insertWithColumnFallback('re_services', retryPayload, {
+        requiredColumns: ['name', 'price_cents', 'active'],
+        returningColumns: serviceReturningColumns,
+        requiredReturningColumns: ['id', 'name', 'price_cents', 'active'],
+      });
+    }
+
+    if (insertResult.error && /journey_id/i.test(String(insertResult.error.message || ''))) {
+      const retryPayload = { ...basePayload, journey_id: null };
+      insertResult = await insertWithColumnFallback('re_services', retryPayload, {
+        requiredColumns: ['name', 'price_cents', 'active'],
+        returningColumns: serviceReturningColumns,
+        requiredReturningColumns: ['id', 'name', 'price_cents', 'active'],
+      });
+    }
+
+    if (insertResult.error && /created_by/i.test(String(insertResult.error.message || ''))) {
+      const retryPayload = { ...basePayload, created_by: null };
+      insertResult = await insertWithColumnFallback('re_services', retryPayload, {
+        requiredColumns: ['name', 'price_cents', 'active'],
+        returningColumns: serviceReturningColumns,
+        requiredReturningColumns: ['id', 'name', 'price_cents', 'active'],
+      });
+    }
+
+    const { data: svc, error } = insertResult;
     if (error) {
       if (isSchemaCompatibilityError(error.message, ['re_services', 'name', 'title', 'description', 'category', 'price_cents', 'price', 'delivery_days', 'features', 'featured', 'journey_id', 'active', 'created_by'])) {
         return res.status(503).json({ error: 'Serviços temporariamente indisponíveis até concluir a atualização do banco.' });
@@ -5063,7 +5119,25 @@ app.put('/api/admin/services/:id', requireAdmin, async (req, res) => {
     if (category    !== undefined) updates.category    = category;
     if (featured    !== undefined) updates.featured    = featured;
     if (journey_id  !== undefined) updates.journey_id  = journey_id || null;
-    const { data: svc, error } = await updateWithColumnFallback('re_services', { id: req.params.id }, updates);
+    let updateResult = await updateWithColumnFallback('re_services', { id: req.params.id }, updates, {
+      returningColumns: ['id', 'name', 'title', 'description', 'category', 'price_cents', 'price', 'delivery_days', 'features', 'featured', 'journey_id', 'active', 'created_by', 'created_at', 'updated_at'],
+      requiredReturningColumns: ['id', 'name', 'price_cents', 'active'],
+    });
+    if (updateResult.error && category !== undefined && /invalid input value.*category|violates .*category/i.test(String(updateResult.error.message || ''))) {
+      const retryUpdates = { ...updates, category: null };
+      updateResult = await updateWithColumnFallback('re_services', { id: req.params.id }, retryUpdates, {
+        returningColumns: ['id', 'name', 'title', 'description', 'category', 'price_cents', 'price', 'delivery_days', 'features', 'featured', 'journey_id', 'active', 'created_by', 'created_at', 'updated_at'],
+        requiredReturningColumns: ['id', 'name', 'price_cents', 'active'],
+      });
+    }
+    if (updateResult.error && journey_id !== undefined && /journey_id/i.test(String(updateResult.error.message || ''))) {
+      const retryUpdates = { ...updates, journey_id: null };
+      updateResult = await updateWithColumnFallback('re_services', { id: req.params.id }, retryUpdates, {
+        returningColumns: ['id', 'name', 'title', 'description', 'category', 'price_cents', 'price', 'delivery_days', 'features', 'featured', 'journey_id', 'active', 'created_by', 'created_at', 'updated_at'],
+        requiredReturningColumns: ['id', 'name', 'price_cents', 'active'],
+      });
+    }
+    const { data: svc, error } = updateResult;
     if (error) {
       if (isSchemaCompatibilityError(error.message, ['re_services', 'name', 'title', 'description', 'category', 'price_cents', 'price', 'featured', 'journey_id', 'active'])) {
         return res.status(503).json({ error: 'Serviços temporariamente indisponíveis até concluir a atualização do banco.' });
