@@ -198,7 +198,7 @@
     return `<li><span class="scope-icon">${def.icon}</span>${def.text}</li>`;
   }).join('');
 
-  // ── Consent decision ────────────────────────────────────────────────────────
+  // ── Consent decision — direct REST call for better error visibility ─────────
   window.decide = async function (allow) {
     const btnAllow = document.getElementById('btnAllow');
     const btnDeny  = document.getElementById('btnDeny');
@@ -211,25 +211,52 @@
     else        btnDeny.innerHTML  = '<div class="spinner"></div> Negando...';
 
     try {
-      let redirect_to;
-      if (allow) {
-        const { data, error } = await supabase.auth.oauth.approveAuthorization(authorizationId);
-        if (error) throw error;
-        redirect_to = data?.redirect_to;
-      } else {
+      // Re-fetch session to ensure it is fresh
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
+      if (!currentSession) throw new Error('Sessão expirada — recarregue a página e tente novamente.');
+
+      console.log('[CONSENT] session uid:', currentSession.user?.id);
+      console.log('[CONSENT] access_token (first 40):', currentSession.access_token?.slice(0, 40));
+
+      if (!allow) {
+        // Deny: try supabase-js method, fall back to redirect
         try {
           const { data, error } = await supabase.auth.oauth.denyAuthorization(authorizationId);
           if (error) throw error;
-          redirect_to = data?.redirect_to;
+          window.location.href = data?.redirect_to || '/login.html?err=oauth&desc=access_denied';
         } catch {
-          // denyAuthorization may not exist in older versions — fall back
-          redirect_to = '/login.html?err=oauth&desc=access_denied';
+          window.location.href = '/login.html?err=oauth&desc=access_denied';
         }
+        return;
       }
-      if (!redirect_to) throw new Error('Supabase não retornou redirect_to');
+
+      // Approve: call the Supabase consent endpoint directly so we can log the
+      // raw response in case supabase-js swallows details.
+      const consentUrl = `${SUPA_URL}/auth/v1/oauth/authorizations/${encodeURIComponent(authorizationId)}/consent`;
+      console.log('[CONSENT] POST', consentUrl);
+
+      const res  = await fetch(consentUrl, {
+        method:  'POST',
+        headers: {
+          'Content-Type':  'application/json',
+          'apikey':        SUPA_ANON,
+          'Authorization': `Bearer ${currentSession.access_token}`,
+        },
+        body: JSON.stringify({}),
+      });
+      const payload = await res.json().catch(() => ({}));
+      console.log('[CONSENT] response', res.status, JSON.stringify(payload));
+
+      if (!res.ok) {
+        const detail = payload.msg || payload.error_description || payload.message || payload.error || JSON.stringify(payload);
+        throw new Error(`Supabase ${res.status}: ${detail}`);
+      }
+
+      const redirect_to = payload.redirect_to || payload.redirectTo;
+      if (!redirect_to) throw new Error('Supabase não retornou redirect_to: ' + JSON.stringify(payload));
       window.location.href = redirect_to;
     } catch (err) {
-      console.error('[CONSENT]', err);
+      console.error('[CONSENT] error:', err);
       errMsg.textContent = err.message || 'Erro ao processar decisão. Tente novamente.';
       errEl.style.display = 'flex';
       btnAllow.disabled = btnDeny.disabled = false;
