@@ -323,63 +323,6 @@ async function pollUnreadMessages() {
 }
 
 // ── Financeiro admin ──────────────────────────────────────────────────────────
-async function loadAdminFinanceiro() {
-  const listEl = document.getElementById('finClientsList');
-  listEl.innerHTML = '<div style="padding:20px;color:var(--text-muted);font-size:14px;">Carregando dados do Stripe...</div>';
-
-  const res = await fetch('/api/admin/financial', { headers: authH() });
-  if (!res.ok) { listEl.innerHTML = '<div style="padding:20px;color:var(--text-muted);">Erro ao carregar dados financeiros.</div>'; return; }
-  const { configured, clients = [], totalRevenue = 0 } = await res.json();
-
-  if (!configured) {
-    listEl.innerHTML = '<div style="padding:20px;color:var(--text-muted);">Stripe não configurado. Defina STRIPE_SECRET_KEY nas variáveis de ambiente.</div>';
-    return;
-  }
-
-  const paying    = clients.filter(c => c.paymentsCount > 0);
-  const totalPmts = clients.reduce((s, c) => s + (c.paymentsCount || 0), 0);
-
-  document.getElementById('finTotalRevenue').textContent  = `R$ ${totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  document.getElementById('finClientsPaid').textContent   = paying.length;
-  document.getElementById('finTotalPayments').textContent = totalPmts;
-  document.getElementById('finSub').textContent           = `${clients.length} cliente${clients.length !== 1 ? 's' : ''} — R$ ${totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} em receita total`;
-
-  if (!clients.length) {
-    listEl.innerHTML = '<div style="padding:20px;color:var(--text-muted);">Nenhum cliente com histórico financeiro.</div>';
-    return;
-  }
-
-  const sorted = [...clients].sort((a, b) => (b.totalPaid||0) - (a.totalPaid||0));
-  let html = '<table style="width:100%;border-collapse:collapse;font-size:13px;">';
-  html += '<thead><tr style="border-bottom:1px solid var(--border);">';
-  ['Cliente','Empresa','Pagamentos','Total pago','Último pagamento',''].forEach(h => {
-    html += `<th style="text-align:left;padding:10px 14px;color:var(--text-muted);font-weight:600;">${h}</th>`;
-  });
-  html += '</tr></thead><tbody>';
-  sorted.forEach(c => {
-    const lastDate = c.lastPaymentDate ? new Date(c.lastPaymentDate).toLocaleDateString('pt-BR') : '—';
-    html += `<tr style="border-bottom:1px solid var(--border-light,#F1F5F9);cursor:pointer;" onclick="openClient('${c.userId}')">
-      <td style="padding:10px 14px;"><div style="font-weight:600;">${c.name||'—'}</div><div style="font-size:11px;color:var(--text-muted);">${c.email}</div></td>
-      <td style="padding:10px 14px;color:var(--text-muted);">${c.company||'—'}</td>
-      <td style="padding:10px 14px;text-align:center;">${c.paymentsCount||0}</td>
-      <td style="padding:10px 14px;font-weight:700;color:${c.totalPaid>0?'#059669':'var(--text-muted)'};">R$ ${(c.totalPaid||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
-      <td style="padding:10px 14px;color:var(--text-muted);">${lastDate}</td>
-      <td style="padding:10px 14px;"><button class="btn-ghost" style="font-size:12px;padding:4px 10px;" onclick="event.stopPropagation();openClientFinanceiro('${c.userId}')">Ver faturas</button></td>
-    </tr>`;
-  });
-  html += '</tbody></table>';
-  listEl.innerHTML = html;
-}
-
-// Abre drawer do cliente e exibe aba Financeiro
-function openClientFinanceiro(clientId) {
-  openClient(clientId);
-  setTimeout(() => {
-    const tabs = document.querySelectorAll('.drawer-tab');
-    tabs.forEach(t => { if (t.textContent.trim() === 'Financeiro') t.click(); });
-  }, 400);
-}
-
 // ── Form Builder ──────────────────────────────────────────────────────────────
 let _formConfig = null;
 
@@ -1035,6 +978,8 @@ function toggleAuditDetail(i) {
 }
 </script>
 
+<script src="./js/admin-agenda.js?v=20260416k"></script>
+<script src="./js/admin-finance.js?v=20260416l"></script>
 <script src="./js/admin-client-drawer-tabs-primary.js?v=20260416g"></script>
 <script src="./js/admin-client-drawer-tabs-secondary.js?v=20260416h"></script>
 <script src="./js/admin-client-drawer-tabs-tertiary.js?v=20260416i"></script>
@@ -1255,7 +1200,6 @@ async function jrnViewProgress(journeyId, asnId, clientName) {
   `;
 }
 
-  <script src="./js/admin-agenda.js?v=20260416k"></script>
 async function jrnMarkStepDone(journeyId, asnId, stepId, clientName) {
   const res = await fetch(`/api/admin/journeys/${journeyId}/assignments/${asnId}/complete-step`, {
     method: 'POST', headers: jrnAuthH(),
