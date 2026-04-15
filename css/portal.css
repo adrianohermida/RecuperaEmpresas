@@ -41,6 +41,10 @@ body {
   position: fixed; inset: 0; background: #0F172A;
   display: flex; align-items: center; justify-content: center; z-index: 9999;
 }
+.auth-guard {
+  position: fixed; inset: 0; background: #0F172A;
+  display: flex; align-items: center; justify-content: center; z-index: 9999;
+}
 .auth-guard-content { text-align: center; color: #fff; }
 .auth-guard-logo { margin-bottom: 16px; }
 .auth-guard-message { font-size: 15px; color: #64748B; }
@@ -1543,6 +1547,16 @@ body {
 .progress-step  { font-size: 14px; color: var(--text-muted); margin-top: 4px; }
 .progress-steps-bar { margin-top: 12px; height: 6px; background: #E2E8F0; border-radius: 3px; overflow: hidden; }
 .progress-steps-fill { height: 100%; background: linear-gradient(90deg, #1A56DB, #3B82F6); border-radius: 3px; transition: width .6s; }
+.dashboard-progress-steps-bar { margin-top: 10px; max-width: 240px; }
+.dashboard-action-wrap { margin-top: 14px; }
+.dashboard-inline-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 18px;
+  font-size: 13px;
+  text-decoration: none;
+}
 
 /* ── Status badges ───────────────────────────────────────────────────────────── */
 .badge {
