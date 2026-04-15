@@ -306,6 +306,39 @@ async function logAccess(userId, email, event, ip, extra = {}) {
   }
 }
 
+// ─── Audit log helper (fire-and-forget, never blocks) ────────────────────────
+async function auditLog({ actorId, actorEmail, actorRole, entityType, entityId, action, before, after, ip, notes } = {}) {
+  try {
+    await sb.from('re_audit_log').insert({
+      actor_id:    actorId    || null,
+      actor_email: actorEmail || null,
+      actor_role:  actorRole  || null,
+      entity_type: entityType || 'unknown',
+      entity_id:   entityId   ? String(entityId) : null,
+      action:      action     || 'unknown',
+      before_data: before     || null,
+      after_data:  after      || null,
+      ip:          ip         || null,
+      notes:       notes      || null,
+    });
+  } catch { /* audit failures must never break primary flows */ }
+}
+
+// ─── Notification helper (fire-and-forget) ────────────────────────────────────
+async function pushNotification(userId, type, title, body, entityType, entityId) {
+  try {
+    if (!userId) return;
+    await sb.from('re_notifications').insert({
+      user_id:     userId,
+      type:        type        || 'info',
+      title:       title       || '',
+      body:        body        || null,
+      entity_type: entityType  || null,
+      entity_id:   entityId ? String(entityId) : null,
+    });
+  } catch { /* notification failures must never block primary responses */ }
+}
+
 // ─── JWT ──────────────────────────────────────────────────────────────────────
 function signToken(payload) { return jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' }); }
 function verifyToken(token) { try { return jwt.verify(token, JWT_SECRET); } catch { return null; } }
@@ -2685,6 +2718,360 @@ app.put('/api/admin/form-config', requireAdmin, (req, res) => {
   } catch (e) {
     console.error('[FORM-CONFIG PUT]', e.message);
     res.status(500).json({ error: 'Erro ao salvar configuração.' });
+  }
+});
+
+// ─── Notifications ───────────────────────────────────────────────────────────
+app.get('/api/notifications', requireAuth, async (req, res) => {
+  try {
+    const uid   = req.user.id;
+    const limit = Math.min(parseInt(req.query.limit) || 30, 100);
+    const { data: rows } = await sb.from('re_notifications')
+      .select('*')
+      .eq('user_id', uid)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+    const items   = rows || [];
+    const unread  = items.filter(n => !n.read).length;
+    res.json({ notifications: items, unread_count: unread });
+  } catch (e) {
+    console.error('[NOTIF GET]', e.message);
+    res.json({ notifications: [], unread_count: 0 });
+  }
+});
+
+app.post('/api/notifications/:id/read', requireAuth, async (req, res) => {
+  try {
+    await sb.from('re_notifications')
+      .update({ read: true, read_at: new Date().toISOString() })
+      .eq('id', req.params.id)
+      .eq('user_id', req.user.id);
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/notifications/read-all', requireAuth, async (req, res) => {
+  try {
+    await sb.from('re_notifications')
+      .update({ read: true, read_at: new Date().toISOString() })
+      .eq('user_id', req.user.id)
+      .eq('read', false);
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Admin: push notification to a specific user or broadcast
+app.post('/api/admin/notifications/send', requireAdmin, async (req, res) => {
+  try {
+    const { user_id, type, title, body, entity_type, entity_id } = req.body;
+    if (!title) return res.status(400).json({ error: 'title é obrigatório.' });
+
+    if (user_id) {
+      await pushNotification(user_id, type || 'info', title, body, entity_type, entity_id);
+    } else {
+      // Broadcast to all active clients
+      const { data: users } = await sb.from('re_users')
+        .select('id')
+        .eq('is_admin', false)
+        .limit(500);
+      for (const u of (users || [])) {
+        await pushNotification(u.id, type || 'info', title, body, entity_type, entity_id);
+      }
+    }
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ─── Internal Invoices (hybrid billing) ──────────────────────────────────────
+
+// Client: list own internal invoices
+app.get('/api/financial/internal-invoices', requireAuth, async (req, res) => {
+  try {
+    const { data: invoices } = await sb.from('re_invoices')
+      .select('id,description,amount_cents,due_date,status,paid_at,payment_method,boleto_pdf_path,bank_data,created_at')
+      .eq('user_id', req.user.id)
+      .neq('status', 'cancelled')
+      .order('due_date', { ascending: false });
+    res.json({ invoices: invoices || [] });
+  } catch (e) {
+    console.error('[INVOICES GET]', e.message);
+    res.json({ invoices: [] });
+  }
+});
+
+// Client: download boleto PDF for an invoice
+app.get('/api/financial/internal-invoices/:id/pdf', requireAuth, async (req, res) => {
+  try {
+    const { data: inv } = await sb.from('re_invoices')
+      .select('*')
+      .eq('id', req.params.id)
+      .eq('user_id', req.user.id)
+      .single();
+    if (!inv) return res.status(404).json({ error: 'Boleto não encontrado.' });
+
+    // If a cached PDF exists, serve it
+    if (inv.boleto_pdf_path) {
+      const pdfPath = path.join(__dirname, inv.boleto_pdf_path);
+      if (fs.existsSync(pdfPath)) {
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="boleto-${inv.id}.pdf"`);
+        return fs.createReadStream(pdfPath).pipe(res);
+      }
+    }
+
+    // Generate PDF on the fly
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="boleto-${inv.id}.pdf"`);
+    const doc = new PDFDoc({ margin: 50, size: 'A4' });
+    doc.pipe(res);
+
+    const amtFmt = (inv.amount_cents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    const dueFmt = new Date(inv.due_date + 'T12:00:00').toLocaleDateString('pt-BR');
+    const bd     = inv.bank_data || {};
+
+    doc.fontSize(18).font('Helvetica-Bold').fillColor('#1e3a5f').text('Recupera Empresas', { align: 'center' });
+    doc.fontSize(13).font('Helvetica').fillColor('#374151').text('BOLETO DE COBRANÇA', { align: 'center' });
+    doc.moveDown(0.5);
+    doc.moveTo(50, doc.y).lineTo(545, doc.y).strokeColor('#E2E8F0').stroke();
+    doc.moveDown(0.5);
+
+    const field = (label, value) => {
+      doc.fontSize(9).fillColor('#6B7280').text(label.toUpperCase());
+      doc.fontSize(12).fillColor('#111827').font('Helvetica-Bold').text(value || '-');
+      doc.font('Helvetica').moveDown(0.4);
+    };
+
+    field('Beneficiário',       'Recupera Empresas Consultoria Ltda');
+    field('Descrição',          inv.description);
+    field('Valor',              amtFmt);
+    field('Vencimento',         dueFmt);
+    field('Status',             inv.status === 'paid' ? 'PAGO' : inv.status === 'overdue' ? 'VENCIDO' : 'EM ABERTO');
+    if (bd.linha_digitavel) field('Linha Digitável',   bd.linha_digitavel);
+    if (bd.banco)           field('Banco',             bd.banco);
+    if (bd.agencia)         field('Agência / Conta',   `${bd.agencia} / ${bd.conta}`);
+
+    doc.moveDown();
+    doc.fontSize(9).fillColor('#9CA3AF').text(`Gerado em ${new Date().toLocaleString('pt-BR')} — ID: ${inv.id}`, { align: 'center' });
+    doc.end();
+  } catch (e) {
+    console.error('[BOLETO PDF]', e.message);
+    res.status(500).json({ error: 'Erro ao gerar PDF.' });
+  }
+});
+
+// Admin: list all internal invoices with optional filters
+app.get('/api/admin/invoices', requireAdmin, async (req, res) => {
+  try {
+    const { status, user_id, from, to, limit = '50', offset = '0' } = req.query;
+    let q = sb.from('re_invoices')
+      .select('*,re_users!re_invoices_user_id_fkey(name,email,company)')
+      .order('created_at', { ascending: false })
+      .limit(parseInt(limit))
+      .range(parseInt(offset), parseInt(offset) + parseInt(limit) - 1);
+    if (status)  q = q.eq('status', status);
+    if (user_id) q = q.eq('user_id', user_id);
+    if (from)    q = q.gte('due_date', from);
+    if (to)      q = q.lte('due_date', to);
+    const { data: invoices, count } = await q;
+    res.json({ invoices: invoices || [], total: count || 0 });
+  } catch (e) {
+    console.error('[ADMIN INVOICES GET]', e.message);
+    res.json({ invoices: [], total: 0 });
+  }
+});
+
+// Admin: create internal invoice for a client
+app.post('/api/admin/invoices', requireAdmin, async (req, res) => {
+  try {
+    const { user_id, description, amount_cents, due_date, payment_method, bank_data, notes } = req.body;
+    if (!user_id || !description || !amount_cents || !due_date) {
+      return res.status(400).json({ error: 'user_id, description, amount_cents e due_date são obrigatórios.' });
+    }
+    const { data: inv, error } = await sb.from('re_invoices').insert({
+      user_id, description,
+      amount_cents: parseInt(amount_cents),
+      due_date,
+      status:         'pending',
+      payment_method: payment_method || 'boleto',
+      bank_data:      bank_data      || null,
+      notes:          notes          || null,
+      created_by:     req.user.id,
+    }).select().single();
+    if (error) return res.status(500).json({ error: error.message });
+
+    // Push notification to client
+    pushNotification(user_id, 'payment', 'Nova cobrança disponível',
+      `${description} — vencimento: ${new Date(due_date + 'T12:00:00').toLocaleDateString('pt-BR')}`,
+      'invoice', inv.id).catch(() => {});
+
+    // Audit log
+    auditLog({ actorId: req.user.id, actorEmail: req.user.email, actorRole: 'admin',
+      entityType: 'invoice', entityId: inv.id, action: 'create',
+      after: { user_id, description, amount_cents, due_date } }).catch(() => {});
+
+    res.json({ success: true, invoice: inv });
+  } catch (e) {
+    console.error('[ADMIN INVOICE POST]', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Admin: update invoice (status, paid_at, notes)
+app.put('/api/admin/invoices/:id', requireAdmin, async (req, res) => {
+  try {
+    const { status, paid_at, notes, bank_data } = req.body;
+    const { data: before } = await sb.from('re_invoices').select('*').eq('id', req.params.id).single();
+    if (!before) return res.status(404).json({ error: 'Boleto não encontrado.' });
+
+    const updates = {};
+    if (status    !== undefined) updates.status    = status;
+    if (paid_at   !== undefined) updates.paid_at   = paid_at;
+    if (notes     !== undefined) updates.notes     = notes;
+    if (bank_data !== undefined) updates.bank_data = bank_data;
+
+    const { data: inv, error } = await sb.from('re_invoices').update(updates).eq('id', req.params.id).select().single();
+    if (error) return res.status(500).json({ error: error.message });
+
+    // Notify client on status change
+    if (status && status !== before.status) {
+      const labels = { paid: 'Pagamento confirmado', overdue: 'Boleto vencido', cancelled: 'Boleto cancelado' };
+      if (labels[status]) {
+        pushNotification(before.user_id, 'payment', labels[status],
+          before.description, 'invoice', req.params.id).catch(() => {});
+      }
+    }
+
+    auditLog({ actorId: req.user.id, actorEmail: req.user.email, actorRole: 'admin',
+      entityType: 'invoice', entityId: req.params.id, action: 'update',
+      before: before, after: updates }).catch(() => {});
+
+    res.json({ success: true, invoice: inv });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Admin: cancel (soft-delete) invoice
+app.delete('/api/admin/invoices/:id', requireAdmin, async (req, res) => {
+  try {
+    const { data: before } = await sb.from('re_invoices').select('*').eq('id', req.params.id).single();
+    if (!before) return res.status(404).json({ error: 'Boleto não encontrado.' });
+    await sb.from('re_invoices').update({ status: 'cancelled' }).eq('id', req.params.id);
+    auditLog({ actorId: req.user.id, actorEmail: req.user.email, actorRole: 'admin',
+      entityType: 'invoice', entityId: req.params.id, action: 'cancel',
+      before: { status: before.status }, after: { status: 'cancelled' } }).catch(() => {});
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Admin: manually send invoice notification email
+app.post('/api/admin/invoices/:id/send-email', requireAdmin, async (req, res) => {
+  try {
+    const { data: inv } = await sb.from('re_invoices')
+      .select('*,re_users!re_invoices_user_id_fkey(name,email)')
+      .eq('id', req.params.id)
+      .single();
+    if (!inv) return res.status(404).json({ error: 'Boleto não encontrado.' });
+
+    const client     = inv.re_users || {};
+    const amtFmt     = ((inv.amount_cents || 0) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    const dueFmt     = new Date(inv.due_date + 'T12:00:00').toLocaleDateString('pt-BR');
+    const pdfUrl     = `${BASE_URL}/api/financial/internal-invoices/${inv.id}/pdf`;
+
+    await sendMail(
+      client.email,
+      `Boleto disponível: ${inv.description}`,
+      `<p>Olá, ${client.name || 'Cliente'}!</p>
+       <p>Um novo boleto está disponível no seu portal:</p>
+       <ul>
+         <li><strong>Descrição:</strong> ${inv.description}</li>
+         <li><strong>Valor:</strong> ${amtFmt}</li>
+         <li><strong>Vencimento:</strong> ${dueFmt}</li>
+       </ul>
+       <p><a href="${pdfUrl}" style="background:#1A56DB;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;">Baixar Boleto PDF</a></p>
+       <p>Acesse o <a href="${BASE_URL}/dashboard.html">Portal do Cliente</a> para mais detalhes.</p>`
+    );
+
+    await sb.from('re_invoices').update({ email_sent_at: new Date().toISOString() }).eq('id', req.params.id);
+    res.json({ success: true });
+  } catch (e) {
+    console.error('[INVOICE EMAIL]', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Admin: admin-side PDF generation (same as client endpoint but no user check)
+app.get('/api/admin/invoices/:id/pdf', requireAdmin, async (req, res) => {
+  try {
+    const { data: inv } = await sb.from('re_invoices').select('*').eq('id', req.params.id).single();
+    if (!inv) return res.status(404).json({ error: 'Boleto não encontrado.' });
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="boleto-${inv.id}.pdf"`);
+    const doc = new PDFDoc({ margin: 50, size: 'A4' });
+    doc.pipe(res);
+
+    const amtFmt = (inv.amount_cents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    const dueFmt = new Date(inv.due_date + 'T12:00:00').toLocaleDateString('pt-BR');
+    const bd     = inv.bank_data || {};
+
+    doc.fontSize(18).font('Helvetica-Bold').fillColor('#1e3a5f').text('Recupera Empresas', { align: 'center' });
+    doc.fontSize(13).font('Helvetica').fillColor('#374151').text('BOLETO DE COBRANÇA — CÓPIA ADMINISTRATIVA', { align: 'center' });
+    doc.moveDown(0.5);
+    doc.moveTo(50, doc.y).lineTo(545, doc.y).strokeColor('#E2E8F0').stroke();
+    doc.moveDown(0.5);
+
+    const field = (label, value) => {
+      doc.fontSize(9).fillColor('#6B7280').font('Helvetica').text(label.toUpperCase());
+      doc.fontSize(12).fillColor('#111827').font('Helvetica-Bold').text(value || '-');
+      doc.font('Helvetica').moveDown(0.4);
+    };
+
+    field('Descrição',        inv.description);
+    field('Valor',            amtFmt);
+    field('Vencimento',       dueFmt);
+    field('Status',           inv.status === 'paid' ? 'PAGO' : inv.status === 'overdue' ? 'VENCIDO' : inv.status === 'cancelled' ? 'CANCELADO' : 'EM ABERTO');
+    field('ID do Boleto',     inv.id);
+    if (bd.linha_digitavel)  field('Linha Digitável', bd.linha_digitavel);
+    if (bd.banco)            field('Banco',           bd.banco);
+    if (bd.agencia)          field('Agência / Conta', `${bd.agencia} / ${bd.conta}`);
+    if (inv.notes)           field('Observações',     inv.notes);
+
+    doc.moveDown();
+    doc.fontSize(9).fillColor('#9CA3AF').text(`Gerado em ${new Date().toLocaleString('pt-BR')}`, { align: 'center' });
+    doc.end();
+  } catch (e) {
+    console.error('[ADMIN BOLETO PDF]', e.message);
+    res.status(500).json({ error: 'Erro ao gerar PDF.' });
+  }
+});
+
+// ─── Audit Log ───────────────────────────────────────────────────────────────
+app.get('/api/admin/audit-log', requireAdmin, async (req, res) => {
+  try {
+    const { entity_type, actor_id, from, to, limit = '50', offset = '0' } = req.query;
+    let q = sb.from('re_audit_log')
+      .select('*')
+      .order('ts', { ascending: false })
+      .limit(parseInt(limit))
+      .range(parseInt(offset), parseInt(offset) + parseInt(limit) - 1);
+    if (entity_type) q = q.eq('entity_type', entity_type);
+    if (actor_id)    q = q.eq('actor_id', actor_id);
+    if (from)        q = q.gte('ts', from);
+    if (to)          q = q.lte('ts', to);
+    const { data: rows } = await q;
+    res.json({ entries: rows || [] });
+  } catch (e) {
+    console.error('[AUDIT LOG GET]', e.message);
+    res.json({ entries: [] });
   }
 });
 
