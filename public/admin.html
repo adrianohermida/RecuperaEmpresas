@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="./css/portal.css"/>
   <script src="./js/config.js?v=20260416d"></script>
   <script src="./js/api-base.js?v=20260416d"></script>
+  <script src="./js/shared-utils.js?v=20260416e"></script>
 </head>
 <body>
 
@@ -881,15 +882,13 @@
 'use strict';
 
 function readAdminResponse(res) {
-  if (typeof window.readApiResponse === 'function') return window.readApiResponse(res);
-  return res.text().then(text => {
-    if (!text) return {};
-    try {
-      return JSON.parse(text);
-    } catch {
-      const cleaned = text.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-      return { error: cleaned && !/^<!doctype/i.test(text.trim()) ? cleaned : `Erro ${res.status || ''}`.trim() };
+  return window.REShared.readResponse(res).then(payload => {
+    if (!payload || !payload.error || !payload.rawText) return payload;
+    const rawText = String(payload.rawText || '').trim();
+    if (/^<!doctype/i.test(rawText)) {
+      return { error: `Erro ${res.status || ''}`.trim() };
     }
+    return payload;
   });
 }
 
@@ -982,9 +981,9 @@ const APPT_TYPES = {
   outro:       'Outro',
 };
 
-function getToken()  { return localStorage.getItem('re_token'); }
-function authH()     { return { 'Content-Type':'application/json', 'Authorization':'Bearer '+getToken() }; }
-function logout()    { ['re_token','re_user'].forEach(k=>localStorage.removeItem(k)); location.href='login.html'; }
+function getToken()  { return window.REShared.getStoredToken(); }
+function authH()     { return window.REShared.buildAuthHeaders(); }
+function logout()    { window.REShared.clearStoredAuth(); location.href='login.html'; }
 
 function showToast(msg, type='', ms=3000) {
   const t = document.getElementById('toast');
@@ -2057,7 +2056,7 @@ function parseCurrencyVal(v) {
 function fmtCur(v) {
   const n = parseCurrencyVal(v);
   if (!n) return null;
-  return 'R$ ' + n.toLocaleString('pt-BR', { minimumFractionDigits:2, maximumFractionDigits:2 });
+  return window.REShared.formatCurrencyBRL(n);
 }
 
 function fmtVal(v) {
@@ -2072,7 +2071,7 @@ function calcTotalDebt(dividas) {
   if (!Array.isArray(dividas) || !dividas.length) return '—';
   const total = dividas.reduce((s, d) => s + parseCurrencyVal(d.saldoAtual || d.valorOriginal), 0);
   if (!total) return '—';
-  return 'R$ ' + total.toLocaleString('pt-BR', { minimumFractionDigits:2, maximumFractionDigits:2 });
+  return window.REShared.formatCurrencyBRL(total);
 }
 
 function calcRecoveryScore(d, onb) {

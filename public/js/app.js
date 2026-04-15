@@ -12,16 +12,14 @@ let   TOTAL_STEPS = 14;
 let ACTIVE_STEP_IDS = [1,2,3,4,5,6,7,8,9,10,11,12,13,14];
 
 // ─── Auth helpers ─────────────────────────────────────────────────────────────
-function getToken()   { return localStorage.getItem('re_token'); }
-function getUser()    { try { return JSON.parse(localStorage.getItem('re_user') || '{}'); } catch { return {}; } }
+function getToken()   { return window.REShared.getStoredToken(); }
+function getUser()    { return window.REShared.getStoredUser(); }
 function authHeaders(extra = {}) {
-  return { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken(), ...extra };
+  return window.REShared.buildAuthHeaders({ extra });
 }
 
 function logout() {
-  localStorage.removeItem('re_token');
-  localStorage.removeItem('re_user');
-  localStorage.removeItem(LS_KEY);
+  window.REShared.clearStoredAuth({ keys: ['re_token', 're_user', LS_KEY] });
   window.location.href = 'login.html';
 }
 

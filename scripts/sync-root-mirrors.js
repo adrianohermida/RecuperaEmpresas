@@ -22,6 +22,7 @@ const MIRROR_PATHS = [
   'js/api-base.js',
   'js/app.js',
   'js/config.js',
+  'js/shared-utils.js',
 ];
 
 function ensureDir(dirPath) {

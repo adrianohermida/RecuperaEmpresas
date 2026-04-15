@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="./css/portal.css"/>
   <script src="./js/config.js?v=20260416d"></script>
   <script src="./js/api-base.js?v=20260416d"></script>
+  <script src="./js/shared-utils.js?v=20260416e"></script>
 </head>
 <body>
 
@@ -775,17 +776,17 @@ const APPT_TYPES = {
 })();
 
 function getToken()  {
-  return sessionStorage.getItem('re_impersonate_token') || localStorage.getItem('re_token');
+  return window.REShared.getStoredToken({ allowImpersonation: true });
 }
-function getUser()   { try { return JSON.parse(localStorage.getItem('re_user')||'{}'); } catch { return {}; } }
-function authH()     { return { 'Content-Type':'application/json', 'Authorization':'Bearer '+getToken() }; }
+function getUser()   { return window.REShared.getStoredUser(); }
+function authH()     { return window.REShared.buildAuthHeaders({ allowImpersonation: true }); }
 function logout() {
   if (sessionStorage.getItem('re_impersonate_token')) {
     sessionStorage.removeItem('re_impersonate_token');
     window.close();
     return;
   }
-  ['re_token','re_user','recupera_onboarding_v2'].forEach(k=>localStorage.removeItem(k));
+  window.REShared.clearStoredAuth({ keys: ['re_token', 're_user', 'recupera_onboarding_v2'] });
   location.href='login.html';
 }
 
@@ -1045,8 +1046,7 @@ function toggleNewTicketForm() {
 }
 
 async function dashboardReadResponse(res) {
-  if (typeof window.readApiResponse === 'function') return window.readApiResponse(res);
-  return res.json();
+  return window.REShared.readResponse(res);
 }
 
 async function loadSupport() {
@@ -1243,8 +1243,8 @@ async function loadFinanceiro() {
     const stBadge = paid ? 'badge-green' : inv.status === 'open' ? 'badge-amber' : 'badge-gray';
     const stLabel = paid ? 'Pago' : inv.status === 'open' ? 'Em aberto' : inv.status === 'void' ? 'Cancelado' : 'Pendente';
     const amtNum  = parseFloat(inv.amount || inv.amountPaid || 0);
-    const amtFmt  = `R$ ${amtNum.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-    const dateFmt = inv.date ? new Date(inv.date).toLocaleDateString('pt-BR') : '-';
+    const amtFmt  = window.REShared.formatCurrencyBRL(amtNum);
+    const dateFmt = inv.date ? window.REShared.formatDateBR(inv.date) : '-';
     const pdfBtn  = inv.pdfUrl    ? `<a href="${inv.pdfUrl}" target="_blank" style="color:#1A56DB;font-size:12px;text-decoration:none;white-space:nowrap;">📄 PDF</a>` : '';
     const linkBtn = inv.hostedUrl ? `<a href="${inv.hostedUrl}" target="_blank" style="color:#1A56DB;font-size:12px;text-decoration:none;white-space:nowrap;">Ver fatura</a>` : '';
     html += `<tr style="border-bottom:1px solid var(--border-light,#F1F5F9);">
@@ -2020,8 +2020,8 @@ async function loadInternalInvoices() {
     html += '</tr></thead><tbody>';
 
     invoices.forEach(inv => {
-      const amt  = ((inv.amount_cents || 0) / 100).toLocaleString('pt-BR', { style:'currency', currency:'BRL' });
-      const due  = inv.due_date ? new Date(inv.due_date + 'T12:00:00').toLocaleDateString('pt-BR') : '-';
+      const amt  = window.REShared.formatCurrencyBRL((inv.amount_cents || 0) / 100);
+      const due  = inv.due_date ? window.REShared.formatDateBR(inv.due_date + 'T12:00:00') : '-';
       const sCls = statusClass[inv.status] || 'badge-gray';
       const sLbl = statusLabel[inv.status] || inv.status;
       const isOverdue = inv.status === 'pending' && inv.due_date && new Date(inv.due_date) < new Date();
@@ -2064,7 +2064,7 @@ async function loadMarketplace() {
       } else {
         const catLabel = { juridico:'Jurídico', financeiro:'Financeiro', consultoria:'Consultoria', outro:'Outro' };
         gridEl.innerHTML = services.map(s => {
-          const price = (s.price_cents / 100).toLocaleString('pt-BR', { style:'currency', currency:'BRL' });
+          const price = window.REShared.formatCurrencyBRL((s.price_cents || 0) / 100);
           const feats = Array.isArray(s.features) ? s.features : [];
           return `<div style="background:#fff;border:1px solid #E2E8F0;border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:10px;">
             ${s.featured ? '<span style="font-size:10px;font-weight:700;background:#FEF3C7;color:#92400E;padding:2px 8px;border-radius:20px;align-self:flex-start;">⭐ Destaque</span>' : ''}
