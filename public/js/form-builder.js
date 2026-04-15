@@ -475,9 +475,9 @@ function fbRenderPropertiesPanel(qId) {
   const opts = Array.isArray(q.options) ? q.options : [];
 
   panel.innerHTML = `
-  <div style="padding:16px;">
-    ${FB.readOnly ? '<div style="background:#FFF7ED;color:#92400E;border:1px solid #FCD34D;border-radius:6px;padding:6px 10px;font-size:11px;font-weight:600;margin-bottom:12px;">🔒 Somente leitura</div>' : ''}
-    <div style="font-size:12px;background:#EFF6FF;color:#1A56DB;border-radius:6px;padding:4px 10px;display:inline-block;margin-bottom:12px;font-weight:600;">
+  <div class="fb-props-panel-inner">
+    ${FB.readOnly ? '<div class="fb-props-readonly-banner">🔒 Somente leitura</div>' : ''}
+    <div class="fb-props-type-badge">
       ${typeInfo.icon} ${typeInfo.label}
     </div>
 
@@ -501,17 +501,17 @@ function fbRenderPropertiesPanel(qId) {
         oninput="fbSavePropDebounced(${q.id})">
     </div>` : ''}
     <!-- Required -->
-    <div class="fb-prop-group" style="display:flex;align-items:center;justify-content:space-between;">
-      <label class="fb-prop-label" style="margin:0;">Obrigatório</label>
+    <div class="fb-prop-group fb-prop-toggle-row">
+      <label class="fb-prop-label fb-prop-label-inline">Obrigatório</label>
       <input type="checkbox" id="fp-required" ${q.required?'checked':''} onchange="fbSavePropDebounced(${q.id})"
-        style="width:16px;height:16px;cursor:pointer;">
+        class="fb-prop-checkbox">
     </div>
 
     ${fbRenderTypeSpecificProps(q)}
 
     <!-- Scoring -->
-    <div style="border-top:1px solid #F1F5F9;margin:14px 0 10px;padding-top:10px;">
-      <div style="font-size:12px;font-weight:700;color:#64748B;margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px;">Pontuação</div>
+    <div class="fb-props-section-divider">
+      <div class="fb-props-section-title">Pontuação</div>
       <div class="fb-prop-group">
         <label class="fb-prop-label">Peso da questão</label>
         <input id="fp-weight" type="number" min="0" class="fb-prop-input" value="${q.weight||0}"
@@ -520,12 +520,12 @@ function fbRenderPropertiesPanel(qId) {
     </div>
 
     <!-- Buttons -->
-    ${FB.readOnly ? '' : `<div style="display:flex;flex-direction:column;gap:6px;margin-top:8px;">
-      <button class="btn-primary" onclick="fbSaveQuestion(${q.id})" style="font-size:13px;padding:8px;">
+    ${FB.readOnly ? '' : `<div class="fb-props-actions">
+      <button class="btn-primary fb-props-action-btn" onclick="fbSaveQuestion(${q.id})">
         💾 Salvar questão
       </button>
       ${['single_choice','multi_choice','dropdown','scale','nps','rating'].includes(q.type) ? `
-      <button class="btn-ghost" onclick="fbOpenLogicEditor(${q.id})" style="font-size:13px;padding:8px;">
+      <button class="btn-ghost fb-props-action-btn" onclick="fbOpenLogicEditor(${q.id})">
         🔀 Editar lógica condicional
       </button>` : ''}
     </div>`}
@@ -539,14 +539,13 @@ function fbRenderTypeSpecificProps(q) {
     <div class="fb-prop-group">
       <label class="fb-prop-label">Opções (uma por linha)</label>
       <textarea id="fp-options" class="fb-prop-input" rows="5"
-        oninput="fbSavePropDebounced(${q.id})"
-        style="resize:vertical;font-size:13px;">${opts.map(o=>typeof o==='string'?o:(o.label||o)).join('\n')}</textarea>
+        oninput="fbSavePropDebounced(${q.id})">${opts.map(o=>typeof o==='string'?o:(o.label||o)).join('\n')}</textarea>
     </div>`;
   }
   if (q.type === 'scale' || q.type === 'nps') {
     const s = q.settings || {};
     return `
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+    <div class="fb-props-grid-2">
       <div class="fb-prop-group">
         <label class="fb-prop-label">Mínimo</label>
         <input id="fp-scale-min" type="number" class="fb-prop-input" value="${s.min||1}" oninput="fbSavePropDebounced(${q.id})">
@@ -556,7 +555,7 @@ function fbRenderTypeSpecificProps(q) {
         <input id="fp-scale-max" type="number" class="fb-prop-input" value="${s.max||(q.type==='nps'?10:5)}" oninput="fbSavePropDebounced(${q.id})">
       </div>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+    <div class="fb-props-grid-2">
       <div class="fb-prop-group">
         <label class="fb-prop-label">Label mínimo</label>
         <input id="fp-scale-lmin" class="fb-prop-input" value="${fbEsc(s.label_min||'')}" placeholder="Ex: Ruim" oninput="fbSavePropDebounced(${q.id})">
@@ -573,8 +572,7 @@ function fbRenderTypeSpecificProps(q) {
       <label class="fb-prop-label">Fórmula (use {question_id})</label>
       <textarea id="fp-formula" class="fb-prop-input" rows="3"
         oninput="fbSavePropDebounced(${q.id})"
-        placeholder="Ex: {q1} * {q2} / 100"
-        style="font-family:monospace;font-size:12px;resize:vertical;">${fbEsc(q.formula||'')}</textarea>
+        placeholder="Ex: {q1} * {q2} / 100">${fbEsc(q.formula||'')}</textarea>
     </div>`;
   }
   return '';
@@ -750,7 +748,7 @@ function fbCloseLogicModal() {
 async function fbLoadLogicRules(qId) {
   const container = document.getElementById('fb-logic-rules');
   if (!container) return;
-  container.innerHTML = '<div style="padding:16px;color:#94A3B8;">Carregando regras...</div>';
+  container.innerHTML = '<div class="form-builder-logic-loading">Carregando regras...</div>';
 
   const res = await fetch(`/api/admin/forms/${FB.currentFormId}/logic?question_id=${qId}`, { headers: fbAuthH() });
   const jl = res.ok ? await res.json() : {};
@@ -760,20 +758,20 @@ async function fbLoadLogicRules(qId) {
   const pages     = FB.currentForm.pages || [];
 
   if (!rules.length) {
-    container.innerHTML = '<div style="padding:16px;text-align:center;color:#94A3B8;font-size:13px;">Nenhuma regra de lógica. Clique em "Adicionar regra".</div>';
+    container.innerHTML = '<div class="form-builder-logic-empty">Nenhuma regra de lógica. Clique em "Adicionar regra".</div>';
     return;
   }
 
   container.innerHTML = rules.map((r, i) => `
-    <div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;padding:12px;margin-bottom:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-      <span style="font-size:12px;color:#64748B;">Se resposta</span>
-      <span style="font-size:12px;font-weight:600;color:#1E293B;">${fbEsc(r.operator)}</span>
-      <span style="font-size:12px;background:#EFF6FF;color:#1A56DB;border-radius:4px;padding:2px 8px;">"${fbEsc(r.condition_value)}"</span>
-      <span style="font-size:12px;color:#64748B;">→</span>
-      <span style="font-size:12px;font-weight:600;color:#1E293B;">${r.action}</span>
-      ${r.target_page_id ? `<span style="font-size:12px;color:#64748B;">para página ${pages.findIndex(p=>p.id===r.target_page_id)+1}</span>` : ''}
-      ${r.target_question_id ? `<span style="font-size:12px;color:#64748B;">questão #${r.target_question_id}</span>` : ''}
-      <button onclick="fbDeleteLogicRule(${r.id})" style="margin-left:auto;background:none;border:none;color:#EF4444;cursor:pointer;font-size:13px;">🗑</button>
+    <div class="form-builder-logic-rule">
+      <span class="form-builder-logic-rule-copy">Se resposta</span>
+      <span class="form-builder-logic-rule-strong">${fbEsc(r.operator)}</span>
+      <span class="form-builder-logic-rule-chip">"${fbEsc(r.condition_value)}"</span>
+      <span class="form-builder-logic-rule-copy">→</span>
+      <span class="form-builder-logic-rule-strong">${r.action}</span>
+      ${r.target_page_id ? `<span class="form-builder-logic-rule-copy">para página ${pages.findIndex(p=>p.id===r.target_page_id)+1}</span>` : ''}
+      ${r.target_question_id ? `<span class="form-builder-logic-rule-copy">questão #${r.target_question_id}</span>` : ''}
+      <button onclick="fbDeleteLogicRule(${r.id})" class="form-builder-logic-rule-delete">🗑</button>
     </div>
   `).join('');
 }
@@ -823,7 +821,7 @@ function fbCloseAssignModal() {
 async function fbLoadAssignments() {
   const el = document.getElementById('fb-assign-list');
   if (!el) return;
-  el.innerHTML = '<div style="padding:12px;color:#94A3B8;font-size:13px;">Carregando...</div>';
+  el.innerHTML = '<div class="form-builder-assign-loading">Carregando...</div>';
   const res = await fetch(`/api/admin/forms/${FB.currentFormId}/assignments`, { headers: fbAuthH() });
   const ja = res.ok ? await res.json() : {};
   const data = ja.assignments || ja || [];
@@ -833,14 +831,14 @@ async function fbLoadAssignments() {
         const uname = u.name || a.user_name || '—';
         const uemail = u.email || a.user_email || '—';
         return `
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid #F1F5F9;">
+        <div class="form-builder-assign-item">
           <div>
-            <div style="font-size:13px;font-weight:600;color:#1E293B;">${fbEsc(uname)}</div>
-            <div style="font-size:11px;color:#94A3B8;">${fbEsc(uemail)}</div>
+            <div class="form-builder-assign-name">${fbEsc(uname)}</div>
+            <div class="form-builder-assign-email">${fbEsc(uemail)}</div>
           </div>
-          <button onclick="fbRemoveAssignment(${a.user_id})" style="background:none;border:none;color:#EF4444;cursor:pointer;font-size:12px;">Remover</button>
+          <button onclick="fbRemoveAssignment(${a.user_id})" class="form-builder-assign-remove">Remover</button>
         </div>`;}).join('')
-    : '<div style="padding:12px;color:#94A3B8;font-size:13px;">Nenhum cliente atribuído.</div>';
+    : '<div class="form-builder-assign-empty">Nenhum cliente atribuído.</div>';
 }
 
 async function fbAssignClient() {
