@@ -6,7 +6,10 @@
 ═══════════════════════════════════════════════════════════════ */
 
 const LS_KEY      = 'recupera_onboarding_v2';
-const TOTAL_STEPS = 14;
+let   TOTAL_STEPS = 14;
+
+// Active step IDs — may be a subset of 1-14 if admin disabled some steps
+let ACTIVE_STEP_IDS = [1,2,3,4,5,6,7,8,9,10,11,12,13,14];
 
 // ─── Auth helpers ─────────────────────────────────────────────────────────────
 function getToken()   { return localStorage.getItem('re_token'); }
@@ -125,19 +128,21 @@ function showToast(msg, type = '', duration = 3000) {
 
 // ─── Progress ─────────────────────────────────────────────────────────────────
 function updateProgress(step) {
-  const pct = Math.round(((step - 1) / TOTAL_STEPS) * 100);
-  el('progressLabel').textContent = `Etapa ${step} de ${TOTAL_STEPS}`;
+  // Position within active steps (1-based)
+  const pos = ACTIVE_STEP_IDS.indexOf(step) + 1 || 1;
+  const pct = Math.round(((pos - 1) / TOTAL_STEPS) * 100);
+  el('progressLabel').textContent = `Etapa ${pos} de ${TOTAL_STEPS}`;
   el('progressPct').textContent   = `${pct}% concluído`;
   el('progressFill').style.width  = pct + '%';
 
-  // dots
+  // dots — only show active steps
   const dots = el('stepsDots');
   dots.innerHTML = '';
-  STEPS.forEach(s => {
+  ACTIVE_STEP_IDS.forEach(id => {
+    const s = STEPS[id - 1];
     const d = document.createElement('div');
-    d.className = 'step-dot' +
-      (s.id < step ? ' done' : s.id === step ? ' active' : '');
-    d.title = s.title;
+    d.className = 'step-dot' + (id < step ? ' done' : id === step ? ' active' : '');
+    d.title = s?.title || `Etapa ${id}`;
     dots.appendChild(d);
   });
 }
@@ -146,8 +151,10 @@ function updateProgress(step) {
 function updateNavButtons(step) {
   const back = el('btnBack');
   const next = el('btnNext');
-  back.style.visibility = step === 1 ? 'hidden' : 'visible';
-  if (step === TOTAL_STEPS) {
+  const isFirst = ACTIVE_STEP_IDS.indexOf(step) === 0;
+  const isLast  = ACTIVE_STEP_IDS.indexOf(step) === ACTIVE_STEP_IDS.length - 1;
+  back.style.visibility = isFirst ? 'hidden' : 'visible';
+  if (isLast) {
     next.style.display = 'none';
   } else {
     next.style.display = '';
@@ -184,11 +191,16 @@ function card(content) {
   return `<div class="card">${content}</div>`;
 }
 function stepHeader(step, desc = '') {
-  const s = STEPS[step - 1];
+  const s   = STEPS[step - 1];
+  const pos = ACTIVE_STEP_IDS.indexOf(step) + 1 || step;
+  // Config description overrides built-in desc
+  const cfgStep    = window._formCfg?.steps?.find(x => x.id === step);
+  const configDesc = cfgStep?.description || '';
+  const finalDesc  = configDesc || desc;
   return `<div class="step-header">
-    <div class="step-chip">Etapa ${step} de ${TOTAL_STEPS}</div>
+    <div class="step-chip">Etapa ${pos} de ${TOTAL_STEPS}</div>
     <h1 class="step-title">${s.icon} ${s.title}</h1>
-    ${desc ? `<p class="step-desc">${desc}</p>` : ''}
+    ${finalDesc ? `<p class="step-desc">${finalDesc}</p>` : ''}
   </div>`;
 }
 function field(id, label, input, required = true, hint = '') {
@@ -1376,16 +1388,18 @@ const app = {
     // Send completed step data to server
     await notifyStepComplete(state.step);
 
-    if (state.step < TOTAL_STEPS) {
-      state.step++;
+    const idx = ACTIVE_STEP_IDS.indexOf(state.step);
+    if (idx !== -1 && idx < ACTIVE_STEP_IDS.length - 1) {
+      state.step = ACTIVE_STEP_IDS[idx + 1];
       renderStep(state.step);
       saveToLS();
     }
   },
   prevStep() {
     collectStepData(state.step);
-    if (state.step > 1) {
-      state.step--;
+    const idx = ACTIVE_STEP_IDS.indexOf(state.step);
+    if (idx > 0) {
+      state.step = ACTIVE_STEP_IDS[idx - 1];
       renderStep(state.step);
       saveToLS();
     }
@@ -1522,7 +1536,32 @@ function showSuccessScreen() {
   // Redirect admin to admin panel
   if (user.isAdmin) { window.location.href = 'admin.html'; return; }
 
-  // Load server-side progress
+  // ── Load form configuration ───────────────────────────────────────────────
+  try {
+    const cfgRes = await fetch('/api/form-config', { headers: { Authorization: 'Bearer ' + token } });
+    if (cfgRes.ok) {
+      const cfg = await cfgRes.json();
+      window._formCfg = cfg;
+      // Build active step IDs (always includes 1 and 14)
+      const activeIds = (cfg.steps || []).map(s => s.id).filter(id => id >= 1 && id <= 14);
+      if (activeIds.length >= 2) {
+        ACTIVE_STEP_IDS = activeIds;
+        TOTAL_STEPS     = ACTIVE_STEP_IDS.length;
+      }
+      // Patch STEPS titles from config
+      (cfg.steps || []).forEach(cs => {
+        const s = STEPS.find(x => x.id === cs.id);
+        if (s && cs.title) s.title = cs.title;
+      });
+      // Show welcome message if set
+      if (cfg.welcomeMessage) {
+        const wm = document.getElementById('welcomeMsg');
+        if (wm) wm.textContent = cfg.welcomeMessage;
+      }
+    }
+  } catch { /* fall back to 14-step defaults */ }
+
+  // ── Load server-side progress ─────────────────────────────────────────────
   try {
     const pRes = await fetch('/api/progress', { headers: { Authorization: 'Bearer ' + token } });
     if (pRes.ok) {
@@ -1531,13 +1570,22 @@ function showSuccessScreen() {
       if (serverProgress.completed) { window.location.href = 'dashboard.html'; return; }
       if (serverProgress.step > 1 && serverProgress.data) {
         Object.assign(state.data, serverProgress.data);
-        state.step = serverProgress.step;
+        // Snap to nearest active step if saved step is now disabled
+        const savedStep = serverProgress.step;
+        state.step = ACTIVE_STEP_IDS.includes(savedStep)
+          ? savedStep
+          : ACTIVE_STEP_IDS.find(id => id >= savedStep) || ACTIVE_STEP_IDS[0];
       }
     }
   } catch { /* fall back to local */ }
 
   // Also try localStorage as fallback
   if (state.step <= 1) loadFromLS();
+
+  // Snap to valid active step after LS load
+  if (!ACTIVE_STEP_IDS.includes(state.step)) {
+    state.step = ACTIVE_STEP_IDS.find(id => id >= state.step) || ACTIVE_STEP_IDS[0];
+  }
 
   renderStep(state.step);
   if (state.step > 1) showToast(`Bem-vindo de volta, ${user.name?.split(' ')[0] || ''}! Continuando na etapa ${state.step}.`, 'success', 4000);

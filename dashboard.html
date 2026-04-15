@@ -41,6 +41,26 @@
       </div>
     </div>
     <div class="header-right">
+      <!-- Notification Bell -->
+      <div style="position:relative;" id="notifBellWrap">
+        <button id="notifBell" onclick="toggleNotifDropdown()" title="Notificações"
+          style="background:none;border:none;cursor:pointer;padding:6px;border-radius:8px;color:#64748B;display:flex;align-items:center;position:relative;transition:background .15s;"
+          onmouseover="this.style.background='#F1F5F9'" onmouseout="this.style.background='none'">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+          </svg>
+          <span id="notifBadge" style="display:none;position:absolute;top:2px;right:2px;background:#DC2626;color:#fff;border-radius:9999px;font-size:9px;font-weight:700;min-width:14px;height:14px;line-height:14px;text-align:center;padding:0 2px;">0</span>
+        </button>
+        <div id="notifDropdown" style="display:none;position:absolute;top:44px;right:0;width:320px;max-height:420px;overflow-y:auto;background:#fff;border:1px solid #E2E8F0;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.12);z-index:300;">
+          <div style="padding:12px 16px;border-bottom:1px solid #F1F5F9;display:flex;align-items:center;justify-content:space-between;">
+            <span style="font-weight:700;font-size:14px;color:#1E293B;">Notificações</span>
+            <button onclick="markAllNotifRead()" style="background:none;border:none;font-size:12px;color:#1A56DB;cursor:pointer;padding:0;">Marcar todas lidas</button>
+          </div>
+          <div id="notifList" style="padding:4px 0;">
+            <div style="padding:20px;text-align:center;color:#94A3B8;font-size:13px;">Carregando...</div>
+          </div>
+        </div>
+      </div>
       <div class="user-chip" id="userChip">
         <div class="user-avatar" id="userAvatar">?</div>
         <span id="userName">Carregando...</span>
@@ -93,11 +113,23 @@
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
         Financeiro
       </button>
+      <button class="sidebar-link" onclick="showSection('marketplace',this)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+        Marketplace
+      </button>
       <button class="sidebar-link" id="docsSideLink" onclick="showSection('documentos',this)">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
         Documentos
       </button>
-      <button class="sidebar-link" id="equipeSideLink" onclick="showSection('equipe',this)" id="equipeNavBtn" style="display:none;">
+      <button class="sidebar-link" id="formulariosSideLink" onclick="showSection('formularios',this)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+        Formulários
+      </button>
+      <button class="sidebar-link" id="jornadasSideLink" onclick="showSection('jornadas',this)" style="display:none;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        Jornadas
+      </button>
+      <button class="sidebar-link" id="equipeNavBtn" onclick="showSection('equipe',this)" style="display:none;">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         Equipe
       </button>
@@ -471,6 +503,43 @@
           </div>
         </div>
       </div>
+
+      <!-- Internal Invoices (boletos bancários) -->
+      <div class="portal-card" style="margin-top:20px;">
+        <div class="portal-card-header">
+          <span class="portal-card-title">Boletos Bancários</span>
+        </div>
+        <div class="portal-card-body" id="internalInvoiceList">
+          <div class="empty-state">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            <p>Nenhum boleto disponível.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MARKETPLACE -->
+    <div id="sec-marketplace" class="tab-content">
+      <div class="section-header">
+        <div>
+          <div class="section-title">Marketplace de Serviços</div>
+          <div class="section-sub">Contrate serviços especializados para sua empresa</div>
+        </div>
+      </div>
+      <div id="marketplaceGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;margin-bottom:24px;">
+        <div style="padding:24px;text-align:center;color:var(--text-muted);font-size:13px;grid-column:1/-1;">Carregando serviços...</div>
+      </div>
+      <div class="portal-card">
+        <div class="portal-card-header">
+          <span class="portal-card-title">Meus Pedidos</span>
+        </div>
+        <div class="portal-card-body" id="myOrdersList">
+          <div class="empty-state">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/></svg>
+            <p>Nenhum pedido ainda.</p>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- DOCUMENTOS -->
@@ -599,7 +668,64 @@
       </div>
     </div>
 
+    <!-- FORMULÁRIOS (Form Player) -->
+    <div id="sec-formularios" class="tab-content">
+      <div class="section-header">
+        <div>
+          <div class="section-title">Formulários</div>
+          <div class="section-sub">Diagnósticos, pesquisas e avaliações atribuídos pela sua consultoria</div>
+        </div>
+        <button class="btn-ghost" onclick="loadClientForms()" style="font-size:13px;padding:8px 14px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/></svg>
+          Atualizar
+        </button>
+      </div>
+      <div id="fp-forms-list" style="display:flex;flex-direction:column;gap:12px;">
+        <div style="padding:24px;color:#94A3B8;text-align:center;">Carregando...</div>
+      </div>
+    </div>
+
+    <!-- JORNADAS (cliente) -->
+    <div id="sec-jornadas" class="tab-content">
+      <div class="section-header">
+        <div>
+          <div class="section-title">Jornadas</div>
+          <div class="section-sub">Seu progresso nas trilhas de formulários atribuídas pela consultoria</div>
+        </div>
+        <button class="btn-ghost" onclick="loadClientJourneys()" style="font-size:13px;padding:8px 14px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/></svg>
+          Atualizar
+        </button>
+      </div>
+      <div id="client-journeys-list" style="display:flex;flex-direction:column;gap:16px;">
+        <div style="padding:24px;color:#94A3B8;text-align:center;">Carregando...</div>
+      </div>
+    </div><!-- /sec-jornadas -->
+
   </main>
+</div>
+
+<!-- Form Player Modal (fullscreen-style) -->
+<div id="fp-player-modal" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.7);z-index:400;align-items:flex-start;justify-content:center;overflow-y:auto;padding:24px 16px;">
+  <div style="background:#fff;border-radius:16px;width:100%;max-width:700px;box-shadow:0 24px 80px rgba(0,0,0,.25);overflow:hidden;">
+    <!-- Modal header -->
+    <div style="padding:16px 24px;border-bottom:1px solid #F1F5F9;display:flex;align-items:center;gap:12px;background:#fff;position:sticky;top:0;z-index:10;">
+      <button onclick="fpClosePlayer()" style="background:none;border:none;color:#94A3B8;cursor:pointer;font-size:20px;line-height:1;padding:0;">←</button>
+      <div style="flex:1;min-width:0;">
+        <div id="fp-player-title" style="font-size:15px;font-weight:700;color:#1E293B;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Formulário</div>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:4px;">
+          <div style="flex:1;height:4px;background:#E2E8F0;border-radius:99px;overflow:hidden;">
+            <div id="fp-player-progress" style="height:100%;background:linear-gradient(90deg,#1A56DB,#4B9EFF);border-radius:99px;width:0%;transition:width .4s;"></div>
+          </div>
+          <span id="fp-player-progress-label" style="font-size:11px;color:#94A3B8;white-space:nowrap;flex-shrink:0;">Página 1 de 1</span>
+        </div>
+      </div>
+    </div>
+    <!-- Modal body -->
+    <div id="fp-player-content" style="padding:28px 32px 24px;">
+      <div style="padding:40px;text-align:center;color:#94A3B8;">Carregando...</div>
+    </div>
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -689,11 +815,15 @@ function showSection(name, clickedEl) {
     });
   }
   window.scrollTo({ top:0, behavior:'instant' });
-  if (name === 'support')    loadSupport();
+  if (name === 'support')     loadSupport();
   if (name === 'agenda')      loadAgendaSlots();
-  if (name === 'financeiro')  loadFinanceiro();
+  if (name === 'financeiro')  { loadFinanceiro(); loadInternalInvoices(); }
   if (name === 'documentos')  loadDocuments();
   if (name === 'equipe')      loadMembers();
+  if (name === 'marketplace')  loadMarketplace();
+  if (name === 'formularios') loadClientForms();
+  if (name === 'jornadas')    loadClientJourneys();
+  if (name === 'messages') { startMsgPolling(); } else { stopMsgPolling(); }
 }
 
 // ── Progress ring ─────────────────────────────────────────────────────────────
@@ -1083,40 +1213,46 @@ async function loadFinanceiro() {
   const el = document.getElementById('invoiceList');
   el.innerHTML = '<div style="padding:16px;color:var(--text-muted);font-size:14px;">Carregando...</div>';
   const res = await fetch('/api/financial/invoices', { headers: authH() });
-  if (!res.ok) {
-    el.innerHTML = '<div class="empty-state"><p>Erro ao carregar faturas.</p></div>';
-    return;
-  }
-  const { invoices, stripeConfigured } = await res.json();
+  if (!res.ok) { el.innerHTML = '<div class="empty-state"><p>Erro ao carregar faturas.</p></div>'; return; }
+  const { invoices = [], stripeConfigured } = await res.json();
 
   const noticeEl = document.getElementById('stripeNotice');
   if (noticeEl && !stripeConfigured) noticeEl.style.display = 'block';
 
+  const isPaid = i => i.status === 'paid' || i.status === 'succeeded';
   document.getElementById('finTotal').textContent   = invoices.length;
-  document.getElementById('finPaid').textContent    = invoices.filter(i=>i.status==='paid').length;
-  document.getElementById('finPending').textContent = invoices.filter(i=>i.status!=='paid').length;
+  document.getElementById('finPaid').textContent    = invoices.filter(isPaid).length;
+  document.getElementById('finPending').textContent = invoices.filter(i => !isPaid(i)).length;
 
   if (!invoices.length) {
     el.innerHTML = `<div class="empty-state">
       <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-      <p>Nenhum boleto encontrado. O módulo financeiro será ativado após a assinatura do contrato.</p>
+      <p>Nenhum registro financeiro encontrado. Pagamentos aparecerão aqui após processamento.</p>
     </div>`;
     return;
   }
   let html = '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:1px solid var(--border);">';
   html += '<th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-weight:600;">Descrição</th>';
-  html += '<th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-weight:600;">Valor</th>';
-  html += '<th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-weight:600;">Vencimento</th>';
+  html += '<th style="text-align:right;padding:8px 12px;color:var(--text-muted);font-weight:600;">Valor</th>';
+  html += '<th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-weight:600;">Data</th>';
   html += '<th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-weight:600;">Status</th>';
+  html += '<th style="padding:8px 12px;"></th>';
   html += '</tr></thead><tbody>';
   invoices.forEach(inv => {
-    const stBadge = inv.status === 'paid' ? 'badge-green' : inv.status === 'open' ? 'badge-amber' : 'badge-gray';
-    const stLabel = inv.status === 'paid' ? 'Pago' : inv.status === 'open' ? 'Em aberto' : 'Vencido';
+    const paid = isPaid(inv);
+    const stBadge = paid ? 'badge-green' : inv.status === 'open' ? 'badge-amber' : 'badge-gray';
+    const stLabel = paid ? 'Pago' : inv.status === 'open' ? 'Em aberto' : inv.status === 'void' ? 'Cancelado' : 'Pendente';
+    const amtNum  = parseFloat(inv.amount || inv.amountPaid || 0);
+    const amtFmt  = `R$ ${amtNum.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    const dateFmt = inv.date ? new Date(inv.date).toLocaleDateString('pt-BR') : '-';
+    const pdfBtn  = inv.pdfUrl    ? `<a href="${inv.pdfUrl}" target="_blank" style="color:#1A56DB;font-size:12px;text-decoration:none;white-space:nowrap;">📄 PDF</a>` : '';
+    const linkBtn = inv.hostedUrl ? `<a href="${inv.hostedUrl}" target="_blank" style="color:#1A56DB;font-size:12px;text-decoration:none;white-space:nowrap;">Ver fatura</a>` : '';
     html += `<tr style="border-bottom:1px solid var(--border-light,#F1F5F9);">
-      <td style="padding:10px 12px;font-weight:500;">${inv.description||'Fatura'}</td>
-      <td style="padding:10px 12px;">R$ ${(inv.amount/100).toFixed(2).replace('.',',')}</td>
-      <td style="padding:10px 12px;color:var(--text-muted);">${inv.dueDate?new Date(inv.dueDate).toLocaleDateString('pt-BR'):'-'}</td>
+      <td style="padding:10px 12px;font-weight:500;">${inv.description || 'Pagamento'}</td>
+      <td style="padding:10px 12px;text-align:right;font-weight:600;color:${paid?'#059669':'#1E293B'};">${amtFmt}</td>
+      <td style="padding:10px 12px;color:var(--text-muted);">${dateFmt}</td>
       <td style="padding:10px 12px;"><span class="badge ${stBadge}">${stLabel}</span></td>
+      <td style="padding:10px 12px;display:flex;gap:8px;">${pdfBtn}${linkBtn}</td>
     </tr>`;
   });
   html += '</tbody></table></div>';
@@ -1183,7 +1319,36 @@ async function sendMessage() {
   if (!text) return;
   input.value = '';
   await fetch('/api/messages', { method:'POST', headers: authH(), body: JSON.stringify({ text }) });
-  loadData();
+  const res = await fetch('/api/messages', { headers: authH() });
+  if (res.ok) { const m = await res.json(); renderMessages(m.messages||[]); }
+}
+
+// ── Polling em tempo real de mensagens ───────────────────────────────────────
+let _lastMsgTs = null, _msgPollTimer = null;
+
+function startMsgPolling() {
+  if (_msgPollTimer) return; // já ativo
+  _msgPollTimer = setInterval(async () => {
+    const activeTab = document.querySelector('.tab-content.active')?.id;
+    if (activeTab !== 'sec-messages') return; // só faz poll se a aba está aberta
+    try {
+      const since = _lastMsgTs || new Date(0).toISOString();
+      const res   = await fetch(`/api/messages/poll?since=${encodeURIComponent(since)}`, { headers: authH() });
+      if (!res.ok) return;
+      const { messages } = await res.json();
+      if (!messages.length) return;
+      // Atualiza timestamp
+      _lastMsgTs = messages[messages.length - 1].ts;
+      // Re-carrega thread completa para simplificar
+      const full = await fetch('/api/messages', { headers: authH() });
+      if (full.ok) { const m = await full.json(); renderMessages(m.messages||[]); }
+    } catch {}
+  }, 8000);
+}
+
+function stopMsgPolling() {
+  clearInterval(_msgPollTimer);
+  _msgPollTimer = null;
 }
 
 // ── Load main data ─────────────────────────────────────────────────────────────
@@ -1350,20 +1515,33 @@ async function loadDocuments() {
 }
 
 // ── Freshchat identity ────────────────────────────────────────────────────────
+// Polls for fcWidget availability (CDN loads async) then applies JWT identity.
+function _fcPoll(cb, attempts) {
+  if (!(window.RE_ENABLE_FRESHCHAT && window.RE_FRESHCHAT_TOKEN && window.RE_FRESHCHAT_SITE_ID)) return;
+  if (typeof window.fcWidget !== 'undefined') { cb(); return; }
+  if (attempts <= 0) { console.warn('[Freshchat] widget not ready after 15s'); return; }
+  setTimeout(function() { _fcPoll(cb, attempts - 1); }, 500);
+}
+
 async function initFreshchat(user) {
   if (!(window.RE_ENABLE_FRESHCHAT && window.RE_FRESHCHAT_TOKEN && window.RE_FRESHCHAT_SITE_ID)) return;
-  try {
-    const res  = await fetch('/api/freshchat-token', { headers: authH() });
-    const json = await res.json();
-    if (!json.token) return;
-    if (typeof fcWidget !== 'undefined') {
-      fcWidget.setExternalId(user.id || user.email);
-      fcWidget.user.setFirstName(user.name ? user.name.split(' ')[0] : '');
-      fcWidget.user.setLastName(user.name ? user.name.split(' ').slice(1).join(' ') : '');
-      fcWidget.user.setEmail(user.email);
-      fcWidget.authenticate({ token: json.token, callback: (err) => { if(err) console.warn('Freshchat auth:', err); } });
-    }
-  } catch(e) { console.warn('Freshchat init:', e); }
+  _fcPoll(async function() {
+    try {
+      const res  = await fetch('/api/freshchat-token', { headers: authH() });
+      const json = await res.json();
+      if (!json.token) return;
+      // Apply user identity + JWT authentication
+      window.fcWidget.setExternalId(user.id || user.email);
+      window.fcWidget.user.setFirstName(user.name ? user.name.split(' ')[0] : '');
+      window.fcWidget.user.setLastName(user.name ? user.name.split(' ').slice(1).join(' ') : '');
+      window.fcWidget.user.setEmail(user.email);
+      window.fcWidget.user.setProperties({ plan: 'cliente', company: user.company || '' });
+      window.fcWidget.authenticate({
+        token:    json.token,
+        callback: function(err) { if (err) console.warn('[Freshchat] auth error:', err); }
+      });
+    } catch(e) { console.warn('[Freshchat] init error:', e.message); }
+  }, 30); // 30 attempts × 500ms = 15s max
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
@@ -1446,6 +1624,23 @@ async function initFreshchat(user) {
   if (!isImpersonating && window.RE_ENABLE_FRESHCHAT && window.RE_FRESHCHAT_TOKEN && window.RE_FRESHCHAT_SITE_ID) {
     setTimeout(() => initFreshchat(user), 2000);
   }
+
+  // Polling de mensagens — inicia automaticamente se a aba de mensagens estiver ativa
+  if (document.getElementById('sec-messages')?.classList.contains('active')) {
+    startMsgPolling();
+  }
+
+  // Notification polling — always active after login
+  startNotifPolling();
+
+  // Check journeys silently to show/hide nav button
+  fetch('/api/my-journeys', { headers: { Authorization: 'Bearer ' + getToken() } })
+    .then(r => r.ok ? r.json() : [])
+    .then(list => {
+      const btn = document.getElementById('jornadasSideLink');
+      if (btn && list.length) btn.style.display = '';
+    })
+    .catch(() => {});
 })();
 
 // ── Equipe (multi-user) ───────────────────────────────────────────────────────
@@ -1592,30 +1787,46 @@ async function loadAgendaSlots() {
           const noSlots = !s.available && !s.my_booking;
           const canBook = s.available && !s.my_booking && bal >= s.credits_cost && !past;
           return `
-          <div style="background:#fff;border:1px solid ${s.my_booking?'#2563eb':'#E2E8F0'};border-radius:10px;padding:14px 18px;display:flex;align-items:center;gap:14px;${past?'opacity:.6':''}">
-            <div style="min-width:58px;text-align:center;background:${s.my_booking?'#EFF6FF':'#F8FAFC'};border-radius:8px;padding:8px 4px;">
-              <div style="font-size:20px;font-weight:800;color:#1e3a5f;line-height:1;">${new Date(s.starts_at).getDate()}</div>
-              <div style="font-size:10px;color:#64748b;font-weight:600;">${MONTH_PT[new Date(s.starts_at).getMonth()]}</div>
-            </div>
-            <div style="flex:1;">
-              <div style="font-weight:700;font-size:14px;color:#1e293b;">${s.title}</div>
-              <div style="font-size:12px;color:#64748b;margin-top:2px;">
-                ${fmtSlotTime(s.starts_at)} – ${fmtSlotTime(s.ends_at)} &nbsp;·&nbsp; ${s.duration_min}min
-                &nbsp;·&nbsp; ${s.credits_cost} crédito${s.credits_cost>1?'s':''}
+          <div style="background:#fff;border:1px solid ${s.my_booking?'#2563eb':'#E2E8F0'};border-radius:10px;padding:14px 18px;${past?'opacity:.6':''}">
+            <div style="display:flex;align-items:center;gap:14px;">
+              <div style="min-width:58px;text-align:center;background:${s.my_booking?'#EFF6FF':'#F8FAFC'};border-radius:8px;padding:8px 4px;">
+                <div style="font-size:20px;font-weight:800;color:#1e3a5f;line-height:1;">${new Date(s.starts_at).getDate()}</div>
+                <div style="font-size:10px;color:#64748b;font-weight:600;">${MONTH_PT[new Date(s.starts_at).getMonth()]}</div>
               </div>
+              <div style="flex:1;min-width:0;">
+                <div style="font-weight:700;font-size:14px;color:#1e293b;">${s.title}</div>
+                <div style="font-size:12px;color:#64748b;margin-top:2px;">
+                  ${fmtSlotTime(s.starts_at)} – ${fmtSlotTime(s.ends_at)} &nbsp;·&nbsp; ${s.duration_min}min
+                  &nbsp;·&nbsp; ${s.credits_cost} crédito${s.credits_cost>1?'s':''}
+                  ${s.location === 'presencial' ? '&nbsp;·&nbsp; 📍 Presencial' : '&nbsp;·&nbsp; 🔗 Online'}
+                </div>
+                ${s.meeting_link && s.my_booking_detail?.status === 'confirmed' ? `<div style="font-size:11px;margin-top:3px;"><a href="${s.meeting_link}" target="_blank" style="color:#1e3a5f;">🔗 Entrar na reunião</a></div>` : ''}
+              </div>
+              ${(() => {
+                const bd = s.my_booking_detail;
+                if (!bd) {
+                  if (noSlots) return '<span style="background:#F1F5F9;color:#94a3b8;font-size:11px;padding:4px 12px;border-radius:20px;">Lotado</span>';
+                  if (past)   return '<span style="background:#F1F5F9;color:#94a3b8;font-size:11px;padding:4px 12px;border-radius:20px;">Encerrado</span>';
+                  if (bal < s.credits_cost) return '<button onclick="buyCredits()" style="background:#FEF3C7;color:#92400e;border:1px solid #FDE68A;border-radius:6px;padding:6px 12px;font-size:11px;cursor:pointer;font-weight:600;">Comprar créditos</button>';
+                  return '<button onclick="bookSlot(\''+s.id+'\','+s.credits_cost+')" style="background:#1e3a5f;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:12px;cursor:pointer;font-weight:600;">Reservar</button>';
+                }
+                if (bd.status === 'pending') return '<span style="background:#FEF3C7;color:#D97706;font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px;">Aguardando confirmação</span>'
+                  + '<button onclick="cancelBooking(\''+s.id+'\')" style="background:none;border:1px solid #fecaca;color:#ef4444;border-radius:6px;padding:5px 10px;font-size:11px;cursor:pointer;">Cancelar</button>';
+                if (bd.status === 'confirmed') return '<span style="background:#DCFCE7;color:#16A34A;font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px;">✅ Confirmado</span>'
+                  + (!past ? '<button onclick="cancelBooking(\''+s.id+'\')" style="background:none;border:1px solid #fecaca;color:#ef4444;border-radius:6px;padding:5px 10px;font-size:11px;cursor:pointer;">Cancelar</button>' : '');
+                if (bd.status === 'cancelled') return '<span style="background:#FEE2E2;color:#DC2626;font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px;">Cancelado</span>';
+                if (bd.status === 'rescheduled') return '<span style="background:#EDE9FE;color:#7C3AED;font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px;">Remarcado</span>';
+                return '';
+              })()}
             </div>
-            ${s.my_booking ? `
-              <span style="background:#EFF6FF;color:#2563eb;font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px;">Reservado</span>
-              <button onclick="cancelBooking('${s.id}')" style="background:none;border:1px solid #fecaca;color:#ef4444;border-radius:6px;padding:5px 10px;font-size:11px;cursor:pointer;">Cancelar</button>
-            ` : noSlots ? `
-              <span style="background:#F1F5F9;color:#94a3b8;font-size:11px;padding:4px 12px;border-radius:20px;">Lotado</span>
-            ` : past ? `
-              <span style="background:#F1F5F9;color:#94a3b8;font-size:11px;padding:4px 12px;border-radius:20px;">Encerrado</span>
-            ` : bal < s.credits_cost ? `
-              <button onclick="buyCredits()" style="background:#FEF3C7;color:#92400e;border:1px solid #FDE68A;border-radius:6px;padding:6px 12px;font-size:11px;cursor:pointer;font-weight:600;">Comprar créditos</button>
-            ` : `
-              <button onclick="bookSlot('${s.id}',${s.credits_cost})" style="background:#1e3a5f;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:12px;cursor:pointer;font-weight:600;">Reservar</button>
-            `}
+            ${s.my_booking_detail?.status === 'cancelled' && s.my_booking_detail?.cancel_reason ? `
+              <div style="margin-top:8px;padding:8px 12px;background:#FEF2F2;border-radius:6px;font-size:12px;color:#DC2626;">
+                <strong>Cancelado pela consultoria:</strong> ${s.my_booking_detail.cancel_reason}
+              </div>` : ''}
+            ${s.my_booking_detail?.status === 'rescheduled' && s.my_booking_detail?.reschedule_reason ? `
+              <div style="margin-top:8px;padding:8px 12px;background:#EDE9FE;border-radius:6px;font-size:12px;color:#7C3AED;">
+                <strong>Remarcado:</strong> ${s.my_booking_detail.reschedule_reason}
+              </div>` : ''}
           </div>`;
         }).join('')}
       </div>`;
@@ -1645,7 +1856,7 @@ async function bookSlot(slotId, cost) {
   const res = await fetch(`/api/agenda/book/${slotId}`, { method: 'POST', headers: authH(), body: JSON.stringify({}) });
   const j   = await res.json();
   if (res.ok) {
-    showToast('Sessão reservada com sucesso!', 'success');
+    showToast('Solicitação enviada! Aguardando confirmação da consultoria.', 'success');
     document.getElementById('creditsCount').textContent = j.credits_balance;
     loadAgendaSlots();
   } else {
@@ -1655,18 +1866,12 @@ async function bookSlot(slotId, cost) {
 }
 
 async function cancelBooking(slotId) {
-  // Find booking id from current slots
-  if (!confirm('Cancelar esta reserva? Seus créditos serão devolvidos.')) return;
-  // We need booking id — refetch slots to get it, but the cancel endpoint uses bookingId
-  // Use the slot approach: re-fetch bookings
-  const res = await fetch('/api/agenda/slots', { headers: authH() });
-  if (!res.ok) return;
-  const { slots } = await res.json();
-  const slot = slots.find(s => s.id === slotId);
-  // We don't store booking id on client — use a dedicated cancel-by-slot endpoint
-  // For now call DELETE /api/agenda/book/:bookingId — need to get booking id first
-  // Workaround: add slot-based cancel endpoint
-  const cancelRes = await fetch(`/api/agenda/cancel-slot/${slotId}`, { method: 'DELETE', headers: authH() });
+  const reason = prompt('Motivo do cancelamento (opcional — ajuda a consultoria a melhorar os horários):');
+  if (reason === null) return; // user dismissed
+  const cancelRes = await fetch(`/api/agenda/cancel-slot/${slotId}`, {
+    method: 'DELETE', headers: authH(),
+    body: JSON.stringify({ reason: reason.trim() || null })
+  });
   const j = await cancelRes.json();
   if (cancelRes.ok) { showToast('Reserva cancelada. Créditos devolvidos.', 'success'); loadAgendaSlots(); }
   else showToast(j.error || 'Erro ao cancelar.', 'error');
@@ -1687,15 +1892,267 @@ async function checkoutCredits(pack) {
   if (j.url) window.location.href = j.url;
   else showToast(j.error || 'Erro ao iniciar pagamento.', 'error');
 }
+
+// ── Notifications ─────────────────────────────────────────────────────────────
+let _notifInterval = null;
+let _notifOpen     = false;
+
+function toggleNotifDropdown() {
+  const dd = document.getElementById('notifDropdown');
+  _notifOpen = !_notifOpen;
+  dd.style.display = _notifOpen ? 'block' : 'none';
+  if (_notifOpen) loadNotifications();
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', e => {
+  const wrap = document.getElementById('notifBellWrap');
+  if (wrap && !wrap.contains(e.target) && _notifOpen) {
+    _notifOpen = false;
+    document.getElementById('notifDropdown').style.display = 'none';
+  }
+});
+
+async function loadNotifications() {
+  const listEl  = document.getElementById('notifList');
+  const badgeEl = document.getElementById('notifBadge');
+  try {
+    const res = await fetch('/api/notifications?limit=20', { headers: authH() });
+    if (!res.ok) return;
+    const { notifications = [], unread_count = 0 } = await res.json();
+
+    // Update badge
+    if (unread_count > 0) {
+      badgeEl.style.display = 'block';
+      badgeEl.textContent   = unread_count > 99 ? '99+' : unread_count;
+    } else {
+      badgeEl.style.display = 'none';
+    }
+
+    if (!notifications.length) {
+      listEl.innerHTML = '<div style="padding:20px;text-align:center;color:#94A3B8;font-size:13px;">Nenhuma notificação.</div>';
+      return;
+    }
+
+    const iconMap = {
+      message:     '💬', task: '✅', payment: '💰', plan: '📋',
+      appointment: '📅', service: '🛒', info: 'ℹ️'
+    };
+
+    listEl.innerHTML = notifications.map(n => {
+      const ts  = new Date(n.created_at).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
+      const unr = !n.read;
+      return `<div onclick="readNotif('${n.id}',this)"
+        style="padding:12px 16px;cursor:pointer;border-bottom:1px solid #F1F5F9;display:flex;gap:10px;align-items:flex-start;
+          background:${unr ? '#EFF6FF' : '#fff'};transition:background .15s;"
+        onmouseover="this.style.background='#F8FAFC'" onmouseout="this.style.background='${unr ? '#EFF6FF' : '#fff'}'">
+        <span style="font-size:18px;line-height:1.4;">${iconMap[n.type] || 'ℹ️'}</span>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;font-weight:${unr ? 700 : 500};color:#1E293B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtmlD(n.title)}</div>
+          ${n.body ? `<div style="font-size:12px;color:#64748B;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtmlD(n.body)}</div>` : ''}
+          <div style="font-size:11px;color:#94A3B8;margin-top:3px;">${ts}</div>
+        </div>
+        ${unr ? '<div style="width:7px;height:7px;border-radius:50%;background:#2563EB;flex-shrink:0;margin-top:6px;"></div>' : ''}
+      </div>`;
+    }).join('');
+  } catch (e) {
+    console.warn('[NOTIF]', e.message);
+  }
+}
+
+async function readNotif(id, el) {
+  // Mark read visually
+  el.style.background = '#fff';
+  const dot = el.querySelector('div[style*="border-radius:50%"]');
+  if (dot) dot.remove();
+  // API call
+  fetch(`/api/notifications/${id}/read`, { method: 'POST', headers: authH() }).catch(() => {});
+  // Refresh badge count
+  loadNotifications();
+}
+
+async function markAllNotifRead() {
+  await fetch('/api/notifications/read-all', { method: 'POST', headers: authH() });
+  loadNotifications();
+}
+
+function escHtmlD(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function startNotifPolling() {
+  if (_notifInterval) return;
+  loadNotifications(); // immediate
+  _notifInterval = setInterval(loadNotifications, 30000);
+}
+function stopNotifPolling() {
+  clearInterval(_notifInterval);
+  _notifInterval = null;
+}
+
+// ── Internal Invoices (Boletos Bancários) ─────────────────────────────────────
+async function loadInternalInvoices() {
+  const el = document.getElementById('internalInvoiceList');
+  if (!el) return;
+  el.innerHTML = '<div style="padding:12px;color:var(--text-muted);font-size:13px;">Carregando boletos...</div>';
+  try {
+    const res = await fetch('/api/financial/internal-invoices', { headers: authH() });
+    if (!res.ok) { el.innerHTML = ''; return; }
+    const { invoices = [] } = await res.json();
+
+    if (!invoices.length) {
+      el.innerHTML = `<div class="empty-state">
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        <p style="font-size:13px;">Nenhum boleto disponível.</p>
+      </div>`;
+      return;
+    }
+
+    const statusLabel = { pending:'Em aberto', paid:'Pago', overdue:'Vencido', cancelled:'Cancelado' };
+    const statusClass = { pending:'badge-amber', paid:'badge-green', overdue:'badge-red', cancelled:'badge-gray' };
+
+    let html = '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:1px solid var(--border);">';
+    html += '<th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-weight:600;">Descrição</th>';
+    html += '<th style="text-align:right;padding:8px 12px;color:var(--text-muted);font-weight:600;">Valor</th>';
+    html += '<th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-weight:600;">Vencimento</th>';
+    html += '<th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-weight:600;">Status</th>';
+    html += '<th style="padding:8px 12px;"></th>';
+    html += '</tr></thead><tbody>';
+
+    invoices.forEach(inv => {
+      const amt  = ((inv.amount_cents || 0) / 100).toLocaleString('pt-BR', { style:'currency', currency:'BRL' });
+      const due  = inv.due_date ? new Date(inv.due_date + 'T12:00:00').toLocaleDateString('pt-BR') : '-';
+      const sCls = statusClass[inv.status] || 'badge-gray';
+      const sLbl = statusLabel[inv.status] || inv.status;
+      const isOverdue = inv.status === 'pending' && inv.due_date && new Date(inv.due_date) < new Date();
+      const rowSt = isOverdue ? 'background:#FFF7ED;' : '';
+      html += `<tr style="border-bottom:1px solid var(--border-light,#F1F5F9);${rowSt}">
+        <td style="padding:10px 12px;font-weight:500;">${escHtmlD(inv.description)}</td>
+        <td style="padding:10px 12px;text-align:right;font-weight:600;">${amt}</td>
+        <td style="padding:10px 12px;color:var(--text-muted);">${due}</td>
+        <td style="padding:10px 12px;"><span class="badge ${isOverdue ? 'badge-red' : sCls}">${isOverdue ? 'Vencido' : sLbl}</span></td>
+        <td style="padding:10px 12px;">
+          ${inv.status !== 'cancelled' && inv.status !== 'paid' ? `<a href="/api/financial/internal-invoices/${inv.id}/pdf?token=${encodeURIComponent(localStorage.getItem('re_token')||'')}" target="_blank" style="color:#1A56DB;font-size:12px;text-decoration:none;">📄 Boleto</a>` : ''}
+        </td>
+      </tr>`;
+    });
+    html += '</tbody></table></div>';
+    el.innerHTML = html;
+  } catch (e) {
+    el.innerHTML = '';
+    console.warn('[INT INVOICES]', e.message);
+  }
+}
+
+// ── Marketplace ───────────────────────────────────────────────────────────────
+async function loadMarketplace() {
+  const gridEl   = document.getElementById('marketplaceGrid');
+  const ordersEl = document.getElementById('myOrdersList');
+  if (!gridEl) return;
+  gridEl.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-muted);font-size:13px;grid-column:1/-1;">Carregando serviços...</div>';
+
+  try {
+    const [svcRes, ordRes] = await Promise.all([
+      fetch('/api/services', { headers: authH() }),
+      fetch('/api/service-orders', { headers: authH() }),
+    ]);
+
+    if (svcRes.ok) {
+      const { services = [] } = await svcRes.json();
+      if (!services.length) {
+        gridEl.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-muted);font-size:13px;grid-column:1/-1;">Nenhum serviço disponível no momento.</div>';
+      } else {
+        const catLabel = { juridico:'Jurídico', financeiro:'Financeiro', consultoria:'Consultoria', outro:'Outro' };
+        gridEl.innerHTML = services.map(s => {
+          const price = (s.price_cents / 100).toLocaleString('pt-BR', { style:'currency', currency:'BRL' });
+          const feats = Array.isArray(s.features) ? s.features : [];
+          return `<div style="background:#fff;border:1px solid #E2E8F0;border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:10px;">
+            ${s.featured ? '<span style="font-size:10px;font-weight:700;background:#FEF3C7;color:#92400E;padding:2px 8px;border-radius:20px;align-self:flex-start;">⭐ Destaque</span>' : ''}
+            <div style="font-size:11px;color:#6B7280;">${catLabel[s.category] || s.category || ''}</div>
+            <div style="font-size:16px;font-weight:700;color:#1E293B;">${escHtmlD(s.name)}</div>
+            ${s.description ? `<div style="font-size:13px;color:#64748B;flex:1;">${escHtmlD(s.description)}</div>` : ''}
+            ${feats.length ? `<ul style="margin:0;padding-left:16px;font-size:12px;color:#374151;">${feats.map(f => `<li>${escHtmlD(f)}</li>`).join('')}</ul>` : ''}
+            <div style="font-size:22px;font-weight:800;color:#1A56DB;margin-top:4px;">${price}</div>
+            <button onclick="contractService('${s.id}')" style="background:#1A56DB;color:#fff;border:none;border-radius:8px;padding:9px;font-size:13px;font-weight:600;cursor:pointer;">Contratar</button>
+          </div>`;
+        }).join('');
+      }
+    } else {
+      gridEl.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-muted);font-size:13px;grid-column:1/-1;">Serviços indisponíveis.</div>';
+    }
+
+    if (ordRes.ok && ordersEl) {
+      const { orders = [] } = await ordRes.json();
+      if (!orders.length) {
+        ordersEl.innerHTML = `<div class="empty-state"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/></svg><p style="font-size:13px;">Nenhum pedido ainda.</p></div>`;
+      } else {
+        const stMap = { pending_payment:'Aguardando pagamento', paid:'Pago', in_progress:'Em andamento', delivered:'Entregue', cancelled:'Cancelado' };
+        ordersEl.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:13px;">
+          <thead><tr style="border-bottom:1px solid var(--border);">
+            <th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-weight:600;">Serviço</th>
+            <th style="text-align:right;padding:8px 12px;color:var(--text-muted);font-weight:600;">Valor</th>
+            <th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-weight:600;">Data</th>
+            <th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-weight:600;">Status</th>
+          </tr></thead><tbody>
+          ${orders.map(o => {
+            const amt = ((o.amount_cents||0)/100).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+            const dt  = new Date(o.created_at).toLocaleDateString('pt-BR');
+            return `<tr style="border-bottom:1px solid #F1F5F9;">
+              <td style="padding:10px 12px;font-weight:500;">${escHtmlD(o.re_services?.name || '—')}</td>
+              <td style="padding:10px 12px;text-align:right;font-weight:600;">${amt}</td>
+              <td style="padding:10px 12px;color:var(--text-muted);">${dt}</td>
+              <td style="padding:10px 12px;"><span class="badge badge-gray">${stMap[o.status]||o.status}</span></td>
+            </tr>`;
+          }).join('')}
+          </tbody></table>`;
+      }
+    }
+  } catch (e) {
+    gridEl.innerHTML = '<div style="grid-column:1/-1;padding:24px;text-align:center;color:var(--text-muted);">Erro ao carregar marketplace.</div>';
+    console.warn('[MARKETPLACE]', e.message);
+  }
+}
+
+async function contractService(serviceId) {
+  if (!confirm('Confirmar contratação deste serviço?')) return;
+  const res = await fetch(`/api/services/${serviceId}/order`, { method: 'POST', headers: authH(), body: JSON.stringify({}) });
+  const j   = await res.json();
+  if (j.url) { window.location.href = j.url; return; }
+  if (res.ok) {
+    showToast('Pedido criado! Nossa equipe entrará em contato.', 'success');
+    loadMarketplace();
+  } else {
+    showToast(j.error || 'Erro ao contratar serviço.', 'error');
+  }
+}
 </script>
+
+<!-- Form Player -->
+<script src="./js/form-player.js?v=20260416"></script>
 
 <script>
   if (window.RE_ENABLE_FRESHCHAT && window.RE_FRESHCHAT_TOKEN && window.RE_FRESHCHAT_SITE_ID) {
-    var script = document.createElement('script');
-    script.src = '//fw-cdn.com/16078787/7064112.js';
-    script.setAttribute('chat', 'true');
-    script.async = true;
-    document.body.appendChild(script);
+    window.fcSettings = {
+      token:  window.RE_FRESHCHAT_TOKEN,
+      host:   'https://msdk.freshchat.com',
+      siteId: window.RE_FRESHCHAT_SITE_ID,
+      config: {
+        headerProperty: { appName: 'Recupera Empresas', backgroundColor: '#1e3a5f', foregroundColor: '#ffffff' },
+        content: {
+          placeholders: { search_field: 'Buscar...', reply_field: 'Escreva sua mensagem...' },
+          actions:      { csat_yes: 'Sim', csat_no: 'Não' },
+          headers:      { chat: 'Suporte', chat_help: 'Fale com nossa equipe de consultores.' }
+        }
+      }
+    };
+
+    (function loadFreshchatWidget() {
+      var script = document.createElement('script');
+      script.src = '//fw-cdn.com/16078787/7064112.js';
+      script.setAttribute('chat', 'true');
+      script.async = true;
+      document.body.appendChild(script);
+    })();
   }
 </script>
 

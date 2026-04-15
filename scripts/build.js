@@ -3,6 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '..', '.env') });
+const { syncRootMirrors } = require('./sync-root-mirrors');
 
 const rootDir = path.resolve(__dirname, '..');
 const publicDir = path.join(rootDir, 'public');
@@ -72,5 +73,8 @@ if (fs.existsSync(loginPath)) {
 }
 
 fs.writeFileSync(path.join(distDir, '.nojekyll'), '', 'utf8');
+
+// Keep root-level mirrors generated from public/ so the repository has a single editable source.
+syncRootMirrors({ silent: true });
 
 console.log('Build concluído com sucesso. Saída em dist/.');
