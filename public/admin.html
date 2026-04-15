@@ -1758,22 +1758,26 @@ async function impersonateClient(clientId) {
 }
 
 // ── Freshchat operator widget init ─────────────────────────────────────────────
+// NOTE: window.fcSettings (token only) is set in a <script> block BEFORE the CDN
+// so the CDN auto-inits the widget. Here we only apply user identity after load.
+function _fcAdminPoll(cb, attempts) {
+  if (typeof window.fcWidget !== 'undefined') { cb(); return; }
+  if (attempts <= 0) { console.warn('[Freshchat] operator widget not ready'); return; }
+  setTimeout(function() { _fcAdminPoll(cb, attempts - 1); }, 500);
+}
+
 function initFreshchatOperator(user) {
-  try {
-    window.fcSettings = {
-      token:  'b487776b-ed4f-4b81-9240-16403eb40d5a',
-      host:   'https://msdk.freshchat.com',
-      siteId: 'e1458f85-7f7b-46cc-8a00-32871dbdc352',
-      config: { headerProperty: { appName: 'Recupera Empresas — Operador' } },
-      firstName: user.name ? user.name.split(' ')[0] : '',
-      lastName:  user.name ? user.name.split(' ').slice(1).join(' ') : '',
-      email:     user.email,
-      externalId: user.id || user.email,
-    };
-    if (typeof window.fcWidget !== 'undefined') {
-      fcWidget.init(window.fcSettings);
-    }
-  } catch(e) { console.warn('Freshchat operator init:', e); }
+  _fcAdminPoll(function() {
+    try {
+      // Do NOT call fcWidget.init() again — CDN already initialized via window.fcSettings.
+      // Just set user identity so the conversation is linked to this operator.
+      window.fcWidget.setExternalId(user.id || user.email);
+      window.fcWidget.user.setFirstName(user.name ? user.name.split(' ')[0] : '');
+      window.fcWidget.user.setLastName(user.name ? user.name.split(' ').slice(1).join(' ') : '');
+      window.fcWidget.user.setEmail(user.email);
+      window.fcWidget.user.setProperties({ role: 'consultor', app: 'Recupera Empresas — Operador' });
+    } catch(e) { console.warn('[Freshchat] operator init error:', e.message); }
+  }, 30);
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
@@ -1816,6 +1820,9 @@ function initFreshchatOperator(user) {
 
   // Freshchat operador
   setTimeout(() => initFreshchatOperator(user), 2000);
+
+  // Notification bell polling
+  startAdminNotifPolling();
 
   // Polling de mensagens não lidas — atualiza badges na lista de clientes a cada 15s
   await pollUnreadMessages();
@@ -2487,6 +2494,18 @@ function toggleAuditDetail(i) {
 }
 </script>
 
+<!-- Freshchat: pré-configura token ANTES do CDN para auto-init funcionar -->
+<script>
+  window.fcSettings = {
+    token:  'b487776b-ed4f-4b81-9240-16403eb40d5a',
+    host:   'https://msdk.freshchat.com',
+    siteId: 'e1458f85-7f7b-46cc-8a00-32871dbdc352',
+    config: {
+      headerProperty: { appName: 'Recupera Empresas — Operador', backgroundColor: '#1e3a5f', foregroundColor: '#ffffff' },
+      content: { placeholders: { search_field: 'Buscar conversa...', reply_field: 'Responder...' } }
+    }
+  };
+</script>
 <!-- Freshchat operator widget (CDN unificado) -->
 <script src='//fw-cdn.com/16078787/7064112.js' chat='true'></script>
 

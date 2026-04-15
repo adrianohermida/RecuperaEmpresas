@@ -113,6 +113,15 @@ const sbAnon = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: { autoRefreshToken: false, persistSession: false }
 });
 
+const AUTH_EMAIL_REDIRECTS = {
+  confirmSignUp:   `${BASE_URL}/login.html?confirmed=1`,
+  inviteUser:      `${BASE_URL}/login.html?invited=1`,
+  magicLink:       `${BASE_URL}/login.html?magic=1`,
+  changeEmail:     `${BASE_URL}/login.html?email_changed=1`,
+  resetPassword:   `${BASE_URL}/reset-password.html`,
+  reauthentication:`${BASE_URL}/login.html?reauthenticated=1`,
+};
+
 // ─── Upload dir (for temp file uploads) ──────────────────────────────────────
 const UPLOADS_DIR = path.join(__dirname, 'uploads');
 fs.mkdirSync(UPLOADS_DIR, { recursive: true });
@@ -364,21 +373,22 @@ async function requireAuth(req, res, next) {
   // Member token: has company_id field — look up in re_company_users
   if (decoded.company_id) {
     const { data: member } = await sb.from('re_company_users')
-      .select('id,name,email,role,active,company_id')
+      .select('id,name,email,role,active,company_id,permissions')
       .eq('id', decoded.id)
       .eq('active', true)
       .single();
     if (!member) return res.status(401).json({ error: 'Membro inativo ou não encontrado.' });
     // Expose company owner id as user.id so all routes read the correct data
     req.user = {
-      id:         member.company_id,   // data owner = the company owner
-      member_id:  member.id,
-      name:       member.name,
-      email:      member.email,
-      role:       member.role,
-      company_id: member.company_id,
-      is_admin:   false,
-      is_member:  true,
+      id:          member.company_id,   // data owner = the company owner
+      member_id:   member.id,
+      name:        member.name,
+      email:       member.email,
+      role:        member.role,
+      company_id:  member.company_id,
+      permissions: member.permissions || {},
+      is_admin:    false,
+      is_member:   true,
     };
     return next();
   }
@@ -804,7 +814,7 @@ app.post('/api/auth/register', async (req, res) => {
       email, password,
       options: {
         data: { name, company: company || '' },
-        emailRedirectTo: `${BASE_URL}/login.html?confirmed=1`,
+        emailRedirectTo: AUTH_EMAIL_REDIRECTS.confirmSignUp,
       }
     });
     if (signUpErr) {
@@ -840,18 +850,10 @@ app.post('/api/auth/register', async (req, res) => {
       return res.json({ success: true, pending_confirmation: true, email });
     }
 
-    // Email confirmation disabled (or admin bypass) → issue JWT immediately
-    sendMail(email, 'Bem-vindo ao Portal Recupera Empresas',
-      emailWrapper('Acesso criado com sucesso', `
-        <p>Olá, <b>${name}</b>!</p>
-        <p>Seu acesso ao portal foi criado. Inicie agora o preenchimento dos dados da sua empresa:</p>
-        <p style="text-align:center;margin:24px 0;">
-          <a href="${BASE_URL}/login.html" style="background:#1A56DB;color:#fff;padding:12px 28px;border-radius:6px;text-decoration:none;font-weight:600;">Acessar o Portal</a>
-        </p>
-        <p style="color:#64748B;font-size:13px;">Dúvidas: contato@recuperaempresas.com.br</p>
-      `)
-    ).catch(() => {});
-
+    // When email confirmation is disabled in Supabase, the account is already
+    // active and we can continue. We intentionally do not send a parallel auth
+    // email here so the Supabase templates remain the single source of truth
+    // for sign-up / invite / recovery communications.
     const token = signToken({ userId: profile.id, email: profile.email });
     res.json({ success: true, token, user: safeUser(profile) });
   } catch(e) {
@@ -906,7 +908,7 @@ app.post('/api/auth/forgot', async (req, res) => {
 
     // Supabase Auth sends the recovery email with a link pointing to redirectTo
     // The link will contain #access_token=...&type=recovery in the hash fragment
-    const resetRedirect = `${BASE_URL}/reset-password.html`;
+    const resetRedirect = AUTH_EMAIL_REDIRECTS.resetPassword;
     const { error } = await sbAnon.auth.resetPasswordForEmail(email, {
       redirectTo: resetRedirect,
     });
@@ -981,12 +983,66 @@ app.post('/api/auth/resend-confirmation', async (req, res) => {
     await sbAnon.auth.resend({
       type: 'signup',
       email,
-      options: { emailRedirectTo: `${BASE_URL}/login.html?confirmed=1` },
+      options: { emailRedirectTo: AUTH_EMAIL_REDIRECTS.confirmSignUp },
     });
     res.json({ success: true });
   } catch(e) {
     console.error('[RESEND]', e.message);
     res.status(500).json({ error: 'Erro ao reenviar.' });
+  }
+});
+
+// /api/auth/magic-link — send Supabase magic-link email using the configured
+// "Magic link" template in the Supabase dashboard.
+app.post('/api/auth/magic-link', async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: 'Informe o e-mail.' });
+
+    const { error } = await sbAnon.auth.signInWithOtp({
+      email,
+      options: {
+        shouldCreateUser: false,
+        emailRedirectTo: AUTH_EMAIL_REDIRECTS.magicLink,
+      },
+    });
+
+    if (error) {
+      console.warn('[MAGIC LINK]', error.message);
+      return res.status(400).json({ error: 'Não foi possível enviar o magic link.' });
+    }
+
+    res.json({ success: true });
+  } catch (e) {
+    console.error('[MAGIC LINK]', e.message);
+    res.status(500).json({ error: 'Erro ao enviar magic link.' });
+  }
+});
+
+// /api/admin/invite-user — send Supabase invite email using the configured
+// "Invite user" template in the Supabase dashboard.
+app.post('/api/admin/invite-user', requireAdmin, async (req, res) => {
+  try {
+    const { email, name, company } = req.body;
+    if (!email) return res.status(400).json({ error: 'Informe o e-mail.' });
+
+    const { data, error } = await sb.auth.admin.inviteUserByEmail(email, {
+      redirectTo: AUTH_EMAIL_REDIRECTS.inviteUser,
+      data: {
+        name: name || email.split('@')[0],
+        company: company || '',
+      },
+    });
+
+    if (error) {
+      console.error('[INVITE USER]', error.message);
+      return res.status(400).json({ error: 'Não foi possível enviar o convite.' });
+    }
+
+    res.json({ success: true, invited: data?.user?.email || email });
+  } catch (e) {
+    console.error('[INVITE USER]', e.message);
+    res.status(500).json({ error: 'Erro ao enviar convite.' });
   }
 });
 
@@ -1326,6 +1382,13 @@ app.post('/api/messages', requireAuth, async (req, res) => {
     from_name: req.user.name || req.user.email,
     text:      text.trim(),
   });
+  // Notify admin users that a client sent a message
+  const { data: admins } = await sb.from('re_users').select('id').eq('is_admin', true).limit(20);
+  for (const admin of (admins || [])) {
+    pushNotification(admin.id, 'message', 'Nova mensagem de cliente',
+      `${req.user.name || req.user.email}: ${text.trim().slice(0, 80)}`,
+      'message', req.user.id).catch(() => {});
+  }
   res.json({ success: true, message: msg });
 });
 
@@ -1391,6 +1454,16 @@ app.post('/api/admin/client/:id/task', requireAdmin, async (req, res) => {
     created_by:  req.user.id,
   }).select().single();
 
+  // Notify client about new task (fire-and-forget)
+  pushNotification(req.params.id, 'task', 'Nova tarefa atribuída',
+    title + (description ? ': ' + description.slice(0, 60) : ''),
+    'task', task?.id).catch(() => {});
+
+  // Audit log
+  auditLog({ actorId: req.user.id, actorEmail: req.user.email, actorRole: 'admin',
+    entityType: 'task', entityId: task?.id, action: 'create',
+    after: { user_id: req.params.id, title, status: 'pendente' } }).catch(() => {});
+
   res.json({ success: true, task });
 });
 
@@ -1400,6 +1473,20 @@ app.put('/api/admin/client/:id/plan/chapter/:chapterId', requireAdmin, async (re
   if (status  !== undefined) updates.status  = status;
   if (content !== undefined) updates.content = content;
   await saveChapterStatus(req.params.id, parseInt(req.params.chapterId), updates);
+
+  // Notify client on chapter status change
+  if (status) {
+    const chap   = PLAN_CHAPTERS.find(c => c.id === parseInt(req.params.chapterId));
+    const stLbl  = status === 'aprovado' ? 'aprovado ✅' : status === 'revisao' ? 'em revisão 🔄' : 'atualizado';
+    pushNotification(req.params.id, 'plan', `Business Plan: capítulo ${stLbl}`,
+      chap ? '"' + chap.title + '"' : 'Capítulo ' + req.params.chapterId,
+      'plan_chapter', req.params.chapterId).catch(() => {});
+  }
+
+  auditLog({ actorId: req.user.id, actorEmail: req.user.email, actorRole: 'admin',
+    entityType: 'plan_chapter', entityId: req.params.id + ':' + req.params.chapterId,
+    action: 'update', after: updates }).catch(() => {});
+
   res.json({ success: true });
 });
 
@@ -1412,6 +1499,11 @@ app.post('/api/admin/client/:id/message', requireAdmin, async (req, res) => {
     from_name: req.user.name || req.user.email,
     text:      text.trim(),
   });
+
+  // Notify client about new message from consultant
+  pushNotification(req.params.id, 'message', 'Nova mensagem do consultor',
+    text.trim().slice(0, 100), 'message', req.params.id).catch(() => {});
+
   res.json({ success: true, message: msg });
 });
 
@@ -3054,6 +3146,159 @@ app.get('/api/admin/invoices/:id/pdf', requireAdmin, async (req, res) => {
   }
 });
 
+// ─── Service Marketplace ─────────────────────────────────────────────────────
+
+// Client: list active services
+app.get('/api/services', requireAuth, async (req, res) => {
+  try {
+    const { data: services } = await sb.from('re_services')
+      .select('id,name,description,category,price_cents,features,delivery_days,featured')
+      .eq('active', true)
+      .order('featured', { ascending: false })
+      .order('created_at');
+    res.json({ services: services || [] });
+  } catch (e) {
+    res.json({ services: [] });
+  }
+});
+
+// Client: get single service
+app.get('/api/services/:id', requireAuth, async (req, res) => {
+  try {
+    const { data: s } = await sb.from('re_services').select('*').eq('id', req.params.id).eq('active', true).single();
+    if (!s) return res.status(404).json({ error: 'Serviço não encontrado.' });
+    res.json({ service: s });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Client: place an order for a service
+app.post('/api/services/:id/order', requireAuth, async (req, res) => {
+  try {
+    const { data: svc } = await sb.from('re_services').select('*').eq('id', req.params.id).eq('active', true).single();
+    if (!svc) return res.status(404).json({ error: 'Serviço não encontrado.' });
+
+    // Create internal invoice
+    const { data: inv } = await sb.from('re_invoices').insert({
+      user_id:        req.user.id,
+      description:    `Serviço: ${svc.name}`,
+      amount_cents:   svc.price_cents,
+      due_date:       new Date(Date.now() + 3*86400000).toISOString().split('T')[0],
+      status:         'pending',
+      payment_method: 'boleto',
+      created_by:     null,
+    }).select().single();
+
+    // Create order referencing the invoice
+    const { data: order } = await sb.from('re_service_orders').insert({
+      user_id:        req.user.id,
+      service_id:     svc.id,
+      amount_cents:   svc.price_cents,
+      status:         'pending_payment',
+      payment_method: 'boleto',
+      invoice_id:     inv?.id || null,
+    }).select().single();
+
+    pushNotification(req.user.id, 'service', 'Pedido recebido!',
+      `Seu pedido para "${svc.name}" foi registrado. Aguarde o boleto.`,
+      'service_order', order?.id).catch(() => {});
+
+    res.json({ success: true, order, invoice: inv });
+  } catch (e) {
+    console.error('[SERVICE ORDER]', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Client: list own orders
+app.get('/api/service-orders', requireAuth, async (req, res) => {
+  try {
+    const { data: orders } = await sb.from('re_service_orders')
+      .select('*,re_services(name,category)')
+      .eq('user_id', req.user.id)
+      .order('created_at', { ascending: false });
+    res.json({ orders: orders || [] });
+  } catch (e) { res.json({ orders: [] }); }
+});
+
+// Admin: list all services (including inactive)
+app.get('/api/admin/services', requireAdmin, async (req, res) => {
+  try {
+    const { data: services } = await sb.from('re_services')
+      .select('*').order('created_at', { ascending: false });
+    res.json({ services: services || [] });
+  } catch (e) { res.json({ services: [] }); }
+});
+
+// Admin: create service
+app.post('/api/admin/services', requireAdmin, async (req, res) => {
+  try {
+    const { name, description, category, price_cents, delivery_days, features, featured } = req.body;
+    if (!name || !price_cents) return res.status(400).json({ error: 'name e price_cents são obrigatórios.' });
+    const { data: svc, error } = await sb.from('re_services').insert({
+      name, description, category, price_cents: parseInt(price_cents),
+      delivery_days: delivery_days || null,
+      features: features || null,
+      featured: featured || false,
+      active: true,
+      created_by: req.user.id,
+    }).select().single();
+    if (error) return res.status(500).json({ error: error.message });
+    auditLog({ actorId: req.user.id, actorEmail: req.user.email, actorRole: 'admin',
+      entityType: 'service', entityId: svc.id, action: 'create', after: { name, price_cents } }).catch(() => {});
+    res.json({ success: true, service: svc });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Admin: update service
+app.put('/api/admin/services/:id', requireAdmin, async (req, res) => {
+  try {
+    const { active, name, description, price_cents, category, featured } = req.body;
+    const updates = {};
+    if (active      !== undefined) updates.active      = active;
+    if (name        !== undefined) updates.name        = name;
+    if (description !== undefined) updates.description = description;
+    if (price_cents !== undefined) updates.price_cents = parseInt(price_cents);
+    if (category    !== undefined) updates.category    = category;
+    if (featured    !== undefined) updates.featured    = featured;
+    const { data: svc, error } = await sb.from('re_services').update(updates).eq('id', req.params.id).select().single();
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ success: true, service: svc });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Admin: list all service orders
+app.get('/api/admin/service-orders', requireAdmin, async (req, res) => {
+  try {
+    const { data: orders } = await sb.from('re_service_orders')
+      .select('*,re_users!re_service_orders_user_id_fkey(name,email),re_services(name,category)')
+      .order('created_at', { ascending: false })
+      .limit(200);
+    res.json({ orders: orders || [] });
+  } catch (e) { res.json({ orders: [] }); }
+});
+
+// Admin: update order status
+app.put('/api/admin/service-orders/:id', requireAdmin, async (req, res) => {
+  try {
+    const { status, admin_notes, delivered_at } = req.body;
+    const updates = { updated_at: new Date().toISOString() };
+    if (status      !== undefined) updates.status      = status;
+    if (admin_notes !== undefined) updates.admin_notes = admin_notes;
+    if (delivered_at !== undefined) updates.delivered_at = delivered_at;
+    const { data: order, error } = await sb.from('re_service_orders')
+      .update(updates).eq('id', req.params.id).select().single();
+    if (error) return res.status(500).json({ error: error.message });
+
+    // Notify client on key status changes
+    if (status === 'delivered') {
+      const { data: o } = await sb.from('re_service_orders').select('user_id,re_services(name)').eq('id', req.params.id).single();
+      if (o) pushNotification(o.user_id, 'service', 'Serviço entregue!',
+        `"${o.re_services?.name}" foi concluído e entregue.`, 'service_order', req.params.id).catch(() => {});
+    }
+    res.json({ success: true, order });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // ─── Audit Log ───────────────────────────────────────────────────────────────
 app.get('/api/admin/audit-log', requireAdmin, async (req, res) => {
   try {
@@ -3101,22 +3346,23 @@ async function seedAdminAccounts() {
       let   authUser    = authUsers.find(u => u.email?.toLowerCase() === email.toLowerCase());
 
       if (!authUser) {
-        // Create Supabase Auth account with email confirmed
-        const { data: created, error: createErr } = await sb.auth.admin.createUser({
-          email,
-          password:       defaultPwd,
-          email_confirm:  true,
-          user_metadata:  { name: email.split('@')[0], company: 'Recupera Empresas' },
+        // Use the native Supabase invite flow so the configured "Invite user"
+        // email template is used instead of bypassing auth emails with a
+        // pre-confirmed account and shared default password.
+        const { data: invited, error: inviteErr } = await sb.auth.admin.inviteUserByEmail(email, {
+          redirectTo: AUTH_EMAIL_REDIRECTS.inviteUser,
+          data: { name: email.split('@')[0], company: 'Recupera Empresas' },
         });
-        if (createErr) {
-          console.warn(`[SEED] Erro Supabase Auth ao criar ${email}:`, createErr.message);
+        if (inviteErr) {
+          console.warn(`[SEED] Erro Supabase Auth ao convidar ${email}:`, inviteErr.message);
           continue;
         }
-        authUser = created.user;
-        console.log(`[SEED] Supabase Auth criado: ${email}`);
+        authUser = invited.user;
+        console.log(`[SEED] Convite Supabase enviado: ${email}`);
       }
 
       // Ensure re_users profile exists and is marked as admin
+      if (!authUser?.id) continue;
       const existing = await findUserByEmail(email);
       if (!existing) {
         await sb.from('re_users').insert({

@@ -296,6 +296,14 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
     showSuccess('E-mail confirmado! Faça login para continuar.');
   } else if (params.get('confirmed') === '1') {
     showSuccess('E-mail confirmado com sucesso! Faça login para continuar.');
+  } else if (params.get('invited') === '1') {
+    showSuccess('Convite confirmado. Defina sua senha e entre na plataforma.');
+  } else if (params.get('magic') === '1') {
+    showSuccess('Magic link enviado. Abra o e-mail e use o link para entrar.');
+  } else if (params.get('email_changed') === '1') {
+    showSuccess('Alteração de e-mail confirmada com sucesso.');
+  } else if (params.get('reauthenticated') === '1') {
+    showSuccess('Reautenticação concluída com sucesso.');
   } else if (params.get('err') === 'timeout') {
     document.getElementById('alertErrorMsg').textContent =
       'O servidor demorou para responder. Tente fazer login novamente.';
