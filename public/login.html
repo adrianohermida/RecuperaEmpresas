@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="./css/auth.css"/>
   <script src="./js/config.js"></script>
   <script src="./js/api-base.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 </head>
 <body>
 <div class="auth-layout">
@@ -195,6 +196,29 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
     if (json.token || json.success) {
       localStorage.setItem('re_token', json.token);
       localStorage.setItem('re_user', JSON.stringify(json.user));
+
+      // Store the Supabase session so supabase-js can use it on the OAuth
+      // consent page (approveAuthorization requires a live browser session).
+      if (json.supabase_session) {
+        try {
+          const SUPA_URL  = (window.RE_SUPABASE_URL  || '').replace(/\/$/, '');
+          const SUPA_ANON = window.RE_SUPABASE_ANON  || '';
+          if (SUPA_URL && SUPA_ANON && window.supabase) {
+            const sb = window.supabase.createClient(SUPA_URL, SUPA_ANON, { auth: { persistSession: true } });
+            await sb.auth.setSession({
+              access_token:  json.supabase_session.access_token,
+              refresh_token: json.supabase_session.refresh_token,
+            });
+          }
+        } catch {}
+      }
+
+      // If we were redirected here from the OAuth consent page, go back there.
+      const returnTo = new URLSearchParams(window.location.search).get('returnTo');
+      if (returnTo && returnTo.startsWith('/')) {
+        window.location.href = returnTo;
+        return;
+      }
       window.location.href = json.user?.isAdmin ? 'admin.html' : 'dashboard.html';
     } else {
       const msg = json.error || 'Credenciais inválidas.';

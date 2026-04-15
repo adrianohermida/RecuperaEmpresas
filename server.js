@@ -757,7 +757,15 @@ app.post('/api/auth/login', async (req, res) => {
     logAccess(profile.id, email, 'login', req.ip);
 
     const token = signToken({ userId: profile.id, email: profile.email });
-    res.json({ success: true, token, user: safeUser(profile) });
+
+    // Also return the Supabase session so the browser can store it for the
+    // OAuth consent page (supabase.auth.oauth.approveAuthorization requires
+    // a live Supabase session in localStorage, not just our custom JWT).
+    const supabaseSession = authData.session
+      ? { access_token: authData.session.access_token, refresh_token: authData.session.refresh_token, expires_at: authData.session.expires_at }
+      : null;
+
+    res.json({ success: true, token, user: safeUser(profile), supabase_session: supabaseSession });
   } catch(e) {
     console.error('[LOGIN]', e.message);
     res.status(500).json({ error: 'Erro interno.' });
