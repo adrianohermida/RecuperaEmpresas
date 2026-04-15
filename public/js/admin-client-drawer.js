@@ -177,68 +177,6 @@ async function renderDrawerTab(tab) {
   }
 
   if (tab === 'data') {
-    const d = onboarding.data || {};
-    const score = calcRecoveryScore(d, onboarding);
-    const insights = calcInsights(d);
-    const suggests = calcSuggestions(d, score);
-    const scoreColor = score >= 70 ? '#059669' : score >= 50 ? '#F59E0B' : score >= 30 ? '#EF4444' : '#DC2626';
-    const scoreLabel = score >= 70 ? 'Bom' : score >= 50 ? 'Moderado' : score >= 30 ? 'Atenção' : 'Crítico';
-    const pct = onboarding.completed ? 100 : Math.round(((onboarding.step||1)-1)/14*100);
-    const empresa = d.empresa || {};
-
-    const statusCls = score >= 70 ? 'badge-green' : score >= 50 ? 'badge-amber' : 'badge-red';
-    const statusLabel = score >= 70 ? 'Estável' : score >= 50 ? 'Atenção' : 'Crítico';
-
-    body.innerHTML = `
-      <div class="exec-header">
-        <div class="exec-company">${empresa.razaoSocial || user.company || '—'}</div>
-        <div class="exec-cnpj">CNPJ: ${empresa.cnpj || '—'} &nbsp;·&nbsp; <span class="badge ${statusCls}" style="font-size:11px;">${statusLabel}</span></div>
-        <div class="exec-kpis">
-          <div class="exec-kpi">
-            <div class="exec-kpi-val" style="color:${scoreColor};">${score}%</div>
-            <div class="exec-kpi-lbl">Score de Recuperação</div>
-            <div class="exec-kpi-sub" style="color:${scoreColor};">${scoreLabel}</div>
-          </div>
-          <div class="exec-kpi exec-divider" style="padding-left:20px;">
-            <div class="exec-kpi-val">${pct}%</div>
-            <div class="exec-kpi-lbl">Onboarding</div>
-            <div class="exec-kpi-sub" style="color:${onboarding.completed?'#34D399':'#93C5FD'};">${onboarding.completed?'Concluído':'Em andamento'}</div>
-          </div>
-          <div class="exec-kpi exec-divider" style="padding-left:20px;">
-            <div class="exec-kpi-val">${calcTotalDebt(d.dividas)}</div>
-            <div class="exec-kpi-lbl">Total dívidas</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="data-tab-bar">
-        ${['Resumo','Financeiro','Dívidas','Operação','Crise','Estratégia','Sócios'].map((t,i)=>
-          `<button class="data-tab-btn${i===0?' active':''}" onclick="switchDataTab(${i},this)">${t}</button>`
-        ).join('')}
-      </div>
-
-      <div id="dataTabContent"></div>
-
-      ${insights.length ? `
-      <div class="insights-box">
-        <div class="insights-title">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-          Pontos de atenção identificados
-        </div>
-        <ul class="insights-list">${insights.map(i=>`<li>${i}</li>`).join('')}</ul>
-      </div>` : ''}
-
-      ${suggests.length ? `
-      <div class="suggestions-box">
-        <div class="suggestions-title">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-          Sugestões estratégicas
-        </div>
-        <ul class="suggestions-list">${suggests.map(s=>`<li>${s}</li>`).join('')}</ul>
-      </div>` : ''}
-    `;
-
-    window._execData = { d, user, onboarding };
-    switchDataTab(0, body.querySelector('.data-tab-btn'));
+    window.REAdminDrawerDataTab.render({ body, user, onboarding });
   }
 }
