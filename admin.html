@@ -452,79 +452,6 @@ async function saveFormConfig() {
 }
 
 // ── Admin Notification Bell ───────────────────────────────────────────────────
-let _adminNotifOpen = false;
-let _adminNotifInterval = null;
-
-function toggleAdminNotifDropdown() {
-  const dd = document.getElementById('adminNotifDropdown');
-  _adminNotifOpen = !_adminNotifOpen;
-  dd.style.display = _adminNotifOpen ? 'block' : 'none';
-  if (_adminNotifOpen) loadAdminNotifications();
-}
-
-document.addEventListener('click', e => {
-  const wrap = document.getElementById('adminNotifBellWrap');
-  if (wrap && !wrap.contains(e.target) && _adminNotifOpen) {
-    _adminNotifOpen = false;
-    document.getElementById('adminNotifDropdown').style.display = 'none';
-  }
-});
-
-async function loadAdminNotifications() {
-  const listEl  = document.getElementById('adminNotifList');
-  const badgeEl = document.getElementById('adminNotifBadge');
-  try {
-    const res = await fetch('/api/notifications?limit=20', { headers: authH() });
-    if (!res.ok) return;
-    const { notifications = [], unread_count = 0 } = await res.json();
-    if (unread_count > 0) {
-      badgeEl.style.display = 'block';
-      badgeEl.textContent   = unread_count > 99 ? '99+' : unread_count;
-    } else {
-      badgeEl.style.display = 'none';
-    }
-    if (!notifications.length) {
-      listEl.innerHTML = '<div style="padding:20px;text-align:center;color:#94A3B8;font-size:13px;">Nenhuma notificação.</div>';
-      return;
-    }
-    const iconMap = { message:'💬', task:'✅', payment:'💰', plan:'📋', appointment:'📅', service:'🛒', info:'ℹ️' };
-    listEl.innerHTML = notifications.map(n => {
-      const ts  = new Date(n.created_at).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
-      const unr = !n.read;
-      return `<div onclick="adminReadNotif('${n.id}',this)"
-        style="padding:12px 16px;cursor:pointer;border-bottom:1px solid #F1F5F9;display:flex;gap:10px;align-items:flex-start;background:${unr?'#EFF6FF':'#fff'};"
-        onmouseover="this.style.background='#F8FAFC'" onmouseout="this.style.background='${unr?'#EFF6FF':'#fff'}'">
-        <span style="font-size:18px;line-height:1.4;">${iconMap[n.type]||'ℹ️'}</span>
-        <div style="flex:1;min-width:0;">
-          <div style="font-size:13px;font-weight:${unr?700:500};color:#1E293B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(n.title)}</div>
-          ${n.body ? `<div style="font-size:12px;color:#64748B;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(n.body)}</div>` : ''}
-          <div style="font-size:11px;color:#94A3B8;margin-top:3px;">${ts}</div>
-        </div>
-        ${unr ? '<div style="width:7px;height:7px;border-radius:50%;background:#2563EB;flex-shrink:0;margin-top:6px;"></div>' : ''}
-      </div>`;
-    }).join('');
-  } catch (e) { console.warn('[ADMIN NOTIF]', e.message); }
-}
-
-async function adminReadNotif(id, el) {
-  el.style.background = '#fff';
-  const dot = el.querySelector('div[style*="border-radius:50%"]');
-  if (dot) dot.remove();
-  fetch(`/api/notifications/${id}/read`, { method: 'POST', headers: authH() }).catch(() => {});
-  loadAdminNotifications();
-}
-
-async function adminMarkAllNotifRead() {
-  await fetch('/api/notifications/read-all', { method: 'POST', headers: authH() });
-  loadAdminNotifications();
-}
-
-function startAdminNotifPolling() {
-  if (_adminNotifInterval) return;
-  loadAdminNotifications();
-  _adminNotifInterval = setInterval(loadAdminNotifications, 30000);
-}
-
 // ── Admin Invoices (Cobranças Internas) ───────────────────────────────────────
 async function loadAdminInvoices() {
   const wrap = document.getElementById('adminInvoiceTableWrap');
@@ -980,6 +907,7 @@ function toggleAuditDetail(i) {
 
 <script src="./js/admin-agenda.js?v=20260416k"></script>
 <script src="./js/admin-finance.js?v=20260416l"></script>
+<script src="./js/admin-notifications.js?v=20260416m"></script>
 <script src="./js/admin-client-drawer-tabs-primary.js?v=20260416g"></script>
 <script src="./js/admin-client-drawer-tabs-secondary.js?v=20260416h"></script>
 <script src="./js/admin-client-drawer-tabs-tertiary.js?v=20260416i"></script>
