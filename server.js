@@ -827,6 +827,9 @@ app.get('/js/config.js', (req, res) => {
 window.RE_SUPABASE_URL    = ${JSON.stringify(SUPABASE_URL)};
 window.RE_SUPABASE_ANON   = ${JSON.stringify(SUPABASE_ANON_KEY)};
 window.RE_OAUTH_CLIENT_ID = ${JSON.stringify(process.env.OAUTH_CLIENT_ID || '')};
+window.RE_ENABLE_FRESHCHAT = ${JSON.stringify(process.env.RE_ENABLE_FRESHCHAT === 'true')};
+window.RE_FRESHCHAT_TOKEN  = ${JSON.stringify(process.env.RE_FRESHCHAT_TOKEN || '')};
+window.RE_FRESHCHAT_SITE_ID = ${JSON.stringify(process.env.RE_FRESHCHAT_SITE_ID || '')};
 `);
 });
 
@@ -2052,12 +2055,17 @@ app.get('/api/company/members', requireAuth, async (req, res) => {
   const companyId = req.user.company_id || req.user.id;
   const { data, error } = await selectWithColumnFallback('re_company_users', {
     columns: ['id', 'name', 'email', 'role', 'active', 'invited_at', 'last_login'],
-    requiredColumns: ['id', 'name', 'email', 'role', 'active'],
+    requiredColumns: ['id', 'email'],
     orderBy: ['created_at', 'invited_at', 'id'],
     apply: (query) => query.eq('company_id', companyId),
   });
   if (error) return res.status(500).json({ error: error.message });
-  res.json({ members: data || [] });
+  res.json({ members: (data || []).map((member) => ({
+    ...member,
+    name: member.name || member.email || 'Membro',
+    role: member.role || 'visualizador',
+    active: member.active !== false,
+  })) });
 });
 
 // Invite / create a new member
@@ -2191,12 +2199,17 @@ app.post('/api/auth/member-login', async (req, res) => {
 app.get('/api/admin/client/:id/members', requireAdmin, async (req, res) => {
   const { data, error } = await selectWithColumnFallback('re_company_users', {
     columns: ['id', 'name', 'email', 'role', 'active', 'invited_at', 'last_login'],
-    requiredColumns: ['id', 'name', 'email', 'role', 'active'],
+    requiredColumns: ['id', 'email'],
     orderBy: ['created_at', 'invited_at', 'id'],
     apply: (query) => query.eq('company_id', req.params.id),
   });
   if (error) return res.status(500).json({ error: error.message });
-  res.json({ members: data || [] });
+  res.json({ members: (data || []).map((member) => ({
+    ...member,
+    name: member.name || member.email || 'Membro',
+    role: member.role || 'visualizador',
+    active: member.active !== false,
+  })) });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════

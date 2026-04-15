@@ -7,8 +7,8 @@
   <title>Painel do Consultor — Recupera Empresas</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
   <link rel="stylesheet" href="./css/portal.css"/>
-  <script src="./js/config.js?v=20260416b"></script>
-  <script src="./js/api-base.js?v=20260416b"></script>
+  <script src="./js/config.js?v=20260416c"></script>
+  <script src="./js/api-base.js?v=20260416c"></script>
 </head>
 <body>
 
@@ -883,6 +883,10 @@
 function readAdminResponse(res) {
   if (typeof window.readApiResponse === 'function') return window.readApiResponse(res);
   return res.json();
+}
+
+function isFreshchatEnabled() {
+  return !!(window.RE_ENABLE_FRESHCHAT && window.RE_FRESHCHAT_TOKEN && window.RE_FRESHCHAT_SITE_ID);
 }
 
 const STEP_TITLES = {
@@ -2466,12 +2470,14 @@ async function impersonateClient(clientId) {
 // NOTE: window.fcSettings (token only) is set in a <script> block BEFORE the CDN
 // so the CDN auto-inits the widget. Here we only apply user identity after load.
 function _fcAdminPoll(cb, attempts) {
+  if (!isFreshchatEnabled()) return;
   if (typeof window.fcWidget !== 'undefined') { cb(); return; }
   if (attempts <= 0) { console.warn('[Freshchat] operator widget not ready'); return; }
   setTimeout(function() { _fcAdminPoll(cb, attempts - 1); }, 500);
 }
 
 function initFreshchatOperator(user) {
+  if (!isFreshchatEnabled()) return;
   _fcAdminPoll(function() {
     try {
       // Do NOT call fcWidget.init() again — CDN already initialized via window.fcSettings.
@@ -2524,7 +2530,9 @@ function initFreshchatOperator(user) {
   await loadAdminData();
 
   // Freshchat operador
-  setTimeout(() => initFreshchatOperator(user), 2000);
+  if (isFreshchatEnabled()) {
+    setTimeout(() => initFreshchatOperator(user), 2000);
+  }
 
   // Notification bell polling
   startAdminNotifPolling();
@@ -3285,7 +3293,7 @@ function toggleAuditDetail(i) {
 </style>
 
 <!-- Form Builder JS -->
-<script src="./js/form-builder.js?v=20260416b"></script>
+<script src="./js/form-builder.js?v=20260416c"></script>
 
 <!-- Jornadas JS -->
 <script>
@@ -3662,20 +3670,27 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 </script>
 
-<!-- Freshchat: pré-configura token ANTES do CDN para auto-init funcionar -->
 <script>
-  window.fcSettings = {
-    token:  'b487776b-ed4f-4b81-9240-16403eb40d5a',
-    host:   'https://msdk.freshchat.com',
-    siteId: 'e1458f85-7f7b-46cc-8a00-32871dbdc352',
-    config: {
-      headerProperty: { appName: 'Recupera Empresas — Operador', backgroundColor: '#1e3a5f', foregroundColor: '#ffffff' },
-      content: { placeholders: { search_field: 'Buscar conversa...', reply_field: 'Responder...' } }
-    }
-  };
+  if (window.RE_ENABLE_FRESHCHAT && window.RE_FRESHCHAT_TOKEN && window.RE_FRESHCHAT_SITE_ID) {
+    window.fcSettings = {
+      token:  window.RE_FRESHCHAT_TOKEN,
+      host:   'https://msdk.freshchat.com',
+      siteId: window.RE_FRESHCHAT_SITE_ID,
+      config: {
+        headerProperty: { appName: 'Recupera Empresas — Operador', backgroundColor: '#1e3a5f', foregroundColor: '#ffffff' },
+        content: { placeholders: { search_field: 'Buscar conversa...', reply_field: 'Responder...' } }
+      }
+    };
+
+    (function loadFreshchatWidget() {
+      var script = document.createElement('script');
+      script.src = '//fw-cdn.com/16078787/7064112.js';
+      script.setAttribute('chat', 'true');
+      script.async = true;
+      document.body.appendChild(script);
+    })();
+  }
 </script>
-<!-- Freshchat operator widget (CDN unificado) -->
-<script src='//fw-cdn.com/16078787/7064112.js' chat='true'></script>
 
 </body>
 </html>

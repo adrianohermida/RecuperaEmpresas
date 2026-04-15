@@ -44,6 +44,9 @@ copyRecursive(publicDir, distDir);
 const apiBase = process.env.RE_API_BASE || '';
 const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || 'https://riiajjmnzgagntiqqshs.supabase.co';
 const supabaseAnon = process.env.VITE_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY || '';
+const freshchatEnabled = process.env.RE_ENABLE_FRESHCHAT === 'true';
+const freshchatToken = process.env.RE_FRESHCHAT_TOKEN || '';
+const freshchatSiteId = process.env.RE_FRESHCHAT_SITE_ID || '';
 const configPath = path.join(distDir, 'js', 'config.js');
 ensureDir(path.dirname(configPath));
 fs.writeFileSync(
@@ -55,6 +58,9 @@ fs.writeFileSync(
     `window.RE_API_BASE = ${JSON.stringify(apiBase)};`,
     `window.RE_SUPABASE_URL = ${JSON.stringify(supabaseUrl)};`,
     `window.RE_SUPABASE_ANON = ${JSON.stringify(supabaseAnon)};`,
+    `window.RE_ENABLE_FRESHCHAT = ${JSON.stringify(freshchatEnabled)};`,
+    `window.RE_FRESHCHAT_TOKEN = ${JSON.stringify(freshchatToken)};`,
+    `window.RE_FRESHCHAT_SITE_ID = ${JSON.stringify(freshchatSiteId)};`,
     ''
   ].join('\n'),
   'utf8'

@@ -7,8 +7,8 @@
   <title>Portal do Cliente — Recupera Empresas</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
   <link rel="stylesheet" href="./css/portal.css"/>
-  <script src="./js/config.js?v=20260415a"></script>
-  <script src="./js/api-base.js?v=20260415a"></script>
+  <script src="./js/config.js?v=20260416c"></script>
+  <script src="./js/api-base.js?v=20260416c"></script>
 </head>
 <body>
 
@@ -1346,6 +1346,7 @@ async function loadDocuments() {
 
 // ── Freshchat identity ────────────────────────────────────────────────────────
 async function initFreshchat(user) {
+  if (!(window.RE_ENABLE_FRESHCHAT && window.RE_FRESHCHAT_TOKEN && window.RE_FRESHCHAT_SITE_ID)) return;
   try {
     const res  = await fetch('/api/freshchat-token', { headers: authH() });
     const json = await res.json();
@@ -1437,7 +1438,7 @@ async function initFreshchat(user) {
   }
 
   // Init Freshchat after widget loads (skip when impersonating)
-  if (!isImpersonating) {
+  if (!isImpersonating && window.RE_ENABLE_FRESHCHAT && window.RE_FRESHCHAT_TOKEN && window.RE_FRESHCHAT_SITE_ID) {
     setTimeout(() => initFreshchat(user), 2000);
   }
 })();
@@ -1682,8 +1683,15 @@ async function checkoutCredits(pack) {
 }
 </script>
 
-<!-- Freshchat client widget -->
-<script src='//fw-cdn.com/16078787/7064112.js' chat='true'></script>
+<script>
+  if (window.RE_ENABLE_FRESHCHAT && window.RE_FRESHCHAT_TOKEN && window.RE_FRESHCHAT_SITE_ID) {
+    var script = document.createElement('script');
+    script.src = '//fw-cdn.com/16078787/7064112.js';
+    script.setAttribute('chat', 'true');
+    script.async = true;
+    document.body.appendChild(script);
+  }
+</script>
 
 </body>
 </html>
