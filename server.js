@@ -2588,6 +2588,106 @@ app.get('/api/admin/client/:id/financial', requireAdmin, async (req, res) => {
   } catch (e) { res.json({ invoices: [], configured: true, error: e.message }); }
 });
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// FORM BUILDER — configuração dinâmica do formulário de onboarding
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const FORM_CONFIG_PATH = path.join(__dirname, 'form-config.json');
+
+const FORM_CONFIG_DEFAULTS = {
+  steps: [
+    { id:1,  title:'Consentimento LGPD',       description:'', enabled:true,  required:true  },
+    { id:2,  title:'Dados da Empresa',          description:'', enabled:true,  required:true  },
+    { id:3,  title:'Sócios',                   description:'', enabled:true,  required:true  },
+    { id:4,  title:'Estrutura Operacional',     description:'', enabled:true,  required:false },
+    { id:5,  title:'Quadro de Funcionários',    description:'', enabled:true,  required:false },
+    { id:6,  title:'Ativos',                   description:'', enabled:true,  required:false },
+    { id:7,  title:'Dados Financeiros',         description:'', enabled:true,  required:true  },
+    { id:8,  title:'Dívidas e Credores',        description:'', enabled:true,  required:true  },
+    { id:9,  title:'Histórico da Crise',        description:'', enabled:true,  required:false },
+    { id:10, title:'Diagnóstico Estratégico',   description:'', enabled:true,  required:false },
+    { id:11, title:'Mercado e Operação',        description:'', enabled:true,  required:false },
+    { id:12, title:'Expectativas e Estratégia', description:'', enabled:true,  required:false },
+    { id:13, title:'Documentos',               description:'', enabled:true,  required:false },
+    { id:14, title:'Confirmação e Envio',       description:'', enabled:true,  required:true  },
+  ],
+  welcomeMessage: 'Preencha as informações da sua empresa para que possamos elaborar o Business Plan de recuperação.',
+  lastUpdated: null,
+};
+
+function readFormConfig() {
+  try {
+    if (fs.existsSync(FORM_CONFIG_PATH)) {
+      const raw = fs.readFileSync(FORM_CONFIG_PATH, 'utf8');
+      const cfg = JSON.parse(raw);
+      // Merge: keep defaults for any step missing in saved config
+      const savedIds = new Set((cfg.steps||[]).map(s => s.id));
+      const merged = FORM_CONFIG_DEFAULTS.steps.map(def => {
+        const saved = (cfg.steps||[]).find(s => s.id === def.id);
+        return saved ? { ...def, ...saved } : def;
+      });
+      return { ...FORM_CONFIG_DEFAULTS, ...cfg, steps: merged };
+    }
+  } catch (e) { console.warn('[FORM-CONFIG] read error:', e.message); }
+  return { ...FORM_CONFIG_DEFAULTS, steps: FORM_CONFIG_DEFAULTS.steps.map(s => ({ ...s })) };
+}
+
+function writeFormConfig(cfg) {
+  try { fs.writeFileSync(FORM_CONFIG_PATH, JSON.stringify(cfg, null, 2), 'utf8'); } catch (e) {
+    console.error('[FORM-CONFIG] write error:', e.message);
+    throw e;
+  }
+}
+
+// Authenticated clients: read enabled steps only
+app.get('/api/form-config', requireAuth, (req, res) => {
+  const cfg = readFormConfig();
+  res.json({
+    steps: cfg.steps.filter(s => s.enabled),
+    welcomeMessage: cfg.welcomeMessage || '',
+  });
+});
+
+// Admin: full config
+app.get('/api/admin/form-config', requireAdmin, (req, res) => {
+  res.json(readFormConfig());
+});
+
+// Admin: save config
+app.put('/api/admin/form-config', requireAdmin, (req, res) => {
+  try {
+    const current = readFormConfig();
+    const { steps, welcomeMessage } = req.body;
+    // Validate and sanitise steps
+    const merged = (FORM_CONFIG_DEFAULTS.steps).map(def => {
+      const incoming = (steps||[]).find(s => s.id === def.id);
+      if (!incoming) return current.steps.find(s => s.id === def.id) || def;
+      return {
+        id:          def.id,
+        title:       (typeof incoming.title === 'string' ? incoming.title.trim() : '') || def.title,
+        description: typeof incoming.description === 'string' ? incoming.description.trim() : '',
+        enabled:     !!incoming.enabled,
+        required:    !!incoming.required,
+      };
+    });
+    // Steps 1 and 14 are always enabled & required (LGPD + confirmação)
+    merged[0]  = { ...merged[0],  enabled: true, required: true };
+    merged[13] = { ...merged[13], enabled: true, required: true };
+
+    const updated = {
+      ...current,
+      steps: merged,
+      welcomeMessage: typeof welcomeMessage === 'string' ? welcomeMessage.trim() : current.welcomeMessage,
+      lastUpdated: new Date().toISOString(),
+    };
+    writeFormConfig(updated);
+    res.json({ success: true, config: updated });
+  } catch (e) {
+    console.error('[FORM-CONFIG PUT]', e.message);
+    res.status(500).json({ error: 'Erro ao salvar configuração.' });
+  }
+});
+
 // ─── Health check (used by Render.com and uptime monitors) ───────────────────
 app.get(['/api/health', '/healthz'], (req, res) => {
   res.json({ status: 'ok', ts: new Date().toISOString() });
