@@ -2110,36 +2110,38 @@ app.get('/api/agenda/slots', requireAuth, async (req, res) => {
   const userId = req.user.id;
   const from = req.query.from || new Date().toISOString();
   const { data: slots } = await sb.from('re_agenda_slots')
-    .select('id,starts_at,ends_at,duration_min,title,credits_cost,max_bookings')
+    .select('id,starts_at,ends_at,duration_min,title,credits_cost,max_bookings,location,meeting_link')
     .gte('starts_at', from)
     .order('starts_at', { ascending: true })
     .limit(60);
 
-  // Count bookings per slot
+  // Count active bookings per slot (pending + confirmed only)
   const slotIds = (slots||[]).map(s => s.id);
   let bookingCounts = {};
   if (slotIds.length) {
     const { data: counts } = await sb.from('re_bookings')
-      .select('slot_id')
-      .in('slot_id', slotIds)
-      .neq('status', 'cancelled');
+      .select('slot_id').in('slot_id', slotIds)
+      .in('status', ['pending', 'confirmed']);
     (counts||[]).forEach(b => { bookingCounts[b.slot_id] = (bookingCounts[b.slot_id]||0) + 1; });
   }
 
-  // Client's own bookings
+  // Client's own bookings — full detail for status display
   const { data: myBookings } = await sb.from('re_bookings')
-    .select('slot_id,status')
+    .select('id,slot_id,status,credits_spent,confirmed_at,cancel_reason,cancelled_by,reschedule_reason,rescheduled_to_slot_id,notes,created_at')
     .eq('user_id', userId)
-    .in('slot_id', slotIds.length ? slotIds : ['00000000-0000-0000-0000-000000000000']);
+    .in('slot_id', slotIds.length ? slotIds : ['00000000-0000-0000-0000-000000000000'])
+    .neq('status', 'rescheduled'); // hide superseded bookings
+  const myBookingMap = {};
+  (myBookings||[]).forEach(b => { myBookingMap[b.slot_id] = b; });
 
-  const mySlotIds = new Set((myBookings||[]).filter(b => b.status !== 'cancelled').map(b => b.slot_id));
   const credits = await getCredits(userId);
 
   const enriched = (slots||[]).map(s => ({
     ...s,
     booked_count: bookingCounts[s.id] || 0,
     available: (bookingCounts[s.id] || 0) < s.max_bookings,
-    my_booking: mySlotIds.has(s.id),
+    my_booking: !!myBookingMap[s.id],
+    my_booking_detail: myBookingMap[s.id] || null,
   }));
 
   res.json({ slots: enriched, credits_balance: credits });
@@ -2175,52 +2177,37 @@ app.post('/api/agenda/book/:slotId', requireAuth, async (req, res) => {
 
   const { data: booking, error } = await sb.from('re_bookings').insert({
     slot_id: slotId, user_id: userId,
-    status: 'confirmed', credits_spent: slot.credits_cost, notes: notes || null,
+    status: 'pending', credits_spent: slot.credits_cost, notes: notes || null,
   }).select().single();
   if (error) return res.status(500).json({ error: error.message });
 
-  const newBal = await adjustCredits(userId, -slot.credits_cost, 'booking', booking.id);
+  // Deduct credits immediately (refunded if consultant rejects)
+  const newBal = await adjustCredits(userId, -slot.credits_cost, 'booking_pending', booking.id);
 
-  // Google Calendar — adicionar cliente como attendee no evento do slot
-  const evId = _calendarEventIds.get(slotId);
-  if (evId && req.user.email) {
-    gcPatchEvent(evId, {
-      summary: `${slot.title || 'Consultoria'} — ${req.user.company || req.user.name || req.user.email}`,
-      attendees: [{ email: req.user.email, displayName: req.user.name || req.user.email }],
-    }).catch(e => console.warn('[async]', e?.message));
-  } else if (!evId && GOOGLE_CALENDAR_ID) {
-    // Slot criado antes do server restart — criar evento agora com attendee
-    gcCreateEvent({
-      summary: `${slot.title || 'Consultoria'} — ${req.user.company || req.user.name || req.user.email}`,
-      description: `Cliente: ${req.user.name || req.user.email} (${req.user.company || ''})\nBooking: ${booking.id}`,
-      start: slot.starts_at, end: slot.ends_at,
-      attendeeEmail: req.user.email,
-    }).then(id => { if (id) _calendarEventIds.set(slotId, id); }).catch(e => console.warn('[async]', e?.message));
-  }
-
-  // Confirmation email (fire and forget)
+  // Emails
   const startsAtFmt = new Date(slot.starts_at).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
-  sendMail(req.user.email, 'Agendamento confirmado — Recupera Empresas', emailWrapper(
-    'Agendamento confirmado',
-    `<p>Olá, <b>${req.user.name || req.user.email}</b>!</p>
-     <p>Seu agendamento foi confirmado com sucesso:</p>
+  const clientName = req.user.name || req.user.email;
+
+  sendMail(req.user.email, 'Solicitação de agendamento recebida — Recupera Empresas', emailWrapper(
+    'Solicitação de agendamento recebida',
+    `<p>Olá, <b>${clientName}</b>!</p>
+     <p>Sua solicitação foi recebida e está <b>aguardando confirmação</b> do consultor.</p>
      <table style="width:100%;border-collapse:collapse;font-size:14px;margin:16px 0;">
        <tr><td style="padding:6px 0;color:#64748B;width:40%;">Sessão</td>
            <td style="padding:6px 0;font-weight:600;">${slot.title || 'Consultoria'}</td></tr>
        <tr><td style="padding:6px 0;color:#64748B;">Data e hora</td>
            <td style="padding:6px 0;font-weight:600;">${startsAtFmt}</td></tr>
-       <tr><td style="padding:6px 0;color:#64748B;">Créditos utilizados</td>
+       <tr><td style="padding:6px 0;color:#64748B;">Créditos reservados</td>
            <td style="padding:6px 0;font-weight:600;">${slot.credits_cost}</td></tr>
-       <tr><td style="padding:6px 0;color:#64748B;">Saldo restante</td>
-           <td style="padding:6px 0;font-weight:600;">${newBal} crédito${newBal !== 1 ? 's' : ''}</td></tr>
      </table>
-     <p style="font-size:13px;color:#64748B;">Você receberá um lembrete 24h antes da sessão.</p>`
+     <p style="font-size:13px;color:#F59E0B;font-weight:600;">⏳ Você receberá um e-mail assim que o consultor confirmar.</p>`
   )).catch(e => console.warn('[async]', e?.message));
 
-  sendMail(EMAIL_TO, `[Agendamento] ${req.user.name || req.user.email} — ${startsAtFmt}`, emailWrapper(
-    'Novo agendamento',
-    `<p><b>${req.user.name || req.user.email}</b> (${req.user.company || '—'}) agendou uma sessão.</p>
-     <p><b>Sessão:</b> ${slot.title || 'Consultoria'}<br><b>Data:</b> ${startsAtFmt}</p>`
+  sendMail(EMAIL_TO, `[Novo Agendamento] ${clientName} — ${startsAtFmt}`, emailWrapper(
+    'Nova solicitação de agendamento',
+    `<p><b>${clientName}</b> (${req.user.company || '—'}) solicitou um agendamento.</p>
+     <p><b>Sessão:</b> ${slot.title || 'Consultoria'}<br><b>Data:</b> ${startsAtFmt}</p>
+     <p style="font-size:13px;color:#64748B;">Acesse o painel do consultor → Agenda para confirmar, remarcar ou cancelar.</p>`
   )).catch(e => console.warn('[async]', e?.message));
 
   res.json({ success: true, booking, credits_balance: newBal });
@@ -2229,19 +2216,23 @@ app.post('/api/agenda/book/:slotId', requireAuth, async (req, res) => {
 // ── Client: cancel a booking (refund credits) ────────────────────────────────
 app.delete('/api/agenda/book/:bookingId', requireAuth, async (req, res) => {
   const userId = req.user.id;
+  const { reason } = req.body || {};
   const { data: booking } = await sb.from('re_bookings')
     .select('*').eq('id', req.params.bookingId).eq('user_id', userId).single();
   if (!booking) return res.status(404).json({ error: 'Reserva não encontrada.' });
-  if (booking.status === 'cancelled') return res.status(400).json({ error: 'Reserva já cancelada.' });
+  if (['cancelled','rescheduled'].includes(booking.status)) return res.status(400).json({ error: 'Reserva já cancelada.' });
 
-  // Only allow cancel if slot hasn't started
-  const { data: slot } = await sb.from('re_agenda_slots').select('starts_at, title').eq('id', booking.slot_id).single();
+  const { data: slot } = await sb.from('re_agenda_slots').select('starts_at,title').eq('id', booking.slot_id).single();
   if (slot && new Date(slot.starts_at) < new Date()) return res.status(400).json({ error: 'Sessão já iniciada.' });
 
-  await sb.from('re_bookings').update({ status: 'cancelled' }).eq('id', booking.id);
-  const newBal = await adjustCredits(userId, booking.credits_spent, 'refund', booking.id);
+  await sb.from('re_bookings').update({
+    status: 'cancelled', cancelled_by: 'client',
+    cancel_reason: reason || null, updated_at: new Date().toISOString(),
+  }).eq('id', booking.id);
 
-  // Google Calendar — restaurar título do slot (remove attendee via patch)
+  const newBal = await adjustCredits(userId, booking.credits_spent, 'refund_client_cancel', booking.id);
+
+  // Restore calendar slot
   const evId = _calendarEventIds.get(booking.slot_id);
   if (evId) {
     gcPatchEvent(evId, {
@@ -2249,6 +2240,15 @@ app.delete('/api/agenda/book/:bookingId', requireAuth, async (req, res) => {
       attendees: [],
     }).catch(e => console.warn('[async]', e?.message));
   }
+
+  // Notify admin
+  const startsAtFmt = new Date(slot?.starts_at || Date.now()).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+  sendMail(EMAIL_TO, `[Cancelamento] ${req.user.name || req.user.email} — ${startsAtFmt}`, emailWrapper(
+    'Agendamento cancelado pelo cliente',
+    `<p><b>${req.user.name || req.user.email}</b> cancelou o agendamento.</p>
+     <p><b>Sessão:</b> ${slot?.title || 'Consultoria'}<br><b>Data:</b> ${startsAtFmt}</p>
+     ${reason ? `<p><b>Motivo:</b> ${reason}</p>` : ''}`
+  )).catch(e => console.warn('[async]', e?.message));
 
   res.json({ success: true, credits_balance: newBal });
 });
@@ -2422,19 +2422,33 @@ app.delete('/api/admin/agenda/slots/:slotId', requireAdmin, async (req, res) => 
   res.json({ success: true });
 });
 
-// Client: cancel booking by slot id (convenience — finds the booking first)
+// Client: cancel booking by slot id (convenience — finds booking then delegates)
 app.delete('/api/agenda/cancel-slot/:slotId', requireAuth, async (req, res) => {
   const userId = req.user.id;
+  const { reason } = req.body || {};
   const { data: booking } = await sb.from('re_bookings')
     .select('*').eq('slot_id', req.params.slotId).eq('user_id', userId)
-    .neq('status', 'cancelled').single();
+    .in('status', ['pending','confirmed']).single();
   if (!booking) return res.status(404).json({ error: 'Reserva não encontrada.' });
 
-  const { data: slot } = await sb.from('re_agenda_slots').select('starts_at').eq('id', booking.slot_id).single();
-  if (slot && new Date(slot.starts_at) < new Date()) return res.status(400).json({ error: 'Sessão já iniciada — não é possível cancelar.' });
+  const { data: slot } = await sb.from('re_agenda_slots').select('starts_at,title').eq('id', booking.slot_id).single();
+  if (slot && new Date(slot.starts_at) < new Date()) return res.status(400).json({ error: 'Sessão já iniciada.' });
 
-  await sb.from('re_bookings').update({ status: 'cancelled' }).eq('id', booking.id);
-  const newBal = await adjustCredits(userId, booking.credits_spent, 'refund', booking.id);
+  await sb.from('re_bookings').update({
+    status: 'cancelled', cancelled_by: 'client',
+    cancel_reason: reason || null, updated_at: new Date().toISOString(),
+  }).eq('id', booking.id);
+
+  const newBal = await adjustCredits(userId, booking.credits_spent, 'refund_client_cancel', booking.id);
+
+  const startsAtFmt = new Date(slot?.starts_at || Date.now()).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+  sendMail(EMAIL_TO, `[Cancelamento] ${req.user.name || req.user.email} — ${startsAtFmt}`, emailWrapper(
+    'Agendamento cancelado pelo cliente',
+    `<p><b>${req.user.name || req.user.email}</b> cancelou o agendamento.</p>
+     <p><b>Sessão:</b> ${slot?.title || 'Consultoria'}<br><b>Data:</b> ${startsAtFmt}</p>
+     ${reason ? `<p><b>Motivo:</b> ${reason}</p>` : ''}`
+  )).catch(e => console.warn('[async]', e?.message));
+
   res.json({ success: true, credits_balance: newBal });
 });
 
