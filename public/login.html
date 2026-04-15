@@ -210,6 +210,14 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
     }
 
     if (json.token || json.success) {
+      if (_sb && json.supabase_session?.access_token && json.supabase_session?.refresh_token) {
+        const { error: setSessionErr } = await _sb.auth.setSession({
+          access_token: json.supabase_session.access_token,
+          refresh_token: json.supabase_session.refresh_token,
+        });
+        if (setSessionErr) console.warn('[LOGIN] supabase-js setSession:', setSessionErr.message);
+      }
+
       localStorage.setItem('re_token', json.token);
       localStorage.setItem('re_user', JSON.stringify(json.user));
 

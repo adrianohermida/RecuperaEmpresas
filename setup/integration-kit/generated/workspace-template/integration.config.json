@@ -13,8 +13,8 @@
   },
   "providers": {
     "supabase": {
-      "url": "https://sspvizogbcyigquqycsz.supabase.co",
-      "redirectUri": "https://sspvizogbcyigquqycsz.supabase.co/functions/v1/oauth",
+      "url": "https://riiajjmnzgagntiqqshs.supabase.co",
+      "redirectUri": "https://riiajjmnzgagntiqqshs.supabase.co/functions/v1/oauth",
       "migrationsPath": "supabase/migrations"
     },
     "freshworks": {

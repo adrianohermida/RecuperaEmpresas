@@ -189,7 +189,8 @@
         document.getElementById('appIcon').textContent  = details.client_name[0].toUpperCase();
       }
       if (details?.client_uri)  document.getElementById('appDomain').textContent = details.client_uri;
-      if (details?.scopes?.length) scopes = details.scopes;
+      if (typeof details?.scope === 'string' && details.scope.trim()) scopes = details.scope.trim().split(/\s+/);
+      else if (details?.scopes?.length) scopes = details.scopes;
     }
   } catch {}
 
@@ -198,7 +199,7 @@
     return `<li><span class="scope-icon">${def.icon}</span>${def.text}</li>`;
   }).join('');
 
-  // ── Consent decision — direct REST call for better error visibility ─────────
+  // ── Consent decision — handled by supabase-js OAuth helpers ─────────────────
   window.decide = async function (allow) {
     const btnAllow = document.getElementById('btnAllow');
     const btnDeny  = document.getElementById('btnDeny');
@@ -215,7 +216,12 @@
       const { data: { session: currentSession } } = await supabase.auth.getSession();
       if (!currentSession) throw new Error('Sessão expirada — recarregue a página e tente novamente.');
 
+      const { data: userData, error: userErr } = await supabase.auth.getUser();
+      if (userErr) throw userErr;
+      if (!userData?.user) throw new Error('Usuário Supabase não autenticado para este projeto.');
+
       console.log('[CONSENT] session uid:', currentSession.user?.id);
+      console.log('[CONSENT] getUser uid:', userData.user?.id);
       console.log('[CONSENT] access_token (first 40):', currentSession.access_token?.slice(0, 40));
 
       if (!allow) {
@@ -230,34 +236,23 @@
         return;
       }
 
-      // Approve: call the Supabase consent endpoint directly so we can log the
-      // raw response in case supabase-js swallows details.
-      const consentUrl = `${SUPA_URL}/auth/v1/oauth/authorizations/${encodeURIComponent(authorizationId)}/consent`;
-      console.log('[CONSENT] POST', consentUrl);
+      const { data: authDetails, error: authDetailsErr } = await supabase.auth.oauth.getAuthorizationDetails(authorizationId);
+      if (authDetailsErr) throw authDetailsErr;
+      console.log('[CONSENT] authorization details before approve:', authDetails);
 
-      const res  = await fetch(consentUrl, {
-        method:  'POST',
-        headers: {
-          'Content-Type':  'application/json',
-          'apikey':        SUPA_ANON,
-          'Authorization': `Bearer ${currentSession.access_token}`,
-        },
-        body: JSON.stringify({ action: 'approve' }),
-      });
-      const payload = await res.json().catch(() => ({}));
-      console.log('[CONSENT] response', res.status, JSON.stringify(payload));
+      const { data, error } = await supabase.auth.oauth.approveAuthorization(authorizationId);
+      if (error) throw error;
 
-      if (!res.ok) {
-        const detail = payload.msg || payload.error_description || payload.message || payload.error || JSON.stringify(payload);
-        throw new Error(`Supabase ${res.status}: ${detail}`);
-      }
+      const redirectTo = data?.redirect_to || data?.redirectTo;
+      if (!redirectTo) throw new Error('Supabase não retornou redirect_to após aprovação.');
 
-      const redirect_to = payload.redirect_to || payload.redirectTo;
-      if (!redirect_to) throw new Error('Supabase não retornou redirect_to: ' + JSON.stringify(payload));
-      window.location.href = redirect_to;
+      console.log('[CONSENT] approve redirect', redirectTo);
+      window.location.href = redirectTo;
+      return;
     } catch (err) {
       console.error('[CONSENT] error:', err);
-      errMsg.textContent = err.message || 'Erro ao processar decisão. Tente novamente.';
+      const detail = [err?.name, err?.code, err?.status, err?.message].filter(Boolean).join(' | ');
+      errMsg.textContent = detail || 'Erro ao processar decisão. Tente novamente.';
       errEl.style.display = 'flex';
       btnAllow.disabled = btnDeny.disabled = false;
       btnAllow.textContent = 'Autorizar';

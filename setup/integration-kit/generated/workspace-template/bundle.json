@@ -8,7 +8,7 @@
     "freshchat_base_url": "https://msdk.eu.freshchat.com",
     "authorize_url": "https://hmadv-org.myfreshworks.com/org/oauth/v2/authorize",
     "token_url": "https://hmadv-org.myfreshworks.com/org/oauth/v2/token",
-    "redirect_uri": "https://sspvizogbcyigquqycsz.supabase.co/functions/v1/oauth",
+    "redirect_uri": "https://riiajjmnzgagntiqqshs.supabase.co/functions/v1/oauth",
     "scopes": "freshchat.reports.create freshsales.products.delete freshsales.contacts.fields.view freshsales.contacts.edit freshsales.appointments.delete freshsales.documents.view freshsales.job_statuses.view freshsales.deals.fields.view freshsales.custom_module_records.edit freshchat.file.create freshchat.conversation.create freshsales.tasks.edit freshsales.files.create freshsales.sales_activities.delete freshsales.marketing_lists.contacts.view freshsales.custom_module_filters.view freshsales.call_logs.create freshsales.marketing_lists.create freshsales.selectors.view freshchat.account.view freshsales.appointments.view freshsales.sales_activities.view freshsales.documents.edit freshsales.deals.filters.view freshchat.business_hours.view freshchat.conversation.edit freshsales.custom_module_records.delete freshsales.sales_accounts.upsert freshchat.image.create freshsales.tasks.delete freshsales.notes.delete freshchat.reports.view freshchat.groups.view freshsales.contacts.create freshsales.deals.delete freshsales.custom_fields.create freshchat.conversation.view freshsales.documents.delete freshsales.notes.edit freshchat.roles.view freshsales.deals.view freshsales.sales_accounts.view freshsales.tasks.create freshsales.custom_modules.edit freshsales.fields.view freshsales.contacts.delete freshsales.sales_activities.create freshsales.products.edit freshsales.products.view freshsales.deals.edit freshsales.document_links.create freshsales.custom_modules.delete freshsales.sales_accounts.delete freshsales.appointments.edit freshchat.conversation.message.create freshsales.deals.upsert freshsales.marketing_lists.view freshchat.dashboard.view freshchat.conversation.properties.view freshsales.appointments.create freshsales.custom_modules.create freshsales.records.search freshsales.sales_accounts.create freshsales.contacts.upsert freshsales.lookup.search freshsales.custom_modules.view freshsales.products.create freshsales.sales_accounts.edit freshsales.notes.create freshsales.deals.create freshsales.documents.create freshchat.channels.view freshchat.csat.create freshsales.contacts.filters.view freshsales.sales_activities.edit freshsales.sales_activities.fields.view freshchat.conversation.messages.view freshsales.sales_accounts.filters.view freshsales.tasks.view freshsales.contacts.activities.view freshsales.custom_module_records.create freshsales.custom_module_records.view freshsales.marketing_lists.edit freshsales.contacts.view",
     "has_client_id": true,
     "has_client_secret": true,
@@ -41,8 +41,8 @@
       },
       "providers": {
         "supabase": {
-          "url": "https://sspvizogbcyigquqycsz.supabase.co",
-          "redirectUri": "https://sspvizogbcyigquqycsz.supabase.co/functions/v1/oauth",
+          "url": "https://riiajjmnzgagntiqqshs.supabase.co",
+          "redirectUri": "https://riiajjmnzgagntiqqshs.supabase.co/functions/v1/oauth",
           "migrationsPath": "supabase/migrations"
         },
         "freshworks": {
