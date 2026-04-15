@@ -158,8 +158,8 @@ function clearErrors() {
 }
 
 // ── Supabase client (browser-side) — persists session automatically ───────────
-const _sbUrl  = (window.RE_SUPABASE_URL  || '').replace(/\/$/, '');
-const _sbAnon = window.RE_SUPABASE_ANON  || '';
+const _sbUrl  = (window.RE_SUPABASE_URL  || 'https://riiajjmnzgagntiqqshs.supabase.co').replace(/\/$/, '');
+const _sbAnon = window.RE_SUPABASE_ANON  || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJpaWFqam1uemdhZ250aXFxc2hzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYxNzY0ODUsImV4cCI6MjA5MTc1MjQ4NX0.zyOFjVFIBJem5FZmXBD-ya78RheD_a-YHetibyVvXcI';
 const _sb     = (_sbUrl && _sbAnon && window.supabase)
   ? window.supabase.createClient(_sbUrl, _sbAnon, { auth: { persistSession: true, autoRefreshToken: true } })
   : null;

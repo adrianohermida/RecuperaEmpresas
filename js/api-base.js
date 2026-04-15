@@ -14,8 +14,16 @@
  * in any order relative to this file.
  */
 (function () {
+  function fallbackBase() {
+    var host = window.location.hostname;
+    if (host === 'recuperaempresas.com.br' || host === 'www.recuperaempresas.com.br') {
+      return 'https://recuperaempresas.onrender.com';
+    }
+    return '';
+  }
+
   function resolveUrl(url) {
-    var base = (window.RE_API_BASE || '').replace(/\/+$/, '');
+    var base = (window.RE_API_BASE || fallbackBase()).replace(/\/+$/, '');
     if (!base) return url;
     if (typeof url === 'string' && url.charAt(0) === '/') return base + url;
     return url;
