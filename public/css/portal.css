@@ -170,12 +170,242 @@ body {
 .admin-section-action-btn {
   font-size: 13px;
 }
+.admin-compact-btn {
+  padding: 8px 14px;
+  font-size: 13px;
+}
 .admin-card-spaced {
   margin-bottom: 16px;
 }
 .admin-data-state-error {
   color: var(--error);
   text-align: left;
+}
+.admin-empty-state-soft {
+  padding: 24px;
+  color: #94A3B8;
+  text-align: center;
+}
+.journey-editor-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.journey-progress-toolbar {
+  margin-bottom: 16px;
+}
+.journey-editor-toolbar-btn {
+  padding: 6px 12px;
+}
+.journey-editor-title {
+  flex: 1;
+  margin: 0;
+  color: #1E293B;
+  font-size: 18px;
+  font-weight: 700;
+}
+.journey-editor-status {
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 20px;
+}
+.journey-editor-grid {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  align-items: start;
+  gap: 16px;
+}
+.journey-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.journey-panel-title {
+  color: #1E293B;
+  font-size: 14px;
+  font-weight: 700;
+}
+.journey-panel-title-spaced {
+  margin-bottom: 14px;
+}
+.journey-panel-btn {
+  padding: 6px 12px;
+  font-size: 12px;
+}
+.journey-stack-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.journey-empty-state {
+  padding: 20px;
+  color: #94A3B8;
+  text-align: center;
+}
+.journey-empty-state-sm {
+  padding: 16px;
+}
+
+.form-builder-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.form-builder-panel {
+  margin-bottom: 16px;
+  border: 1px solid #E2E8F0;
+  border-radius: 10px;
+  background: #F8FAFC;
+  padding: 16px 20px;
+}
+
+.form-builder-settings-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  align-items: end;
+  gap: 12px;
+}
+
+.form-builder-field-label {
+  display: block;
+  margin-bottom: 4px;
+  color: #64748B;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.form-builder-settings-save {
+  align-self: end;
+}
+
+.form-builder-settings-desc {
+  margin-top: 10px;
+}
+
+.form-builder-stats-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.form-builder-mini-btn {
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
+.form-builder-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+.form-builder-stats-loading {
+  padding: 0;
+}
+
+.form-builder-stats-chart {
+  margin-top: 14px;
+}
+
+.journey-modal-overlay {
+  z-index: 500;
+}
+
+.journey-modal {
+  width: 100%;
+  border-radius: 14px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.2);
+}
+
+.journey-modal-md {
+  max-width: 480px;
+}
+
+.journey-modal-lg {
+  max-width: 500px;
+}
+
+.journey-modal-title {
+  margin-bottom: 20px;
+  color: #1E293B;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.journey-modal-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.journey-modal-textarea {
+  resize: vertical;
+}
+
+.journey-modal-actions {
+  margin-top: 20px;
+  gap: 8px;
+}
+
+.journey-modal-actions-wide-gap {
+  gap: 10px;
+}
+
+.journey-modal-checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.journey-modal-checkbox {
+  width: 16px;
+  height: 16px;
+}
+
+.journey-modal-checkbox-label {
+  color: #374151;
+  font-size: 13px;
+}
+
+@media (max-width: 960px) {
+  .journey-editor-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .journey-panel-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .form-builder-settings-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .form-builder-settings-save,
+  .form-builder-mini-btn {
+    width: 100%;
+  }
+
+  .form-builder-stats-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .journey-modal-actions {
+    flex-direction: column;
+  }
+
+  .journey-modal-actions .admin-modal-btn {
+    width: 100%;
+  }
 }
 .admin-simple-table {
   width: 100%; border-collapse: collapse; font-size: 13px;

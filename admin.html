@@ -408,18 +408,18 @@
             <div class="section-title" id="fb-resp-title">Respostas</div>
             <div class="section-sub">Visualize e exporte as respostas dos clientes</div>
           </div>
-          <div style="display:flex;gap:8px;">
-            <button class="btn-ghost" onclick="fbExportResponsesCSV()" style="font-size:13px;padding:8px 14px;">
+          <div class="admin-toolbar-actions">
+            <button class="btn-ghost admin-compact-btn" onclick="fbExportResponsesCSV()">
               📥 Exportar CSV
             </button>
-            <button class="btn-ghost" onclick="fbLoadFormsList()" style="font-size:13px;padding:8px 14px;">
+            <button class="btn-ghost admin-compact-btn" onclick="fbLoadFormsList()">
               ← Voltar
             </button>
           </div>
         </div>
         <div class="portal-card">
-          <div style="overflow-x:auto;" id="fb-resp-list">
-            <div style="padding:24px;color:#94A3B8;text-align:center;">Carregando...</div>
+          <div class="admin-table-wrap" id="fb-resp-list">
+            <div class="admin-empty-state-soft">Carregando...</div>
           </div>
         </div>
       </div>
@@ -448,32 +448,32 @@
 
       <!-- ── VIEW: EDITOR ────────────────────────────────────────────────── -->
       <div id="jrn-view-editor" style="display:none;">
-        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
-          <button class="btn-ghost" onclick="jrnLoadList()" style="font-size:13px;padding:6px 12px;">← Todas as jornadas</button>
-          <h1 id="jrn-editor-title" style="font-size:18px;font-weight:700;color:#1E293B;margin:0;flex:1;">—</h1>
-          <span id="jrn-editor-status-badge" style="font-size:11px;padding:4px 10px;border-radius:20px;background:#E2E8F0;color:#64748B;"></span>
-          <button class="btn-ghost" onclick="jrnOpenEditModal()" style="font-size:13px;padding:6px 12px;">✏️ Editar</button>
-          <button class="btn-primary" onclick="jrnOpenAssignModal()" style="font-size:13px;padding:8px 14px;">👥 Atribuir cliente</button>
+        <div class="journey-editor-toolbar">
+          <button class="btn-ghost admin-compact-btn journey-editor-toolbar-btn" onclick="jrnLoadList()">← Todas as jornadas</button>
+          <h1 id="jrn-editor-title" class="journey-editor-title">—</h1>
+          <span id="jrn-editor-status-badge" class="badge badge-gray journey-editor-status"></span>
+          <button class="btn-ghost admin-compact-btn journey-editor-toolbar-btn" onclick="jrnOpenEditModal()">✏️ Editar</button>
+          <button class="btn-primary admin-compact-btn" onclick="jrnOpenAssignModal()">👥 Atribuir cliente</button>
         </div>
 
-        <div style="display:grid;grid-template-columns:1fr 340px;gap:16px;align-items:start;">
+        <div class="journey-editor-grid">
 
           <!-- Left: Steps builder -->
-          <div class="portal-card" style="padding:20px;">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-              <div style="font-size:14px;font-weight:700;color:#1E293B;">Etapas da Jornada</div>
-              <button class="btn-primary" onclick="jrnOpenAddStepModal()" style="font-size:12px;padding:6px 12px;">+ Adicionar etapa</button>
+          <div class="portal-card portal-card-body">
+            <div class="journey-panel-header">
+              <div class="journey-panel-title">Etapas da Jornada</div>
+              <button class="btn-primary journey-panel-btn" onclick="jrnOpenAddStepModal()">+ Adicionar etapa</button>
             </div>
-            <div id="jrn-steps-list" style="display:flex;flex-direction:column;gap:8px;">
-              <div style="color:#94A3B8;text-align:center;padding:20px;">Nenhuma etapa ainda.</div>
+            <div id="jrn-steps-list" class="journey-stack-list">
+              <div class="journey-empty-state">Nenhuma etapa ainda.</div>
             </div>
           </div>
 
           <!-- Right: Clients assigned -->
-          <div class="portal-card" style="padding:20px;">
-            <div style="font-size:14px;font-weight:700;color:#1E293B;margin-bottom:14px;">Clientes nesta jornada</div>
-            <div id="jrn-assignments-list" style="display:flex;flex-direction:column;gap:8px;">
-              <div style="color:#94A3B8;text-align:center;padding:16px;">Nenhum cliente atribuído.</div>
+          <div class="portal-card portal-card-body">
+            <div class="journey-panel-title journey-panel-title-spaced">Clientes nesta jornada</div>
+            <div id="jrn-assignments-list" class="journey-stack-list">
+              <div class="journey-empty-state journey-empty-state-sm">Nenhum cliente atribuído.</div>
             </div>
           </div>
 
@@ -482,12 +482,12 @@
 
       <!-- ── VIEW: PROGRESS ──────────────────────────────────────────────── -->
       <div id="jrn-view-progress" style="display:none;">
-        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
-          <button class="btn-ghost" id="jrn-progress-back-btn" style="font-size:13px;padding:6px 12px;">← Voltar</button>
-          <h1 id="jrn-progress-title" style="font-size:18px;font-weight:700;color:#1E293B;margin:0;flex:1;">Progresso</h1>
+        <div class="journey-editor-toolbar journey-progress-toolbar">
+          <button class="btn-ghost admin-compact-btn journey-editor-toolbar-btn" id="jrn-progress-back-btn">← Voltar</button>
+          <h1 id="jrn-progress-title" class="journey-editor-title">Progresso</h1>
         </div>
-        <div id="jrn-progress-content" class="portal-card" style="padding:20px;">
-          <div style="color:#94A3B8;text-align:center;padding:20px;">Carregando...</div>
+        <div id="jrn-progress-content" class="portal-card portal-card-body">
+          <div class="journey-empty-state">Carregando...</div>
         </div>
       </div>
 
