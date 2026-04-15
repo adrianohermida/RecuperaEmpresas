@@ -1179,7 +1179,7 @@ async function agendaCancelBooking(bookingId, clientName) {
 
 async function agendaRescheduleBooking(bookingId, clientName) {
   // Load available future slots for picker
-  const sRes = await fetch('/api/admin/agenda/slots', { headers: authH() });
+  const sRes = await fetch('/api/admin/agenda/slots?include_bookings=0', { headers: authH() });
   const sJson = await readAdminResponse(sRes);
   if (!sRes.ok) { showToast(sJson.error || 'Erro ao carregar horários.', 'error'); return; }
   const slots = sJson.slots || [];
@@ -1333,9 +1333,10 @@ async function _submitBookForClient(slotId) {
 
 // Book for client from inside the client drawer
 async function openBookForClientFromDrawer(clientId) {
-  const sRes = await fetch('/api/admin/agenda/slots', { headers: authH() });
-  if (!sRes.ok) { showToast('Erro ao carregar horários.', 'error'); return; }
-  const { slots } = await sRes.json();
+  const sRes = await fetch('/api/admin/agenda/slots?include_bookings=0', { headers: authH() });
+  const sJson = await readAdminResponse(sRes);
+  if (!sRes.ok) { showToast(sJson.error || 'Erro ao carregar horários.', 'error'); return; }
+  const slots = sJson.slots || [];
   const future = slots.filter(s => new Date(s.starts_at) > new Date());
 
   if (!future.length) { showToast('Nenhum horário futuro disponível.', 'error'); return; }
@@ -1371,7 +1372,7 @@ async function _submitBookFromDrawer(clientId) {
     method: 'POST', headers: authH(),
     body: JSON.stringify({ slot_id: slotId, user_id: clientId, notes })
   });
-  const j = await res.json();
+  const j = await readAdminResponse(res);
   if (res.ok) {
     document.getElementById('bookDrawerModal')?.remove();
     showToast('Agendamento criado!', 'success');

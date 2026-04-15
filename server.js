@@ -2553,6 +2553,7 @@ app.post('/api/stripe/webhook', async (req, res) => {
 app.get('/api/admin/agenda/slots', requireAdmin, async (req, res) => {
   try {
     const from = req.query.from || new Date(Date.now() - 7*24*60*60*1000).toISOString();
+    const includeBookings = !['0', 'false', 'no'].includes(String(req.query.include_bookings || '1').toLowerCase());
     const { data: slots, error: slotsError } = await selectWithColumnFallback('re_agenda_slots', {
       columns: ['id', 'starts_at', 'ends_at', 'title', 'credits_cost', 'max_bookings', 'duration_min', 'location', 'meeting_link', 'description', 'created_at'],
       requiredColumns: ['id', 'starts_at', 'ends_at'],
@@ -2565,6 +2566,10 @@ app.get('/api/admin/agenda/slots', requireAdmin, async (req, res) => {
         return res.json({ slots: [] });
       }
       return res.status(500).json({ error: slotsError.message });
+    }
+
+    if (!includeBookings) {
+      return res.json({ slots: slots || [] });
     }
 
     const slotIds = (slots || []).map(s => s.id);
