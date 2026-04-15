@@ -271,6 +271,7 @@ async function fbSubmitNewForm() {
     fbToast('Formulário criado!','success');
     fbOpenBuilder((j.form || j).id);
   } else {
+    if (j.diagnostic) console.error('[ADMIN FORMS DIAGNOSTIC]', j.diagnostic);
     fbToast(j.error || 'Erro ao criar.','error');
   }
 }

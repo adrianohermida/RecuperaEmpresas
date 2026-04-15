@@ -1205,7 +1205,10 @@ async function createSlot() {
   });
   const j = await readAdminResponse(res);
   if (res.ok) { showToast('Horário publicado!', 'success'); toggleSlotForm(); loadAdminAgenda(); }
-  else showToast(j.error || 'Erro ao publicar.', 'error');
+  else {
+    if (j.diagnostic) console.error('[ADMIN AGENDA DIAGNOSTIC]', j.diagnostic);
+    showToast(j.error || 'Erro ao publicar.', 'error');
+  }
 }
 
 async function deleteSlot(slotId) {
@@ -3082,6 +3085,7 @@ async function submitCreateInvoice() {
     showToast('Cobrança criada com sucesso!', 'success');
     loadAdminInvoices();
   } else {
+    if (j.diagnostic) console.error('[ADMIN INVOICES DIAGNOSTIC]', j.diagnostic);
     showToast(j.error || 'Erro ao criar cobrança.', 'error');
   }
 }
@@ -3290,6 +3294,7 @@ async function submitServiceForm() {
     showToast(editId ? 'Serviço atualizado!' : 'Serviço criado!', 'success');
     loadAdminMarketplace();
   } else {
+    if (j.diagnostic) console.error('[ADMIN SERVICES DIAGNOSTIC]', j.diagnostic);
     showToast(j.error || 'Erro ao salvar.', 'error');
   }
 }
