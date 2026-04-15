@@ -157,6 +157,13 @@ function clearErrors() {
   document.getElementById('alertError').classList.remove('show');
 }
 
+// ── Supabase client (browser-side) — persists session automatically ───────────
+const _sbUrl  = (window.RE_SUPABASE_URL  || '').replace(/\/$/, '');
+const _sbAnon = window.RE_SUPABASE_ANON  || '';
+const _sb     = (_sbUrl && _sbAnon && window.supabase)
+  ? window.supabase.createClient(_sbUrl, _sbAnon, { auth: { persistSession: true, autoRefreshToken: true } })
+  : null;
+
 document.getElementById('loginForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   clearErrors();
@@ -174,7 +181,16 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
   btn.innerHTML = '<div class="spinner"></div> Entrando...';
 
   try {
-    // Try owner login first; if it fails try member login
+    // ── Step 1: sign in directly via supabase-js so the Supabase session is
+    // stored in localStorage automatically (needed for OAuth consent page).
+    if (_sb) {
+      const { error: sbErr } = await _sb.auth.signInWithPassword({ email, password });
+      // Ignore errors here — server login below is authoritative.
+      // If the anon key is misconfigured, we still fall through to server login.
+      if (sbErr) console.warn('[LOGIN] supabase-js signIn:', sbErr.message);
+    }
+
+    // ── Step 2: call our server to get the custom JWT + user profile.
     let res  = await fetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -196,22 +212,6 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
     if (json.token || json.success) {
       localStorage.setItem('re_token', json.token);
       localStorage.setItem('re_user', JSON.stringify(json.user));
-
-      // Store the Supabase session so supabase-js can use it on the OAuth
-      // consent page (approveAuthorization requires a live browser session).
-      if (json.supabase_session) {
-        try {
-          const SUPA_URL  = (window.RE_SUPABASE_URL  || '').replace(/\/$/, '');
-          const SUPA_ANON = window.RE_SUPABASE_ANON  || '';
-          if (SUPA_URL && SUPA_ANON && window.supabase) {
-            const sb = window.supabase.createClient(SUPA_URL, SUPA_ANON, { auth: { persistSession: true } });
-            await sb.auth.setSession({
-              access_token:  json.supabase_session.access_token,
-              refresh_token: json.supabase_session.refresh_token,
-            });
-          }
-        } catch {}
-      }
 
       // If we were redirected here from the OAuth consent page, go back there.
       const returnTo = new URLSearchParams(window.location.search).get('returnTo');
