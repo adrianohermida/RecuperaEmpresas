@@ -206,13 +206,17 @@ async function updateAppointment(id, updates) {
 }
 
 async function logAccess(userId, email, event, ip, extra = {}) {
-  await sb.from('re_access_log').insert({
-    user_id: userId || null,
-    email, event,
-    ip: ip || 'unknown',
-    step: extra.step || null,
-    ts: new Date().toISOString()
-  }).catch(() => {}); // fire and forget
+  try {
+    await sb.from('re_access_log').insert({
+      user_id: userId || null,
+      email, event,
+      ip: ip || 'unknown',
+      step: extra.step || null,
+      ts: new Date().toISOString()
+    });
+  } catch {
+    // Access log failures must never break auth flows.
+  }
 }
 
 // ─── JWT ──────────────────────────────────────────────────────────────────────
@@ -630,8 +634,8 @@ async function upsertProfileFromAuth(authUser, extra = {}) {
     if (Object.keys(updates).length) {
       if (updates.id) {
         // id changed — insert new row then delete old
-        await sb.from('re_users').insert({ ...profile, ...updates }).catch(() => {});
-        await sb.from('re_users').delete().eq('id', profile.id).catch(() => {});
+        try { await sb.from('re_users').insert({ ...profile, ...updates }); } catch {}
+        try { await sb.from('re_users').delete().eq('id', profile.id); } catch {}
       } else {
         await sb.from('re_users').update(updates).eq('id', profile.id);
       }
@@ -2211,8 +2215,8 @@ async function seedAdminAccounts() {
         if (!existing.is_admin)          updates.is_admin = true;
         if (Object.keys(updates).length) {
           if (updates.id) {
-            await sb.from('re_users').insert({ ...existing, ...updates }).catch(() => {});
-            await sb.from('re_users').delete().eq('id', existing.id).catch(() => {});
+            try { await sb.from('re_users').insert({ ...existing, ...updates }); } catch {}
+            try { await sb.from('re_users').delete().eq('id', existing.id); } catch {}
           } else {
             await sb.from('re_users').update(updates).eq('id', existing.id);
           }
