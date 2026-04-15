@@ -87,6 +87,33 @@
         <span id="alertErrorMsg"></span>
       </div>
 
+      <!-- Confirmation pending screen -->
+      <div id="confirmStep" style="display:none;text-align:center;padding:16px 0;">
+        <div style="width:64px;height:64px;background:#EFF6FF;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;">
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#1A56DB" stroke-width="2">
+            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+            <polyline points="22,6 12,13 2,6"/>
+          </svg>
+        </div>
+        <h2 style="font-size:20px;font-weight:700;color:#0F172A;margin-bottom:8px;">Verifique seu e-mail</h2>
+        <p style="color:#64748B;font-size:14px;line-height:1.7;margin-bottom:6px;">
+          Enviamos um link de confirmação para
+        </p>
+        <p style="font-weight:700;color:#1A56DB;font-size:14px;margin-bottom:20px;" id="confirmEmailDisplay"></p>
+        <p style="color:#64748B;font-size:13px;line-height:1.7;margin-bottom:24px;">
+          Clique no link do e-mail para ativar sua conta.<br/>
+          Verifique também a caixa de spam.
+        </p>
+        <button onclick="resendConfirmEmail()" id="btnResend"
+          style="background:none;border:1.5px solid #CBD5E1;color:#1A56DB;border-radius:8px;padding:10px 20px;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:16px;">
+          Reenviar e-mail
+        </button>
+        <br/>
+        <a href="./login.html" style="color:#64748B;font-size:13px;text-decoration:none;">
+          Já confirmei → Fazer login
+        </a>
+      </div>
+
       <form id="registerForm" novalidate>
         <div class="form-group">
           <label class="form-label" for="name">Nome completo</label>
@@ -223,10 +250,18 @@ document.getElementById('registerForm').addEventListener('submit', async (e) => 
     });
     const json = await res.json();
 
-    if (json.success) {
+    if (json.pending_confirmation) {
+      // Supabase requires email confirmation — show "check your inbox" screen
+      document.getElementById('confirmEmailDisplay').textContent = json.email || email;
+      document.getElementById('registerForm').style.display  = 'none';
+      document.getElementById('confirmStep').style.display   = 'block';
+      document.querySelector('.auth-links').style.display    = 'none';
+      // store email so the resend button can use it
+      window._pendingEmail = json.email || email;
+    } else if (json.token) {
       localStorage.setItem('re_token', json.token);
       localStorage.setItem('re_user', JSON.stringify(json.user));
-      window.location.href = 'index.html'; // new users go to onboarding first
+      window.location.href = 'dashboard.html';
     } else {
       document.getElementById('alertErrorMsg').textContent = json.error || 'Erro ao criar conta.';
       document.getElementById('alertError').classList.add('show');
@@ -240,6 +275,25 @@ document.getElementById('registerForm').addEventListener('submit', async (e) => 
     btn.textContent = 'Criar minha conta';
   }
 });
+
+async function resendConfirmEmail() {
+  const email = window._pendingEmail;
+  if (!email) return;
+  const btn = document.getElementById('btnResend');
+  btn.disabled = true;
+  btn.textContent = 'Enviando...';
+  try {
+    await fetch('/api/auth/resend-confirmation', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
+    });
+    btn.textContent = 'E-mail reenviado!';
+    setTimeout(() => { btn.disabled = false; btn.textContent = 'Reenviar e-mail'; }, 30000);
+  } catch {
+    btn.disabled = false;
+    btn.textContent = 'Reenviar e-mail';
+  }
+}
 </script>
 </body>
 </html>
