@@ -907,6 +907,19 @@ function isCompanyMembersSchemaError(message) {
   return isSchemaCompatibilityError(message, ['re_company_users', 'company_id', 'password_hash', 'invited_at', 'last_login', 'role', 'active']);
 }
 
+function buildRouteDiagnostic(route, error, attempts = []) {
+  return {
+    route,
+    lastError: String(error?.message || error || ''),
+    attempts: attempts.map((attempt, index) => ({
+      index: index + 1,
+      requiredColumns: attempt.requiredColumns || [],
+      returningColumns: attempt.returningColumns || [],
+      payloadKeys: Object.keys(attempt.payload || {}),
+    })),
+  };
+}
+
 async function selectWithColumnFallback(table, options) {
   let columns = [...(options.columns || [])];
   let orderBy = [...(options.orderBy || [])];
