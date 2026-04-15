@@ -2635,15 +2635,56 @@ app.post('/api/admin/agenda/slots', requireAdmin, async (req, res) => {
   try {
     const { starts_at, ends_at, title, credits_cost, max_bookings, duration_min, location, meeting_link, description } = req.body;
     if (!starts_at || !ends_at) return res.status(400).json({ error: 'starts_at e ends_at são obrigatórios.' });
-    const { data, error } = await insertWithColumnFallback('re_agenda_slots', {
-      starts_at, ends_at, title: title || 'Consultoria',
-      credits_cost: credits_cost || 1, max_bookings: max_bookings || 1, duration_min: duration_min || 60,
-      location: location || 'online', meeting_link: meeting_link || null, description: description || null,
-      created_by: req.user.id,
-    }, { requiredColumns: ['starts_at', 'ends_at'] });
+    const slotAttempts = [
+      {
+        payload: {
+          starts_at, ends_at, title: title || 'Consultoria',
+          credits_cost: credits_cost || 1, max_bookings: max_bookings || 1, duration_min: duration_min || 60,
+          location: location || 'online', meeting_link: meeting_link || null, description: description || null,
+          created_by: req.user.id,
+        },
+        requiredColumns: ['starts_at', 'ends_at'],
+      },
+      {
+        payload: {
+          starts_at, ends_at, title: title || 'Consultoria',
+          credits_cost: credits_cost || 1, max_bookings: max_bookings || 1, duration_min: duration_min || 60,
+          location: location || 'online',
+        },
+        requiredColumns: ['starts_at', 'ends_at'],
+      },
+      {
+        payload: {
+          starts_at, ends_at, title: title || 'Consultoria',
+          credits_cost: credits_cost || 1, max_bookings: max_bookings || 1,
+        },
+        requiredColumns: ['starts_at', 'ends_at'],
+      },
+      {
+        payload: { starts_at, ends_at, title: title || 'Consultoria' },
+        requiredColumns: ['starts_at', 'ends_at'],
+      },
+      {
+        payload: { starts_at, ends_at },
+        requiredColumns: ['starts_at', 'ends_at'],
+      },
+    ];
+    let slotInsert = null;
+    for (const attempt of slotAttempts) {
+      slotInsert = await insertWithColumnFallback('re_agenda_slots', attempt.payload, {
+        requiredColumns: attempt.requiredColumns,
+        returningColumns: ['id', 'starts_at', 'ends_at', 'title', 'credits_cost', 'max_bookings', 'duration_min', 'location', 'meeting_link', 'description', 'created_at'],
+        requiredReturningColumns: ['id', 'starts_at', 'ends_at'],
+      });
+      if (!slotInsert.error) break;
+    }
+    const { data, error } = slotInsert;
     if (error) {
       if (isSchemaCompatibilityError(error.message, ['re_agenda_slots', 'starts_at', 'ends_at', 'credits_cost', 'max_bookings', 'duration_min', 'location', 'meeting_link', 'description', 'created_by'])) {
-        return res.status(503).json({ error: 'Agenda temporariamente indisponível até concluir a atualização do banco.' });
+        return res.status(503).json({
+          error: 'Agenda temporariamente indisponível até concluir a atualização do banco.',
+          diagnostic: buildRouteDiagnostic('/api/admin/agenda/slots', error, slotAttempts),
+        });
       }
       return res.status(500).json({ error: error.message });
     }
@@ -3566,40 +3607,45 @@ app.post('/api/admin/forms', requireAdmin, async (req, res) => {
       status: 'draft',
     };
     const formReturningColumns = ['id', 'title', 'description', 'type', 'settings', 'linked_plan_chapter', 'created_by', 'status', 'created_at', 'updated_at'];
-    let formInsert = await insertWithColumnFallback('re_forms', basePayload, {
-      requiredColumns: ['title'],
-      returningColumns: formReturningColumns,
-      requiredReturningColumns: ['id', 'title'],
-    });
-
-    if (formInsert.error && /invalid input value.*type|violates .*type/i.test(String(formInsert.error.message || ''))) {
-      formInsert = await insertWithColumnFallback('re_forms', { ...basePayload, type: 'custom' }, {
+    const formAttempts = [
+      {
+        payload: basePayload,
         requiredColumns: ['title'],
+      },
+      {
+        payload: { ...basePayload, type: 'custom', created_by: null, linked_plan_chapter: null },
+        requiredColumns: ['title'],
+      },
+      {
+        payload: { title, description: description || null, type: 'custom', status: 'draft' },
+        requiredColumns: ['title'],
+      },
+      {
+        payload: { title, description: description || null },
+        requiredColumns: ['title'],
+      },
+      {
+        payload: { title },
+        requiredColumns: ['title'],
+      },
+    ];
+    let formInsert = null;
+    for (const attempt of formAttempts) {
+      formInsert = await insertWithColumnFallback('re_forms', attempt.payload, {
+        requiredColumns: attempt.requiredColumns,
         returningColumns: formReturningColumns,
         requiredReturningColumns: ['id', 'title'],
       });
-    }
-
-    if (formInsert.error && /created_by/i.test(String(formInsert.error.message || ''))) {
-      formInsert = await insertWithColumnFallback('re_forms', { ...basePayload, created_by: null }, {
-        requiredColumns: ['title'],
-        returningColumns: formReturningColumns,
-        requiredReturningColumns: ['id', 'title'],
-      });
-    }
-
-    if (formInsert.error && /linked_plan_chapter/i.test(String(formInsert.error.message || ''))) {
-      formInsert = await insertWithColumnFallback('re_forms', { ...basePayload, linked_plan_chapter: null }, {
-        requiredColumns: ['title'],
-        returningColumns: formReturningColumns,
-        requiredReturningColumns: ['id', 'title'],
-      });
+      if (!formInsert.error) break;
     }
 
     const { data: form, error } = formInsert;
     if (error) {
       if (isSchemaCompatibilityError(error.message, ['re_forms', 'title', 'description', 'type', 'settings', 'linked_plan_chapter', 'created_by', 'status'])) {
-        return res.status(503).json({ error: 'Formulários temporariamente indisponíveis até concluir a atualização do banco.' });
+        return res.status(503).json({
+          error: 'Formulários temporariamente indisponíveis até concluir a atualização do banco.',
+          diagnostic: buildRouteDiagnostic('/api/admin/forms', error, formAttempts),
+        });
       }
       return res.status(500).json({ error: error.message });
     }
@@ -5209,7 +5255,10 @@ app.post('/api/admin/services', requireAdmin, async (req, res) => {
     const { data: rawService, error } = insertResult;
     if (error) {
       if (isSchemaCompatibilityError(error.message, ['re_services', 'name', 'title', 'description', 'category', 'price_cents', 'price', 'delivery_days', 'features', 'featured', 'journey_id', 'active', 'created_by'])) {
-        return res.status(503).json({ error: 'Serviços temporariamente indisponíveis até concluir a atualização do banco.' });
+        return res.status(503).json({
+          error: 'Serviços temporariamente indisponíveis até concluir a atualização do banco.',
+          diagnostic: buildRouteDiagnostic('/api/admin/services', error, serviceInsertAttempts),
+        });
       }
       return res.status(500).json({ error: error.message });
     }
