@@ -1,12 +1,15 @@
 /**
  * config.js — runtime configuration
  *
- * RE_API_BASE prefixes all /api/* fetch calls.
+ * This file is served DYNAMICALLY by Express (/js/config.js route),
+ * which injects the real values from environment variables.
  *
- * - Local dev + Render.com (same-origin):  '' (no prefix needed)
- * - GitHub Pages: CI (deploy-pages.yml) rewrites this file with
- *   the RENDER_API_URL secret before deploying to gh-pages.
- *   Set the secret in: GitHub repo → Settings → Secrets → Actions
- *   Value: https://recuperaempresas.onrender.com
+ * The static version below is only used as a fallback when the file is
+ * loaded directly from the filesystem (e.g. local file:// dev without server).
+ *
+ * For GitHub Pages: CI (deploy-pages.yml) rewrites this file with real values
+ * before deploying to gh-pages.
  */
-window.RE_API_BASE = '';
+window.RE_API_BASE      = 'https://recuperaempresas.onrender.com';
+window.RE_SUPABASE_URL  = 'https://riiajjmnzgagntiqqshs.supabase.co';
+window.RE_SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJpaWFqam1uemdhZ250aXFxc2hzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYxNzY0ODUsImV4cCI6MjA5MTc1MjQ4NX0.zyOFjVFIBJem5FZmXBD-ya78RheD_a-YHetibyVvXcI';

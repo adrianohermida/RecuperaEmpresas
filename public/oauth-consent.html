@@ -5,7 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <meta name="robots" content="noindex, nofollow"/>
   <title>Autorizar Acesso — Recupera Empresas</title>
-  <link rel="stylesheet" href="./css/auth.css"/>
+  <link rel="stylesheet" href="/css/auth.css"/>
+  <script src="/js/config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <style>
     .consent-card { max-width: 440px; }
     .app-badge {
@@ -25,7 +27,7 @@
       display: flex; align-items: center; gap: 10px;
       font-size: 14px; color: #1E293B;
     }
-    .scope-list li svg { flex-shrink: 0; }
+    .scope-list li span.scope-icon { flex-shrink: 0; font-size: 16px; }
     .consent-actions { display: flex; gap: 12px; }
     .btn-allow {
       flex: 1; background: #1A56DB; color: #fff; border: none;
@@ -33,6 +35,7 @@
       cursor: pointer; transition: background .15s;
     }
     .btn-allow:hover { background: #1244AB; }
+    .btn-allow:disabled { background: #93C5FD; cursor: not-allowed; }
     .btn-deny {
       flex: 1; background: #fff; color: #64748B;
       border: 1.5px solid #CBD5E1; border-radius: 8px;
@@ -40,9 +43,21 @@
       cursor: pointer; transition: border-color .15s, color .15s;
     }
     .btn-deny:hover { border-color: #94A3B8; color: #1E293B; }
+    .btn-deny:disabled { opacity: .5; cursor: not-allowed; }
     .consent-footer {
-      text-align: center; font-size: 12px; color: #94A3B8; margin-top: 20px;
+      text-align: center; font-size: 12px; color: #94A3B8; margin-top: 20px; line-height: 1.6;
     }
+    .divider {
+      display: flex; align-items: center; gap: 10px;
+      margin: 20px 0; color: #CBD5E1; font-size: 12px;
+    }
+    .divider::before, .divider::after {
+      content: ''; flex: 1; height: 1px; background: #E2E8F0;
+    }
+    #loadingGate {
+      text-align: center; padding: 32px 0; color: #64748B; font-size: 14px;
+    }
+    #consentGate { display: none; }
   </style>
 </head>
 <body>
@@ -60,106 +75,191 @@
       <span style="font-weight:700;font-size:14px;color:#1E293B;">Recupera Empresas</span>
     </div>
 
-    <h1 class="auth-card-title" style="margin-bottom:6px;">Autorizar acesso</h1>
-    <p class="auth-card-subtitle" style="margin-bottom:20px;">
-      O aplicativo abaixo está solicitando acesso à sua conta.
-    </p>
-
-    <!-- App requesting access -->
-    <div class="app-badge">
-      <div class="app-icon" id="appIcon">?</div>
-      <div>
-        <div class="app-name"  id="appName">Carregando...</div>
-        <div class="app-domain" id="appDomain"></div>
-      </div>
+    <!-- Loading -->
+    <div id="loadingGate">
+      <div class="spinner" style="margin:0 auto 12px;"></div>
+      Verificando sessão...
     </div>
 
-    <!-- Scopes being requested -->
-    <p style="font-size:13px;font-weight:600;color:#64748B;margin-bottom:10px;">PERMISSÕES SOLICITADAS</p>
-    <ul class="scope-list" id="scopeList">
-      <li>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1A56DB" stroke-width="2">
-          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-          <circle cx="12" cy="7" r="4"/>
-        </svg>
-        Ver seu nome e e-mail
-      </li>
-    </ul>
+    <!-- Consent UI (hidden until session confirmed) -->
+    <div id="consentGate">
+      <h1 class="auth-card-title" style="margin-bottom:6px;">Autorizar acesso</h1>
+      <p class="auth-card-subtitle" style="margin-bottom:20px;">
+        O aplicativo abaixo está solicitando acesso à sua conta Recupera Empresas.
+      </p>
 
-    <!-- Hidden form — submitted on approve/deny -->
-    <form id="consentForm" method="POST" action="/oauth/consent">
-      <input type="hidden" name="client_id"     id="f_client_id"/>
-      <input type="hidden" name="response_type" id="f_response_type"/>
-      <input type="hidden" name="redirect_uri"  id="f_redirect_uri"/>
-      <input type="hidden" name="scope"         id="f_scope"/>
-      <input type="hidden" name="state"         id="f_state"/>
-      <input type="hidden" name="code_challenge"        id="f_code_challenge"/>
-      <input type="hidden" name="code_challenge_method" id="f_code_challenge_method"/>
-      <input type="hidden" name="allow"         id="f_allow" value="1"/>
+      <div class="app-badge">
+        <div class="app-icon" id="appIcon">R</div>
+        <div>
+          <div class="app-name"  id="appName">Recupera Empresas</div>
+          <div class="app-domain" id="appDomain">recuperaempresas.onrender.com</div>
+        </div>
+      </div>
+
+      <p style="font-size:11px;font-weight:700;color:#94A3B8;letter-spacing:.05em;margin-bottom:10px;">PERMISSÕES SOLICITADAS</p>
+      <ul class="scope-list" id="scopeList"></ul>
+
+      <div class="alert alert-error" id="consentError" style="display:none;margin-bottom:16px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;margin-top:1px">
+          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        <span id="consentErrorMsg"></span>
+      </div>
+
+      <div class="divider">sua decisão é irrevogável nesta sessão</div>
 
       <div class="consent-actions">
-        <button type="submit" class="btn-allow" onclick="setAllow(1)">Autorizar</button>
-        <button type="submit" class="btn-deny"  onclick="setAllow(0)">Negar</button>
+        <button type="button" class="btn-allow" id="btnAllow" onclick="decide(true)">Autorizar</button>
+        <button type="button" class="btn-deny"  id="btnDeny"  onclick="decide(false)">Negar acesso</button>
       </div>
-    </form>
 
-    <div class="consent-footer">
-      Ao autorizar, o aplicativo poderá acessar os dados listados acima em seu nome.<br/>
-      Você pode revogar o acesso a qualquer momento em Configurações.
+      <div class="consent-footer">
+        Ao autorizar, o aplicativo terá acesso aos dados listados acima em seu nome.<br/>
+        Você pode revogar o acesso a qualquer momento nas suas configurações de conta.
+      </div>
     </div>
+
   </div>
 </div>
 
 <script>
-function setAllow(v) { document.getElementById('f_allow').value = String(v); }
+(async function () {
+  const SUPA_URL  = (window.RE_SUPABASE_URL  || 'https://riiajjmnzgagntiqqshs.supabase.co').replace(/\/$/, '');
+  const SUPA_ANON = window.RE_SUPABASE_ANON  || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJpaWFqam1uemdhZ250aXFxc2hzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYxNzY0ODUsImV4cCI6MjA5MTc1MjQ4NX0.zyOFjVFIBJem5FZmXBD-ya78RheD_a-YHetibyVvXcI';
 
-// ── Read OAuth params from the current URL query string ──────────────────────
-const q = new URLSearchParams(window.location.search);
+  const supabase = window.supabase.createClient(SUPA_URL, SUPA_ANON, {
+    auth: { persistSession: true, autoRefreshToken: true },
+  });
 
-document.getElementById('f_client_id').value             = q.get('client_id')             || '';
-document.getElementById('f_response_type').value         = q.get('response_type')         || 'code';
-document.getElementById('f_redirect_uri').value          = q.get('redirect_uri')          || '';
-document.getElementById('f_scope').value                 = q.get('scope')                 || '';
-document.getElementById('f_state').value                 = q.get('state')                 || '';
-document.getElementById('f_code_challenge').value        = q.get('code_challenge')        || '';
-document.getElementById('f_code_challenge_method').value = q.get('code_challenge_method') || '';
+  const q               = new URLSearchParams(window.location.search);
+  const authorizationId = q.get('authorization_id');
 
-// ── Show app name from client_id (try to look it up) ─────────────────────────
-const clientId = q.get('client_id') || '';
-const redirectUri = q.get('redirect_uri') || '';
+  // ── Guard: must have authorization_id ──────────────────────────────────────
+  if (!authorizationId) {
+    document.querySelector('.auth-card').innerHTML = `
+      <div style="text-align:center;padding:20px 0;">
+        <div style="width:56px;height:56px;background:#FEF2F2;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#DC2626" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="12"/>
+            <line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+        </div>
+        <h2 style="font-size:18px;font-weight:700;color:#0F172A;margin-bottom:8px;">Acesso inválido</h2>
+        <p style="color:#64748B;font-size:14px;line-height:1.6;margin-bottom:20px;">
+          Esta página só pode ser acessada via fluxo OAuth.<br/>
+          Inicie a autorização pelo aplicativo que solicitou acesso.
+        </p>
+        <a href="/login.html" style="color:#1A56DB;font-size:14px;font-weight:600;text-decoration:none;">← Voltar ao login</a>
+      </div>`;
+    return;
+  }
 
-if (clientId) {
-  document.getElementById('appIcon').textContent = clientId.charAt(0).toUpperCase();
-  document.getElementById('appName').textContent = clientId;
-}
-if (redirectUri) {
+  // ── Check Supabase session ──────────────────────────────────────────────────
+  const { data: { session } } = await supabase.auth.getSession();
+
+  if (!session) {
+    // No Supabase session → send user to login page, then back here.
+    // Login page will store the Supabase session and redirect to returnTo.
+    const returnTo = '/oauth/consent?authorization_id=' + encodeURIComponent(authorizationId);
+    window.location.href = '/login.html?returnTo=' + encodeURIComponent(returnTo);
+    return;
+  }
+
+  // ── Session confirmed — render consent UI ───────────────────────────────────
+  document.getElementById('loadingGate').style.display  = 'none';
+  document.getElementById('consentGate').style.display  = 'block';
+
+  // Render scope list
+  const SCOPE_LABELS = {
+    openid:         { icon: '🔑', text: 'Identificação OpenID Connect' },
+    email:          { icon: '✉️', text: 'Ver seu endereço de e-mail' },
+    profile:        { icon: '👤', text: 'Ver seu nome e informações de perfil' },
+    offline_access: { icon: '🔄', text: 'Manter acesso mesmo quando você não estiver usando o app' },
+    phone:          { icon: '📱', text: 'Ver seu número de telefone' },
+  };
+
+  // Try to get real client details; fall back to defaults
+  let scopes = ['openid', 'email', 'profile'];
   try {
-    const u = new URL(redirectUri);
-    document.getElementById('appDomain').textContent = u.hostname;
+    if (supabase.auth.oauth?.getAuthorizationDetails) {
+      const { data: details } = await supabase.auth.oauth.getAuthorizationDetails(authorizationId);
+      if (details?.client_name) {
+        document.getElementById('appName').textContent  = details.client_name;
+        document.getElementById('appIcon').textContent  = details.client_name[0].toUpperCase();
+      }
+      if (details?.client_uri)  document.getElementById('appDomain').textContent = details.client_uri;
+      if (typeof details?.scope === 'string' && details.scope.trim()) scopes = details.scope.trim().split(/\s+/);
+      else if (details?.scopes?.length) scopes = details.scopes;
+    }
   } catch {}
-}
 
-// ── Render scope badges ───────────────────────────────────────────────────────
-const SCOPE_LABELS = {
-  openid:  { icon: '🔑', text: 'Identificação OpenID' },
-  email:   { icon: '✉️', text: 'Ver seu endereço de e-mail' },
-  profile: { icon: '👤', text: 'Ver seu nome e informações de perfil' },
-  offline_access: { icon: '🔄', text: 'Manter o acesso mesmo quando você não estiver usando o app' },
-};
-
-const scopeStr = q.get('scope') || 'openid email profile';
-const scopes   = scopeStr.split(/\s+/).filter(Boolean);
-const list     = document.getElementById('scopeList');
-
-if (scopes.length) {
-  list.innerHTML = scopes.map(s => {
-    const def = SCOPE_LABELS[s] || { icon: '🔹', text: `Escopo: ${s}` };
-    return `<li>
-      <span style="font-size:16px;flex-shrink:0;">${def.icon}</span>
-      ${def.text}
-    </li>`;
+  document.getElementById('scopeList').innerHTML = scopes.map(s => {
+    const def = SCOPE_LABELS[s] || { icon: '🔹', text: `Acesso: ${s}` };
+    return `<li><span class="scope-icon">${def.icon}</span>${def.text}</li>`;
   }).join('');
-}
+
+  // ── Consent decision — handled by supabase-js OAuth helpers ─────────────────
+  window.decide = async function (allow) {
+    const btnAllow = document.getElementById('btnAllow');
+    const btnDeny  = document.getElementById('btnDeny');
+    const errEl    = document.getElementById('consentError');
+    const errMsg   = document.getElementById('consentErrorMsg');
+    errEl.style.display = 'none';
+
+    btnAllow.disabled = btnDeny.disabled = true;
+    if (allow) btnAllow.innerHTML = '<div class="spinner"></div> Autorizando...';
+    else        btnDeny.innerHTML  = '<div class="spinner"></div> Negando...';
+
+    try {
+      // Re-fetch session to ensure it is fresh
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
+      if (!currentSession) throw new Error('Sessão expirada — recarregue a página e tente novamente.');
+
+      const { data: userData, error: userErr } = await supabase.auth.getUser();
+      if (userErr) throw userErr;
+      if (!userData?.user) throw new Error('Usuário Supabase não autenticado para este projeto.');
+
+      console.log('[CONSENT] session uid:', currentSession.user?.id);
+      console.log('[CONSENT] getUser uid:', userData.user?.id);
+      console.log('[CONSENT] access_token (first 40):', currentSession.access_token?.slice(0, 40));
+
+      if (!allow) {
+        // Deny: try supabase-js method, fall back to redirect
+        try {
+          const { data, error } = await supabase.auth.oauth.denyAuthorization(authorizationId);
+          if (error) throw error;
+          window.location.href = data?.redirect_to || '/login.html?err=oauth&desc=access_denied';
+        } catch {
+          window.location.href = '/login.html?err=oauth&desc=access_denied';
+        }
+        return;
+      }
+
+      const { data: authDetails, error: authDetailsErr } = await supabase.auth.oauth.getAuthorizationDetails(authorizationId);
+      if (authDetailsErr) throw authDetailsErr;
+      console.log('[CONSENT] authorization details before approve:', authDetails);
+
+      const { data, error } = await supabase.auth.oauth.approveAuthorization(authorizationId);
+      if (error) throw error;
+
+      const redirectTo = data?.redirect_to || data?.redirectTo;
+      if (!redirectTo) throw new Error('Supabase não retornou redirect_to após aprovação.');
+
+      console.log('[CONSENT] approve redirect', redirectTo);
+      window.location.href = redirectTo;
+      return;
+    } catch (err) {
+      console.error('[CONSENT] error:', err);
+      const detail = [err?.name, err?.code, err?.status, err?.message].filter(Boolean).join(' | ');
+      errMsg.textContent = detail || 'Erro ao processar decisão. Tente novamente.';
+      errEl.style.display = 'flex';
+      btnAllow.disabled = btnDeny.disabled = false;
+      btnAllow.textContent = 'Autorizar';
+      btnDeny.textContent  = 'Negar acesso';
+    }
+  };
+})();
 </script>
 </body>
 </html>

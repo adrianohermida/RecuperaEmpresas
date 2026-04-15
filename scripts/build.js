@@ -2,6 +2,7 @@
 
 const fs = require('fs');
 const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '..', '.env') });
 
 const rootDir = path.resolve(__dirname, '..');
 const publicDir = path.join(rootDir, 'public');
@@ -38,7 +39,9 @@ if (!fs.existsSync(publicDir)) {
 cleanDir(distDir);
 copyRecursive(publicDir, distDir);
 
-const apiBase = process.env.RENDER_API_URL || process.env.RE_API_BASE || '';
+const apiBase = process.env.RENDER_API_URL || process.env.RE_API_BASE || 'https://recuperaempresas.onrender.com';
+const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || 'https://riiajjmnzgagntiqqshs.supabase.co';
+const supabaseAnon = process.env.VITE_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY || '';
 const configPath = path.join(distDir, 'js', 'config.js');
 ensureDir(path.dirname(configPath));
 fs.writeFileSync(
@@ -48,6 +51,8 @@ fs.writeFileSync(
     ' * config.js — generated during build',
     ' */',
     `window.RE_API_BASE = ${JSON.stringify(apiBase)};`,
+    `window.RE_SUPABASE_URL = ${JSON.stringify(supabaseUrl)};`,
+    `window.RE_SUPABASE_ANON = ${JSON.stringify(supabaseAnon)};`,
     ''
   ].join('\n'),
   'utf8'
