@@ -8,6 +8,8 @@
   <link rel="stylesheet" href="/css/auth.css"/>
   <!-- config.js injeta window.RE_SUPABASE_URL e window.RE_SUPABASE_ANON -->
   <script src="/js/config.js"></script>
+  <!-- supabase-js for approveAuthorization / denyAuthorization -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <style>
     .consent-card { max-width: 440px; }
     .app-badge {
@@ -35,6 +37,7 @@
       cursor: pointer; transition: background .15s;
     }
     .btn-allow:hover { background: #1244AB; }
+    .btn-allow:disabled { background: #93C5FD; cursor: not-allowed; }
     .btn-deny {
       flex: 1; background: #fff; color: #64748B;
       border: 1.5px solid #CBD5E1; border-radius: 8px;
@@ -42,6 +45,7 @@
       cursor: pointer; transition: border-color .15s, color .15s;
     }
     .btn-deny:hover { border-color: #94A3B8; color: #1E293B; }
+    .btn-deny:disabled { opacity: .5; cursor: not-allowed; }
     .consent-footer {
       text-align: center; font-size: 12px; color: #94A3B8; margin-top: 20px; line-height: 1.6;
     }
@@ -51,6 +55,13 @@
     }
     .divider::before, .divider::after {
       content: ''; flex: 1; height: 1px; background: #E2E8F0;
+    }
+
+    /* ── Login gate (shown when no Supabase session) ── */
+    #loginGate { display: none; }
+    #consentGate { display: none; }
+    #loadingGate {
+      text-align: center; padding: 32px 0; color: #64748B; font-size: 14px;
     }
   </style>
 </head>
@@ -69,57 +80,115 @@
       <span style="font-weight:700;font-size:14px;color:#1E293B;">Recupera Empresas</span>
     </div>
 
-    <h1 class="auth-card-title" style="margin-bottom:6px;">Autorizar acesso</h1>
-    <p class="auth-card-subtitle" style="margin-bottom:20px;">
-      O aplicativo abaixo está solicitando acesso à sua conta Recupera Empresas.
-    </p>
+    <!-- Loading state -->
+    <div id="loadingGate">
+      <div class="spinner" style="margin:0 auto 12px;"></div>
+      Verificando sessão...
+    </div>
 
-    <!-- App requesting access -->
-    <div class="app-badge">
-      <div class="app-icon" id="appIcon">?</div>
-      <div>
-        <div class="app-name"  id="appName">Carregando...</div>
-        <div class="app-domain" id="appDomain"></div>
+    <!-- ── Login gate — shown when user has no Supabase session ── -->
+    <div id="loginGate">
+      <h1 class="auth-card-title" style="margin-bottom:6px;">Faça login para continuar</h1>
+      <p class="auth-card-subtitle" style="margin-bottom:20px;">
+        Um aplicativo está solicitando acesso. Confirme sua identidade para prosseguir.
+      </p>
+
+      <div class="alert alert-error" id="loginError" style="display:none;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;margin-top:1px">
+          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        <span id="loginErrorMsg"></span>
+      </div>
+
+      <form id="loginForm" novalidate>
+        <div class="form-group">
+          <label class="form-label" for="loginEmail">E-mail</label>
+          <input class="form-control" type="email" id="loginEmail" placeholder="seu@email.com.br" autocomplete="email"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="loginPassword">Senha</label>
+          <div class="form-control-wrap">
+            <input class="form-control" type="password" id="loginPassword" placeholder="••••••••" autocomplete="current-password"/>
+            <button type="button" class="toggle-password" onclick="togglePwd('loginPassword',this)" title="Mostrar/ocultar senha">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="eye-icon">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                <circle cx="12" cy="12" r="3"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+        <button type="submit" class="btn-auth" id="btnLogin">Entrar e continuar</button>
+      </form>
+    </div>
+
+    <!-- ── Consent gate — shown after session confirmed ── -->
+    <div id="consentGate">
+      <h1 class="auth-card-title" style="margin-bottom:6px;">Autorizar acesso</h1>
+      <p class="auth-card-subtitle" style="margin-bottom:20px;">
+        O aplicativo abaixo está solicitando acesso à sua conta Recupera Empresas.
+      </p>
+
+      <!-- App requesting access -->
+      <div class="app-badge">
+        <div class="app-icon" id="appIcon">R</div>
+        <div>
+          <div class="app-name"  id="appName">Recupera Empresas</div>
+          <div class="app-domain" id="appDomain">recuperaempresas.onrender.com</div>
+        </div>
+      </div>
+
+      <!-- Scopes being requested -->
+      <p style="font-size:11px;font-weight:700;color:#94A3B8;letter-spacing:.05em;margin-bottom:10px;">PERMISSÕES SOLICITADAS</p>
+      <ul class="scope-list" id="scopeList"></ul>
+
+      <div class="alert alert-error" id="consentError" style="display:none;margin-bottom:16px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;margin-top:1px">
+          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        <span id="consentErrorMsg"></span>
+      </div>
+
+      <div class="divider">sua decisão é irrevogável nesta sessão</div>
+
+      <div class="consent-actions">
+        <button type="button" class="btn-allow" id="btnAllow" onclick="decide(true)">Autorizar</button>
+        <button type="button" class="btn-deny"  id="btnDeny"  onclick="decide(false)">Negar acesso</button>
+      </div>
+
+      <div class="consent-footer">
+        Ao autorizar, o aplicativo terá acesso aos dados listados acima em seu nome.<br/>
+        Você pode revogar o acesso a qualquer momento nas suas configurações de conta.
       </div>
     </div>
 
-    <!-- Scopes being requested -->
-    <p style="font-size:11px;font-weight:700;color:#94A3B8;letter-spacing:.05em;margin-bottom:10px;">PERMISSÕES SOLICITADAS</p>
-    <ul class="scope-list" id="scopeList">
-      <!-- filled by JS -->
-    </ul>
-
-    <div class="divider">sua decisão é irrevogável nesta sessão</div>
-
-    <!-- Supabase /auth/v1/oauth/authorize only accepts GET.
-         Buttons build the URL with all params + allow=true/false and redirect. -->
-    <div class="consent-actions">
-      <button type="button" class="btn-allow" onclick="decide(true)">Autorizar</button>
-      <button type="button" class="btn-deny"  onclick="decide(false)">Negar acesso</button>
-    </div>
-
-    <div class="consent-footer">
-      Ao autorizar, o aplicativo terá acesso aos dados listados acima em seu nome.<br/>
-      Você pode revogar o acesso a qualquer momento nas suas configurações de conta.
-    </div>
   </div>
 </div>
 
 <script>
-(function () {
-  // ── Config ──────────────────────────────────────────────────────────────────
-  const supabaseUrl       = (window.RE_SUPABASE_URL || 'https://riiajjmnzgagntiqqshs.supabase.co').replace(/\/$/, '');
-  const authorizeEndpoint = supabaseUrl + '/auth/v1/oauth/authorize';
-  const q                 = new URLSearchParams(window.location.search);
+// ── Helpers ──────────────────────────────────────────────────────────────────────
+function togglePwd(id, btn) {
+  const inp = document.getElementById(id);
+  const showing = inp.type === 'text';
+  inp.type = showing ? 'password' : 'text';
+  btn.querySelector('.eye-icon').style.opacity = showing ? '1' : '0.4';
+}
 
-  // Supabase OAuth Server sends a single opaque authorization_id parameter
-  // instead of the full OAuth params.
+(async function () {
+  // ── Config ────────────────────────────────────────────────────────────────────
+  const SUPA_URL  = (window.RE_SUPABASE_URL  || 'https://riiajjmnzgagntiqqshs.supabase.co').replace(/\/$/, '');
+  const SUPA_ANON = window.RE_SUPABASE_ANON  || '';
+
+  const supabase = window.supabase.createClient(SUPA_URL, SUPA_ANON, {
+    auth: { persistSession: true, autoRefreshToken: true },
+  });
+
+  const q               = new URLSearchParams(window.location.search);
   const authorizationId = q.get('authorization_id');
 
-  // ── Guard ────────────────────────────────────────────────────────────────────
+  // ── Guard: must have authorization_id ─────────────────────────────────────────
   if (!authorizationId) {
-    const card = document.querySelector('.auth-card');
-    if (card) card.innerHTML = `
+    document.getElementById('loadingGate').style.display = 'none';
+    document.querySelector('.auth-card').innerHTML = `
       <div style="text-align:center;padding:20px 0;">
         <div style="width:56px;height:56px;background:#FEF2F2;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#DC2626" stroke-width="2">
@@ -138,26 +207,7 @@
     return;
   }
 
-  // ── decide(allow) — proxy through our server so client_id comes from env var ─
-  // Browser → GET /api/auth/oauth/decide?authorization_id=...&allow=true
-  // Server  → GET supabase.../authorize?authorization_id=...&client_id=...&allow=true
-  window.decide = function (allow) {
-    const params = new URLSearchParams({
-      authorization_id: authorizationId,
-      allow:            allow ? 'true' : 'false',
-    });
-    window.location.href = '/api/auth/oauth/decide?' + params.toString();
-  };
-
-  // ── Show app info (from known OAuth App — name comes from Supabase dashboard) ─
-  // We only have authorization_id so display what we know about the registered app.
-  const appName = 'Recupera Empresas';
-  const appDomain = 'recuperaempresas.onrender.com';
-  document.getElementById('appIcon').textContent   = 'R';
-  document.getElementById('appName').textContent   = appName;
-  document.getElementById('appDomain').textContent = appDomain;
-
-  // ── Render scope list ────────────────────────────────────────────────────────
+  // ── Render scope list ─────────────────────────────────────────────────────────
   const SCOPE_LABELS = {
     openid:         { icon: '🔑', text: 'Identificação OpenID Connect' },
     email:          { icon: '✉️', text: 'Ver seu endereço de e-mail' },
@@ -165,16 +215,118 @@
     offline_access: { icon: '🔄', text: 'Manter acesso mesmo quando você não estiver usando o app' },
     phone:          { icon: '📱', text: 'Ver seu número de telefone' },
   };
-
-  // Default scopes — Supabase doesn't send them separately when using authorization_id
   const scopes = ['openid', 'email', 'profile'];
   const list   = document.getElementById('scopeList');
-  if (list) {
-    list.innerHTML = scopes.map(s => {
-      const def = SCOPE_LABELS[s] || { icon: '🔹', text: `Acesso: ${s}` };
-      return `<li><span class="scope-icon">${def.icon}</span>${def.text}</li>`;
-    }).join('');
+  list.innerHTML = scopes.map(s => {
+    const def = SCOPE_LABELS[s] || { icon: '🔹', text: `Acesso: ${s}` };
+    return `<li><span class="scope-icon">${def.icon}</span>${def.text}</li>`;
+  }).join('');
+
+  // ── Try to get auth details from Supabase (client info) ───────────────────────
+  // This populates the app badge if the API is available.
+  try {
+    if (supabase.auth.oauth?.getAuthorizationDetails) {
+      const { data: details } = await supabase.auth.oauth.getAuthorizationDetails(authorizationId);
+      if (details?.client_name)  document.getElementById('appName').textContent   = details.client_name;
+      if (details?.client_uri)   document.getElementById('appDomain').textContent = details.client_uri;
+      if (details?.client_name)  document.getElementById('appIcon').textContent   = details.client_name[0].toUpperCase();
+      // If scopes are specified in details, render them
+      if (details?.scopes?.length) {
+        list.innerHTML = details.scopes.map(s => {
+          const def = SCOPE_LABELS[s] || { icon: '🔹', text: `Acesso: ${s}` };
+          return `<li><span class="scope-icon">${def.icon}</span>${def.text}</li>`;
+        }).join('');
+      }
+    }
+  } catch {}
+
+  // ── Check session ─────────────────────────────────────────────────────────────
+  const { data: { session } } = await supabase.auth.getSession();
+
+  document.getElementById('loadingGate').style.display = 'none';
+
+  if (!session) {
+    // Show login form
+    document.getElementById('loginGate').style.display = 'block';
+    setupLoginForm();
+  } else {
+    document.getElementById('consentGate').style.display = 'block';
   }
+
+  // ── Login form ────────────────────────────────────────────────────────────────
+  function setupLoginForm() {
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email    = document.getElementById('loginEmail').value.trim();
+      const password = document.getElementById('loginPassword').value;
+      const errEl    = document.getElementById('loginError');
+      const errMsg   = document.getElementById('loginErrorMsg');
+      errEl.style.display = 'none';
+
+      const btn = document.getElementById('btnLogin');
+      btn.disabled = true;
+      btn.innerHTML = '<div class="spinner"></div> Entrando...';
+
+      try {
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+        // Session established — show consent UI
+        document.getElementById('loginGate').style.display   = 'none';
+        document.getElementById('consentGate').style.display = 'block';
+      } catch (err) {
+        errMsg.textContent = err.message || 'Credenciais inválidas.';
+        errEl.style.display = 'flex';
+        btn.disabled = false;
+        btn.textContent = 'Entrar e continuar';
+      }
+    });
+  }
+
+  // ── Consent decision ──────────────────────────────────────────────────────────
+  // Uses supabase.auth.oauth.approveAuthorization / denyAuthorization.
+  // Supabase stores code_challenge internally with the authorization_id,
+  // so we do NOT need to resend PKCE params — the JS client handles it.
+  window.decide = async function (allow) {
+    const btnAllow = document.getElementById('btnAllow');
+    const btnDeny  = document.getElementById('btnDeny');
+    const errEl    = document.getElementById('consentError');
+    const errMsg   = document.getElementById('consentErrorMsg');
+    errEl.style.display = 'none';
+
+    btnAllow.disabled = true;
+    btnDeny.disabled  = true;
+
+    if (allow) {
+      btnAllow.innerHTML = '<div class="spinner"></div> Autorizando...';
+    } else {
+      btnDeny.innerHTML = '<div class="spinner"></div> Negando...';
+    }
+
+    try {
+      let redirect_to;
+
+      if (allow) {
+        const { data, error } = await supabase.auth.oauth.approveAuthorization(authorizationId);
+        if (error) throw error;
+        redirect_to = data?.redirect_to;
+      } else {
+        const { data, error } = await supabase.auth.oauth.denyAuthorization(authorizationId);
+        if (error) throw error;
+        redirect_to = data?.redirect_to;
+      }
+
+      if (!redirect_to) throw new Error('Supabase não retornou redirect_to');
+      window.location.href = redirect_to;
+    } catch (err) {
+      console.error('[CONSENT]', err);
+      errMsg.textContent = err.message || 'Erro ao processar decisão. Tente novamente.';
+      errEl.style.display = 'flex';
+      btnAllow.disabled = false;
+      btnDeny.disabled  = false;
+      btnAllow.textContent = 'Autorizar';
+      btnDeny.textContent  = 'Negar acesso';
+    }
+  };
 })();
 </script>
 </body>
