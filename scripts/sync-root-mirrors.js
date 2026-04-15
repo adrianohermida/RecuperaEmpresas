@@ -21,6 +21,7 @@ const MIRROR_PATHS = [
   'css/style.css',
   'js/admin-agenda.js',
   'js/admin-finance.js',
+  'js/admin-invoices.js',
   'js/admin-notifications.js',
   'js/api-base.js',
   'js/admin-client-drawer.js',
