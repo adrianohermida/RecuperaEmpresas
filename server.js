@@ -2501,17 +2501,25 @@ app.post('/api/stripe/webhook', async (req, res) => {
 // ── Admin: agenda slots management ───────────────────────────────────────────
 app.get('/api/admin/agenda/slots', requireAdmin, async (req, res) => {
   const from = req.query.from || new Date(Date.now() - 7*24*60*60*1000).toISOString();
-  const { data: slots } = await sb.from('re_agenda_slots')
-    .select('*').gte('starts_at', from).order('starts_at', { ascending: true }).limit(100);
+  const { data: slots, error: slotsError } = await selectWithColumnFallback('re_agenda_slots', {
+    columns: ['id', 'starts_at', 'ends_at', 'title', 'credits_cost', 'max_bookings', 'duration_min', 'location', 'meeting_link', 'description', 'created_at'],
+    requiredColumns: ['id', 'starts_at', 'ends_at'],
+    orderBy: ['starts_at', 'created_at', 'id'],
+    apply: (query) => query.gte('starts_at', from).limit(100),
+  });
+  if (slotsError) return res.status(500).json({ error: slotsError.message });
 
   const slotIds = (slots||[]).map(s => s.id);
   let bookings = [];
   if (slotIds.length) {
     // Include ALL statuses so admin can see pending, confirmed, cancelled, rescheduled
-    const { data } = await sb.from('re_bookings')
-      .select('id,slot_id,user_id,status,credits_spent,confirmed_at,cancel_reason,cancelled_by,reschedule_reason,rescheduled_to_slot_id,external_contact,notes,created_at,re_users(id,name,email,company)')
-      .in('slot_id', slotIds)
-      .order('created_at', { ascending: true });
+    const { data, error } = await selectWithColumnFallback('re_bookings', {
+      columns: ['id', 'slot_id', 'user_id', 'status', 'credits_spent', 'confirmed_at', 'cancel_reason', 'cancelled_by', 'reschedule_reason', 'rescheduled_to_slot_id', 'external_contact', 'notes', 'created_at', 're_users(id,name,email,company)'],
+      requiredColumns: ['id', 'slot_id', 'status'],
+      orderBy: ['created_at', 'id'],
+      apply: (query) => query.in('slot_id', slotIds),
+    });
+    if (error) return res.status(500).json({ error: error.message });
     bookings = data || [];
   }
   const bySlot = {};
@@ -2523,12 +2531,12 @@ app.get('/api/admin/agenda/slots', requireAdmin, async (req, res) => {
 app.post('/api/admin/agenda/slots', requireAdmin, async (req, res) => {
   const { starts_at, ends_at, title, credits_cost, max_bookings, duration_min, location, meeting_link, description } = req.body;
   if (!starts_at || !ends_at) return res.status(400).json({ error: 'starts_at e ends_at são obrigatórios.' });
-  const { data, error } = await sb.from('re_agenda_slots').insert({
+  const { data, error } = await insertWithColumnFallback('re_agenda_slots', {
     starts_at, ends_at, title: title || 'Consultoria',
     credits_cost: credits_cost || 1, max_bookings: max_bookings || 1, duration_min: duration_min || 60,
     location: location || 'online', meeting_link: meeting_link || null, description: description || null,
     created_by: req.user.id,
-  }).select().single();
+  }, { requiredColumns: ['starts_at', 'ends_at'] });
   if (error) return res.status(500).json({ error: error.message });
 
   gcCreateEvent({
@@ -3425,7 +3433,12 @@ app.post('/api/admin/forms', requireAdmin, async (req, res) => {
     }, { requiredColumns: ['title', 'type', 'settings'] });
     if (error) return res.status(500).json({ error: error.message });
     // Auto-create first page
-    await sb.from('re_form_pages').insert({ form_id: form.id, title: 'Página 1', order_index: 0 });
+    const { error: pageError } = await insertWithColumnFallback('re_form_pages', {
+      form_id: form.id,
+      title: 'Página 1',
+      order_index: 0,
+    }, { requiredColumns: ['form_id', 'title'] });
+    if (pageError) return res.status(500).json({ error: pageError.message });
     auditLog({ actorId: req.user.id, actorEmail: req.user.email, actorRole: 'admin',
       entityType: 'form', entityId: form.id, action: 'create', after: { title, type } }).catch(e => console.warn('[async]', e?.message));
     res.json({ success: true, form });
