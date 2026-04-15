@@ -21,6 +21,7 @@ const MIRROR_PATHS = [
   'css/style.css',
   'js/api-base.js',
   'js/admin-client-drawer.js',
+  'js/admin-client-drawer-tabs-primary.js',
   'js/app.js',
   'js/config.js',
   'js/shared-utils.js',
