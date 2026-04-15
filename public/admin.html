@@ -882,7 +882,15 @@
 
 function readAdminResponse(res) {
   if (typeof window.readApiResponse === 'function') return window.readApiResponse(res);
-  return res.json();
+  return res.text().then(text => {
+    if (!text) return {};
+    try {
+      return JSON.parse(text);
+    } catch {
+      const cleaned = text.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+      return { error: cleaned && !/^<!doctype/i.test(text.trim()) ? cleaned : `Erro ${res.status || ''}`.trim() };
+    }
+  });
 }
 
 function isFreshchatEnabled() {
@@ -1016,8 +1024,9 @@ async function loadAdminAgenda() {
   if (el) el.innerHTML = '<div style="padding:16px;color:var(--text-muted);font-size:14px;">Carregando...</div>';
 
   const res = await fetch('/api/admin/agenda/slots', { headers: authH() });
-  if (!res.ok) { if (el) el.innerHTML = '<div class="empty-state"><p>Erro ao carregar.</p></div>'; return; }
-  const { slots } = await res.json();
+  const payload = await readAdminResponse(res);
+  if (!res.ok) { if (el) el.innerHTML = `<div class="empty-state"><p>${payload.error || 'Erro ao carregar.'}</p></div>`; return; }
+  const slots = payload.slots || [];
 
   if (!el) return;
   if (!slots.length) {
@@ -1150,7 +1159,7 @@ async function deleteSlot(slotId) {
 
 async function agendaConfirmBooking(bookingId) {
   const res = await fetch(`/api/admin/agenda/bookings/${bookingId}/confirm`, { method: 'PUT', headers: authH() });
-  const j = await res.json();
+  const j = await readAdminResponse(res);
   if (res.ok) { showToast('Reserva confirmada! E-mail enviado ao cliente.', 'success'); loadAdminAgenda(); }
   else showToast(j.error || 'Erro ao confirmar.', 'error');
 }
@@ -1163,7 +1172,7 @@ async function agendaCancelBooking(bookingId, clientName) {
     method: 'PUT', headers: authH(),
     body: JSON.stringify({ reason: reason.trim() })
   });
-  const j = await res.json();
+  const j = await readAdminResponse(res);
   if (res.ok) { showToast('Reserva cancelada e cliente notificado.', 'success'); loadAdminAgenda(); }
   else showToast(j.error || 'Erro ao cancelar.', 'error');
 }
@@ -1171,8 +1180,9 @@ async function agendaCancelBooking(bookingId, clientName) {
 async function agendaRescheduleBooking(bookingId, clientName) {
   // Load available future slots for picker
   const sRes = await fetch('/api/admin/agenda/slots', { headers: authH() });
-  if (!sRes.ok) { showToast('Erro ao carregar horários.', 'error'); return; }
-  const { slots } = await sRes.json();
+  const sJson = await readAdminResponse(sRes);
+  if (!sRes.ok) { showToast(sJson.error || 'Erro ao carregar horários.', 'error'); return; }
+  const slots = sJson.slots || [];
   const future = slots.filter(s => new Date(s.starts_at) > new Date());
 
   if (!future.length) { showToast('Nenhum horário futuro disponível para remarcar.', 'error'); return; }
@@ -1210,7 +1220,7 @@ async function _submitReschedule(bookingId) {
     method: 'PUT', headers: authH(),
     body: JSON.stringify({ new_slot_id: newSlotId, reason })
   });
-  const j = await res.json();
+  const j = await readAdminResponse(res);
   if (res.ok) {
     document.getElementById('rescheduleModal')?.remove();
     showToast('Agendamento remarcado e cliente notificado.', 'success');
@@ -3174,15 +3184,16 @@ async function toggleService(id, active) {
   const res = await fetch(`/api/admin/services/${id}`, {
     method: 'PUT', headers: authH(), body: JSON.stringify({ active })
   });
+  const j = await readAdminResponse(res);
   if (res.ok) { showToast(active ? 'Serviço ativado.' : 'Serviço desativado.', 'success'); loadAdminMarketplace(); }
-  else { const j = await res.json(); showToast(j.error || 'Erro.', 'error'); }
+  else showToast(j.error || 'Erro.', 'error');
 }
 
 async function updateOrderStatus(id, status) {
   const res = await fetch(`/api/admin/service-orders/${id}`, {
     method: 'PUT', headers: authH(), body: JSON.stringify({ status })
   });
-  const j = await res.json();
+  const j = await readAdminResponse(res);
   if (!res.ok) showToast(j.error || 'Erro ao atualizar.', 'error');
   else {
     showToast('Status atualizado.', 'success');
@@ -3313,7 +3324,7 @@ async function jrnInit() {
 async function jrnLoadForms() {
   const res = await fetch('/api/admin/forms', { headers: jrnAuthH() });
   if (!res.ok) return;
-  const j = await res.json();
+  const j = await readAdminResponse(res);
   JRN.forms = j.forms || j || [];
   // populate step form select
   const sel = document.getElementById('jrn-step-form');

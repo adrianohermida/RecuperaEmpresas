@@ -282,6 +282,19 @@
 <script>
 'use strict';
 
+function readAdminResponse(res) {
+  if (typeof window.readApiResponse === 'function') return window.readApiResponse(res);
+  return res.text().then(text => {
+    if (!text) return {};
+    try {
+      return JSON.parse(text);
+    } catch {
+      const cleaned = text.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+      return { error: cleaned && !/^<!doctype/i.test(text.trim()) ? cleaned : `Erro ${res.status || ''}`.trim() };
+    }
+  });
+}
+
 const STEP_TITLES = {
   1:'LGPD', 2:'Empresa', 3:'Sócios', 4:'Operacional', 5:'Funcionários', 6:'Ativos',
   7:'Financeiro', 8:'Dívidas', 9:'Histórico da Crise', 10:'Diagnóstico',
@@ -377,8 +390,9 @@ async function loadAdminAgenda() {
   if (el) el.innerHTML = '<div style="padding:16px;color:var(--text-muted);font-size:14px;">Carregando...</div>';
 
   const res = await fetch('/api/admin/agenda/slots', { headers: authH() });
-  if (!res.ok) { if (el) el.innerHTML = '<div class="empty-state"><p>Erro ao carregar.</p></div>'; return; }
-  const { slots } = await res.json();
+  const payload = await readAdminResponse(res);
+  if (!res.ok) { if (el) el.innerHTML = `<div class="empty-state"><p>${payload.error || 'Erro ao carregar.'}</p></div>`; return; }
+  const slots = payload.slots || [];
 
   if (!el) return;
   if (!slots.length) {
@@ -461,7 +475,7 @@ async function createSlot() {
     method: 'POST', headers: authH(),
     body: JSON.stringify({ starts_at: new Date(starts_at).toISOString(), ends_at: new Date(ends_at).toISOString(), title, credits_cost, max_bookings, duration_min })
   });
-  const j = await res.json();
+  const j = await readAdminResponse(res);
   if (res.ok) { showToast('Horário publicado!', 'success'); toggleSlotForm(); loadAdminAgenda(); }
   else showToast(j.error || 'Erro ao publicar.', 'error');
 }

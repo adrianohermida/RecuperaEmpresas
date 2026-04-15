@@ -2551,52 +2551,75 @@ app.post('/api/stripe/webhook', async (req, res) => {
 
 // ── Admin: agenda slots management ───────────────────────────────────────────
 app.get('/api/admin/agenda/slots', requireAdmin, async (req, res) => {
-  const from = req.query.from || new Date(Date.now() - 7*24*60*60*1000).toISOString();
-  const { data: slots, error: slotsError } = await selectWithColumnFallback('re_agenda_slots', {
-    columns: ['id', 'starts_at', 'ends_at', 'title', 'credits_cost', 'max_bookings', 'duration_min', 'location', 'meeting_link', 'description', 'created_at'],
-    requiredColumns: ['id', 'starts_at', 'ends_at'],
-    orderBy: ['starts_at', 'created_at', 'id'],
-    apply: (query) => query.gte('starts_at', from).limit(100),
-  });
-  if (slotsError) return res.status(500).json({ error: slotsError.message });
-
-  const slotIds = (slots||[]).map(s => s.id);
-  let bookings = [];
-  if (slotIds.length) {
-    // Include ALL statuses so admin can see pending, confirmed, cancelled, rescheduled
-    const { data, error } = await selectWithColumnFallback('re_bookings', {
-      columns: ['id', 'slot_id', 'user_id', 'status', 'credits_spent', 'confirmed_at', 'cancel_reason', 'cancelled_by', 'reschedule_reason', 'rescheduled_to_slot_id', 'external_contact', 'notes', 'created_at', 're_users(id,name,email,company)'],
-      requiredColumns: ['id', 'slot_id', 'status'],
-      orderBy: ['created_at', 'id'],
-      apply: (query) => query.in('slot_id', slotIds),
+  try {
+    const from = req.query.from || new Date(Date.now() - 7*24*60*60*1000).toISOString();
+    const { data: slots, error: slotsError } = await selectWithColumnFallback('re_agenda_slots', {
+      columns: ['id', 'starts_at', 'ends_at', 'title', 'credits_cost', 'max_bookings', 'duration_min', 'location', 'meeting_link', 'description', 'created_at'],
+      requiredColumns: ['id', 'starts_at', 'ends_at'],
+      orderBy: ['starts_at', 'created_at', 'id'],
+      apply: (query) => query.gte('starts_at', from).limit(100),
     });
-    if (error) return res.status(500).json({ error: error.message });
-    bookings = data || [];
-  }
-  const bySlot = {};
-  bookings.forEach(b => { (bySlot[b.slot_id] = bySlot[b.slot_id]||[]).push(b); });
+    if (slotsError) {
+      if (isSchemaCompatibilityError(slotsError.message, ['re_agenda_slots', 'starts_at', 'ends_at', 'credits_cost', 'max_bookings', 'duration_min', 'location', 'meeting_link', 'description'])) {
+        console.warn('[ADMIN AGENDA SLOTS] returning empty list due to schema mismatch:', slotsError.message);
+        return res.json({ slots: [] });
+      }
+      return res.status(500).json({ error: slotsError.message });
+    }
 
-  res.json({ slots: (slots||[]).map(s => ({ ...s, bookings: bySlot[s.id]||[] })) });
+    const slotIds = (slots || []).map(s => s.id);
+    let bookings = [];
+    if (slotIds.length) {
+      const { data, error } = await selectWithColumnFallback('re_bookings', {
+        columns: ['id', 'slot_id', 'user_id', 'status', 'credits_spent', 'confirmed_at', 'cancel_reason', 'cancelled_by', 'reschedule_reason', 'rescheduled_to_slot_id', 'external_contact', 'notes', 'created_at', 're_users(id,name,email,company)'],
+        requiredColumns: ['id', 'slot_id', 'status'],
+        orderBy: ['created_at', 'id'],
+        apply: (query) => query.in('slot_id', slotIds),
+      });
+      if (error) {
+        console.warn('[ADMIN AGENDA BOOKINGS] returning slots without bookings:', error.message);
+      } else {
+        bookings = data || [];
+      }
+    }
+    const bySlot = {};
+    bookings.forEach(b => { (bySlot[b.slot_id] = bySlot[b.slot_id] || []).push(b); });
+
+    res.json({ slots: (slots || []).map(s => ({ ...s, bookings: bySlot[s.id] || [] })) });
+  } catch (e) {
+    console.error('[ADMIN AGENDA SLOTS]', e.message);
+    res.status(500).json({ error: e.message });
+  }
 });
 
 app.post('/api/admin/agenda/slots', requireAdmin, async (req, res) => {
-  const { starts_at, ends_at, title, credits_cost, max_bookings, duration_min, location, meeting_link, description } = req.body;
-  if (!starts_at || !ends_at) return res.status(400).json({ error: 'starts_at e ends_at são obrigatórios.' });
-  const { data, error } = await insertWithColumnFallback('re_agenda_slots', {
-    starts_at, ends_at, title: title || 'Consultoria',
-    credits_cost: credits_cost || 1, max_bookings: max_bookings || 1, duration_min: duration_min || 60,
-    location: location || 'online', meeting_link: meeting_link || null, description: description || null,
-    created_by: req.user.id,
-  }, { requiredColumns: ['starts_at', 'ends_at'] });
-  if (error) return res.status(500).json({ error: error.message });
+  try {
+    const { starts_at, ends_at, title, credits_cost, max_bookings, duration_min, location, meeting_link, description } = req.body;
+    if (!starts_at || !ends_at) return res.status(400).json({ error: 'starts_at e ends_at são obrigatórios.' });
+    const { data, error } = await insertWithColumnFallback('re_agenda_slots', {
+      starts_at, ends_at, title: title || 'Consultoria',
+      credits_cost: credits_cost || 1, max_bookings: max_bookings || 1, duration_min: duration_min || 60,
+      location: location || 'online', meeting_link: meeting_link || null, description: description || null,
+      created_by: req.user.id,
+    }, { requiredColumns: ['starts_at', 'ends_at'] });
+    if (error) {
+      if (isSchemaCompatibilityError(error.message, ['re_agenda_slots', 'starts_at', 'ends_at', 'credits_cost', 'max_bookings', 'duration_min', 'location', 'meeting_link', 'description', 'created_by'])) {
+        return res.status(503).json({ error: 'Agenda temporariamente indisponível até concluir a atualização do banco.' });
+      }
+      return res.status(500).json({ error: error.message });
+    }
 
-  gcCreateEvent({
-    summary: `[Disponível] ${title || 'Consultoria'} — Recupera Empresas`,
-    description: `Slot disponível para reserva.\nVagas: ${max_bookings||1}  |  Créditos: ${credits_cost||1}${meeting_link ? '\nLink: '+meeting_link : ''}`,
-    start: starts_at, end: ends_at,
-  }).then(evId => { if (evId) _calendarEventIds.set(data.id, evId); }).catch(e => console.warn('[async]', e?.message));
+    gcCreateEvent({
+      summary: `[Disponível] ${title || 'Consultoria'} — Recupera Empresas`,
+      description: `Slot disponível para reserva.\nVagas: ${max_bookings || 1}  |  Créditos: ${credits_cost || 1}${meeting_link ? '\nLink: ' + meeting_link : ''}`,
+      start: starts_at, end: ends_at,
+    }).then(evId => { if (evId) _calendarEventIds.set(data.id, evId); }).catch(e => console.warn('[async]', e?.message));
 
-  res.json({ success: true, slot: data });
+    res.json({ success: true, slot: data });
+  } catch (e) {
+    console.error('[ADMIN AGENDA CREATE]', e.message);
+    res.status(500).json({ error: e.message });
+  }
 });
 
 app.delete('/api/admin/agenda/slots/:slotId', requireAdmin, async (req, res) => {
@@ -3455,17 +3478,35 @@ async function loadFullForm(formId) {
 app.get('/api/admin/forms', requireAdmin, async (req, res) => {
   try {
     const { type, status } = req.query;
-    let q = sb.from('re_forms').select('*').order('created_at', { ascending: false });
-    if (type)   q = q.eq('type', type);
-    if (status) q = q.eq('status', status);
-    const { data: forms } = await q;
+    const { data: forms, error } = await selectWithColumnFallback('re_forms', {
+      columns: ['id', 'title', 'description', 'type', 'status', 'settings', 'linked_plan_chapter', 'created_by', 'created_at', 'updated_at'],
+      requiredColumns: ['id', 'title'],
+      orderBy: ['created_at', 'id'],
+      apply: (query) => {
+        let next = query;
+        if (type) next = next.eq('type', type);
+        if (status) next = next.eq('status', status);
+        return next;
+      },
+    });
+    if (error) {
+      if (isSchemaCompatibilityError(error.message, ['re_forms', 'title', 'description', 'type', 'status', 'settings', 'linked_plan_chapter', 'created_by'])) {
+        console.warn('[FORMS LIST] returning empty list due to schema mismatch:', error.message);
+        return res.json({ forms: [] });
+      }
+      throw error;
+    }
     // Attach response counts
     const ids = (forms || []).map(f => f.id);
     let counts = {};
     if (ids.length) {
-      const { data: resp } = await sb.from('re_form_responses')
+      const { data: resp, error: respError } = await sb.from('re_form_responses')
         .select('form_id').in('form_id', ids).eq('status', 'completed');
-      (resp || []).forEach(r => { counts[r.form_id] = (counts[r.form_id] || 0) + 1; });
+      if (respError) {
+        console.warn('[FORMS LIST] response counts unavailable:', respError.message);
+      } else {
+        (resp || []).forEach(r => { counts[r.form_id] = (counts[r.form_id] || 0) + 1; });
+      }
     }
     res.json({ forms: (forms || []).map(f => ({ ...f, response_count: counts[f.id] || 0 })) });
   } catch (e) { console.error('[FORMS LIST]', e.message); res.json({ forms: [] }); }
@@ -3482,14 +3523,24 @@ app.post('/api/admin/forms', requireAdmin, async (req, res) => {
       linked_plan_chapter: linked_plan_chapter || null,
       created_by: req.user.id, status: 'draft',
     }, { requiredColumns: ['title', 'type', 'settings'] });
-    if (error) return res.status(500).json({ error: error.message });
+    if (error) {
+      if (isSchemaCompatibilityError(error.message, ['re_forms', 'title', 'description', 'type', 'settings', 'linked_plan_chapter', 'created_by', 'status'])) {
+        return res.status(503).json({ error: 'Formulários temporariamente indisponíveis até concluir a atualização do banco.' });
+      }
+      return res.status(500).json({ error: error.message });
+    }
     // Auto-create first page
     const { error: pageError } = await insertWithColumnFallback('re_form_pages', {
       form_id: form.id,
       title: 'Página 1',
       order_index: 0,
     }, { requiredColumns: ['form_id', 'title'] });
-    if (pageError) return res.status(500).json({ error: pageError.message });
+    if (pageError) {
+      if (isSchemaCompatibilityError(pageError.message, ['re_form_pages', 'form_id', 'title', 'order_index'])) {
+        return res.status(503).json({ error: 'Formulários temporariamente indisponíveis até concluir a atualização do banco.' });
+      }
+      return res.status(500).json({ error: pageError.message });
+    }
     auditLog({ actorId: req.user.id, actorEmail: req.user.email, actorRole: 'admin',
       entityType: 'form', entityId: form.id, action: 'create', after: { title, type } }).catch(e => console.warn('[async]', e?.message));
     res.json({ success: true, form });
@@ -4950,8 +5001,18 @@ app.get('/api/service-orders', requireAuth, async (req, res) => {
 // Admin: list all services (including inactive)
 app.get('/api/admin/services', requireAdmin, async (req, res) => {
   try {
-    const { data: services } = await sb.from('re_services')
-      .select('*').order('created_at', { ascending: false });
+    const { data: services, error } = await selectWithColumnFallback('re_services', {
+      columns: ['id', 'name', 'title', 'description', 'category', 'price_cents', 'price', 'delivery_days', 'features', 'featured', 'journey_id', 'active', 'created_by', 'created_at', 'updated_at'],
+      requiredColumns: ['id'],
+      orderBy: ['created_at', 'id'],
+    });
+    if (error) {
+      if (isSchemaCompatibilityError(error.message, ['re_services', 'name', 'title', 'description', 'category', 'price_cents', 'price', 'delivery_days', 'features', 'featured', 'journey_id', 'active', 'created_by'])) {
+        console.warn('[ADMIN SERVICES] returning empty list due to schema mismatch:', error.message);
+        return res.json({ services: [] });
+      }
+      throw error;
+    }
     res.json({ services: services || [] });
   } catch (e) { res.json({ services: [] }); }
 });
@@ -4973,7 +5034,12 @@ app.post('/api/admin/services', requireAdmin, async (req, res) => {
       active: true,
       created_by: req.user.id,
     }, { requiredColumns: ['name', 'price_cents', 'active'] });
-    if (error) return res.status(500).json({ error: error.message });
+    if (error) {
+      if (isSchemaCompatibilityError(error.message, ['re_services', 'name', 'title', 'description', 'category', 'price_cents', 'price', 'delivery_days', 'features', 'featured', 'journey_id', 'active', 'created_by'])) {
+        return res.status(503).json({ error: 'Serviços temporariamente indisponíveis até concluir a atualização do banco.' });
+      }
+      return res.status(500).json({ error: error.message });
+    }
     auditLog({ actorId: req.user.id, actorEmail: req.user.email, actorRole: 'admin',
       entityType: 'service', entityId: svc.id, action: 'create', after: { name, price_cents } }).catch(e => console.warn('[async]', e?.message));
     res.json({ success: true, service: svc });
@@ -4993,7 +5059,12 @@ app.put('/api/admin/services/:id', requireAdmin, async (req, res) => {
     if (featured    !== undefined) updates.featured    = featured;
     if (journey_id  !== undefined) updates.journey_id  = journey_id || null;
     const { data: svc, error } = await updateWithColumnFallback('re_services', { id: req.params.id }, updates);
-    if (error) return res.status(500).json({ error: error.message });
+    if (error) {
+      if (isSchemaCompatibilityError(error.message, ['re_services', 'name', 'title', 'description', 'category', 'price_cents', 'price', 'featured', 'journey_id', 'active'])) {
+        return res.status(503).json({ error: 'Serviços temporariamente indisponíveis até concluir a atualização do banco.' });
+      }
+      return res.status(500).json({ error: error.message });
+    }
     res.json({ success: true, service: svc });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
