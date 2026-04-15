@@ -875,10 +875,10 @@ async function fbOpenResponses(formId, formTitle) {
   if (titleEl) titleEl.textContent = 'Respostas: ' + (formTitle || '');
 
   const el = document.getElementById('fb-resp-list');
-  if (el) el.innerHTML = '<div style="padding:24px;color:#94A3B8;text-align:center;">Carregando...</div>';
+  if (el) el.innerHTML = '<div class="admin-empty-state-soft">Carregando...</div>';
 
   const res = await fetch(`/api/admin/forms/${formId}/responses`, { headers: fbAuthH() });
-  if (!res.ok) { if(el) el.innerHTML='<div style="padding:24px;color:#EF4444;">Erro ao carregar respostas.</div>'; return; }
+  if (!res.ok) { if(el) el.innerHTML='<div class="form-builder-feedback-error">Erro ao carregar respostas.</div>'; return; }
   const jr = await res.json();
   FB.responses = jr.responses || jr;
 
@@ -888,20 +888,20 @@ async function fbOpenResponses(formId, formTitle) {
   const CLASS_LBL  = { saudavel:'Saudável', risco_moderado:'Risco Moderado', risco_alto:'Risco Alto' };
 
   if (!FB.responses.length) {
-    if (el) el.innerHTML = '<div style="padding:40px;text-align:center;color:#94A3B8;"><div style="font-size:32px;margin-bottom:10px;">📭</div><div style="font-size:14px;">Nenhuma resposta ainda.</div></div>';
+    if (el) el.innerHTML = '<div class="form-builder-response-empty"><div class="form-builder-response-empty-icon">📭</div><div class="form-builder-response-empty-copy">Nenhuma resposta ainda.</div></div>';
     return;
   }
 
   if (el) el.innerHTML = `
-  <table style="width:100%;border-collapse:collapse;">
+  <table class="admin-simple-table form-builder-response-table">
     <thead>
-      <tr style="border-bottom:2px solid #F1F5F9;">
-        <th style="padding:10px 12px;text-align:left;font-size:12px;color:#64748B;font-weight:600;text-transform:uppercase;">Cliente</th>
-        <th style="padding:10px 12px;text-align:left;font-size:12px;color:#64748B;font-weight:600;text-transform:uppercase;">Status</th>
-        <th style="padding:10px 12px;text-align:left;font-size:12px;color:#64748B;font-weight:600;text-transform:uppercase;">Pontuação</th>
-        <th style="padding:10px 12px;text-align:left;font-size:12px;color:#64748B;font-weight:600;text-transform:uppercase;">Classificação</th>
-        <th style="padding:10px 12px;text-align:left;font-size:12px;color:#64748B;font-weight:600;text-transform:uppercase;">Data</th>
-        <th style="padding:10px 12px;text-align:left;font-size:12px;color:#64748B;font-weight:600;text-transform:uppercase;">Ação</th>
+      <tr>
+        <th>Cliente</th>
+        <th>Status</th>
+        <th>Pontuação</th>
+        <th>Classificação</th>
+        <th>Data</th>
+        <th>Ação</th>
       </tr>
     </thead>
     <tbody>
@@ -910,23 +910,22 @@ async function fbOpenResponses(formId, formTitle) {
         const uname  = u.name  || r.user_name  || '—';
         const uemail = u.email || r.user_email || '—';
         return `
-      <tr style="border-bottom:1px solid #F8FAFC;cursor:pointer;" onclick="fbOpenResponseDetail(${r.id})"
-          onmouseover="this.style.background='#F8FAFC'" onmouseout="this.style.background=''">
-        <td style="padding:10px 12px;">
-          <div style="font-size:13px;font-weight:600;color:#1E293B;">${fbEsc(uname)}</div>
-          <div style="font-size:11px;color:#94A3B8;">${fbEsc(uemail)}</div>
+      <tr class="form-builder-response-row" onclick="fbOpenResponseDetail(${r.id})">
+        <td>
+          <div class="form-builder-response-user">${fbEsc(uname)}</div>
+          <div class="form-builder-response-email">${fbEsc(uemail)}</div>
         </td>
-        <td style="padding:10px 12px;"><span class="badge ${STATUS_CLS[r.status]||'badge-gray'}">${STATUS_LBL[r.status]||r.status}</span></td>
-        <td style="padding:10px 12px;">
-          ${r.score_pct != null ? `<span style="font-size:14px;font-weight:700;color:#1A56DB;">${Math.round(r.score_pct)}%</span>
-          <span style="font-size:11px;color:#94A3B8;margin-left:4px;">${r.score_total||0}/${r.score_max||0}</span>` : '—'}
+        <td><span class="badge ${STATUS_CLS[r.status]||'badge-gray'}">${STATUS_LBL[r.status]||r.status}</span></td>
+        <td>
+          ${r.score_pct != null ? `<span class="form-builder-response-score">${Math.round(r.score_pct)}%</span>
+          <span class="form-builder-response-score-meta">${r.score_total||0}/${r.score_max||0}</span>` : '—'}
         </td>
-        <td style="padding:10px 12px;">
+        <td>
           ${r.score_classification ? `<span class="badge ${CLASS_CLS[r.score_classification]||'badge-gray'}">${CLASS_LBL[r.score_classification]||r.score_classification}</span>` : '—'}
         </td>
-        <td style="padding:10px 12px;font-size:12px;color:#94A3B8;">${r.updated_at ? new Date(r.updated_at).toLocaleDateString('pt-BR') : '—'}</td>
-        <td style="padding:10px 12px;">
-          <button class="btn-ghost" style="font-size:12px;padding:4px 10px;" onclick="event.stopPropagation();fbOpenResponseDetail(${r.id})">
+        <td class="form-builder-response-date">${r.updated_at ? new Date(r.updated_at).toLocaleDateString('pt-BR') : '—'}</td>
+        <td>
+          <button class="btn-ghost form-builder-response-action" onclick="event.stopPropagation();fbOpenResponseDetail(${r.id})">
             Ver detalhes
           </button>
         </td>
