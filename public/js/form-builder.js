@@ -100,18 +100,18 @@ async function fbLoadFormsList() {
   fbShowView('list');
   const grid = document.getElementById('fb-forms-grid');
   if (!grid) return;
-  grid.innerHTML = '<div style="padding:24px;color:#94A3B8;text-align:center;">Carregando formulários...</div>';
+  grid.innerHTML = '<div class="admin-empty-state-soft">Carregando formulários...</div>';
 
   const res = await fetch('/api/admin/forms', { headers: fbAuthH() });
-  if (!res.ok) { grid.innerHTML = '<div style="padding:24px;color:#EF4444;">Erro ao carregar.</div>'; return; }
+  if (!res.ok) { grid.innerHTML = '<div class="form-builder-feedback-error">Erro ao carregar.</div>'; return; }
   const j = await res.json();
   FB.forms = j.forms || j;
 
   if (!FB.forms.length) {
-    grid.innerHTML = `<div style="padding:40px;text-align:center;color:#94A3B8;">
-      <div style="font-size:40px;margin-bottom:12px;">📋</div>
-      <div style="font-size:15px;font-weight:600;color:#64748B;margin-bottom:8px;">Nenhum formulário criado</div>
-      <div style="font-size:13px;">Clique em "Novo Formulário" para começar.</div>
+    grid.innerHTML = `<div class="form-builder-list-empty">
+      <div class="form-builder-list-empty-icon">📋</div>
+      <div class="form-builder-list-empty-title">Nenhum formulário criado</div>
+      <div class="form-builder-list-empty-copy">Clique em "Novo Formulário" para começar.</div>
     </div>`;
     return;
   }
@@ -125,32 +125,31 @@ async function fbLoadFormsList() {
     const isSystem = !!(f.is_system);
     const systemNote = f.settings?.system_note || '';
     const statusBadge = `<span class="badge ${STATUS_CLS[f.status] || 'badge-gray'}">${STATUS_LBL[f.status] || f.status}</span>`;
-    const systemBadge = isSystem ? `<span class="badge badge-gray" style="background:#EFF6FF;color:#1A56DB;border:1px solid #BFDBFE;">Sistema</span>` : '';
+    const systemBadge = isSystem ? '<span class="badge form-builder-system-badge">Sistema</span>' : '';
     const actionBtns = isSystem
-      ? `<button class="btn-primary" style="font-size:12px;padding:6px 12px;" onclick="fbOpenBuilder('${fid}',true)">👁️ Ver Perguntas</button>
-         <button class="btn-ghost" style="font-size:12px;padding:6px 12px;" onclick="fbOpenResponses('${fid}','${fbEsc(f.title)}')">📊 Respostas</button>
-         <button class="btn-ghost" style="font-size:12px;padding:6px 12px;" onclick="fbOpenStatsPanel('${fid}')">📈 Estatísticas</button>`
-      : `<button class="btn-primary" style="font-size:12px;padding:6px 12px;" onclick="fbOpenBuilder('${fid}')">✏️ Editar</button>
-         <button class="btn-ghost" style="font-size:12px;padding:6px 12px;" onclick="fbOpenResponses('${fid}','${fbEsc(f.title)}')">📊 Respostas</button>
-         <button class="btn-ghost" style="font-size:12px;padding:6px 12px;" onclick="fbOpenStatsPanel('${fid}')">📈 Estatísticas</button>
-         <button class="btn-ghost" style="font-size:12px;padding:6px 12px;" onclick="fbDuplicateForm('${fid}')">📋 Duplicar</button>
-         <button class="btn-ghost" style="font-size:12px;padding:6px 12px;color:#EF4444;" onclick="fbDeleteForm('${fid}','${fbEsc(f.title)}')">🗑️ Excluir</button>`;
+      ? `<button class="btn-primary form-builder-card-btn" onclick="fbOpenBuilder('${fid}',true)">👁️ Ver Perguntas</button>
+         <button class="btn-ghost form-builder-card-btn" onclick="fbOpenResponses('${fid}','${fbEsc(f.title)}')">📊 Respostas</button>
+         <button class="btn-ghost form-builder-card-btn" onclick="fbOpenStatsPanel('${fid}')">📈 Estatísticas</button>`
+      : `<button class="btn-primary form-builder-card-btn" onclick="fbOpenBuilder('${fid}')">✏️ Editar</button>
+         <button class="btn-ghost form-builder-card-btn" onclick="fbOpenResponses('${fid}','${fbEsc(f.title)}')">📊 Respostas</button>
+         <button class="btn-ghost form-builder-card-btn" onclick="fbOpenStatsPanel('${fid}')">📈 Estatísticas</button>
+         <button class="btn-ghost form-builder-card-btn" onclick="fbDuplicateForm('${fid}')">📋 Duplicar</button>
+         <button class="btn-ghost form-builder-card-btn form-builder-card-btn-danger" onclick="fbDeleteForm('${fid}','${fbEsc(f.title)}')">🗑️ Excluir</button>`;
     return `
-    <div style="background:#fff;border:1px solid ${isSystem ? '#BFDBFE' : '#E2E8F0'};border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:12px;transition:box-shadow .15s;"
-         onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,.08)'" onmouseout="this.style.boxShadow=''">
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
+    <div class="form-builder-list-card ${isSystem ? 'form-builder-list-card-system' : ''}">
+      <div class="form-builder-list-card-header">
         <div>
-          <div style="font-weight:700;font-size:15px;color:#1E293B;">${fbEsc(f.title)}</div>
-          <div style="font-size:12px;color:#94A3B8;margin-top:2px;">${TYPE_LABELS[f.type] || f.type || '—'}</div>
+          <div class="form-builder-list-card-title">${fbEsc(f.title)}</div>
+          <div class="form-builder-list-card-type">${TYPE_LABELS[f.type] || f.type || '—'}</div>
         </div>
-        <div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end;">${systemBadge}${statusBadge}</div>
+        <div class="form-builder-list-card-badges">${systemBadge}${statusBadge}</div>
       </div>
-      ${f.description ? `<div style="font-size:13px;color:#64748B;line-height:1.5;">${fbEsc(f.description)}</div>` : ''}
-      ${isSystem && systemNote ? `<div style="font-size:11px;color:#6366F1;background:#EEF2FF;padding:6px 10px;border-radius:6px;">ℹ️ ${fbEsc(systemNote)}</div>` : ''}
-      <div style="display:flex;gap:8px;font-size:12px;color:#94A3B8;">
+      ${f.description ? `<div class="form-builder-list-card-desc">${fbEsc(f.description)}</div>` : ''}
+      ${isSystem && systemNote ? `<div class="form-builder-system-note">ℹ️ ${fbEsc(systemNote)}</div>` : ''}
+      <div class="form-builder-list-card-meta">
         <span>📬 ${f.response_count || 0} respostas</span>
       </div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;">${actionBtns}</div>
+      <div class="form-builder-list-card-actions">${actionBtns}</div>
     </div>`;
   }).join('');
 }
@@ -175,7 +174,7 @@ async function fbOpenStatsPanel(formIdOverride) {
   if (!panel) return;
   // Show panel
   panel.style.display = 'block';
-  document.getElementById('fb-stats-content').innerHTML = '<div style="text-align:center;color:#94A3B8;">Carregando...</div>';
+  document.getElementById('fb-stats-content').innerHTML = '<div class="admin-empty-state-soft form-builder-stats-loading">Carregando...</div>';
   document.getElementById('fb-stats-chart').innerHTML = '';
 
   // If called from list view, open the builder first (stats panel is there)
@@ -188,7 +187,7 @@ async function fbOpenStatsPanel(formIdOverride) {
 
   const res = await fetch(`/api/admin/forms/${formId}/stats`, { headers: fbAuthH() });
   if (!res.ok) {
-    document.getElementById('fb-stats-content').innerHTML = '<div style="color:#EF4444;">Erro ao carregar estatísticas.</div>';
+    document.getElementById('fb-stats-content').innerHTML = '<div class="form-builder-feedback-error">Erro ao carregar estatísticas.</div>';
     return;
   }
   const s = await res.json();
@@ -201,33 +200,33 @@ async function fbOpenStatsPanel(formIdOverride) {
   };
 
   document.getElementById('fb-stats-content').innerHTML = `
-    <div style="background:#fff;border:1px solid #E2E8F0;border-radius:8px;padding:14px;text-align:center;">
-      <div style="font-size:22px;font-weight:800;color:#1A56DB;">${fmt(s.total)}</div>
-      <div style="font-size:12px;color:#64748B;margin-top:2px;">Total de respostas</div>
+    <div class="form-builder-stat-card">
+      <div class="form-builder-stat-value form-builder-stat-value-blue">${fmt(s.total)}</div>
+      <div class="form-builder-stat-label">Total de respostas</div>
     </div>
-    <div style="background:#fff;border:1px solid #E2E8F0;border-radius:8px;padding:14px;text-align:center;">
-      <div style="font-size:22px;font-weight:800;color:#10B981;">${fmt(s.completed)}</div>
-      <div style="font-size:12px;color:#64748B;margin-top:2px;">Concluídas</div>
+    <div class="form-builder-stat-card">
+      <div class="form-builder-stat-value form-builder-stat-value-green">${fmt(s.completed)}</div>
+      <div class="form-builder-stat-label">Concluídas</div>
     </div>
-    <div style="background:#fff;border:1px solid #E2E8F0;border-radius:8px;padding:14px;text-align:center;">
-      <div style="font-size:22px;font-weight:800;color:#F59E0B;">${fmt(s.in_progress)}</div>
-      <div style="font-size:12px;color:#64748B;margin-top:2px;">Em andamento</div>
+    <div class="form-builder-stat-card">
+      <div class="form-builder-stat-value form-builder-stat-value-amber">${fmt(s.in_progress)}</div>
+      <div class="form-builder-stat-label">Em andamento</div>
     </div>
-    <div style="background:#fff;border:1px solid #E2E8F0;border-radius:8px;padding:14px;text-align:center;">
-      <div style="font-size:22px;font-weight:800;color:#EF4444;">${fmt(s.abandoned)}</div>
-      <div style="font-size:12px;color:#64748B;margin-top:2px;">Abandonadas</div>
+    <div class="form-builder-stat-card">
+      <div class="form-builder-stat-value form-builder-stat-value-red">${fmt(s.abandoned)}</div>
+      <div class="form-builder-stat-label">Abandonadas</div>
     </div>
-    <div style="background:#fff;border:1px solid #E2E8F0;border-radius:8px;padding:14px;text-align:center;">
-      <div style="font-size:22px;font-weight:800;color:#8B5CF6;">${s.completion_rate ?? 0}%</div>
-      <div style="font-size:12px;color:#64748B;margin-top:2px;">Taxa de conclusão</div>
+    <div class="form-builder-stat-card">
+      <div class="form-builder-stat-value form-builder-stat-value-violet">${s.completion_rate ?? 0}%</div>
+      <div class="form-builder-stat-label">Taxa de conclusão</div>
     </div>
-    <div style="background:#fff;border:1px solid #E2E8F0;border-radius:8px;padding:14px;text-align:center;">
-      <div style="font-size:22px;font-weight:800;color:#EC4899;">${s.abandonment_rate ?? 0}%</div>
-      <div style="font-size:12px;color:#64748B;margin-top:2px;">Taxa de abandono</div>
+    <div class="form-builder-stat-card">
+      <div class="form-builder-stat-value form-builder-stat-value-pink">${s.abandonment_rate ?? 0}%</div>
+      <div class="form-builder-stat-label">Taxa de abandono</div>
     </div>
-    <div style="background:#fff;border:1px solid #E2E8F0;border-radius:8px;padding:14px;text-align:center;">
-      <div style="font-size:22px;font-weight:800;color:#0EA5E9;">${fmtTime(s.avg_time_seconds)}</div>
-      <div style="font-size:12px;color:#64748B;margin-top:2px;">Tempo médio</div>
+    <div class="form-builder-stat-card">
+      <div class="form-builder-stat-value form-builder-stat-value-cyan">${fmtTime(s.avg_time_seconds)}</div>
+      <div class="form-builder-stat-label">Tempo médio</div>
     </div>
   `;
 
@@ -236,11 +235,11 @@ async function fbOpenStatsPanel(formIdOverride) {
     const maxCount = Math.max(...s.daily_starts.map(d=>d.count), 1);
     const bars = s.daily_starts.slice(-14).map(d => {
       const h = Math.round((d.count / maxCount) * 40);
-      return `<div title="${d.date}: ${d.count} inícios" style="width:16px;height:${h}px;background:#1A56DB;border-radius:2px 2px 0 0;opacity:.75;"></div>`;
+      return `<div title="${d.date}: ${d.count} inícios" class="form-builder-spark-bar" style="height:${h}px;"></div>`;
     }).join('');
     document.getElementById('fb-stats-chart').innerHTML = `
-      <div style="font-size:11px;color:#64748B;margin-bottom:6px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;">Inícios por dia (últimos 14 dias)</div>
-      <div style="display:flex;align-items:flex-end;gap:4px;height:44px;">${bars}</div>`;
+      <div class="form-builder-spark-title">Inícios por dia (últimos 14 dias)</div>
+      <div class="form-builder-spark-row">${bars}</div>`;
   }
 }
 
