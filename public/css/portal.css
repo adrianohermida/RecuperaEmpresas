@@ -1065,6 +1065,58 @@ body {
   margin-bottom: 16px;
 }
 
+.form-builder-logic-loading {
+  padding: 16px;
+  color: #94A3B8;
+}
+
+.form-builder-logic-empty {
+  padding: 16px;
+  color: #94A3B8;
+  font-size: 13px;
+  text-align: center;
+}
+
+.form-builder-logic-rule {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+  padding: 12px;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  background: #F8FAFC;
+}
+
+.form-builder-logic-rule-copy {
+  color: #64748B;
+  font-size: 12px;
+}
+
+.form-builder-logic-rule-strong {
+  color: #1E293B;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.form-builder-logic-rule-chip {
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: #EFF6FF;
+  color: #1A56DB;
+  font-size: 12px;
+}
+
+.form-builder-logic-rule-delete {
+  margin-left: auto;
+  border: none;
+  background: none;
+  color: #EF4444;
+  cursor: pointer;
+  font-size: 13px;
+}
+
 .form-builder-logic-box {
   border: 1px solid #E2E8F0;
   border-radius: 8px;
@@ -1118,6 +1170,44 @@ body {
   margin-bottom: 14px;
 }
 
+.form-builder-assign-loading,
+.form-builder-assign-empty {
+  padding: 12px;
+  color: #94A3B8;
+  font-size: 13px;
+}
+
+.form-builder-assign-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid #F1F5F9;
+}
+
+.form-builder-assign-item:last-child {
+  border-bottom: none;
+}
+
+.form-builder-assign-name {
+  color: #1E293B;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.form-builder-assign-email {
+  color: #94A3B8;
+  font-size: 11px;
+}
+
+.form-builder-assign-remove {
+  border: none;
+  background: none;
+  color: #EF4444;
+  cursor: pointer;
+  font-size: 12px;
+}
+
 .form-builder-assign-row {
   display: flex;
   gap: 8px;
@@ -1130,6 +1220,12 @@ body {
 @media (max-width: 960px) {
   .journey-editor-grid {
     grid-template-columns: 1fr;
+  }
+
+  .form-builder-assign-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
   }
 
   .journey-panel-header {
@@ -2891,16 +2987,81 @@ body {
 
 /* ── Form Builder helpers ───────────────────────────────────────────────────── */
 .fb-prop-group { margin-bottom: 10px; }
+.fb-props-panel-inner { padding: 16px; }
+.fb-props-readonly-banner {
+  margin-bottom: 12px;
+  padding: 6px 10px;
+  border: 1px solid #FCD34D;
+  border-radius: 6px;
+  background: #FFF7ED;
+  color: #92400E;
+  font-size: 11px;
+  font-weight: 600;
+}
+.fb-props-type-badge {
+  display: inline-block;
+  margin-bottom: 12px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: #EFF6FF;
+  color: #1A56DB;
+  font-size: 12px;
+  font-weight: 600;
+}
 .fb-prop-label {
   display: block; font-size: 11px; color: #64748B; font-weight: 600;
   text-transform: uppercase; letter-spacing: .4px; margin-bottom: 4px;
 }
+.fb-prop-label-inline { margin: 0; }
 .fb-prop-input {
   width: 100%; padding: 7px 10px; border: 1px solid #E2E8F0;
   border-radius: 6px; font-size: 13px; box-sizing: border-box; color: #1E293B;
+  resize: vertical;
+}
+.fb-prop-input[id="fp-formula"] {
+  font-family: monospace;
+  font-size: 12px;
 }
 .fb-prop-input:focus {
   border-color: #1A56DB; outline: none; box-shadow: 0 0 0 2px rgba(26,86,219,.1);
+}
+.fb-prop-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.fb-prop-checkbox {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+.fb-props-section-divider {
+  margin: 14px 0 10px;
+  padding-top: 10px;
+  border-top: 1px solid #F1F5F9;
+}
+.fb-props-section-title {
+  margin-bottom: 10px;
+  color: #64748B;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+}
+.fb-props-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+.fb-props-action-btn {
+  padding: 8px;
+  font-size: 13px;
+}
+.fb-props-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
 }
 .fb-palette-btn {
   display: flex; align-items: center; gap: 8px; padding: 7px 10px;
@@ -2909,3 +3070,9 @@ body {
   text-align: left; transition: all .12s;
 }
 .fb-palette-btn:hover { background: #EFF6FF; border-color: #BFDBFE; color: #1A56DB; }
+
+@media (max-width: 960px) {
+  .fb-props-grid-2 {
+    grid-template-columns: 1fr;
+  }
+}
