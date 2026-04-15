@@ -1,13 +1,14 @@
 'use strict';
 
 (function () {
+  const iconMap = { message: '💬', task: '✅', payment: '💰', plan: '📋', appointment: '📅', service: '🛒', info: 'ℹ️' };
   let adminNotifOpen = false;
   let adminNotifInterval = null;
 
   function toggleAdminNotifDropdown() {
     const dropdown = document.getElementById('adminNotifDropdown');
     adminNotifOpen = !adminNotifOpen;
-    dropdown.style.display = adminNotifOpen ? 'block' : 'none';
+    dropdown.classList.toggle('admin-notif-dropdown-open', adminNotifOpen);
     if (adminNotifOpen) loadAdminNotifications();
   }
 
@@ -15,9 +16,30 @@
     const wrap = document.getElementById('adminNotifBellWrap');
     if (wrap && !wrap.contains(event.target) && adminNotifOpen) {
       adminNotifOpen = false;
-      document.getElementById('adminNotifDropdown').style.display = 'none';
+      document.getElementById('adminNotifDropdown').classList.remove('admin-notif-dropdown-open');
     }
   });
+
+  function renderEmptyState(message) {
+    return `<div class="admin-notif-empty">${message}</div>`;
+  }
+
+  function renderNotificationItem(notification) {
+    const ts = new Date(notification.created_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+    const unread = !notification.read;
+    const titleClass = unread ? 'admin-notif-item-title admin-notif-item-title-unread' : 'admin-notif-item-title';
+    const unreadDot = unread ? '<div class="admin-notif-item-dot"></div>' : '';
+
+    return `<button type="button" class="admin-notif-item${unread ? ' admin-notif-item-unread' : ''}" data-id="${notification.id}" onclick="adminReadNotif('${notification.id}', this)">
+      <span class="admin-notif-item-icon">${iconMap[notification.type] || 'ℹ️'}</span>
+      <span class="admin-notif-item-content">
+        <span class="${titleClass}">${escHtml(notification.title)}</span>
+        ${notification.body ? `<span class="admin-notif-item-body">${escHtml(notification.body)}</span>` : ''}
+        <span class="admin-notif-item-time">${ts}</span>
+      </span>
+      ${unreadDot}
+    </button>`;
+  }
 
   async function loadAdminNotifications() {
     const listEl = document.getElementById('adminNotifList');
@@ -27,39 +49,26 @@
       if (!response.ok) return;
       const { notifications = [], unread_count: unreadCount = 0 } = await response.json();
       if (unreadCount > 0) {
-        badgeEl.style.display = 'block';
+        badgeEl.classList.add('admin-notif-badge-visible');
         badgeEl.textContent = unreadCount > 99 ? '99+' : unreadCount;
       } else {
-        badgeEl.style.display = 'none';
+        badgeEl.classList.remove('admin-notif-badge-visible');
       }
       if (!notifications.length) {
-        listEl.innerHTML = '<div style="padding:20px;text-align:center;color:#94A3B8;font-size:13px;">Nenhuma notificação.</div>';
+        listEl.innerHTML = renderEmptyState('Nenhuma notificação.');
         return;
       }
-      const iconMap = { message: '💬', task: '✅', payment: '💰', plan: '📋', appointment: '📅', service: '🛒', info: 'ℹ️' };
-      listEl.innerHTML = notifications.map(notification => {
-        const ts = new Date(notification.created_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
-        const unread = !notification.read;
-        return `<div onclick="adminReadNotif('${notification.id}',this)"
-          style="padding:12px 16px;cursor:pointer;border-bottom:1px solid #F1F5F9;display:flex;gap:10px;align-items:flex-start;background:${unread ? '#EFF6FF' : '#fff'};"
-          onmouseover="this.style.background='#F8FAFC'" onmouseout="this.style.background='${unread ? '#EFF6FF' : '#fff'}'">
-          <span style="font-size:18px;line-height:1.4;">${iconMap[notification.type] || 'ℹ️'}</span>
-          <div style="flex:1;min-width:0;">
-            <div style="font-size:13px;font-weight:${unread ? 700 : 500};color:#1E293B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(notification.title)}</div>
-            ${notification.body ? `<div style="font-size:12px;color:#64748B;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(notification.body)}</div>` : ''}
-            <div style="font-size:11px;color:#94A3B8;margin-top:3px;">${ts}</div>
-          </div>
-          ${unread ? '<div style="width:7px;height:7px;border-radius:50%;background:#2563EB;flex-shrink:0;margin-top:6px;"></div>' : ''}
-        </div>`;
-      }).join('');
+      listEl.innerHTML = notifications.map(renderNotificationItem).join('');
     } catch (error) {
       console.warn('[ADMIN NOTIF]', error.message);
     }
   }
 
   async function adminReadNotif(id, el) {
-    el.style.background = '#fff';
-    const dot = el.querySelector('div[style*="border-radius:50%"]');
+    el.classList.remove('admin-notif-item-unread');
+    const title = el.querySelector('.admin-notif-item-title');
+    if (title) title.classList.remove('admin-notif-item-title-unread');
+    const dot = el.querySelector('.admin-notif-item-dot');
     if (dot) dot.remove();
     fetch(`/api/notifications/${id}/read`, { method: 'POST', headers: authH() }).catch(() => {});
     loadAdminNotifications();

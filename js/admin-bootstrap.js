@@ -20,16 +20,16 @@
     if (!tableBody) return;
 
     if (!logs.length) {
-      tableBody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:20px;">Nenhum log registrado.</td></tr>';
+      tableBody.innerHTML = '<tr><td colspan="5" class="admin-log-empty-cell">Nenhum log registrado.</td></tr>';
       return;
     }
 
     tableBody.innerHTML = logs.map(log => `<tr>
       <td>${new Date(log.ts).toLocaleString('pt-BR')}</td>
-      <td style="color:var(--primary);">${log.email}</td>
+      <td class="admin-log-email">${log.email}</td>
       <td><span class="badge ${log.event === 'login' ? 'badge-blue' : log.event === 'submit' ? 'badge-green' : 'badge-gray'}">${EVENT_LABELS[log.event] || log.event}</span></td>
-      <td style="color:var(--text-muted);">${log.ip}</td>
-      <td style="color:var(--text-muted);">${log.step ? `Etapa ${log.step}` : '—'}</td>
+      <td class="admin-log-muted">${log.ip}</td>
+      <td class="admin-log-muted">${log.step ? `Etapa ${log.step}` : '—'}</td>
     </tr>`).join('');
   }
 

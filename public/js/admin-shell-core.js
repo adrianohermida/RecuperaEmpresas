@@ -1,0 +1,129 @@
+'use strict';
+
+var STEP_TITLES = {
+  1: 'LGPD', 2: 'Empresa', 3: 'Sócios', 4: 'Operacional', 5: 'Funcionários', 6: 'Ativos',
+  7: 'Financeiro', 8: 'Dívidas', 9: 'Histórico da Crise', 10: 'Diagnóstico',
+  11: 'Mercado', 12: 'Expectativas', 13: 'Documentos', 14: 'Confirmação'
+};
+
+var CHAPTER_STATUS = {
+  pendente: { label: 'Aguardando dados', cls: 'badge-gray' },
+  em_elaboracao: { label: 'Em elaboração', cls: 'badge-blue' },
+  aguardando: { label: 'Aguardando cliente', cls: 'badge-amber' },
+  em_revisao: { label: 'Em revisão', cls: 'badge-purple' },
+  aprovado: { label: 'Aprovado', cls: 'badge-green' },
+};
+
+var STATUS_LABELS = {
+  nao_iniciado: { label: 'Não iniciado', cls: 'badge-gray' },
+  em_andamento: { label: 'Em andamento', cls: 'badge-blue' },
+  concluido: { label: 'Concluído', cls: 'badge-green' },
+};
+
+var APPT_TYPES = {
+  diagnostico: 'Diagnóstico inicial',
+  revisao: 'Revisão do Business Plan',
+  financeiro: 'Análise financeira',
+  estrategia: 'Planejamento estratégico',
+  outro: 'Outro',
+};
+
+function getToken() {
+  if (window.REShared?.getStoredToken) return window.REShared.getStoredToken();
+  return localStorage.getItem('re_token');
+}
+
+function authH() {
+  if (window.REShared?.buildAuthHeaders) return window.REShared.buildAuthHeaders();
+  return { 'Content-Type': 'application/json', Authorization: 'Bearer ' + getToken() };
+}
+
+function logout() {
+  if (window.REShared?.clearStoredAuth) window.REShared.clearStoredAuth();
+  else ['re_token', 're_user'].forEach(key => localStorage.removeItem(key));
+  location.href = 'login.html';
+}
+
+function showToast(msg, type, ms) {
+  var toast = document.getElementById('toast');
+  var duration = typeof ms === 'number' ? ms : 3000;
+  if (!toast) return;
+  toast.textContent = msg;
+  toast.className = 'toast show ' + (type || '');
+  setTimeout(function () { toast.className = 'toast'; }, duration);
+}
+
+function readAdminResponse(response) {
+  if (window.REShared?.readResponse) return window.REShared.readResponse(response);
+  if (window.readApiResponse) return window.readApiResponse(response);
+  return response.json().catch(function () { return {}; });
+}
+
+function isFreshchatEnabled() {
+  return !!(window.RE_ENABLE_FRESHCHAT && window.RE_FRESHCHAT_TOKEN && window.RE_FRESHCHAT_SITE_ID);
+}
+
+function showSection(name, el) {
+  document.querySelectorAll('.tab-content').forEach(function (section) { section.classList.remove('active'); });
+  document.querySelectorAll('.sidebar-link').forEach(function (link) { link.classList.remove('active'); });
+  document.getElementById('sec-' + name)?.classList.add('active');
+  if (el) el.classList.add('active');
+  if (name === 'logs') loadLogs();
+  if (name === 'agenda') loadAdminAgenda();
+  if (name === 'financeiro') loadAdminFinanceiro();
+  if (name === 'formularios') loadFormBuilder();
+  if (name === 'adminInvoices') loadAdminInvoices();
+  if (name === 'adminMarketplace') loadAdminMarketplace();
+  if (name === 'auditlog') loadAuditLog();
+  window.scrollTo({ top: 0, behavior: 'instant' });
+}
+
+var _allClients = [];
+
+function filterClients() {
+  var query = (document.getElementById('clientSearch')?.value || '').toLowerCase();
+  var filtered = _allClients.filter(function (client) {
+    return (client.company || '').toLowerCase().includes(query)
+      || (client.name || '').toLowerCase().includes(query)
+      || (client.email || '').toLowerCase().includes(query);
+  });
+  renderClientTable(filtered);
+}
+
+var _unreadMsgs = {};
+
+function renderClientTable(clients) {
+  var tbody = document.getElementById('clientTableBody');
+  if (!tbody) return;
+  if (!clients.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:24px;">Nenhum cliente encontrado.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = clients.map(function (client) {
+    var status = STATUS_LABELS[client.status] || STATUS_LABELS.nao_iniciado;
+    var progress = client.completed ? 100 : client.progress;
+    var lastActivity = client.lastActivity ? new Date(client.lastActivity).toLocaleDateString('pt-BR') : '—';
+    var unread = _unreadMsgs[client.id] || 0;
+    var msgBadge = unread
+      ? '<span class="badge badge-red" style="animation:pulse 1.5s infinite;">' + unread + '</span>'
+      : '<span style="color:var(--text-muted);font-size:13px;">—</span>';
+    return `<tr onclick="openClient('${client.id}')">
+      <td>
+        <div class="company-cell">${client.company || client.name}</div>
+        <div class="email-cell">${client.email}</div>
+      </td>
+      <td><span class="badge ${status.cls}">${status.label}</span></td>
+      <td>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div class="mini-progress"><div class="mini-progress-fill" style="width:${progress}%"></div></div>
+          <span style="font-size:13px;font-weight:600;color:var(--primary);">${progress}%</span>
+        </div>
+      </td>
+      <td style="font-size:13px;color:var(--text-muted);">${client.step}/14</td>
+      <td style="font-size:13px;color:var(--text-muted);">${lastActivity}</td>
+      <td>${client.pendingTasks ? `<span class="badge badge-amber">${client.pendingTasks}</span>` : '<span style="color:var(--text-muted);font-size:13px;">—</span>'}</td>
+      <td>${msgBadge}</td>
+    </tr>`;
+  }).join('');
+}
