@@ -66,6 +66,12 @@ const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || '';
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || 'contato@recuperaempresas.com.br,camilagbhmaia@gmail.com,adrianohermida@gmail.com')
                        .split(',').map(e => e.trim().toLowerCase());
 
+// ─── Google Calendar (service account) ───────────────────────────────────────
+const GOOGLE_CLIENT_EMAIL = process.env.GOOGLE_CLIENT_EMAIL || '';
+const GOOGLE_PRIVATE_KEY  = (process.env.GOOGLE_PRIVATE_KEY  || '').replace(/\\n/g, '\n');
+const GOOGLE_CALENDAR_ID  = process.env.GOOGLE_CALENDAR_ID  || '';
+const GOOGLE_CALENDAR_TZ  = process.env.GOOGLE_CALENDAR_TZ  || 'America/Sao_Paulo';
+
 // ─── Supabase — aceita nomes VITE_* (convenção do projeto) ou nomes genéricos ─
 const SUPABASE_URL = (
   process.env.VITE_SUPABASE_URL ||
@@ -209,6 +215,81 @@ async function insertAppointment(appt) {
 }
 async function updateAppointment(id, updates) {
   await sb.from('re_appointments').update(updates).eq('id', id);
+}
+
+// ─── In-memory stores (reset on restart — sem schema changes no Supabase) ─────
+const _calendarEventIds = new Map(); // slotId → googleCalendarEventId
+const _adminMsgSeen     = new Map(); // adminId → { clientId: ISO timestamp }
+
+// ─── Google Calendar (service account via REST) ───────────────────────────────
+let _gcToken = null, _gcTokenExp = 0;
+
+async function _gcAccessToken() {
+  if (_gcToken && Date.now() < _gcTokenExp - 60_000) return _gcToken;
+  if (!GOOGLE_CLIENT_EMAIL || !GOOGLE_PRIVATE_KEY) return null;
+  try {
+    const now     = Math.floor(Date.now() / 1000);
+    const header  = Buffer.from(JSON.stringify({ alg: 'RS256', typ: 'JWT' })).toString('base64url');
+    const payload = Buffer.from(JSON.stringify({
+      iss: GOOGLE_CLIENT_EMAIL,
+      scope: 'https://www.googleapis.com/auth/calendar',
+      aud:  'https://oauth2.googleapis.com/token',
+      iat:  now, exp: now + 3600,
+    })).toString('base64url');
+    const sign = crypto.createSign('RSA-SHA256');
+    sign.update(`${header}.${payload}`);
+    const sig = sign.sign(GOOGLE_PRIVATE_KEY, 'base64url');
+    const res  = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer', assertion: `${header}.${payload}.${sig}` }),
+    });
+    if (!res.ok) return null;
+    const d = await res.json();
+    _gcToken = d.access_token; _gcTokenExp = Date.now() + d.expires_in * 1000;
+    return _gcToken;
+  } catch (e) { console.warn('[GCAL] auth:', e.message); return null; }
+}
+
+async function gcCreateEvent({ summary, description, start, end, attendeeEmail }) {
+  if (!GOOGLE_CALENDAR_ID) return null;
+  const token = await _gcAccessToken();
+  if (!token) return null;
+  try {
+    const body = {
+      summary, description: description || '',
+      start: { dateTime: start, timeZone: GOOGLE_CALENDAR_TZ },
+      end:   { dateTime: end,   timeZone: GOOGLE_CALENDAR_TZ },
+      reminders: { useDefault: false, overrides: [{ method: 'email', minutes: 60 }, { method: 'popup', minutes: 30 }] },
+    };
+    if (attendeeEmail) body.attendees = [{ email: attendeeEmail }];
+    const res = await fetch(
+      `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(GOOGLE_CALENDAR_ID)}/events?sendUpdates=all`,
+      { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
+    );
+    if (!res.ok) { console.warn('[GCAL] create:', await res.text()); return null; }
+    return (await res.json()).id;
+  } catch (e) { console.warn('[GCAL] create:', e.message); return null; }
+}
+
+async function gcPatchEvent(eventId, patch) {
+  if (!GOOGLE_CALENDAR_ID || !eventId) return;
+  const token = await _gcAccessToken();
+  if (!token) return;
+  await fetch(
+    `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(GOOGLE_CALENDAR_ID)}/events/${eventId}?sendUpdates=all`,
+    { method: 'PATCH', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(patch) }
+  ).catch(e => console.warn('[GCAL] patch:', e.message));
+}
+
+async function gcDeleteEvent(eventId) {
+  if (!GOOGLE_CALENDAR_ID || !eventId) return;
+  const token = await _gcAccessToken();
+  if (!token) return;
+  await fetch(
+    `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(GOOGLE_CALENDAR_ID)}/events/${eventId}?sendUpdates=all`,
+    { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } }
+  ).catch(e => console.warn('[GCAL] delete:', e.message));
 }
 
 async function logAccess(userId, email, event, ip, extra = {}) {
@@ -1848,6 +1929,24 @@ app.post('/api/agenda/book/:slotId', requireAuth, async (req, res) => {
   if (error) return res.status(500).json({ error: error.message });
 
   const newBal = await adjustCredits(userId, -slot.credits_cost, 'booking', booking.id);
+
+  // Google Calendar — adicionar cliente como attendee no evento do slot
+  const evId = _calendarEventIds.get(slotId);
+  if (evId && req.user.email) {
+    gcPatchEvent(evId, {
+      summary: `${slot.title || 'Consultoria'} — ${req.user.company || req.user.name || req.user.email}`,
+      attendees: [{ email: req.user.email, displayName: req.user.name || req.user.email }],
+    }).catch(() => {});
+  } else if (!evId && GOOGLE_CALENDAR_ID) {
+    // Slot criado antes do server restart — criar evento agora com attendee
+    gcCreateEvent({
+      summary: `${slot.title || 'Consultoria'} — ${req.user.company || req.user.name || req.user.email}`,
+      description: `Cliente: ${req.user.name || req.user.email} (${req.user.company || ''})\nBooking: ${booking.id}`,
+      start: slot.starts_at, end: slot.ends_at,
+      attendeeEmail: req.user.email,
+    }).then(id => { if (id) _calendarEventIds.set(slotId, id); }).catch(() => {});
+  }
+
   res.json({ success: true, booking, credits_balance: newBal });
 });
 
@@ -1860,11 +1959,21 @@ app.delete('/api/agenda/book/:bookingId', requireAuth, async (req, res) => {
   if (booking.status === 'cancelled') return res.status(400).json({ error: 'Reserva já cancelada.' });
 
   // Only allow cancel if slot hasn't started
-  const { data: slot } = await sb.from('re_agenda_slots').select('starts_at').eq('id', booking.slot_id).single();
+  const { data: slot } = await sb.from('re_agenda_slots').select('starts_at, title').eq('id', booking.slot_id).single();
   if (slot && new Date(slot.starts_at) < new Date()) return res.status(400).json({ error: 'Sessão já iniciada.' });
 
   await sb.from('re_bookings').update({ status: 'cancelled' }).eq('id', booking.id);
   const newBal = await adjustCredits(userId, booking.credits_spent, 'refund', booking.id);
+
+  // Google Calendar — restaurar título do slot (remove attendee via patch)
+  const evId = _calendarEventIds.get(booking.slot_id);
+  if (evId) {
+    gcPatchEvent(evId, {
+      summary: `[Disponível] ${slot?.title || 'Consultoria'} — Recupera Empresas`,
+      attendees: [],
+    }).catch(() => {});
+  }
+
   res.json({ success: true, credits_balance: newBal });
 });
 
@@ -1980,11 +2089,23 @@ app.post('/api/admin/agenda/slots', requireAdmin, async (req, res) => {
     created_by: req.user.id,
   }).select().single();
   if (error) return res.status(500).json({ error: error.message });
+
+  // Google Calendar — criar evento de disponibilidade
+  gcCreateEvent({
+    summary: `[Disponível] ${title || 'Consultoria'} — Recupera Empresas`,
+    description: `Slot disponível para reserva de clientes.\nVagas: ${max_bookings || 1}  |  Créditos: ${credits_cost || 1}`,
+    start: starts_at, end: ends_at,
+  }).then(evId => { if (evId) _calendarEventIds.set(data.id, evId); }).catch(() => {});
+
   res.json({ success: true, slot: data });
 });
 
 app.delete('/api/admin/agenda/slots/:slotId', requireAdmin, async (req, res) => {
-  await sb.from('re_agenda_slots').delete().eq('id', req.params.slotId);
+  const { slotId } = req.params;
+  await sb.from('re_agenda_slots').delete().eq('id', slotId);
+  // Google Calendar — remover evento
+  const evId = _calendarEventIds.get(slotId);
+  if (evId) { gcDeleteEvent(evId).catch(() => {}); _calendarEventIds.delete(slotId); }
   res.json({ success: true });
 });
 
@@ -2285,9 +2406,57 @@ app.put('/api/admin/appointments/:userId/:id', requireAdmin, async (req, res) =>
   res.json({ success: true });
 });
 
-// Financial: invoices (Stripe placeholder)
-app.get('/api/financial/invoices', requireAuth, (req, res) => {
-  res.json({ invoices: [], stripeConfigured: !!process.env.STRIPE_SECRET_KEY });
+// Financial: invoices (Stripe real)
+app.get('/api/financial/invoices', requireAuth, async (req, res) => {
+  if (!STRIPE_SECRET_KEY) return res.json({ invoices: [], stripeConfigured: false });
+  try {
+    const Stripe = require('stripe');
+    const stripe = Stripe(STRIPE_SECRET_KEY);
+    const user   = req.user;
+
+    let customerId = user.stripe_customer_id;
+    if (!customerId) {
+      const found = await stripe.customers.list({ email: user.email, limit: 1 });
+      customerId  = found.data[0]?.id || null;
+      if (customerId) await sb.from('re_users').update({ stripe_customer_id: customerId }).eq('id', user.id);
+    }
+    if (!customerId) return res.json({ invoices: [], stripeConfigured: true });
+
+    const [invList, piList] = await Promise.all([
+      stripe.invoices.list({ customer: customerId, limit: 50 }),
+      stripe.paymentIntents.list({ customer: customerId, limit: 50 }),
+    ]);
+
+    const invoices = invList.data.map(inv => ({
+      id: inv.id, type: 'invoice',
+      amount: (inv.amount_due / 100).toFixed(2),
+      amountPaid: (inv.amount_paid / 100).toFixed(2),
+      currency: inv.currency.toUpperCase(),
+      status: inv.status,
+      date: new Date(inv.created * 1000).toISOString(),
+      dueDate: inv.due_date ? new Date(inv.due_date * 1000).toISOString() : null,
+      pdfUrl:    inv.invoice_pdf        || null,
+      hostedUrl: inv.hosted_invoice_url || null,
+      description: inv.description || inv.lines?.data?.[0]?.description || 'Fatura',
+    }));
+
+    // Inclui pagamentos de créditos que não geram invoice formal
+    const payments = piList.data
+      .filter(p => p.status === 'succeeded' && !invoices.find(i => i.id === p.invoice))
+      .map(p => ({
+        id: p.id, type: 'payment',
+        amount: (p.amount / 100).toFixed(2), amountPaid: (p.amount / 100).toFixed(2),
+        currency: p.currency.toUpperCase(), status: 'paid',
+        date: new Date(p.created * 1000).toISOString(),
+        description: p.description || 'Pagamento',
+      }));
+
+    const all = [...invoices, ...payments].sort((a, b) => b.date.localeCompare(a.date));
+    res.json({ invoices: all, stripeConfigured: true });
+  } catch (e) {
+    console.error('[FINANCIAL]', e.message);
+    res.json({ invoices: [], stripeConfigured: true, error: e.message });
+  }
 });
 
 // Financial: request 2nd copy
@@ -2311,6 +2480,112 @@ app.post('/api/financial/request-invoice', requireAuth, async (req, res) => {
     )
   ]).catch(() => {});
   res.json({ success: true, message: 'Solicitação enviada. Nossa equipe entrará em contato.' });
+});
+
+// ─── Mensagens: polling em tempo real ────────────────────────────────────────
+// Cliente: busca mensagens novas desde 'since' (ISO timestamp)
+app.get('/api/messages/poll', requireAuth, async (req, res) => {
+  const since = req.query.since || new Date(0).toISOString();
+  const { data } = await sb.from('re_messages')
+    .select('*').eq('user_id', req.user.id)
+    .gt('ts', since).order('ts');
+  res.json({ messages: data || [] });
+});
+
+// Admin: conta mensagens de clientes não lidas por agente
+app.get('/api/admin/messages/unread', requireAdmin, async (req, res) => {
+  const adminId = req.user.id;
+  const seen    = _adminMsgSeen.get(adminId) || {};
+
+  const { data: msgs } = await sb.from('re_messages')
+    .select('user_id, ts, from_role')
+    .eq('from_role', 'client')
+    .order('ts', { ascending: false });
+
+  const unread = {};
+  (msgs || []).forEach(m => {
+    const lastSeen = seen[m.user_id] || '1970-01-01T00:00:00.000Z';
+    if (m.ts > lastSeen) unread[m.user_id] = (unread[m.user_id] || 0) + 1;
+  });
+  res.json({ unread });
+});
+
+// Admin: marca mensagens de um cliente como vistas
+app.post('/api/admin/messages/seen/:clientId', requireAdmin, async (req, res) => {
+  const adminId = req.user.id;
+  if (!_adminMsgSeen.has(adminId)) _adminMsgSeen.set(adminId, {});
+  _adminMsgSeen.get(adminId)[req.params.clientId] = new Date().toISOString();
+  res.json({ success: true });
+});
+
+// Admin: polling de mensagens de um cliente específico
+app.get('/api/admin/client/:id/messages/poll', requireAdmin, async (req, res) => {
+  const since = req.query.since || new Date(0).toISOString();
+  const { data } = await sb.from('re_messages')
+    .select('*').eq('user_id', req.params.id)
+    .gt('ts', since).order('ts');
+  res.json({ messages: data || [] });
+});
+
+// ─── Admin: visão financeira consolidada (Stripe) ────────────────────────────
+app.get('/api/admin/financial', requireAdmin, async (req, res) => {
+  if (!STRIPE_SECRET_KEY) return res.json({ configured: false, clients: [], totalRevenue: 0 });
+  try {
+    const Stripe = require('stripe');
+    const stripe = Stripe(STRIPE_SECRET_KEY);
+
+    const { data: users } = await sb.from('re_users')
+      .select('id, name, email, company, stripe_customer_id')
+      .eq('is_admin', false);
+
+    const results = await Promise.all((users || []).map(async u => {
+      try {
+        if (!u.stripe_customer_id) return { userId: u.id, name: u.name, email: u.email, company: u.company, totalPaid: 0, paymentsCount: 0, lastPaymentDate: null };
+        const piList = await stripe.paymentIntents.list({ customer: u.stripe_customer_id, limit: 20 });
+        const paid   = piList.data.filter(p => p.status === 'succeeded');
+        return {
+          userId: u.id, name: u.name, email: u.email, company: u.company,
+          customerId: u.stripe_customer_id,
+          totalPaid:      paid.reduce((s, p) => s + p.amount, 0) / 100,
+          paymentsCount:  paid.length,
+          lastPaymentDate: paid[0] ? new Date(paid[0].created * 1000).toISOString() : null,
+        };
+      } catch { return { userId: u.id, name: u.name, email: u.email, company: u.company, totalPaid: 0, paymentsCount: 0, lastPaymentDate: null }; }
+    }));
+
+    const totalRevenue = results.reduce((s, c) => s + (c.totalPaid || 0), 0);
+    res.json({ configured: true, clients: results, totalRevenue });
+  } catch (e) {
+    console.error('[ADMIN FINANCIAL]', e.message);
+    res.json({ configured: false, clients: [], totalRevenue: 0, error: e.message });
+  }
+});
+
+// Admin: invoices de um cliente específico
+app.get('/api/admin/client/:id/financial', requireAdmin, async (req, res) => {
+  if (!STRIPE_SECRET_KEY) return res.json({ invoices: [], configured: false });
+  try {
+    const Stripe = require('stripe');
+    const stripe = Stripe(STRIPE_SECRET_KEY);
+    const { data: user } = await sb.from('re_users').select('stripe_customer_id, email').eq('id', req.params.id).single();
+    if (!user) return res.status(404).json({ error: 'Cliente não encontrado.' });
+
+    let customerId = user.stripe_customer_id;
+    if (!customerId) {
+      const found = await stripe.customers.list({ email: user.email, limit: 1 });
+      customerId  = found.data[0]?.id || null;
+    }
+    if (!customerId) return res.json({ invoices: [], configured: true });
+
+    const piList = await stripe.paymentIntents.list({ customer: customerId, limit: 30 });
+    const invoices = piList.data.map(p => ({
+      id: p.id, amount: (p.amount / 100).toFixed(2),
+      currency: p.currency.toUpperCase(), status: p.status,
+      date: new Date(p.created * 1000).toISOString(),
+      description: p.description || 'Pagamento',
+    }));
+    res.json({ invoices, configured: true });
+  } catch (e) { res.json({ invoices: [], configured: true, error: e.message }); }
 });
 
 // ─── Health check (used by Render.com and uptime monitors) ───────────────────

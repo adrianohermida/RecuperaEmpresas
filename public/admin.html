@@ -69,6 +69,10 @@
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
         Agenda
       </button>
+      <button class="sidebar-link" onclick="showSection('financeiro',this)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        Financeiro
+      </button>
       <button class="sidebar-link" onclick="showSection('logs',this)">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
         Log de Acesso
@@ -135,6 +139,7 @@
                 <th>Etapa</th>
                 <th>Última atividade</th>
                 <th>Tarefas</th>
+                <th>Msgs</th>
               </tr>
             </thead>
             <tbody id="clientTableBody">
@@ -198,6 +203,47 @@
         <div class="empty-state">
           <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
           <p>Carregando horários...</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- FINANCEIRO -->
+    <div id="sec-financeiro" class="tab-content">
+      <div class="section-header">
+        <div>
+          <div class="section-title">Financeiro</div>
+          <div class="section-sub" id="finSub">Receita consolidada dos clientes via Stripe</div>
+        </div>
+        <button class="btn-ghost" onclick="loadAdminFinanceiro()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/></svg>
+          Atualizar
+        </button>
+      </div>
+
+      <!-- Summary cards -->
+      <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:24px;">
+        <div class="stat-card green">
+          <div class="stat-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
+          <div class="stat-value" id="finTotalRevenue">—</div>
+          <div class="stat-label">Receita total</div>
+        </div>
+        <div class="stat-card blue">
+          <div class="stat-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div>
+          <div class="stat-value" id="finClientsPaid">—</div>
+          <div class="stat-label">Clientes pagantes</div>
+        </div>
+        <div class="stat-card amber">
+          <div class="stat-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></div>
+          <div class="stat-value" id="finTotalPayments">—</div>
+          <div class="stat-label">Total de pagamentos</div>
+        </div>
+      </div>
+
+      <!-- Clients table -->
+      <div class="portal-card">
+        <div class="portal-card-header"><span class="portal-card-title">Clientes — histórico financeiro</span></div>
+        <div id="finClientsList" style="overflow-x:auto;">
+          <div style="padding:20px;color:var(--text-muted);font-size:14px;">Carregando...</div>
         </div>
       </div>
     </div>
@@ -267,10 +313,11 @@
     <button class="drawer-tab active" onclick="switchDrawerTab('overview',this)">Visão Geral</button>
     <button class="drawer-tab" onclick="switchDrawerTab('plan',this)">Business Plan</button>
     <button class="drawer-tab" onclick="switchDrawerTab('tasks',this)">Tarefas</button>
-    <button class="drawer-tab" onclick="switchDrawerTab('messages',this)">Mensagens</button>
+    <button class="drawer-tab" id="drawerTabMessages" onclick="switchDrawerTab('messages',this)">Mensagens</button>
     <button class="drawer-tab" onclick="switchDrawerTab('agenda',this)">Agenda</button>
     <button class="drawer-tab" onclick="switchDrawerTab('docs',this)">Documentos</button>
     <button class="drawer-tab" onclick="switchDrawerTab('equipe',this)">Equipe</button>
+    <button class="drawer-tab" onclick="switchDrawerTab('financeiro_client',this)">Financeiro</button>
     <button class="drawer-tab" onclick="switchDrawerTab('data',this)">Dados</button>
   </div>
   <div class="drawer-body" id="drawerBody"></div>
@@ -321,8 +368,9 @@ function showSection(name, el) {
   document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
   document.getElementById('sec-'+name)?.classList.add('active');
   if (el) el.classList.add('active');
-  if (name === 'logs')   loadLogs();
-  if (name === 'agenda') loadAdminAgenda();
+  if (name === 'logs')       loadLogs();
+  if (name === 'agenda')     loadAdminAgenda();
+  if (name === 'financeiro') loadAdminFinanceiro();
   window.scrollTo({ top:0, behavior:'instant' });
 }
 
@@ -339,16 +387,22 @@ function filterClients() {
   renderClientTable(filtered);
 }
 
+let _unreadMsgs = {}; // clientId → count (updated by polling)
+
 function renderClientTable(clients) {
   const tbody = document.getElementById('clientTableBody');
   if (!clients.length) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:24px;">Nenhum cliente encontrado.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:24px;">Nenhum cliente encontrado.</td></tr>';
     return;
   }
   tbody.innerHTML = clients.map(c => {
     const st      = STATUS_LABELS[c.status] || STATUS_LABELS.nao_iniciado;
     const pct     = c.completed ? 100 : c.progress;
     const lastAct = c.lastActivity ? new Date(c.lastActivity).toLocaleDateString('pt-BR') : '—';
+    const unread  = _unreadMsgs[c.id] || 0;
+    const msgBadge = unread
+      ? `<span class="badge badge-red" style="animation:pulse 1.5s infinite;">${unread}</span>`
+      : '<span style="color:var(--text-muted);font-size:13px;">—</span>';
     return `<tr onclick="openClient('${c.id}')">
       <td>
         <div class="company-cell">${c.company || c.name}</div>
@@ -364,6 +418,7 @@ function renderClientTable(clients) {
       <td style="font-size:13px;color:var(--text-muted);">${c.step}/14</td>
       <td style="font-size:13px;color:var(--text-muted);">${lastAct}</td>
       <td>${c.pendingTasks ? `<span class="badge badge-amber">${c.pendingTasks}</span>` : '<span style="color:var(--text-muted);font-size:13px;">—</span>'}</td>
+      <td>${msgBadge}</td>
     </tr>`;
   }).join('');
 }
@@ -475,6 +530,37 @@ async function deleteSlot(slotId) {
 // ── Drawer ────────────────────────────────────────────────────────────────────
 let _currentClientId   = null;
 let _currentClientData = null;
+let _drawerMsgPollTimer = null;
+
+function _stopDrawerMsgPoll() {
+  if (_drawerMsgPollTimer) { clearInterval(_drawerMsgPollTimer); _drawerMsgPollTimer = null; }
+}
+
+async function _drawerMsgPollTick() {
+  if (!_currentClientId) return;
+  const thread = document.getElementById('adminMsgThread');
+  if (!thread) { _stopDrawerMsgPoll(); return; }
+  try {
+    const r = await fetch(`/api/admin/client/${_currentClientId}`, { headers: authH() });
+    if (!r.ok) return;
+    const data = await r.json();
+    const msgs = data.messages || [];
+    if (msgs.length !== (_currentClientData?.messages?.length || 0) ||
+        (msgs.length && msgs[msgs.length-1].ts !== (_currentClientData?.messages?.slice(-1)[0]?.ts))) {
+      _currentClientData = data;
+      thread.innerHTML = !msgs.length
+        ? '<div class="empty-state"><p>Nenhuma mensagem.</p></div>'
+        : msgs.map(m=>`<div>
+            <div class="message-bubble from-${m.fromRole||m.from}">
+              <div class="message-from">${(m.fromRole||m.from)==='admin'?'Recupera Empresas':m.fromName||'Cliente'}</div>
+              ${m.text}
+              <div class="message-ts">${new Date(m.ts).toLocaleString('pt-BR')}</div>
+            </div>
+          </div>`).join('');
+      thread.scrollTop = thread.scrollHeight;
+    }
+  } catch {}
+}
 
 async function openClient(id) {
   _currentClientId = id;
@@ -498,6 +584,7 @@ async function openClient(id) {
 }
 
 function closeDrawer() {
+  _stopDrawerMsgPoll();
   document.getElementById('drawerOverlay').classList.remove('open');
   document.getElementById('clientDrawer').classList.remove('open');
   _currentClientId   = null;
@@ -505,9 +592,13 @@ function closeDrawer() {
 }
 
 function switchDrawerTab(tab, el) {
+  _stopDrawerMsgPoll();
   document.querySelectorAll('.drawer-tab').forEach(t => t.classList.remove('active'));
   if (el) el.classList.add('active');
   renderDrawerTab(tab);
+  if (tab === 'messages') {
+    _drawerMsgPollTimer = setInterval(_drawerMsgPollTick, 10000);
+  }
 }
 
 function stepIconDone() {
@@ -626,7 +717,68 @@ async function renderDrawerTab(tab) {
       </div>`;
   }
 
+  if (tab === 'financeiro_client') {
+    body.innerHTML = '<div style="padding:16px;color:var(--text-muted);font-size:14px;">Carregando financeiro...</div>';
+    try {
+      const res = await fetch(`/api/admin/client/${_currentClientId}/financial`, { headers: authH() });
+      if (!res.ok) throw new Error('Erro');
+      const { invoices, stripeConfigured } = await res.json();
+      if (!stripeConfigured) {
+        body.innerHTML = '<div class="empty-state"><p>Stripe não configurado.</p></div>';
+        return;
+      }
+      if (!invoices || !invoices.length) {
+        body.innerHTML = '<div class="empty-state"><p>Nenhuma cobrança encontrada.</p></div>';
+        return;
+      }
+      const total = invoices.reduce((s, inv) => s + parseFloat(inv.amount || 0), 0);
+      const paid  = invoices.filter(inv => inv.status === 'paid' || inv.status === 'succeeded');
+      const paidTotal = paid.reduce((s, inv) => s + parseFloat(inv.amount || 0), 0);
+      body.innerHTML = `
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
+          <div class="stat-card blue" style="margin:0;">
+            <div class="stat-value" style="font-size:18px;">R$ ${paidTotal.toLocaleString('pt-BR',{minimumFractionDigits:2})}</div>
+            <div class="stat-label">Total pago</div>
+          </div>
+          <div class="stat-card" style="margin:0;">
+            <div class="stat-value" style="font-size:18px;">${invoices.length}</div>
+            <div class="stat-label">Cobranças (${paid.length} pagas)</div>
+          </div>
+        </div>
+        <div style="font-size:13px;font-weight:700;margin-bottom:10px;">Histórico de cobranças</div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          ${invoices.map(inv => {
+            const isPaid = inv.status === 'paid' || inv.status === 'succeeded';
+            const stCls  = isPaid ? 'badge-green' : inv.status === 'open' ? 'badge-amber' : 'badge-red';
+            const stLbl  = isPaid ? 'Pago' : inv.status === 'open' ? 'Em aberto' : inv.status;
+            const dt = new Date(inv.date).toLocaleDateString('pt-BR');
+            const amt = parseFloat(inv.amount || 0).toLocaleString('pt-BR',{minimumFractionDigits:2});
+            const link = inv.pdfUrl || inv.hostedUrl;
+            return `<div style="background:#F8FAFC;border:1px solid var(--border);border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:10px;">
+              <div style="flex:1;min-width:0;">
+                <div style="font-weight:600;font-size:13px;">${inv.description || 'Cobrança'}</div>
+                <div style="font-size:11px;color:var(--text-muted);">${dt}</div>
+              </div>
+              <div style="font-weight:700;font-size:13px;">R$ ${amt}</div>
+              <span class="badge ${stCls}">${stLbl}</span>
+              ${link ? `<a href="${link}" target="_blank" style="font-size:11px;color:var(--primary);">Ver</a>` : ''}
+            </div>`;
+          }).join('')}
+        </div>`;
+    } catch (e) {
+      body.innerHTML = '<div class="empty-state"><p>Erro ao carregar dados financeiros.</p></div>';
+    }
+    return;
+  }
+
   if (tab === 'messages') {
+    // Mark messages as seen
+    if (_currentClientId) {
+      fetch(`/api/admin/messages/seen/${_currentClientId}`, { method: 'POST', headers: authH() }).catch(() => {});
+      if (_unreadMsgs) { _unreadMsgs[_currentClientId] = 0; }
+      const btn = document.getElementById('drawerTabMessages');
+      if (btn) btn.innerHTML = btn.innerHTML.replace(/\s*<span[^>]*>.*?<\/span>/g, '') + '';
+    }
     const MSG_TEMPLATES = [
       { label: 'Solicitar dados pendentes', icon: '📋',
         text: 'Identificamos que algumas informações estão pendentes no seu cadastro. Para avançarmos na elaboração do Business Plan, precisamos que você complemente os dados do formulário de onboarding. Caso tenha dúvidas, estamos à disposição.' },
@@ -1484,12 +1636,108 @@ function initFreshchatOperator(user) {
 
   await loadAdminData();
 
+  // Freshchat operador
   setTimeout(() => initFreshchatOperator(user), 2000);
+
+  // Polling de mensagens não lidas — atualiza badges na lista de clientes a cada 15s
+  await pollUnreadMessages();
+  setInterval(pollUnreadMessages, 15000);
 })();
+
+// ── Mensagens não lidas — polling + notificação ───────────────────────────────
+let _prevUnreadTotal = 0;
+
+async function pollUnreadMessages() {
+  try {
+    const res = await fetch('/api/admin/messages/unread', { headers: authH() });
+    if (!res.ok) return;
+    const { unread } = await res.json();
+    _unreadMsgs = unread || {};
+
+    const newTotal = Object.values(_unreadMsgs).reduce((s, n) => s + n, 0);
+
+    // Atualiza tabela (se visível)
+    if (document.getElementById('sec-clients')?.classList.contains('active')) {
+      renderClientTable(_allClients);
+    }
+
+    // Badge no título da aba do browser
+    document.title = newTotal > 0 ? `(${newTotal}) Admin — Recupera Empresas` : 'Admin — Recupera Empresas';
+
+    // Notificação do browser ao receber nova mensagem
+    if (newTotal > _prevUnreadTotal && _prevUnreadTotal >= 0) {
+      const diff = newTotal - _prevUnreadTotal;
+      if (Notification.permission === 'granted') {
+        new Notification('Recupera Empresas', { body: `${diff} nova${diff>1?'s':''} mensagem${diff>1?'s':''} de cliente${diff>1?'s':''}`, icon: '/favicon.ico' });
+      } else if (Notification.permission === 'default') {
+        Notification.requestPermission();
+      }
+    }
+    _prevUnreadTotal = newTotal;
+  } catch {}
+}
+
+// ── Financeiro admin ──────────────────────────────────────────────────────────
+async function loadAdminFinanceiro() {
+  const listEl = document.getElementById('finClientsList');
+  listEl.innerHTML = '<div style="padding:20px;color:var(--text-muted);font-size:14px;">Carregando dados do Stripe...</div>';
+
+  const res = await fetch('/api/admin/financial', { headers: authH() });
+  if (!res.ok) { listEl.innerHTML = '<div style="padding:20px;color:var(--text-muted);">Erro ao carregar dados financeiros.</div>'; return; }
+  const { configured, clients = [], totalRevenue = 0 } = await res.json();
+
+  if (!configured) {
+    listEl.innerHTML = '<div style="padding:20px;color:var(--text-muted);">Stripe não configurado. Defina STRIPE_SECRET_KEY nas variáveis de ambiente.</div>';
+    return;
+  }
+
+  const paying    = clients.filter(c => c.paymentsCount > 0);
+  const totalPmts = clients.reduce((s, c) => s + (c.paymentsCount || 0), 0);
+
+  document.getElementById('finTotalRevenue').textContent  = `R$ ${totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  document.getElementById('finClientsPaid').textContent   = paying.length;
+  document.getElementById('finTotalPayments').textContent = totalPmts;
+  document.getElementById('finSub').textContent           = `${clients.length} cliente${clients.length !== 1 ? 's' : ''} — R$ ${totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} em receita total`;
+
+  if (!clients.length) {
+    listEl.innerHTML = '<div style="padding:20px;color:var(--text-muted);">Nenhum cliente com histórico financeiro.</div>';
+    return;
+  }
+
+  const sorted = [...clients].sort((a, b) => (b.totalPaid||0) - (a.totalPaid||0));
+  let html = '<table style="width:100%;border-collapse:collapse;font-size:13px;">';
+  html += '<thead><tr style="border-bottom:1px solid var(--border);">';
+  ['Cliente','Empresa','Pagamentos','Total pago','Último pagamento',''].forEach(h => {
+    html += `<th style="text-align:left;padding:10px 14px;color:var(--text-muted);font-weight:600;">${h}</th>`;
+  });
+  html += '</tr></thead><tbody>';
+  sorted.forEach(c => {
+    const lastDate = c.lastPaymentDate ? new Date(c.lastPaymentDate).toLocaleDateString('pt-BR') : '—';
+    html += `<tr style="border-bottom:1px solid var(--border-light,#F1F5F9);cursor:pointer;" onclick="openClient('${c.userId}')">
+      <td style="padding:10px 14px;"><div style="font-weight:600;">${c.name||'—'}</div><div style="font-size:11px;color:var(--text-muted);">${c.email}</div></td>
+      <td style="padding:10px 14px;color:var(--text-muted);">${c.company||'—'}</td>
+      <td style="padding:10px 14px;text-align:center;">${c.paymentsCount||0}</td>
+      <td style="padding:10px 14px;font-weight:700;color:${c.totalPaid>0?'#059669':'var(--text-muted)'};">R$ ${(c.totalPaid||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
+      <td style="padding:10px 14px;color:var(--text-muted);">${lastDate}</td>
+      <td style="padding:10px 14px;"><button class="btn-ghost" style="font-size:12px;padding:4px 10px;" onclick="event.stopPropagation();openClientFinanceiro('${c.userId}')">Ver faturas</button></td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  listEl.innerHTML = html;
+}
+
+// Abre drawer do cliente e exibe aba Financeiro
+function openClientFinanceiro(clientId) {
+  openClient(clientId);
+  setTimeout(() => {
+    const tabs = document.querySelectorAll('.drawer-tab');
+    tabs.forEach(t => { if (t.textContent.trim() === 'Financeiro') t.click(); });
+  }, 400);
+}
 </script>
 
-<!-- Freshchat operator widget -->
-<script src="https://wchat.freshchat.com/js/widget.js" async></script>
+<!-- Freshchat operator widget (CDN unificado) -->
+<script src='//fw-cdn.com/16078787/7064112.js' chat='true'></script>
 
 </body>
 </html>
