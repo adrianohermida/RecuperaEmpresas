@@ -242,7 +242,7 @@
           'apikey':        SUPA_ANON,
           'Authorization': `Bearer ${currentSession.access_token}`,
         },
-        body: JSON.stringify({}),
+        body: JSON.stringify({ action: 'approve' }),
       });
       const payload = await res.json().catch(() => ({}));
       console.log('[CONSENT] response', res.status, JSON.stringify(payload));
