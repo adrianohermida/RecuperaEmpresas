@@ -324,131 +324,8 @@ async function pollUnreadMessages() {
 
 // ── Financeiro admin ──────────────────────────────────────────────────────────
 // ── Form Builder ──────────────────────────────────────────────────────────────
-let _formConfig = null;
-
-const FB_STEP_ICONS = ['🔒','🏢','👥','⚙️','👷','🏭','💰','📋','📉','🧠','📊','🎯','📁','✅'];
-
-async function loadFormBuilder() {
-  const el = document.getElementById('fbStepsList');
-  if (!el) return;
-  el.innerHTML = '<div style="padding:20px;color:var(--text-muted);font-size:14px;">Carregando...</div>';
-  try {
-    const res = await fetch('/api/admin/form-config', { headers: authH() });
-    if (!res.ok) throw new Error('Erro ao carregar');
-    _formConfig = await res.json();
-
-    // Set welcome message
-    const wm = document.getElementById('fbWelcomeMsg');
-    if (wm) wm.value = _formConfig.welcomeMessage || '';
-
-    // Render steps
-    el.innerHTML = `
-      <div style="border-top:1px solid var(--border);">
-        ${_formConfig.steps.map((s, i) => {
-          const locked = s.id === 1 || s.id === 14;
-          return `
-          <div style="display:grid;grid-template-columns:36px 1fr 1fr auto auto;align-items:center;gap:12px;padding:14px 20px;border-bottom:1px solid var(--border-light,#F1F5F9);${locked?'background:#FAFBFF;':''}" id="fbStep_${s.id}">
-            <!-- Toggle -->
-            <div style="display:flex;align-items:center;justify-content:center;">
-              ${locked
-                ? `<span style="font-size:17px;" title="Etapa obrigatória (não pode ser desativada)">${FB_STEP_ICONS[i]}</span>`
-                : `<label style="position:relative;display:inline-block;width:36px;height:20px;cursor:pointer;" title="${s.enabled?'Clique para desativar':'Clique para ativar'}">
-                    <input type="checkbox" id="fbEnabled_${s.id}" ${s.enabled?'checked':''} style="opacity:0;width:0;height:0;"
-                           onchange="fbToggleStep(${s.id},this.checked)"/>
-                    <span id="fbTrack_${s.id}" style="position:absolute;inset:0;border-radius:20px;background:${s.enabled?'#2563eb':'#cbd5e1'};transition:background .2s;">
-                      <span style="position:absolute;left:${s.enabled?'18px':'2px'};top:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.2);" id="fbThumb_${s.id}"></span>
-                    </span>
-                  </label>`
-              }
-            </div>
-            <!-- Step number + icon -->
-            <div style="${!s.enabled?'opacity:.45':''}">
-              <div style="font-size:12px;color:var(--text-muted);margin-bottom:2px;">Etapa ${s.id}</div>
-              <div style="font-weight:600;font-size:13px;display:flex;align-items:center;gap:6px;">
-                <span>${FB_STEP_ICONS[i]}</span>
-                <input type="text" id="fbTitle_${s.id}" value="${escHtml(s.title)}"
-                  style="border:1px solid transparent;border-radius:4px;padding:2px 6px;font-size:13px;font-weight:600;color:var(--dark);background:transparent;width:200px;outline:none;"
-                  onfocus="this.style.borderColor='var(--primary)';this.style.background='#fff';"
-                  onblur="this.style.borderColor='transparent';this.style.background='transparent';"
-                  ${locked?'readonly style="cursor:default;"':''}
-                  placeholder="Título da etapa"/>
-              </div>
-            </div>
-            <!-- Description -->
-            <div style="${!s.enabled?'opacity:.45':''}">
-              <input type="text" id="fbDesc_${s.id}" value="${escHtml(s.description||'')}"
-                style="width:100%;border:1px solid transparent;border-radius:4px;padding:4px 8px;font-size:12px;color:var(--text-muted);background:transparent;outline:none;box-sizing:border-box;"
-                onfocus="this.style.borderColor='var(--primary)';this.style.background='#fff';"
-                onblur="this.style.borderColor='transparent';this.style.background='transparent';"
-                placeholder="Instrução adicional (opcional)"/>
-            </div>
-            <!-- Required toggle -->
-            <div style="display:flex;align-items:center;gap:6px;white-space:nowrap;${!s.enabled?'opacity:.45':''}">
-              <input type="checkbox" id="fbRequired_${s.id}" ${s.required?'checked':''}
-                ${locked?'disabled':''}
-                style="width:14px;height:14px;accent-color:var(--primary);cursor:pointer;"/>
-              <label for="fbRequired_${s.id}" style="font-size:12px;color:var(--text-muted);cursor:pointer;">Obrigatória</label>
-            </div>
-            <!-- Status badge -->
-            <div>
-              ${locked
-                ? `<span class="badge badge-blue" style="font-size:10px;">Fixo</span>`
-                : s.enabled
-                  ? `<span class="badge badge-green" id="fbBadge_${s.id}" style="font-size:10px;">Ativa</span>`
-                  : `<span class="badge badge-gray" id="fbBadge_${s.id}" style="font-size:10px;">Inativa</span>`
-              }
-            </div>
-          </div>`;
-        }).join('')}
-      </div>
-      ${_formConfig.lastUpdated ? `<div style="padding:10px 20px;font-size:11px;color:var(--text-muted);">Última atualização: ${new Date(_formConfig.lastUpdated).toLocaleString('pt-BR')}</div>` : ''}
-    `;
-  } catch (e) {
-    el.innerHTML = `<div class="empty-state"><p>Erro ao carregar configuração do formulário.</p></div>`;
-  }
-}
-
-function fbToggleStep(stepId, enabled) {
-  const track = document.getElementById(`fbTrack_${stepId}`);
-  const thumb = document.getElementById(`fbThumb_${stepId}`);
-  const badge = document.getElementById(`fbBadge_${stepId}`);
-  const row   = document.getElementById(`fbStep_${stepId}`);
-  if (track) track.style.background = enabled ? '#2563eb' : '#cbd5e1';
-  if (thumb) thumb.style.left = enabled ? '18px' : '2px';
-  if (badge) { badge.textContent = enabled ? 'Ativa' : 'Inativa'; badge.className = enabled ? 'badge badge-green' : 'badge badge-gray'; badge.style.fontSize = '10px'; }
-  // Dim row content when disabled
-  row?.querySelectorAll('[style*="opacity"]').forEach(el => el.style.opacity = enabled ? '' : '.45');
-}
-
 function escHtml(str) {
   return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-
-async function saveFormConfig() {
-  if (!_formConfig) return;
-  const welcomeMessage = document.getElementById('fbWelcomeMsg')?.value?.trim() || '';
-  const steps = _formConfig.steps.map(s => ({
-    id:          s.id,
-    title:       document.getElementById(`fbTitle_${s.id}`)?.value?.trim() || s.title,
-    description: document.getElementById(`fbDesc_${s.id}`)?.value?.trim() || '',
-    enabled:     s.id === 1 || s.id === 14 ? true : !!(document.getElementById(`fbEnabled_${s.id}`)?.checked),
-    required:    s.id === 1 || s.id === 14 ? true : !!(document.getElementById(`fbRequired_${s.id}`)?.checked),
-  }));
-  try {
-    const res = await fetch('/api/admin/form-config', {
-      method: 'PUT', headers: authH(),
-      body: JSON.stringify({ steps, welcomeMessage }),
-    });
-    const json = await res.json();
-    if (json.success) {
-      _formConfig = json.config;
-      showToast('Configuração salva com sucesso!', 'success');
-    } else {
-      showToast(json.error || 'Erro ao salvar.', 'error');
-    }
-  } catch (e) {
-    showToast('Erro de conexão.', 'error');
-  }
 }
 
 // ── Admin Notification Bell ───────────────────────────────────────────────────
@@ -460,6 +337,7 @@ async function saveFormConfig() {
 <script src="./js/admin-agenda.js?v=20260416k"></script>
 <script src="./js/admin-audit-log.js?v=20260416p"></script>
 <script src="./js/admin-finance.js?v=20260416l"></script>
+<script src="./js/admin-form-builder.js?v=20260416q"></script>
 <script src="./js/admin-notifications.js?v=20260416m"></script>
 <script src="./js/admin-invoices.js?v=20260416n"></script>
 <script src="./js/admin-marketplace.js?v=20260416o"></script>
