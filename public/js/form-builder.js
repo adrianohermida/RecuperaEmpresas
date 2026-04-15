@@ -941,10 +941,10 @@ async function fbOpenResponseDetail(respId) {
   modal.style.display = 'flex';
 
   const body = document.getElementById('fb-resp-detail-body');
-  if (body) body.innerHTML = '<div style="padding:24px;color:#94A3B8;text-align:center;">Carregando detalhes...</div>';
+  if (body) body.innerHTML = '<div class="admin-empty-state-soft">Carregando detalhes...</div>';
 
   const res = await fetch(`/api/admin/forms/${FB.currentFormId}/responses/${respId}`, { headers: fbAuthH() });
-  if (!res.ok) { if(body) body.innerHTML='<div style="padding:24px;color:#EF4444;">Erro ao carregar.</div>'; return; }
+  if (!res.ok) { if(body) body.innerHTML='<div class="form-builder-feedback-error">Erro ao carregar.</div>'; return; }
   const jr = await res.json();
   const data = jr.response || jr;
 
@@ -960,28 +960,28 @@ async function fbOpenResponseDetail(respId) {
   if (body) body.innerHTML = `
     <!-- Score summary -->
     ${data.score_pct != null ? `
-    <div style="background:linear-gradient(135deg,#1e3a5f,#1A56DB);border-radius:10px;padding:16px 20px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;color:#fff;">
+    <div class="form-builder-response-summary">
       <div>
-        <div style="font-size:24px;font-weight:800;">${Math.round(data.score_pct)}%</div>
-        <div style="font-size:13px;opacity:.85;">Pontuação: ${data.score_total||0} / ${data.score_max||0} pontos</div>
+        <div class="form-builder-response-summary-score">${Math.round(data.score_pct)}%</div>
+        <div class="form-builder-response-summary-meta">Pontuação: ${data.score_total||0} / ${data.score_max||0} pontos</div>
       </div>
-      ${data.score_classification ? `<span style="background:rgba(255,255,255,.2);border-radius:6px;padding:4px 12px;font-size:13px;font-weight:600;">${CLASS_LBL[data.score_classification]||data.score_classification}</span>` : ''}
+      ${data.score_classification ? `<span class="form-builder-response-summary-badge">${CLASS_LBL[data.score_classification]||data.score_classification}</span>` : ''}
     </div>` : ''}
 
     <!-- Auto-report -->
     ${data.auto_report ? `
-    <div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:8px;padding:14px 16px;margin-bottom:16px;">
-      <div style="font-size:12px;font-weight:700;color:#16A34A;margin-bottom:6px;">📄 RELATÓRIO AUTOMÁTICO</div>
-      <div style="font-size:13px;color:#166534;white-space:pre-wrap;">${fbEsc(data.auto_report)}</div>
+    <div class="form-builder-auto-report">
+      <div class="form-builder-auto-report-title">📄 RELATÓRIO AUTOMÁTICO</div>
+      <div class="form-builder-auto-report-body">${fbEsc(data.auto_report)}</div>
     </div>` : ''}
 
     <!-- Answers -->
-    <div style="display:flex;flex-direction:column;gap:10px;">
+    <div class="form-builder-answer-list">
       ${answers.map(a => `
-      <div style="border:1px solid #E2E8F0;border-radius:8px;padding:12px 14px;">
-        <div style="font-size:12px;color:#94A3B8;margin-bottom:4px;">${fbEsc(a.question_label||'Questão #'+a.question_id)}</div>
-        <div style="font-size:14px;color:#1E293B;font-weight:500;">${a.value_json ? JSON.stringify(a.value_json) : (fbEsc(a.value) || '<em style="color:#94A3B8;">Sem resposta</em>')}</div>
-        ${a.score != null ? `<div style="margin-top:4px;font-size:11px;color:#16A34A;font-weight:600;">Pontos: ${a.score}</div>` : ''}
+      <div class="form-builder-answer-card">
+        <div class="form-builder-answer-label">${fbEsc(a.question_label||'Questão #'+a.question_id)}</div>
+        <div class="form-builder-answer-value">${a.value_json ? JSON.stringify(a.value_json) : (fbEsc(a.value) || '<em class="form-builder-answer-empty">Sem resposta</em>')}</div>
+        ${a.score != null ? `<div class="form-builder-answer-score">Pontos: ${a.score}</div>` : ''}
       </div>`).join('')}
     </div>
   `;

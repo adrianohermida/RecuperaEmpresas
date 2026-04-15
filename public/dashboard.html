@@ -14,15 +14,15 @@
 <body>
 
 <!-- Auth guard -->
-<div id="authGuard" style="position:fixed;inset:0;background:#0F172A;display:flex;align-items:center;justify-content:center;z-index:9999;">
-  <div style="text-align:center;color:#fff;">
-    <svg width="44" height="36" viewBox="0 0 44 36" fill="none" style="margin-bottom:16px;">
+<div id="authGuard" class="auth-guard">
+  <div class="auth-guard-content">
+    <svg width="44" height="36" viewBox="0 0 44 36" fill="none" class="auth-guard-logo">
       <rect x="0"  y="26" width="8" height="10" rx="4" fill="#4B9EFF"/>
       <rect x="12" y="18" width="8" height="18" rx="4" fill="#2B7FFF"/>
       <rect x="24" y="10" width="8" height="26" rx="4" fill="#1A56DB"/>
       <rect x="36" y="2"  width="8" height="34" rx="4" fill="#1244AB"/>
     </svg>
-    <div style="font-size:15px;color:#64748B;">Verificando acesso...</div>
+    <div class="auth-guard-message">Verificando acesso...</div>
   </div>
 </div>
 
@@ -43,22 +43,20 @@
     </div>
     <div class="header-right">
       <!-- Notification Bell -->
-      <div style="position:relative;" id="notifBellWrap">
-        <button id="notifBell" onclick="toggleNotifDropdown()" title="Notificações"
-          style="background:none;border:none;cursor:pointer;padding:6px;border-radius:8px;color:#64748B;display:flex;align-items:center;position:relative;transition:background .15s;"
-          onmouseover="this.style.background='#F1F5F9'" onmouseout="this.style.background='none'">
+      <div class="admin-notif-wrap" id="notifBellWrap">
+        <button id="notifBell" class="admin-notif-bell" onclick="toggleNotifDropdown()" title="Notificações">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>
           </svg>
-          <span id="notifBadge" style="display:none;position:absolute;top:2px;right:2px;background:#DC2626;color:#fff;border-radius:9999px;font-size:9px;font-weight:700;min-width:14px;height:14px;line-height:14px;text-align:center;padding:0 2px;">0</span>
+          <span id="notifBadge" class="admin-notif-badge">0</span>
         </button>
-        <div id="notifDropdown" style="display:none;position:absolute;top:44px;right:0;width:320px;max-height:420px;overflow-y:auto;background:#fff;border:1px solid #E2E8F0;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.12);z-index:300;">
-          <div style="padding:12px 16px;border-bottom:1px solid #F1F5F9;display:flex;align-items:center;justify-content:space-between;">
-            <span style="font-weight:700;font-size:14px;color:#1E293B;">Notificações</span>
-            <button onclick="markAllNotifRead()" style="background:none;border:none;font-size:12px;color:#1A56DB;cursor:pointer;padding:0;">Marcar todas lidas</button>
+        <div id="notifDropdown" class="admin-notif-dropdown">
+          <div class="admin-notif-dropdown-header">
+            <span class="admin-notif-dropdown-title">Notificações</span>
+            <button class="admin-notif-mark-all" onclick="markAllNotifRead()">Marcar todas lidas</button>
           </div>
-          <div id="notifList" style="padding:4px 0;">
-            <div style="padding:20px;text-align:center;color:#94A3B8;font-size:13px;">Carregando...</div>
+          <div id="notifList" class="admin-notif-list">
+            <div class="admin-notif-empty">Carregando...</div>
           </div>
         </div>
       </div>
@@ -196,11 +194,11 @@
           <div class="progress-ring-info">
             <div class="progress-pct" id="progressPct">0%</div>
             <div class="progress-step" id="progressStep">Etapa 1 de 14</div>
-            <div class="progress-steps-bar" style="margin-top:10px;max-width:240px;">
-              <div class="progress-steps-fill" id="progressBar" style="width:0%"></div>
+            <div class="progress-steps-bar dashboard-progress-steps-bar">
+              <div class="progress-steps-fill" id="progressBar"></div>
             </div>
-            <div style="margin-top:14px;" id="actionBtnWrap">
-              <a href="./index.html" class="btn-primary" style="display:inline-flex;align-items:center;gap:6px;text-decoration:none;font-size:13px;padding:9px 18px;" id="continueBtn">
+            <div class="dashboard-action-wrap" id="actionBtnWrap">
+              <a href="./index.html" class="btn-primary dashboard-inline-link" id="continueBtn">
                 Continuar onboarding
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
               </a>
@@ -213,7 +211,7 @@
       <div class="portal-card">
         <div class="portal-card-header">
           <span class="portal-card-title">Business Plan</span>
-          <button class="btn-ghost" style="font-size:13px;padding:6px 12px;" onclick="showSection('plan',null)">Ver tudo</button>
+          <button class="btn-ghost admin-compact-btn" onclick="showSection('plan',null)">Ver tudo</button>
         </div>
         <div class="portal-card-body" id="planPreview">
           <div class="empty-state">
@@ -227,7 +225,7 @@
       <div class="portal-card">
         <div class="portal-card-header">
           <span class="portal-card-title">Tarefas Pendentes</span>
-          <button class="btn-ghost" style="font-size:13px;padding:6px 12px;" onclick="showSection('tasks',null)">Ver todas</button>
+          <button class="btn-ghost admin-compact-btn" onclick="showSection('tasks',null)">Ver todas</button>
         </div>
         <div class="portal-card-body" id="tasksPreview">
           <div class="empty-state">
@@ -245,7 +243,7 @@
           <div class="section-title">Onboarding</div>
           <div class="section-sub">Status de preenchimento do formulário</div>
         </div>
-        <a href="./index.html" class="btn-primary" style="text-decoration:none;font-size:14px;" id="onboardingBtn">Continuar</a>
+        <a href="./index.html" class="btn-primary dashboard-inline-link" id="onboardingBtn">Continuar</a>
       </div>
       <div class="portal-card">
         <div class="portal-card-body" id="stepsList"></div>
@@ -1900,7 +1898,7 @@ let _notifOpen     = false;
 function toggleNotifDropdown() {
   const dd = document.getElementById('notifDropdown');
   _notifOpen = !_notifOpen;
-  dd.style.display = _notifOpen ? 'block' : 'none';
+  dd.classList.toggle('admin-notif-dropdown-open', _notifOpen);
   if (_notifOpen) loadNotifications();
 }
 
@@ -1909,7 +1907,7 @@ document.addEventListener('click', e => {
   const wrap = document.getElementById('notifBellWrap');
   if (wrap && !wrap.contains(e.target) && _notifOpen) {
     _notifOpen = false;
-    document.getElementById('notifDropdown').style.display = 'none';
+    document.getElementById('notifDropdown').classList.remove('admin-notif-dropdown-open');
   }
 });
 
@@ -1923,14 +1921,14 @@ async function loadNotifications() {
 
     // Update badge
     if (unread_count > 0) {
-      badgeEl.style.display = 'block';
+      badgeEl.classList.add('admin-notif-badge-visible');
       badgeEl.textContent   = unread_count > 99 ? '99+' : unread_count;
     } else {
-      badgeEl.style.display = 'none';
+      badgeEl.classList.remove('admin-notif-badge-visible');
     }
 
     if (!notifications.length) {
-      listEl.innerHTML = '<div style="padding:20px;text-align:center;color:#94A3B8;font-size:13px;">Nenhuma notificação.</div>';
+      listEl.innerHTML = '<div class="admin-notif-empty">Nenhuma notificação.</div>';
       return;
     }
 
@@ -1942,18 +1940,15 @@ async function loadNotifications() {
     listEl.innerHTML = notifications.map(n => {
       const ts  = new Date(n.created_at).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
       const unr = !n.read;
-      return `<div onclick="readNotif('${n.id}',this)"
-        style="padding:12px 16px;cursor:pointer;border-bottom:1px solid #F1F5F9;display:flex;gap:10px;align-items:flex-start;
-          background:${unr ? '#EFF6FF' : '#fff'};transition:background .15s;"
-        onmouseover="this.style.background='#F8FAFC'" onmouseout="this.style.background='${unr ? '#EFF6FF' : '#fff'}'">
-        <span style="font-size:18px;line-height:1.4;">${iconMap[n.type] || 'ℹ️'}</span>
-        <div style="flex:1;min-width:0;">
-          <div style="font-size:13px;font-weight:${unr ? 700 : 500};color:#1E293B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtmlD(n.title)}</div>
-          ${n.body ? `<div style="font-size:12px;color:#64748B;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtmlD(n.body)}</div>` : ''}
-          <div style="font-size:11px;color:#94A3B8;margin-top:3px;">${ts}</div>
+      return `<button type="button" class="admin-notif-item${unr ? ' admin-notif-item-unread' : ''}" onclick="readNotif('${n.id}',this)">
+        <span class="admin-notif-item-icon">${iconMap[n.type] || 'ℹ️'}</span>
+        <div class="admin-notif-item-content">
+          <div class="admin-notif-item-title${unr ? ' admin-notif-item-title-unread' : ''}">${escHtmlD(n.title)}</div>
+          ${n.body ? `<div class="admin-notif-item-body">${escHtmlD(n.body)}</div>` : ''}
+          <div class="admin-notif-item-time">${ts}</div>
         </div>
-        ${unr ? '<div style="width:7px;height:7px;border-radius:50%;background:#2563EB;flex-shrink:0;margin-top:6px;"></div>' : ''}
-      </div>`;
+        ${unr ? '<div class="admin-notif-item-dot"></div>' : ''}
+      </button>`;
     }).join('');
   } catch (e) {
     console.warn('[NOTIF]', e.message);
@@ -1962,8 +1957,10 @@ async function loadNotifications() {
 
 async function readNotif(id, el) {
   // Mark read visually
-  el.style.background = '#fff';
-  const dot = el.querySelector('div[style*="border-radius:50%"]');
+  el.classList.remove('admin-notif-item-unread');
+  const title = el.querySelector('.admin-notif-item-title');
+  if (title) title.classList.remove('admin-notif-item-title-unread');
+  const dot = el.querySelector('.admin-notif-item-dot');
   if (dot) dot.remove();
   // API call
   fetch(`/api/notifications/${id}/read`, { method: 'POST', headers: authH() }).catch(() => {});
