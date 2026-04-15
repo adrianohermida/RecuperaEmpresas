@@ -231,6 +231,17 @@
             <label style="font-size:12px;color:#64748b;font-weight:500;display:block;margin-bottom:4px;">Vagas máximas</label>
             <input id="slotMax" type="number" value="1" min="1" style="width:100%;padding:8px 10px;border:1px solid #CBD5E1;border-radius:6px;font-size:13px;box-sizing:border-box;">
           </div>
+          <div>
+            <label style="font-size:12px;color:#64748b;font-weight:500;display:block;margin-bottom:4px;">Modalidade</label>
+            <select id="slotLocation" style="width:100%;padding:8px 10px;border:1px solid #CBD5E1;border-radius:6px;font-size:13px;box-sizing:border-box;">
+              <option value="online">🔗 Online</option>
+              <option value="presencial">📍 Presencial</option>
+            </select>
+          </div>
+          <div style="grid-column:span 2;">
+            <label style="font-size:12px;color:#64748b;font-weight:500;display:block;margin-bottom:4px;">Link da reunião (opcional)</label>
+            <input id="slotMeetingLink" type="url" placeholder="https://meet.google.com/xxx-xxxx-xxx" style="width:100%;padding:8px 10px;border:1px solid #CBD5E1;border-radius:6px;font-size:13px;box-sizing:border-box;">
+          </div>
         </div>
         <div style="display:flex;gap:8px;">
           <button class="btn-primary" onclick="createSlot()" style="font-size:13px;padding:8px 16px;">Publicar horário</button>
