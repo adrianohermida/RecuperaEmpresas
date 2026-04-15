@@ -323,6 +323,76 @@ body {
   margin-top: 14px;
 }
 
+.form-builder-page-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.form-builder-layout-grid {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr) 280px;
+  gap: 12px;
+  min-height: 500px;
+}
+
+.form-builder-side-panel {
+  overflow: hidden;
+  border: 1px solid #E2E8F0;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.form-builder-side-panel-header {
+  padding: 10px 12px;
+  border-bottom: 1px solid #E2E8F0;
+  background: #F8FAFC;
+  color: #64748B;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+}
+
+.form-builder-palette {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 580px;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+.form-builder-canvas {
+  max-height: 600px;
+  overflow-y: auto;
+  border: 1px solid #E2E8F0;
+  border-radius: 10px;
+  background: #F8FAFC;
+  padding: 16px;
+}
+
+.form-builder-canvas-empty {
+  padding: 40px;
+  color: #94A3B8;
+  text-align: center;
+}
+
+.form-builder-canvas-empty-icon {
+  margin-bottom: 10px;
+  font-size: 32px;
+}
+
+.form-builder-canvas-empty-copy {
+  font-size: 14px;
+}
+
+.form-builder-props-panel {
+  max-height: 560px;
+  overflow-y: auto;
+}
+
 .journey-modal-overlay {
   z-index: 500;
 }
@@ -518,6 +588,10 @@ body {
   }
 
   .form-builder-settings-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .form-builder-layout-grid {
     grid-template-columns: 1fr;
   }
 
@@ -1081,6 +1155,9 @@ body {
 }
 .stats-grid-4 {
   grid-template-columns: repeat(4, 1fr);
+}
+.stats-grid-3 {
+  grid-template-columns: repeat(3, 1fr);
 }
 .stat-card {
   background: var(--card); border: 1px solid rgba(203,213,225,.6);

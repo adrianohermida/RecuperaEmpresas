@@ -1156,6 +1156,9 @@ body {
 .stats-grid-4 {
   grid-template-columns: repeat(4, 1fr);
 }
+.stats-grid-3 {
+  grid-template-columns: repeat(3, 1fr);
+}
 .stat-card {
   background: var(--card); border: 1px solid rgba(203,213,225,.6);
   border-radius: var(--radius-lg); padding: 20px;
