@@ -298,68 +298,68 @@
             <div class="section-title">Formulários</div>
             <div class="section-sub">Crie diagnósticos, pesquisas e avaliações profissionais</div>
           </div>
-          <button class="btn-primary" onclick="fbOpenNewFormModal()" style="font-size:13px;padding:8px 16px;">
+          <button class="btn-primary admin-section-action-btn form-builder-list-action" onclick="fbOpenNewFormModal()">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             Novo Formulário
           </button>
         </div>
-        <div id="fb-forms-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;">
-          <div style="padding:24px;color:#94A3B8;text-align:center;">Carregando...</div>
+        <div id="fb-forms-grid" class="admin-card-grid">
+          <div class="admin-empty-state-soft">Carregando...</div>
         </div>
       </div>
 
       <!-- ── VIEW: BUILDER ──────────────────────────────────────────────── -->
       <div id="fb-view-builder" style="display:none;">
         <!-- Builder header -->
-        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
-          <button class="btn-ghost" onclick="fbLoadFormsList()" style="font-size:13px;padding:6px 12px;">
+        <div class="journey-editor-toolbar">
+          <button class="btn-ghost admin-compact-btn journey-editor-toolbar-btn" onclick="fbLoadFormsList()">
             ← Todos os formulários
           </button>
-          <h1 id="fb-builder-title" style="font-size:18px;font-weight:700;color:#1E293B;margin:0;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">—</h1>
-          <button class="btn-ghost" onclick="fbToggleSettings()" style="font-size:13px;padding:6px 12px;">
+          <h1 id="fb-builder-title" class="journey-editor-title form-builder-title">—</h1>
+          <button class="btn-ghost admin-compact-btn journey-editor-toolbar-btn" onclick="fbToggleSettings()">
             ⚙️ Configurações
           </button>
-          <button class="btn-ghost" onclick="fbOpenAssignModal()" style="font-size:13px;padding:6px 12px;">
+          <button class="btn-ghost admin-compact-btn journey-editor-toolbar-btn" onclick="fbOpenAssignModal()">
             👥 Atribuir clientes
           </button>
-          <button class="btn-ghost" onclick="fbOpenStatsPanel()" style="font-size:13px;padding:6px 12px;">
+          <button class="btn-ghost admin-compact-btn journey-editor-toolbar-btn" onclick="fbOpenStatsPanel()">
             📊 Estatísticas
           </button>
         </div>
 
         <!-- Settings panel (collapsible) -->
-        <div id="fb-settings-panel" style="display:none;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px;padding:16px 20px;margin-bottom:16px;">
-          <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:12px;align-items:end;">
+        <div id="fb-settings-panel" class="form-builder-panel" style="display:none;">
+          <div class="form-builder-settings-grid">
             <div>
-              <label style="font-size:12px;color:#64748B;font-weight:500;display:block;margin-bottom:4px;">Título</label>
+              <label class="form-builder-field-label">Título</label>
               <input id="fb-settings-title" class="portal-input" placeholder="Título do formulário">
             </div>
             <div>
-              <label style="font-size:12px;color:#64748B;font-weight:500;display:block;margin-bottom:4px;">Status</label>
+              <label class="form-builder-field-label">Status</label>
               <select id="fb-settings-status" class="portal-input">
                 <option value="draft">Rascunho</option>
                 <option value="active">Publicado</option>
                 <option value="inactive">Arquivado</option>
               </select>
             </div>
-            <button class="btn-primary" onclick="fbSaveFormSettings()" style="font-size:13px;padding:8px 14px;">Salvar</button>
+            <button class="btn-primary admin-compact-btn form-builder-settings-save" onclick="fbSaveFormSettings()">Salvar</button>
           </div>
-          <div style="margin-top:10px;">
-            <label style="font-size:12px;color:#64748B;font-weight:500;display:block;margin-bottom:4px;">Descrição</label>
+          <div class="form-builder-settings-desc">
+            <label class="form-builder-field-label">Descrição</label>
             <input id="fb-settings-desc" class="portal-input" placeholder="Descrição (opcional)">
           </div>
         </div>
 
         <!-- Stats panel (collapsible) -->
-        <div id="fb-stats-panel" style="display:none;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px;padding:16px 20px;margin-bottom:16px;">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-            <div style="font-size:14px;font-weight:700;color:#1E293B;">Estatísticas do Formulário</div>
-            <button class="btn-ghost" onclick="fbOpenStatsPanel()" style="font-size:12px;padding:4px 10px;">Atualizar</button>
+        <div id="fb-stats-panel" class="form-builder-panel" style="display:none;">
+          <div class="form-builder-stats-header">
+            <div class="journey-panel-title">Estatísticas do Formulário</div>
+            <button class="btn-ghost form-builder-mini-btn" onclick="fbOpenStatsPanel()">Atualizar</button>
           </div>
-          <div id="fb-stats-content" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;">
-            <div style="text-align:center;color:#94A3B8;">Carregando...</div>
+          <div id="fb-stats-content" class="form-builder-stats-grid">
+            <div class="admin-empty-state-soft form-builder-stats-loading">Carregando...</div>
           </div>
-          <div id="fb-stats-chart" style="margin-top:14px;"></div>
+          <div id="fb-stats-chart" class="form-builder-stats-chart"></div>
         </div>
 
         <!-- Page tabs -->
@@ -392,9 +392,9 @@
               Propriedades
             </div>
             <div id="fb-props-panel" style="overflow-y:auto;max-height:560px;">
-              <div style="padding:24px;text-align:center;color:#94A3B8;">
-                <div style="font-size:28px;margin-bottom:8px;">👈</div>
-                <div style="font-size:13px;">Clique em uma questão para editar</div>
+              <div class="admin-empty-state-soft form-builder-props-empty">
+                <div class="form-builder-props-empty-icon">👈</div>
+                <div class="form-builder-props-empty-copy">Clique em uma questão para editar</div>
               </div>
             </div>
           </div>
@@ -436,13 +436,13 @@
             <div class="section-title">Jornadas</div>
             <div class="section-sub">Crie trilhas de formulários e atribua a clientes específicos</div>
           </div>
-          <button class="btn-primary" onclick="jrnOpenNewModal()" style="font-size:13px;padding:8px 16px;">
+          <button class="btn-primary admin-section-action-btn form-builder-list-action" onclick="jrnOpenNewModal()">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             Nova Jornada
           </button>
         </div>
-        <div id="jrn-list-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;">
-          <div style="padding:24px;color:#94A3B8;text-align:center;">Carregando...</div>
+        <div id="jrn-list-grid" class="admin-card-grid">
+          <div class="admin-empty-state-soft">Carregando...</div>
         </div>
       </div>
 
@@ -494,20 +494,20 @@
     </div><!-- /sec-jornadas -->
 
     <!-- ── MODAL: New/Edit Journey ──────────────────────────────────────────── -->
-    <div id="jrn-modal-form" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;align-items:center;justify-content:center;">
-      <div style="background:#fff;border-radius:14px;padding:28px;width:100%;max-width:480px;box-shadow:0 20px 60px rgba(0,0,0,.2);">
-        <div id="jrn-modal-title" style="font-size:18px;font-weight:700;color:#1E293B;margin-bottom:20px;">Nova Jornada</div>
-        <div style="display:flex;flex-direction:column;gap:14px;">
+    <div id="jrn-modal-form" class="admin-modal-overlay journey-modal-overlay" style="display:none;">
+      <div class="admin-modal journey-modal journey-modal-md">
+        <div id="jrn-modal-title" class="journey-modal-title">Nova Jornada</div>
+        <div class="journey-modal-stack">
           <div>
-            <label style="font-size:12px;color:#64748B;font-weight:500;display:block;margin-bottom:4px;">Nome *</label>
+            <label class="form-builder-field-label">Nome *</label>
             <input id="jrn-f-name" class="portal-input" placeholder="Ex: Onboarding Completo">
           </div>
           <div>
-            <label style="font-size:12px;color:#64748B;font-weight:500;display:block;margin-bottom:4px;">Descrição</label>
-            <textarea id="jrn-f-desc" class="portal-input" rows="2" placeholder="Descrição opcional" style="resize:vertical;"></textarea>
+            <label class="form-builder-field-label">Descrição</label>
+            <textarea id="jrn-f-desc" class="portal-input journey-modal-textarea" rows="2" placeholder="Descrição opcional"></textarea>
           </div>
           <div>
-            <label style="font-size:12px;color:#64748B;font-weight:500;display:block;margin-bottom:4px;">Status</label>
+            <label class="form-builder-field-label">Status</label>
             <select id="jrn-f-status" class="portal-input">
               <option value="draft">Rascunho</option>
               <option value="active">Ativo</option>
@@ -515,79 +515,79 @@
             </select>
           </div>
         </div>
-        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:20px;">
-          <button class="btn-ghost" onclick="jrnCloseFormModal()" style="font-size:13px;">Cancelar</button>
-          <button class="btn-primary" onclick="jrnSaveForm()" style="font-size:13px;" id="jrn-save-btn">Criar Jornada</button>
+        <div class="admin-modal-actions journey-modal-actions">
+          <button class="btn-ghost admin-modal-btn" onclick="jrnCloseFormModal()">Cancelar</button>
+          <button class="btn-primary admin-modal-btn" onclick="jrnSaveForm()" id="jrn-save-btn">Criar Jornada</button>
         </div>
       </div>
     </div>
 
     <!-- ── MODAL: Add Step ─────────────────────────────────────────────────── -->
-    <div id="jrn-modal-step" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;align-items:center;justify-content:center;">
-      <div style="background:#fff;border-radius:14px;padding:28px;width:100%;max-width:500px;box-shadow:0 20px 60px rgba(0,0,0,.2);">
-        <div id="jrn-step-modal-title" style="font-size:18px;font-weight:700;color:#1E293B;margin-bottom:20px;">Adicionar Etapa</div>
+    <div id="jrn-modal-step" class="admin-modal-overlay journey-modal-overlay" style="display:none;">
+      <div class="admin-modal journey-modal journey-modal-lg">
+        <div id="jrn-step-modal-title" class="journey-modal-title">Adicionar Etapa</div>
         <input type="hidden" id="jrn-step-editing-id">
-        <div style="display:flex;flex-direction:column;gap:14px;">
+        <div class="journey-modal-stack">
           <div>
-            <label style="font-size:12px;color:#64748B;font-weight:500;display:block;margin-bottom:4px;">Título *</label>
+            <label class="form-builder-field-label">Título *</label>
             <input id="jrn-step-title" class="portal-input" placeholder="Ex: Diagnóstico Inicial">
           </div>
           <div>
-            <label style="font-size:12px;color:#64748B;font-weight:500;display:block;margin-bottom:4px;">Descrição</label>
+            <label class="form-builder-field-label">Descrição</label>
             <input id="jrn-step-desc" class="portal-input" placeholder="Opcional">
           </div>
           <div>
-            <label style="font-size:12px;color:#64748B;font-weight:500;display:block;margin-bottom:4px;">Formulário vinculado</label>
+            <label class="form-builder-field-label">Formulário vinculado</label>
             <select id="jrn-step-form" class="portal-input">
               <option value="">— Nenhum formulário —</option>
             </select>
           </div>
-          <div style="display:flex;align-items:center;gap:8px;">
-            <input type="checkbox" id="jrn-step-optional" style="width:16px;height:16px;">
-            <label for="jrn-step-optional" style="font-size:13px;color:#374151;">Etapa opcional</label>
+          <div class="journey-modal-checkbox-row">
+            <input type="checkbox" id="jrn-step-optional" class="journey-modal-checkbox">
+            <label for="jrn-step-optional" class="journey-modal-checkbox-label">Etapa opcional</label>
           </div>
         </div>
-        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:20px;">
-          <button class="btn-ghost" onclick="jrnCloseStepModal()" style="font-size:13px;">Cancelar</button>
-          <button class="btn-primary" onclick="jrnSaveStep()" style="font-size:13px;">Salvar Etapa</button>
+        <div class="admin-modal-actions journey-modal-actions">
+          <button class="btn-ghost admin-modal-btn" onclick="jrnCloseStepModal()">Cancelar</button>
+          <button class="btn-primary admin-modal-btn" onclick="jrnSaveStep()">Salvar Etapa</button>
         </div>
       </div>
     </div>
 
     <!-- ── MODAL: Assign client to Journey ─────────────────────────────────── -->
-    <div id="jrn-modal-assign" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;align-items:center;justify-content:center;">
-      <div style="background:#fff;border-radius:14px;padding:28px;width:100%;max-width:480px;box-shadow:0 20px 60px rgba(0,0,0,.2);">
-        <div style="font-size:18px;font-weight:700;color:#1E293B;margin-bottom:20px;">Atribuir Cliente</div>
-        <div style="display:flex;flex-direction:column;gap:14px;">
+    <div id="jrn-modal-assign" class="admin-modal-overlay journey-modal-overlay" style="display:none;">
+      <div class="admin-modal journey-modal journey-modal-md">
+        <div class="journey-modal-title">Atribuir Cliente</div>
+        <div class="journey-modal-stack">
           <div>
-            <label style="font-size:12px;color:#64748B;font-weight:500;display:block;margin-bottom:4px;">Cliente *</label>
+            <label class="form-builder-field-label">Cliente *</label>
             <select id="jrn-assign-user" class="portal-input">
               <option value="">Selecione um cliente...</option>
             </select>
           </div>
           <div>
-            <label style="font-size:12px;color:#64748B;font-weight:500;display:block;margin-bottom:4px;">Observações</label>
+            <label class="form-builder-field-label">Observações</label>
             <input id="jrn-assign-notes" class="portal-input" placeholder="Opcional">
           </div>
         </div>
-        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:20px;">
-          <button class="btn-ghost" onclick="document.getElementById('jrn-modal-assign').style.display='none'" style="font-size:13px;">Cancelar</button>
-          <button class="btn-primary" onclick="jrnSaveAssign()" style="font-size:13px;">Atribuir</button>
+        <div class="admin-modal-actions journey-modal-actions">
+          <button class="btn-ghost admin-modal-btn" onclick="document.getElementById('jrn-modal-assign').style.display='none'">Cancelar</button>
+          <button class="btn-primary admin-modal-btn" onclick="jrnSaveAssign()">Atribuir</button>
         </div>
       </div>
     </div>
 
     <!-- ── MODAL: New Form ────────────────────────────────────────────────── -->
-    <div id="fb-modal-new" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;align-items:center;justify-content:center;">
-      <div style="background:#fff;border-radius:14px;padding:28px;width:100%;max-width:480px;box-shadow:0 20px 60px rgba(0,0,0,.2);">
-        <div style="font-size:18px;font-weight:700;color:#1E293B;margin-bottom:20px;">Novo Formulário</div>
-        <div style="display:flex;flex-direction:column;gap:14px;">
+    <div id="fb-modal-new" class="admin-modal-overlay journey-modal-overlay" style="display:none;">
+      <div class="admin-modal journey-modal journey-modal-md">
+        <div class="journey-modal-title">Novo Formulário</div>
+        <div class="journey-modal-stack">
           <div>
-            <label style="font-size:12px;color:#64748B;font-weight:500;display:block;margin-bottom:4px;">Título *</label>
+            <label class="form-builder-field-label">Título *</label>
             <input id="fb-new-title" class="portal-input" placeholder="Ex: Diagnóstico Financeiro">
           </div>
           <div>
-            <label style="font-size:12px;color:#64748B;font-weight:500;display:block;margin-bottom:4px;">Tipo</label>
+            <label class="form-builder-field-label">Tipo</label>
             <select id="fb-new-type" class="portal-input">
               <option value="diagnostico">Diagnóstico</option>
               <option value="pesquisa">Pesquisa</option>
@@ -597,31 +597,31 @@
             </select>
           </div>
           <div>
-            <label style="font-size:12px;color:#64748B;font-weight:500;display:block;margin-bottom:4px;">Descrição</label>
-            <textarea id="fb-new-desc" class="portal-input" rows="2" placeholder="Descreva o objetivo deste formulário..."></textarea>
+            <label class="form-builder-field-label">Descrição</label>
+            <textarea id="fb-new-desc" class="portal-input journey-modal-textarea" rows="2" placeholder="Descreva o objetivo deste formulário..."></textarea>
           </div>
         </div>
-        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;">
-          <button class="btn-ghost" onclick="fbCloseNewModal()">Cancelar</button>
-          <button class="btn-primary" onclick="fbSubmitNewForm()">Criar formulário →</button>
+        <div class="admin-modal-actions journey-modal-actions journey-modal-actions-wide-gap">
+          <button class="btn-ghost admin-modal-btn" onclick="fbCloseNewModal()">Cancelar</button>
+          <button class="btn-primary admin-modal-btn" onclick="fbSubmitNewForm()">Criar formulário →</button>
         </div>
       </div>
     </div>
 
     <!-- ── MODAL: Logic Editor ────────────────────────────────────────────── -->
-    <div id="fb-logic-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;align-items:center;justify-content:center;">
-      <div style="background:#fff;border-radius:14px;padding:24px;width:100%;max-width:560px;box-shadow:0 20px 60px rgba(0,0,0,.2);max-height:80vh;overflow-y:auto;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-          <div style="font-size:16px;font-weight:700;color:#1E293B;">🔀 Lógica Condicional</div>
-          <button onclick="fbCloseLogicModal()" style="background:none;border:none;color:#94A3B8;font-size:20px;cursor:pointer;line-height:1;">×</button>
+    <div id="fb-logic-modal" class="admin-modal-overlay journey-modal-overlay" style="display:none;">
+      <div class="admin-modal form-builder-modal form-builder-modal-lg">
+        <div class="form-builder-modal-header">
+          <div class="form-builder-modal-title">🔀 Lógica Condicional</div>
+          <button onclick="fbCloseLogicModal()" class="form-builder-modal-close">×</button>
         </div>
-        <div id="fb-logic-rules" style="margin-bottom:16px;"></div>
-        <div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;padding:14px;">
-          <div style="font-size:12px;font-weight:700;color:#64748B;margin-bottom:10px;text-transform:uppercase;">Nova Regra</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px;">
+        <div id="fb-logic-rules" class="form-builder-logic-rules"></div>
+        <div class="form-builder-logic-box">
+          <div class="form-builder-logic-box-title">Nova Regra</div>
+          <div class="form-builder-logic-grid">
             <div>
-              <label style="font-size:11px;color:#64748B;display:block;margin-bottom:3px;">Operador</label>
-              <select id="fb-logic-op" class="portal-input" style="font-size:12px;padding:6px;">
+              <label class="form-builder-logic-label">Operador</label>
+              <select id="fb-logic-op" class="portal-input form-builder-logic-control">
                 <option value="equals">É igual a</option>
                 <option value="not_equals">Diferente de</option>
                 <option value="contains">Contém</option>
@@ -632,47 +632,47 @@
               </select>
             </div>
             <div>
-              <label style="font-size:11px;color:#64748B;display:block;margin-bottom:3px;">Valor</label>
-              <input id="fb-logic-val" class="portal-input" style="font-size:12px;padding:6px;" placeholder="Ex: Sim">
+              <label class="form-builder-logic-label">Valor</label>
+              <input id="fb-logic-val" class="portal-input form-builder-logic-control" placeholder="Ex: Sim">
             </div>
             <div>
-              <label style="font-size:11px;color:#64748B;display:block;margin-bottom:3px;">Ação</label>
-              <select id="fb-logic-action" class="portal-input" style="font-size:12px;padding:6px;">
+              <label class="form-builder-logic-label">Ação</label>
+              <select id="fb-logic-action" class="portal-input form-builder-logic-control">
                 <option value="skip_to_page">Ir para página</option>
                 <option value="hide_question">Ocultar questão</option>
               </select>
             </div>
           </div>
-          <div style="margin-bottom:10px;">
-            <label style="font-size:11px;color:#64748B;display:block;margin-bottom:3px;">Página de destino (ID)</label>
-            <input id="fb-logic-target-page" type="number" class="portal-input" style="font-size:12px;padding:6px;max-width:160px;" placeholder="ID da página">
+          <div class="form-builder-logic-target-wrap">
+            <label class="form-builder-logic-label">Página de destino (ID)</label>
+            <input id="fb-logic-target-page" type="number" class="portal-input form-builder-logic-control form-builder-logic-target" placeholder="ID da página">
           </div>
-          <button class="btn-primary" onclick="fbAddLogicRule()" style="font-size:12px;padding:7px 14px;">+ Adicionar regra</button>
+          <button class="btn-primary form-builder-logic-add-btn" onclick="fbAddLogicRule()">+ Adicionar regra</button>
         </div>
       </div>
     </div>
 
     <!-- ── MODAL: Assign Clients ──────────────────────────────────────────── -->
-    <div id="fb-assign-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;align-items:center;justify-content:center;">
-      <div style="background:#fff;border-radius:14px;padding:24px;width:100%;max-width:480px;box-shadow:0 20px 60px rgba(0,0,0,.2);max-height:80vh;overflow-y:auto;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-          <div style="font-size:16px;font-weight:700;color:#1E293B;">👥 Atribuir Clientes</div>
-          <button onclick="fbCloseAssignModal()" style="background:none;border:none;color:#94A3B8;font-size:20px;cursor:pointer;line-height:1;">×</button>
+    <div id="fb-assign-modal" class="admin-modal-overlay journey-modal-overlay" style="display:none;">
+      <div class="admin-modal form-builder-modal form-builder-modal-md">
+        <div class="form-builder-modal-header">
+          <div class="form-builder-modal-title">👥 Atribuir Clientes</div>
+          <button onclick="fbCloseAssignModal()" class="form-builder-modal-close">×</button>
         </div>
-        <div id="fb-assign-list" style="margin-bottom:14px;max-height:200px;overflow-y:auto;"></div>
-        <div style="display:flex;gap:8px;">
-          <input id="fb-assign-email" class="portal-input" placeholder="Email do cliente" style="flex:1;">
-          <button class="btn-primary" onclick="fbAssignClient()" style="font-size:13px;padding:8px 14px;">Atribuir</button>
+        <div id="fb-assign-list" class="form-builder-assign-list"></div>
+        <div class="form-builder-assign-row">
+          <input id="fb-assign-email" class="portal-input form-builder-assign-input" placeholder="Email do cliente">
+          <button class="btn-primary admin-compact-btn" onclick="fbAssignClient()">Atribuir</button>
         </div>
       </div>
     </div>
 
     <!-- ── MODAL: Response detail ─────────────────────────────────────────── -->
-    <div id="fb-resp-detail-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;align-items:center;justify-content:center;">
-      <div style="background:#fff;border-radius:14px;padding:24px;width:100%;max-width:600px;box-shadow:0 20px 60px rgba(0,0,0,.2);max-height:88vh;overflow-y:auto;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-          <div style="font-size:16px;font-weight:700;color:#1E293B;">📊 Detalhes da Resposta</div>
-          <button onclick="fbCloseRespDetailModal()" style="background:none;border:none;color:#94A3B8;font-size:20px;cursor:pointer;line-height:1;">×</button>
+    <div id="fb-resp-detail-modal" class="admin-modal-overlay journey-modal-overlay" style="display:none;">
+      <div class="admin-modal form-builder-modal form-builder-modal-xl">
+        <div class="form-builder-modal-header">
+          <div class="form-builder-modal-title">📊 Detalhes da Resposta</div>
+          <button onclick="fbCloseRespDetailModal()" class="form-builder-modal-close">×</button>
         </div>
         <div id="fb-resp-detail-body"></div>
       </div>
@@ -824,18 +824,18 @@
   <div class="drawer-header">
     <div>
       <div class="drawer-title" id="drawerTitle">Cliente</div>
-      <div style="font-size:13px;color:var(--text-muted);margin-top:2px;" id="drawerSub"></div>
+      <div class="drawer-subtitle" id="drawerSub"></div>
     </div>
-    <div style="display:flex;align-items:center;gap:8px;">
-      <button class="btn-ghost" style="font-size:12px;padding:6px 10px;gap:5px;" onclick="exportClientXLS(_currentClientId)" title="Exportar dados em Excel">
+    <div class="drawer-actions">
+      <button class="btn-ghost drawer-action-btn" onclick="exportClientXLS(_currentClientId)" title="Exportar dados em Excel">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         Exportar XLS
       </button>
-      <button class="btn-ghost" style="font-size:12px;padding:6px 10px;gap:5px;" onclick="exportClientPDF(_currentClientId)" title="Relatório executivo em PDF">
+      <button class="btn-ghost drawer-action-btn" onclick="exportClientPDF(_currentClientId)" title="Relatório executivo em PDF">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
         Exportar PDF
       </button>
-      <button class="btn-ghost" style="font-size:12px;padding:6px 10px;gap:5px;" onclick="impersonateClient(_currentClientId)" title="Visualizar portal como este cliente">
+      <button class="btn-ghost drawer-action-btn" onclick="impersonateClient(_currentClientId)" title="Visualizar portal como este cliente">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
         Ver como cliente
       </button>

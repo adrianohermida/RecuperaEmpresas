@@ -186,6 +186,14 @@ body {
   color: #94A3B8;
   text-align: center;
 }
+.admin-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
+}
+.form-builder-list-action {
+  padding: 8px 16px;
+}
 .journey-editor-toolbar {
   display: flex;
   flex-wrap: wrap;
@@ -375,6 +383,130 @@ body {
   font-size: 13px;
 }
 
+.form-builder-props-empty {
+  padding: 24px;
+}
+
+.form-builder-props-empty-icon {
+  margin-bottom: 8px;
+  font-size: 28px;
+}
+
+.form-builder-props-empty-copy {
+  font-size: 13px;
+}
+
+.form-builder-modal {
+  width: 100%;
+  border-radius: 14px;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0,0,0,.2);
+  padding: 24px;
+}
+
+.form-builder-modal-md {
+  max-width: 480px;
+}
+
+.form-builder-modal-lg {
+  max-width: 560px;
+}
+
+.form-builder-modal-xl {
+  max-width: 600px;
+  max-height: 88vh;
+}
+
+.form-builder-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.form-builder-modal-title {
+  color: #1E293B;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.form-builder-modal-close {
+  border: 0;
+  background: none;
+  color: #94A3B8;
+  cursor: pointer;
+  font-size: 20px;
+  line-height: 1;
+}
+
+.form-builder-logic-rules {
+  margin-bottom: 16px;
+}
+
+.form-builder-logic-box {
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  background: #F8FAFC;
+  padding: 14px;
+}
+
+.form-builder-logic-box-title {
+  margin-bottom: 10px;
+  color: #64748B;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.form-builder-logic-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.form-builder-logic-label {
+  display: block;
+  margin-bottom: 3px;
+  color: #64748B;
+  font-size: 11px;
+}
+
+.form-builder-logic-control {
+  padding: 6px;
+  font-size: 12px;
+}
+
+.form-builder-logic-target-wrap {
+  margin-bottom: 10px;
+}
+
+.form-builder-logic-target {
+  max-width: 160px;
+}
+
+.form-builder-logic-add-btn {
+  padding: 7px 14px;
+  font-size: 12px;
+}
+
+.form-builder-assign-list {
+  max-height: 200px;
+  overflow-y: auto;
+  margin-bottom: 14px;
+}
+
+.form-builder-assign-row {
+  display: flex;
+  gap: 8px;
+}
+
+.form-builder-assign-input {
+  flex: 1;
+}
+
 @media (max-width: 960px) {
   .journey-editor-grid {
     grid-template-columns: 1fr;
@@ -405,6 +537,26 @@ body {
 
   .journey-modal-actions .admin-modal-btn {
     width: 100%;
+  }
+
+  .form-builder-logic-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .form-builder-assign-row,
+  .form-builder-modal-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .form-builder-logic-target,
+  .form-builder-assign-row .btn-primary {
+    max-width: none;
+    width: 100%;
+  }
+
+  .form-builder-modal-close {
+    align-self: flex-end;
   }
 }
 .admin-simple-table {
@@ -1106,6 +1258,23 @@ body {
   display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
 }
 .drawer-title  { font-size: 18px; font-weight: 800; color: var(--dark); }
+.drawer-subtitle {
+  margin-top: 2px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+.drawer-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.drawer-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 10px;
+  font-size: 12px;
+}
 .drawer-close  {
   background: none; border: none; cursor: pointer; color: var(--text-muted);
   border-radius: 8px; padding: 6px; line-height: 0; transition: background .15s;
@@ -1123,6 +1292,18 @@ body {
 .drawer-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
 .drawer-tab:hover:not(.active) { background: var(--bg); color: var(--text); }
 .drawer-body { flex: 1; overflow-y: auto; padding: 20px 24px; }
+
+@media (max-width: 960px) {
+  .drawer-header {
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .drawer-actions {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+}
 
 /* ── Tabs (general) ──────────────────────────────────────────────────────────── */
 .tab-content { display: none; }
