@@ -4814,17 +4814,63 @@ app.post('/api/admin/invoices', requireAdmin, async (req, res) => {
     if (!user_id || !description || !amount_cents || !due_date) {
       return res.status(400).json({ error: 'user_id, description, amount_cents e due_date são obrigatórios.' });
     }
-    const { data: inv, error } = await sb.from('re_invoices').insert({
-      user_id, description,
-      amount_cents: parseInt(amount_cents),
+    const basePayload = {
+      user_id,
+      description,
+      amount_cents: parseInt(amount_cents, 10),
       due_date,
-      status:         'pending',
+      status: 'pending',
       payment_method: payment_method || 'boleto',
-      bank_data:      bank_data      || null,
-      notes:          notes          || null,
-      created_by:     req.user.id,
-    }).select().single();
-    if (error) return res.status(500).json({ error: error.message });
+      bank_data: bank_data || null,
+      notes: notes || null,
+      created_by: req.user.id,
+    };
+    const invoiceReturningColumns = ['id', 'user_id', 'description', 'amount_cents', 'due_date', 'status', 'paid_at', 'payment_method', 'boleto_pdf_path', 'bank_data', 'notes', 'created_by', 'created_at', 'updated_at'];
+    let invoiceInsert = await insertWithColumnFallback('re_invoices', basePayload, {
+      requiredColumns: ['user_id', 'description', 'amount_cents', 'due_date'],
+      returningColumns: invoiceReturningColumns,
+      requiredReturningColumns: ['id', 'user_id', 'description', 'amount_cents', 'due_date'],
+    });
+
+    if (invoiceInsert.error && /payment_method/i.test(String(invoiceInsert.error.message || ''))) {
+      invoiceInsert = await insertWithColumnFallback('re_invoices', { ...basePayload, payment_method: null }, {
+        requiredColumns: ['user_id', 'description', 'amount_cents', 'due_date'],
+        returningColumns: invoiceReturningColumns,
+        requiredReturningColumns: ['id', 'user_id', 'description', 'amount_cents', 'due_date'],
+      });
+    }
+
+    if (invoiceInsert.error && /created_by/i.test(String(invoiceInsert.error.message || ''))) {
+      invoiceInsert = await insertWithColumnFallback('re_invoices', { ...basePayload, created_by: null }, {
+        requiredColumns: ['user_id', 'description', 'amount_cents', 'due_date'],
+        returningColumns: invoiceReturningColumns,
+        requiredReturningColumns: ['id', 'user_id', 'description', 'amount_cents', 'due_date'],
+      });
+    }
+
+    if (invoiceInsert.error && /bank_data/i.test(String(invoiceInsert.error.message || ''))) {
+      invoiceInsert = await insertWithColumnFallback('re_invoices', { ...basePayload, bank_data: null }, {
+        requiredColumns: ['user_id', 'description', 'amount_cents', 'due_date'],
+        returningColumns: invoiceReturningColumns,
+        requiredReturningColumns: ['id', 'user_id', 'description', 'amount_cents', 'due_date'],
+      });
+    }
+
+    if (invoiceInsert.error && /notes/i.test(String(invoiceInsert.error.message || ''))) {
+      invoiceInsert = await insertWithColumnFallback('re_invoices', { ...basePayload, notes: null }, {
+        requiredColumns: ['user_id', 'description', 'amount_cents', 'due_date'],
+        returningColumns: invoiceReturningColumns,
+        requiredReturningColumns: ['id', 'user_id', 'description', 'amount_cents', 'due_date'],
+      });
+    }
+
+    const { data: inv, error } = invoiceInsert;
+    if (error) {
+      if (isSchemaCompatibilityError(error.message, ['re_invoices', 'user_id', 'description', 'amount_cents', 'due_date', 'status', 'payment_method', 'bank_data', 'notes', 'created_by'])) {
+        return res.status(503).json({ error: 'Cobranças temporariamente indisponíveis até concluir a atualização do banco.' });
+      }
+      return res.status(500).json({ error: error.message });
+    }
 
     // Push notification to client
     pushNotification(user_id, 'payment', 'Nova cobrança disponível',

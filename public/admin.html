@@ -2963,7 +2963,7 @@ async function submitCreateInvoice() {
   if (linha) body.bank_data = { linha_digitavel: linha };
 
   const res = await fetch('/api/admin/invoices', { method:'POST', headers: authH(), body: JSON.stringify(body) });
-  const j   = await res.json();
+  const j   = await readAdminResponse(res);
   if (res.ok) {
     document.getElementById('createInvoiceModal')?.remove();
     showToast('Cobrança criada com sucesso!', 'success');
@@ -2979,21 +2979,24 @@ async function markInvoicePaid(id) {
     method: 'PUT', headers: authH(),
     body: JSON.stringify({ status: 'paid', paid_at: new Date().toISOString() })
   });
+  const j = await readAdminResponse(res);
   if (res.ok) { showToast('Marcado como pago!', 'success'); loadAdminInvoices(); }
-  else { const j = await res.json(); showToast(j.error || 'Erro.', 'error'); }
+  else showToast(j.error || 'Erro.', 'error');
 }
 
 async function cancelInvoice(id) {
   if (!confirm('Cancelar este boleto?')) return;
   const res = await fetch(`/api/admin/invoices/${id}`, { method: 'DELETE', headers: authH() });
+  const j = await readAdminResponse(res);
   if (res.ok) { showToast('Boleto cancelado.', 'success'); loadAdminInvoices(); }
-  else { const j = await res.json(); showToast(j.error || 'Erro.', 'error'); }
+  else showToast(j.error || 'Erro.', 'error');
 }
 
 async function sendInvoiceEmail(id) {
   const res = await fetch(`/api/admin/invoices/${id}/send-email`, { method: 'POST', headers: authH() });
+  const j = await readAdminResponse(res);
   if (res.ok) showToast('E-mail enviado ao cliente!', 'success');
-  else { const j = await res.json(); showToast(j.error || 'Erro ao enviar e-mail.', 'error'); }
+  else showToast(j.error || 'Erro ao enviar e-mail.', 'error');
 }
 
 // ── Admin Marketplace ─────────────────────────────────────────────────────────
