@@ -982,6 +982,26 @@ function renderClientTable(clients) {
 // ── Admin Agenda (slots + créditos) ──────────────────────────────────────────
 const SLOT_MONTHS = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 
+function _bookingStatusBadge(status) {
+  const map = {
+    pending:     { bg:'#FEF3C7', color:'#D97706', label:'Pendente'   },
+    confirmed:   { bg:'#DCFCE7', color:'#16A34A', label:'Confirmado' },
+    cancelled:   { bg:'#FEE2E2', color:'#DC2626', label:'Cancelado'  },
+    rescheduled: { bg:'#EDE9FE', color:'#7C3AED', label:'Remarcado'  },
+  };
+  const s = map[status] || { bg:'#F1F5F9', color:'#64748b', label: status };
+  return `<span style="font-size:10px;padding:2px 8px;border-radius:12px;background:${s.bg};color:${s.color};font-weight:600;">${s.label}</span>`;
+}
+
+function _bookingClientName(b) {
+  if (b.re_users?.name || b.re_users?.email) return b.re_users.name || b.re_users.email;
+  if (b.external_contact) {
+    const ec = typeof b.external_contact === 'string' ? JSON.parse(b.external_contact) : b.external_contact;
+    return (ec.name || ec.email || 'Contato externo') + ' <span style="font-size:10px;color:#94a3b8;">(externo)</span>';
+  }
+  return 'Cliente';
+}
+
 async function loadAdminAgenda() {
   const el = document.getElementById('adminSlotsList');
   if (el) el.innerHTML = '<div style="padding:16px;color:var(--text-muted);font-size:14px;">Carregando...</div>';
@@ -1001,28 +1021,43 @@ async function loadAdminAgenda() {
 
   el.innerHTML = `<div style="display:flex;flex-direction:column;gap:10px;">
     ${slots.map(s => {
-      const d = new Date(s.starts_at);
+      const d    = new Date(s.starts_at);
+      const de   = new Date(s.ends_at);
       const past = d < new Date();
-      const bookings = s.bookings || [];
+      const bookings = (s.bookings || []).filter(b => b.status !== 'rescheduled');
+      const activeCount = bookings.filter(b => b.status === 'pending' || b.status === 'confirmed').length;
+      const locIcon  = s.location === 'presencial' ? '📍' : '🔗';
+      const locLabel = s.location === 'presencial' ? 'Presencial' : 'Online';
+      const slotStatusStyle = past
+        ? 'background:#F1F5F9;color:#94a3b8;'
+        : activeCount >= s.max_bookings
+          ? 'background:#FEE2E2;color:#DC2626;'
+          : 'background:#DCFCE7;color:#16A34A;';
+      const slotStatusLabel = past ? 'Encerrado' : activeCount >= s.max_bookings ? 'Lotado' : 'Disponível';
+
       return `
       <div style="background:#fff;border:1px solid #E2E8F0;border-radius:10px;padding:14px 18px;${past?'opacity:.65':''}">
-        <div style="display:flex;align-items:center;gap:14px;">
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
           <div style="min-width:52px;text-align:center;background:#F8FAFC;border-radius:8px;padding:6px 4px;">
             <div style="font-size:18px;font-weight:800;color:#1e3a5f;">${d.getDate()}</div>
             <div style="font-size:10px;color:#64748b;font-weight:600;">${SLOT_MONTHS[d.getMonth()]} ${d.getFullYear()}</div>
           </div>
-          <div style="flex:1;">
+          <div style="flex:1;min-width:0;">
             <div style="font-weight:700;font-size:14px;color:#1e293b;">${s.title}</div>
             <div style="font-size:12px;color:#64748b;margin-top:2px;">
               ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}
-              – ${String(new Date(s.ends_at).getHours()).padStart(2,'0')}:${String(new Date(s.ends_at).getMinutes()).padStart(2,'0')}
+              – ${String(de.getHours()).padStart(2,'0')}:${String(de.getMinutes()).padStart(2,'0')}
               &nbsp;·&nbsp; ${s.duration_min}min &nbsp;·&nbsp; ${s.credits_cost} crédito${s.credits_cost>1?'s':''}
-              &nbsp;·&nbsp; ${bookings.length}/${s.max_bookings} vagas
+              &nbsp;·&nbsp; ${activeCount}/${s.max_bookings} vagas
+              &nbsp;·&nbsp; ${locIcon} ${locLabel}
             </div>
+            ${s.meeting_link ? `<div style="font-size:11px;margin-top:3px;"><a href="${s.meeting_link}" target="_blank" style="color:#1e3a5f;">🔗 ${s.meeting_link}</a></div>` : ''}
           </div>
-          <span style="font-size:11px;padding:3px 10px;border-radius:20px;${past?'background:#F1F5F9;color:#94a3b8;':bookings.length>=s.max_bookings?'background:#FEE2E2;color:#DC2626;':'background:#DCFCE7;color:#16A34A;'}">
-            ${past ? 'Encerrado' : bookings.length >= s.max_bookings ? 'Lotado' : 'Disponível'}
-          </span>
+          <span style="font-size:11px;padding:3px 10px;border-radius:20px;white-space:nowrap;${slotStatusStyle}">${slotStatusLabel}</span>
+          ${!past ? `<button onclick="openBookForClientModal('${s.id}')" title="Agendar cliente"
+            style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:6px;padding:5px 10px;cursor:pointer;color:#1e3a5f;font-size:11px;font-weight:600;white-space:nowrap;">
+            + Agendar
+          </button>` : ''}
           <button onclick="deleteSlot('${s.id}')" title="Remover horário"
             style="background:none;border:1px solid #fecaca;border-radius:6px;padding:5px 8px;cursor:pointer;color:#ef4444;">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
@@ -1030,12 +1065,29 @@ async function loadAdminAgenda() {
         </div>
         ${bookings.length ? `
         <div style="margin-top:10px;padding-top:10px;border-top:1px solid #F1F5F9;">
-          <div style="font-size:11px;font-weight:600;color:#64748b;margin-bottom:6px;">RESERVAS</div>
-          <div style="display:flex;flex-wrap:wrap;gap:6px;">
-            ${bookings.map(b => `
-            <span style="background:#EFF6FF;color:#1e3a5f;font-size:11px;padding:3px 10px;border-radius:20px;font-weight:500;">
-              ${b.re_users?.name||b.re_users?.email||'Cliente'}
-            </span>`).join('')}
+          <div style="font-size:11px;font-weight:600;color:#64748b;margin-bottom:8px;">RESERVAS</div>
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            ${bookings.map(b => {
+              const bname = _bookingClientName(b).replace(/'/g, '&#39;');
+              const bnamePlain = bname.replace(/<[^>]+>/g,'').trim();
+              return `
+            <div style="display:flex;align-items:center;gap:8px;background:#F8FAFC;border-radius:8px;padding:8px 12px;flex-wrap:wrap;">
+              <div style="flex:1;min-width:0;">
+                <span style="font-size:12px;font-weight:600;color:#1e293b;">${bname}</span>
+                ${b.notes ? `<div style="font-size:11px;color:#94a3b8;margin-top:1px;">${b.notes}</div>` : ''}
+                ${b.cancel_reason && (b.status==='cancelled'||b.status==='rescheduled') ? `<div style="font-size:11px;color:#94a3b8;font-style:italic;margin-top:1px;">Motivo: ${b.cancel_reason}</div>` : ''}
+              </div>
+              ${_bookingStatusBadge(b.status)}
+              ${b.status === 'pending' ? `
+                <button onclick="agendaConfirmBooking('${b.id}')" style="background:#DCFCE7;border:1px solid #86EFAC;border-radius:5px;padding:3px 8px;cursor:pointer;color:#15803D;font-size:11px;font-weight:600;">✅ Confirmar</button>
+                <button onclick="agendaRescheduleBooking('${b.id}','${bnamePlain}')" style="background:#EEF2FF;border:1px solid #A5B4FC;border-radius:5px;padding:3px 8px;cursor:pointer;color:#4338CA;font-size:11px;font-weight:600;">↕️ Remarcar</button>
+                <button onclick="agendaCancelBooking('${b.id}','${bnamePlain}')" style="background:#FEF2F2;border:1px solid #FECACA;border-radius:5px;padding:3px 8px;cursor:pointer;color:#DC2626;font-size:11px;font-weight:600;">❌ Cancelar</button>
+              ` : b.status === 'confirmed' ? `
+                <button onclick="agendaRescheduleBooking('${b.id}','${bnamePlain}')" style="background:#EEF2FF;border:1px solid #A5B4FC;border-radius:5px;padding:3px 8px;cursor:pointer;color:#4338CA;font-size:11px;font-weight:600;">↕️ Remarcar</button>
+                <button onclick="agendaCancelBooking('${b.id}','${bnamePlain}')" style="background:#FEF2F2;border:1px solid #FECACA;border-radius:5px;padding:3px 8px;cursor:pointer;color:#DC2626;font-size:11px;font-weight:600;">❌ Cancelar</button>
+              ` : ''}
+            </div>`;
+            }).join('')}
           </div>
         </div>` : ''}
       </div>`;
@@ -1064,12 +1116,14 @@ async function createSlot() {
   const credits_cost = parseInt(document.getElementById('slotCredits').value) || 1;
   const max_bookings = parseInt(document.getElementById('slotMax').value) || 1;
   const duration_min = parseInt(document.getElementById('slotDuration').value) || 60;
+  const location     = document.getElementById('slotLocation').value || 'online';
+  const meeting_link = document.getElementById('slotMeetingLink').value.trim() || null;
   if (!starts_at || !ends_at) { showToast('Preencha data/hora de início e fim.', 'error'); return; }
   if (new Date(ends_at) <= new Date(starts_at)) { showToast('Fim deve ser após o início.', 'error'); return; }
 
   const res = await fetch('/api/admin/agenda/slots', {
     method: 'POST', headers: authH(),
-    body: JSON.stringify({ starts_at: new Date(starts_at).toISOString(), ends_at: new Date(ends_at).toISOString(), title, credits_cost, max_bookings, duration_min })
+    body: JSON.stringify({ starts_at: new Date(starts_at).toISOString(), ends_at: new Date(ends_at).toISOString(), title, credits_cost, max_bookings, duration_min, location, meeting_link })
   });
   const j = await res.json();
   if (res.ok) { showToast('Horário publicado!', 'success'); toggleSlotForm(); loadAdminAgenda(); }
@@ -1081,6 +1135,229 @@ async function deleteSlot(slotId) {
   const res = await fetch(`/api/admin/agenda/slots/${slotId}`, { method: 'DELETE', headers: authH() });
   if (res.ok) { showToast('Horário removido.', 'success'); loadAdminAgenda(); }
   else showToast('Erro ao remover.', 'error');
+}
+
+// ── Booking management actions ────────────────────────────────────────────────
+
+async function agendaConfirmBooking(bookingId) {
+  const res = await fetch(`/api/admin/agenda/bookings/${bookingId}/confirm`, { method: 'PUT', headers: authH() });
+  const j = await res.json();
+  if (res.ok) { showToast('Reserva confirmada! E-mail enviado ao cliente.', 'success'); loadAdminAgenda(); }
+  else showToast(j.error || 'Erro ao confirmar.', 'error');
+}
+
+async function agendaCancelBooking(bookingId, clientName) {
+  const reason = prompt(`Motivo do cancelamento para ${clientName || 'este cliente'}:\n(obrigatório – será enviado por e-mail)`);
+  if (reason === null) return; // user dismissed
+  if (!reason.trim()) { showToast('O motivo é obrigatório.', 'error'); return; }
+  const res = await fetch(`/api/admin/agenda/bookings/${bookingId}/cancel`, {
+    method: 'PUT', headers: authH(),
+    body: JSON.stringify({ reason: reason.trim() })
+  });
+  const j = await res.json();
+  if (res.ok) { showToast('Reserva cancelada e cliente notificado.', 'success'); loadAdminAgenda(); }
+  else showToast(j.error || 'Erro ao cancelar.', 'error');
+}
+
+async function agendaRescheduleBooking(bookingId, clientName) {
+  // Load available future slots for picker
+  const sRes = await fetch('/api/admin/agenda/slots', { headers: authH() });
+  if (!sRes.ok) { showToast('Erro ao carregar horários.', 'error'); return; }
+  const { slots } = await sRes.json();
+  const future = slots.filter(s => new Date(s.starts_at) > new Date());
+
+  if (!future.length) { showToast('Nenhum horário futuro disponível para remarcar.', 'error'); return; }
+
+  const modal = document.createElement('div');
+  modal.id = 'rescheduleModal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;';
+  modal.innerHTML = `
+    <div style="background:#fff;border-radius:12px;padding:28px;width:440px;max-width:94vw;box-shadow:0 20px 60px rgba(0,0,0,.25);">
+      <div style="font-weight:700;font-size:16px;color:#1e3a5f;margin-bottom:4px;">↕️ Remarcar agendamento</div>
+      <div style="font-size:13px;color:#64748b;margin-bottom:16px;">Cliente: ${clientName}</div>
+      <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">Novo horário</label>
+      <select id="rescheduleSlotSelect" style="width:100%;padding:9px 10px;border:1px solid #CBD5E1;border-radius:6px;font-size:13px;margin-bottom:14px;">
+        ${future.map(s => {
+          const d = new Date(s.starts_at);
+          const de = new Date(s.ends_at);
+          return `<option value="${s.id}">${d.toLocaleDateString('pt-BR')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}–${String(de.getHours()).padStart(2,'0')}:${String(de.getMinutes()).padStart(2,'0')} · ${s.title}</option>`;
+        }).join('')}
+      </select>
+      <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">Motivo / observação (obrigatório)</label>
+      <textarea id="rescheduleReason" rows="3" placeholder="Ex.: Solicitação da empresa, conflito de agenda..." style="width:100%;padding:9px 10px;border:1px solid #CBD5E1;border-radius:6px;font-size:13px;box-sizing:border-box;resize:vertical;margin-bottom:18px;"></textarea>
+      <div style="display:flex;gap:8px;justify-content:flex-end;">
+        <button onclick="document.getElementById('rescheduleModal').remove()" style="padding:8px 16px;border:1px solid #CBD5E1;border-radius:6px;background:#fff;cursor:pointer;font-size:13px;">Cancelar</button>
+        <button onclick="_submitReschedule('${bookingId}')" style="padding:8px 18px;border:none;border-radius:6px;background:#1e3a5f;color:#fff;cursor:pointer;font-size:13px;font-weight:600;">Remarcar</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+}
+
+async function _submitReschedule(bookingId) {
+  const newSlotId = document.getElementById('rescheduleSlotSelect').value;
+  const reason    = document.getElementById('rescheduleReason').value.trim();
+  if (!reason) { showToast('O motivo é obrigatório.', 'error'); return; }
+  const res = await fetch(`/api/admin/agenda/bookings/${bookingId}/reschedule`, {
+    method: 'PUT', headers: authH(),
+    body: JSON.stringify({ new_slot_id: newSlotId, reason })
+  });
+  const j = await res.json();
+  if (res.ok) {
+    document.getElementById('rescheduleModal')?.remove();
+    showToast('Agendamento remarcado e cliente notificado.', 'success');
+    loadAdminAgenda();
+  } else showToast(j.error || 'Erro ao remarcar.', 'error');
+}
+
+// ── Book for client modal ─────────────────────────────────────────────────────
+
+async function openBookForClientModal(slotId) {
+  // Load clients list for autocomplete
+  const cRes = await fetch('/api/admin/clients', { headers: authH() });
+  const clients = cRes.ok ? (await cRes.json()).clients || [] : [];
+
+  const modal = document.createElement('div');
+  modal.id = 'bookForClientModal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;';
+  modal.innerHTML = `
+    <div style="background:#fff;border-radius:12px;padding:28px;width:480px;max-width:94vw;box-shadow:0 20px 60px rgba(0,0,0,.25);">
+      <div style="font-weight:700;font-size:16px;color:#1e3a5f;margin-bottom:16px;">📅 Agendar cliente neste horário</div>
+
+      <div style="display:flex;gap:0;border:1px solid #E2E8F0;border-radius:8px;overflow:hidden;margin-bottom:18px;">
+        <button id="bfcTabExisting" onclick="_bfcTab('existing')"
+          style="flex:1;padding:8px;border:none;background:#1e3a5f;color:#fff;cursor:pointer;font-size:13px;font-weight:600;">
+          Cliente existente
+        </button>
+        <button id="bfcTabExternal" onclick="_bfcTab('external')"
+          style="flex:1;padding:8px;border:none;background:#F1F5F9;color:#64748b;cursor:pointer;font-size:13px;font-weight:600;">
+          Novo contato externo
+        </button>
+      </div>
+
+      <div id="bfcPanelExisting">
+        <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">Selecionar cliente</label>
+        <select id="bfcClientSelect" style="width:100%;padding:9px 10px;border:1px solid #CBD5E1;border-radius:6px;font-size:13px;margin-bottom:12px;">
+          <option value="">— selecione —</option>
+          ${clients.map(c => `<option value="${c.id}">${c.company||c.name} (${c.email})</option>`).join('')}
+        </select>
+      </div>
+
+      <div id="bfcPanelExternal" style="display:none;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+          <div>
+            <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Nome *</label>
+            <input id="bfcExtName" placeholder="Nome completo" style="width:100%;padding:8px 10px;border:1px solid #CBD5E1;border-radius:6px;font-size:13px;box-sizing:border-box;">
+          </div>
+          <div>
+            <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">E-mail *</label>
+            <input id="bfcExtEmail" type="email" placeholder="email@empresa.com" style="width:100%;padding:8px 10px;border:1px solid #CBD5E1;border-radius:6px;font-size:13px;box-sizing:border-box;">
+          </div>
+          <div>
+            <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Telefone</label>
+            <input id="bfcExtPhone" placeholder="(11) 99999-9999" style="width:100%;padding:8px 10px;border:1px solid #CBD5E1;border-radius:6px;font-size:13px;box-sizing:border-box;">
+          </div>
+          <div>
+            <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Empresa</label>
+            <input id="bfcExtCompany" placeholder="Empresa S.A." style="width:100%;padding:8px 10px;border:1px solid #CBD5E1;border-radius:6px;font-size:13px;box-sizing:border-box;">
+          </div>
+        </div>
+      </div>
+
+      <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Observações (opcional)</label>
+      <textarea id="bfcNotes" rows="2" placeholder="Pauta, objetivo da reunião..." style="width:100%;padding:8px 10px;border:1px solid #CBD5E1;border-radius:6px;font-size:13px;box-sizing:border-box;resize:vertical;margin-bottom:18px;"></textarea>
+
+      <div style="display:flex;gap:8px;justify-content:flex-end;">
+        <button onclick="document.getElementById('bookForClientModal').remove()" style="padding:8px 16px;border:1px solid #CBD5E1;border-radius:6px;background:#fff;cursor:pointer;font-size:13px;">Cancelar</button>
+        <button onclick="_submitBookForClient('${slotId}')" style="padding:8px 18px;border:none;border-radius:6px;background:#1e3a5f;color:#fff;cursor:pointer;font-size:13px;font-weight:600;">Confirmar agendamento</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+  window._bfcMode = 'existing';
+}
+
+function _bfcTab(mode) {
+  window._bfcMode = mode;
+  document.getElementById('bfcPanelExisting').style.display = mode === 'existing' ? '' : 'none';
+  document.getElementById('bfcPanelExternal').style.display = mode === 'external' ? '' : 'none';
+  document.getElementById('bfcTabExisting').style.cssText  += mode==='existing' ? ';background:#1e3a5f;color:#fff;' : ';background:#F1F5F9;color:#64748b;';
+  document.getElementById('bfcTabExternal').style.cssText  += mode==='external' ? ';background:#1e3a5f;color:#fff;' : ';background:#F1F5F9;color:#64748b;';
+}
+
+async function _submitBookForClient(slotId) {
+  const notes = document.getElementById('bfcNotes').value.trim() || null;
+  let body = { slot_id: slotId, notes };
+
+  if (window._bfcMode === 'existing') {
+    const userId = document.getElementById('bfcClientSelect').value;
+    if (!userId) { showToast('Selecione um cliente.', 'error'); return; }
+    body.user_id = userId;
+  } else {
+    const name    = document.getElementById('bfcExtName').value.trim();
+    const email   = document.getElementById('bfcExtEmail').value.trim();
+    const phone   = document.getElementById('bfcExtPhone').value.trim();
+    const company = document.getElementById('bfcExtCompany').value.trim();
+    if (!name || !email) { showToast('Nome e e-mail são obrigatórios.', 'error'); return; }
+    body.external_contact = { name, email, phone: phone||null, company: company||null };
+  }
+
+  const res = await fetch('/api/admin/agenda/book-for-client', {
+    method: 'POST', headers: authH(),
+    body: JSON.stringify(body)
+  });
+  const j = await res.json();
+  if (res.ok) {
+    document.getElementById('bookForClientModal')?.remove();
+    showToast('Agendamento criado e confirmado!', 'success');
+    loadAdminAgenda();
+  } else showToast(j.error || 'Erro ao agendar.', 'error');
+}
+
+// Book for client from inside the client drawer
+async function openBookForClientFromDrawer(clientId) {
+  const sRes = await fetch('/api/admin/agenda/slots', { headers: authH() });
+  if (!sRes.ok) { showToast('Erro ao carregar horários.', 'error'); return; }
+  const { slots } = await sRes.json();
+  const future = slots.filter(s => new Date(s.starts_at) > new Date());
+
+  if (!future.length) { showToast('Nenhum horário futuro disponível.', 'error'); return; }
+
+  const modal = document.createElement('div');
+  modal.id = 'bookDrawerModal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;';
+  modal.innerHTML = `
+    <div style="background:#fff;border-radius:12px;padding:28px;width:420px;max-width:94vw;box-shadow:0 20px 60px rgba(0,0,0,.25);">
+      <div style="font-weight:700;font-size:16px;color:#1e3a5f;margin-bottom:16px;">📅 Novo agendamento</div>
+      <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">Horário disponível</label>
+      <select id="bookDrawerSlot" style="width:100%;padding:9px 10px;border:1px solid #CBD5E1;border-radius:6px;font-size:13px;margin-bottom:12px;">
+        ${future.map(s => {
+          const d = new Date(s.starts_at);
+          const de = new Date(s.ends_at);
+          return `<option value="${s.id}">${d.toLocaleDateString('pt-BR')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}–${String(de.getHours()).padStart(2,'0')}:${String(de.getMinutes()).padStart(2,'0')} · ${s.title}</option>`;
+        }).join('')}
+      </select>
+      <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Observações (opcional)</label>
+      <textarea id="bookDrawerNotes" rows="2" placeholder="Pauta, objetivo..." style="width:100%;padding:8px 10px;border:1px solid #CBD5E1;border-radius:6px;font-size:13px;box-sizing:border-box;resize:vertical;margin-bottom:18px;"></textarea>
+      <div style="display:flex;gap:8px;justify-content:flex-end;">
+        <button onclick="document.getElementById('bookDrawerModal').remove()" style="padding:8px 16px;border:1px solid #CBD5E1;border-radius:6px;background:#fff;cursor:pointer;font-size:13px;">Cancelar</button>
+        <button onclick="_submitBookFromDrawer('${clientId}')" style="padding:8px 18px;border:none;border-radius:6px;background:#1e3a5f;color:#fff;cursor:pointer;font-size:13px;font-weight:600;">Agendar</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+}
+
+async function _submitBookFromDrawer(clientId) {
+  const slotId = document.getElementById('bookDrawerSlot').value;
+  const notes  = document.getElementById('bookDrawerNotes').value.trim() || null;
+  const res = await fetch('/api/admin/agenda/book-for-client', {
+    method: 'POST', headers: authH(),
+    body: JSON.stringify({ slot_id: slotId, user_id: clientId, notes })
+  });
+  const j = await res.json();
+  if (res.ok) {
+    document.getElementById('bookDrawerModal')?.remove();
+    showToast('Agendamento criado!', 'success');
+    renderDrawerTab('agenda');
+  } else showToast(j.error || 'Erro ao agendar.', 'error');
 }
 
 // ── Drawer ────────────────────────────────────────────────────────────────────
