@@ -909,7 +909,7 @@ app.get('/api/auth/oauth/start', (req, res) => {
     client_id:             clientId,
     response_type:         'code',
     redirect_uri:          `${BASE_URL}/api/auth/oauth/callback`,
-    scope:                 req.query.scope || 'openid email profile',
+    scope:                 req.query.scope || 'email profile',
     state,
     code_challenge:        challenge,
     code_challenge_method: 'S256',
