@@ -363,35 +363,35 @@
         </div>
 
         <!-- Page tabs -->
-        <div id="fb-page-tabs" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;"></div>
+        <div id="fb-page-tabs" class="form-builder-page-tabs"></div>
 
         <!-- 3-column layout -->
-        <div style="display:grid;grid-template-columns:220px 1fr 280px;gap:12px;min-height:500px;">
+        <div class="form-builder-layout-grid">
 
           <!-- Left: Question palette -->
-          <div style="background:#fff;border:1px solid #E2E8F0;border-radius:10px;overflow:hidden;">
-            <div style="padding:10px 12px;background:#F8FAFC;border-bottom:1px solid #E2E8F0;font-size:11px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:.5px;">
+          <div class="form-builder-side-panel">
+            <div class="form-builder-side-panel-header">
               Tipos de questão
             </div>
-            <div id="fb-palette" style="padding:8px;display:flex;flex-direction:column;gap:2px;overflow-y:auto;max-height:580px;">
+            <div id="fb-palette" class="form-builder-palette">
               <!-- filled by fbRenderPalette() -->
             </div>
           </div>
 
           <!-- Center: Canvas -->
-          <div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px;padding:16px;overflow-y:auto;max-height:600px;" id="fb-canvas">
-            <div style="padding:40px;text-align:center;color:#94A3B8;">
-              <div style="font-size:32px;margin-bottom:10px;">📋</div>
-              <div style="font-size:14px;">Clique em um tipo de questão para adicionar</div>
+          <div class="form-builder-canvas" id="fb-canvas">
+            <div class="form-builder-canvas-empty">
+              <div class="form-builder-canvas-empty-icon">📋</div>
+              <div class="form-builder-canvas-empty-copy">Clique em um tipo de questão para adicionar</div>
             </div>
           </div>
 
           <!-- Right: Properties panel -->
-          <div style="background:#fff;border:1px solid #E2E8F0;border-radius:10px;overflow:hidden;">
-            <div style="padding:10px 12px;background:#F8FAFC;border-bottom:1px solid #E2E8F0;font-size:11px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:.5px;">
+          <div class="form-builder-side-panel">
+            <div class="form-builder-side-panel-header">
               Propriedades
             </div>
-            <div id="fb-props-panel" style="overflow-y:auto;max-height:560px;">
+            <div id="fb-props-panel" class="form-builder-props-panel">
               <div class="admin-empty-state-soft form-builder-props-empty">
                 <div class="form-builder-props-empty-icon">👈</div>
                 <div class="form-builder-props-empty-copy">Clique em uma questão para editar</div>
