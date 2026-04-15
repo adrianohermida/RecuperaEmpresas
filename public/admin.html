@@ -906,7 +906,7 @@ function showSection(name, el) {
   if (name === 'logs')             loadLogs();
   if (name === 'agenda')           loadAdminAgenda();
   if (name === 'financeiro')       loadAdminFinanceiro();
-  if (name === 'formularios')      loadFormBuilder();
+  if (name === 'formularios')      fbLoadFormsList();
   if (name === 'adminInvoices')    loadAdminInvoices();
   if (name === 'adminMarketplace') loadAdminMarketplace();
   if (name === 'auditlog')         loadAuditLog();
@@ -2644,13 +2644,20 @@ async function loadAdminMarketplace() {
   if (oWrap) oWrap.innerHTML = '<div style="padding:16px;color:var(--text-muted);font-size:13px;">Carregando pedidos...</div>';
 
   try {
-    const [svcRes, ordRes] = await Promise.all([
-      fetch('/api/admin/services', { headers: authH() }),
+    const [svcRes, ordRes, jrnRes] = await Promise.all([
+      fetch('/api/admin/services',       { headers: authH() }),
       fetch('/api/admin/service-orders', { headers: authH() }),
+      fetch('/api/admin/journeys',       { headers: authH() }),
     ]);
+
+    // Cache journeys for modal
+    window._mktJourneys = jrnRes.ok ? await jrnRes.json() : [];
 
     if (svcRes.ok) {
       const { services = [] } = await svcRes.json();
+      const jMap = {};
+      (window._mktJourneys || []).forEach(j => { jMap[j.id] = j.name; });
+
       if (!services.length) {
         sWrap.innerHTML = '<div style="padding:16px;color:var(--text-muted);font-size:13px;">Nenhum serviço cadastrado.</div>';
       } else {
@@ -2658,18 +2665,25 @@ async function loadAdminMarketplace() {
           <thead><tr style="border-bottom:1px solid var(--border);">
             <th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-weight:600;">Nome</th>
             <th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-weight:600;">Categoria</th>
+            <th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-weight:600;">Jornada vinculada</th>
             <th style="text-align:right;padding:8px 12px;color:var(--text-muted);font-weight:600;">Valor</th>
             <th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-weight:600;">Status</th>
             <th style="padding:8px 12px;"></th>
           </tr></thead>
           <tbody>${services.map(s => {
-            const price = ((s.price_cents||0)/100).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+            const svcName = s.name || s.title || '—';
+            const price = ((s.price_cents || Math.round((s.price||0)*100)) / 100)
+              .toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+            const jName = s.journey_id ? (jMap[s.journey_id] || s.journey_id) : '—';
             return `<tr style="border-bottom:1px solid #F1F5F9;">
-              <td style="padding:10px 12px;font-weight:600;">${escHtml(s.name)}</td>
+              <td style="padding:10px 12px;font-weight:600;">${escHtml(svcName)}</td>
               <td style="padding:10px 12px;color:var(--text-muted);">${escHtml(s.category||'—')}</td>
+              <td style="padding:10px 12px;font-size:12px;color:#6366F1;">${s.journey_id ? '🗺️ '+escHtml(jName) : '<span style="color:var(--text-muted);">Nenhuma</span>'}</td>
               <td style="padding:10px 12px;text-align:right;font-weight:700;">${price}</td>
               <td style="padding:10px 12px;"><span class="badge ${s.active?'badge-green':'badge-gray'}">${s.active?'Ativo':'Inativo'}</span></td>
-              <td style="padding:10px 12px;">
+              <td style="padding:10px 12px;display:flex;gap:6px;">
+                <button onclick="openEditServiceModal('${s.id}','${escHtml(svcName)}','${escHtml(s.category||'')}','${escHtml(s.description||'')}',${s.price_cents||Math.round((s.price||0)*100)},'${s.journey_id||''}')"
+                  style="border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:11px;background:none;cursor:pointer;">Editar</button>
                 <button onclick="toggleService('${s.id}',${!s.active})"
                   style="border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:11px;background:none;cursor:pointer;">
                   ${s.active?'Desativar':'Ativar'}
@@ -2683,7 +2697,10 @@ async function loadAdminMarketplace() {
 
     if (ordRes.ok && oWrap) {
       const { orders = [] } = await ordRes.json();
-      const stMap = { pending_payment:'Aguardando', paid:'Pago', in_progress:'Em andamento', delivered:'Entregue', cancelled:'Cancelado' };
+      const stMap = {
+        pending_payment:'Aguardando pagamento', active:'Ativo',
+        in_progress:'Em andamento', delivered:'Entregue', cancelled:'Cancelado'
+      };
       if (!orders.length) {
         oWrap.innerHTML = '<div style="padding:16px;color:var(--text-muted);font-size:13px;">Nenhum pedido ainda.</div>';
       } else {
@@ -2698,12 +2715,13 @@ async function loadAdminMarketplace() {
           <tbody>${orders.map(o => {
             const amt = ((o.amount_cents||0)/100).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
             const client = o.re_users || {};
+            const svcName = o.re_services?.name || o.re_services?.title || '—';
             return `<tr style="border-bottom:1px solid #F1F5F9;">
               <td style="padding:10px 12px;">
                 <div style="font-weight:600;">${escHtml(client.name||'—')}</div>
                 <div style="font-size:11px;color:var(--text-muted);">${escHtml(client.email||'')}</div>
               </td>
-              <td style="padding:10px 12px;">${escHtml(o.re_services?.name||'—')}</td>
+              <td style="padding:10px 12px;">${escHtml(svcName)}</td>
               <td style="padding:10px 12px;text-align:right;font-weight:700;">${amt}</td>
               <td style="padding:10px 12px;"><span class="badge badge-gray">${stMap[o.status]||o.status}</span></td>
               <td style="padding:10px 12px;">
@@ -2722,56 +2740,85 @@ async function loadAdminMarketplace() {
   }
 }
 
-function openCreateServiceModal() {
-  const html = `<div id="createServiceModal" style="position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:1000;">
-    <div style="background:#fff;border-radius:12px;padding:28px;width:440px;max-width:96vw;max-height:90vh;overflow-y:auto;">
-      <div style="font-size:17px;font-weight:700;color:var(--dark);margin-bottom:18px;">Novo Serviço</div>
+function _buildServiceModalHtml(id, name, cat, desc, price_cents, journey_id) {
+  const isEdit = !!id;
+  const journeys = window._mktJourneys || [];
+  const jornSelect = `<select id="svcJourney" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:9px;font-size:13px;margin-bottom:12px;">
+    <option value="">— Nenhuma jornada —</option>
+    ${journeys.map(j => `<option value="${j.id}"${journey_id===j.id?' selected':''}>${escHtml(j.name)}</option>`).join('')}
+  </select>`;
+  return `<div id="svcModal" style="position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:1000;">
+    <div style="background:#fff;border-radius:12px;padding:28px;width:460px;max-width:96vw;max-height:90vh;overflow-y:auto;">
+      <div style="font-size:17px;font-weight:700;color:var(--dark);margin-bottom:18px;">${isEdit ? 'Editar Serviço' : 'Novo Serviço'}</div>
+      ${isEdit ? `<input type="hidden" id="svcEditId" value="${id}">` : ''}
       <label style="font-size:12px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px;">Nome *</label>
-      <input id="svcName" type="text" style="width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:6px;padding:9px;font-size:13px;margin-bottom:12px;"/>
+      <input id="svcName" type="text" value="${escHtml(name||'')}" style="width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:6px;padding:9px;font-size:13px;margin-bottom:12px;"/>
       <label style="font-size:12px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px;">Categoria</label>
       <select id="svcCat" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:9px;font-size:13px;margin-bottom:12px;">
-        <option value="juridico">Jurídico</option>
-        <option value="financeiro">Financeiro</option>
-        <option value="consultoria">Consultoria</option>
-        <option value="outro">Outro</option>
+        ${['juridico','financeiro','consultoria','outro'].map(v => `<option value="${v}"${cat===v?' selected':''}>${v.charAt(0).toUpperCase()+v.slice(1)}</option>`).join('')}
       </select>
       <label style="font-size:12px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px;">Descrição</label>
-      <textarea id="svcDesc" rows="2" style="width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:6px;padding:9px;font-size:13px;margin-bottom:12px;resize:vertical;"></textarea>
+      <textarea id="svcDesc" rows="2" style="width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:6px;padding:9px;font-size:13px;margin-bottom:12px;resize:vertical;">${escHtml(desc||'')}</textarea>
       <label style="font-size:12px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px;">Valor (R$) *</label>
-      <input id="svcPrice" type="number" step="0.01" min="0" style="width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:6px;padding:9px;font-size:13px;margin-bottom:12px;"/>
-      <label style="font-size:12px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px;">Prazo de entrega (dias)</label>
-      <input id="svcDays" type="number" min="1" style="width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:6px;padding:9px;font-size:13px;margin-bottom:18px;"/>
+      <input id="svcPrice" type="number" step="0.01" min="0" value="${price_cents ? (price_cents/100).toFixed(2) : ''}" style="width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:6px;padding:9px;font-size:13px;margin-bottom:12px;"/>
+      <label style="font-size:12px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px;">Jornada vinculada
+        <span style="font-weight:400;color:var(--text-muted);"> — ativada automaticamente ao confirmar o pedido</span>
+      </label>
+      ${jornSelect}
       <div style="display:flex;gap:10px;justify-content:flex-end;">
-        <button onclick="document.getElementById('createServiceModal').remove()" style="background:none;border:1px solid var(--border);border-radius:7px;padding:9px 18px;font-size:13px;cursor:pointer;">Cancelar</button>
-        <button onclick="submitCreateService()" style="background:var(--primary);color:#fff;border:none;border-radius:7px;padding:9px 18px;font-size:13px;cursor:pointer;font-weight:600;">Criar Serviço</button>
+        <button onclick="document.getElementById('svcModal').remove()" style="background:none;border:1px solid var(--border);border-radius:7px;padding:9px 18px;font-size:13px;cursor:pointer;">Cancelar</button>
+        <button onclick="submitServiceForm()" style="background:var(--primary);color:#fff;border:none;border-radius:7px;padding:9px 18px;font-size:13px;cursor:pointer;font-weight:600;">${isEdit ? 'Salvar' : 'Criar Serviço'}</button>
       </div>
     </div>
   </div>`;
-  document.body.insertAdjacentHTML('beforeend', html);
 }
 
-async function submitCreateService() {
-  const name    = document.getElementById('svcName')?.value?.trim();
-  const cat     = document.getElementById('svcCat')?.value;
-  const desc    = document.getElementById('svcDesc')?.value?.trim();
-  const price   = parseFloat(document.getElementById('svcPrice')?.value || 0);
-  const days    = parseInt(document.getElementById('svcDays')?.value || 0);
+async function openCreateServiceModal() {
+  // Pre-load journeys if not cached
+  if (!window._mktJourneys) {
+    const r = await fetch('/api/admin/journeys', { headers: authH() });
+    window._mktJourneys = r.ok ? await r.json() : [];
+  }
+  document.getElementById('svcModal')?.remove();
+  document.body.insertAdjacentHTML('beforeend', _buildServiceModalHtml(null,'','consultoria','',0,''));
+}
+
+function openEditServiceModal(id, name, cat, desc, price_cents, journey_id) {
+  document.getElementById('svcModal')?.remove();
+  document.body.insertAdjacentHTML('beforeend', _buildServiceModalHtml(id, name, cat, desc, price_cents, journey_id));
+}
+
+async function submitServiceForm() {
+  const editId    = document.getElementById('svcEditId')?.value;
+  const name      = document.getElementById('svcName')?.value?.trim();
+  const cat       = document.getElementById('svcCat')?.value;
+  const desc      = document.getElementById('svcDesc')?.value?.trim();
+  const price     = parseFloat(document.getElementById('svcPrice')?.value || 0);
+  const journeyId = document.getElementById('svcJourney')?.value || null;
 
   if (!name || !price) { showToast('Nome e valor são obrigatórios.', 'error'); return; }
 
-  const res = await fetch('/api/admin/services', {
-    method: 'POST', headers: authH(),
-    body: JSON.stringify({ name, category: cat, description: desc, price_cents: Math.round(price * 100), delivery_days: days || null })
-  });
-  const j = await res.json();
+  const payload = {
+    name, category: cat, description: desc,
+    price_cents: Math.round(price * 100),
+    journey_id: journeyId || null,
+  };
+
+  const url    = editId ? `/api/admin/services/${editId}` : '/api/admin/services';
+  const method = editId ? 'PUT' : 'POST';
+  const res    = await fetch(url, { method, headers: authH(), body: JSON.stringify(payload) });
+  const j      = await res.json();
   if (res.ok) {
-    document.getElementById('createServiceModal')?.remove();
-    showToast('Serviço criado!', 'success');
+    document.getElementById('svcModal')?.remove();
+    showToast(editId ? 'Serviço atualizado!' : 'Serviço criado!', 'success');
     loadAdminMarketplace();
   } else {
-    showToast(j.error || 'Erro ao criar serviço.', 'error');
+    showToast(j.error || 'Erro ao salvar.', 'error');
   }
 }
+
+// Backwards-compat alias (old onclick in HTML may call openCreateServiceModal)
+function submitCreateService() { submitServiceForm(); }
 
 async function toggleService(id, active) {
   const res = await fetch(`/api/admin/services/${id}`, {
@@ -2785,8 +2832,13 @@ async function updateOrderStatus(id, status) {
   const res = await fetch(`/api/admin/service-orders/${id}`, {
     method: 'PUT', headers: authH(), body: JSON.stringify({ status })
   });
-  if (!res.ok) { const j = await res.json(); showToast(j.error || 'Erro ao atualizar.', 'error'); }
-  else showToast('Status atualizado.', 'success');
+  const j = await res.json();
+  if (!res.ok) showToast(j.error || 'Erro ao atualizar.', 'error');
+  else {
+    showToast('Status atualizado.', 'success');
+    if (status === 'active') showToast('Jornada ativada automaticamente para o cliente!', 'success');
+    loadAdminMarketplace();
+  }
 }
 
 // ── Audit Log ─────────────────────────────────────────────────────────────────

@@ -4427,10 +4427,12 @@ app.post('/api/services/:id/order', requireAuth, async (req, res) => {
     const { data: svc } = await sb.from('re_services').select('*').eq('id', req.params.id).eq('active', true).single();
     if (!svc) return res.status(404).json({ error: 'Serviço não encontrado.' });
 
+    const svcName = svc.name || svc.title || 'Serviço';
+
     // Create internal invoice
     const { data: inv } = await sb.from('re_invoices').insert({
       user_id:        req.user.id,
-      description:    `Serviço: ${svc.name}`,
+      description:    `Serviço: ${svcName}`,
       amount_cents:   svc.price_cents,
       due_date:       new Date(Date.now() + 3*86400000).toISOString().split('T')[0],
       status:         'pending',
@@ -4439,17 +4441,30 @@ app.post('/api/services/:id/order', requireAuth, async (req, res) => {
     }).select().single();
 
     // Create order referencing the invoice
-    const { data: order } = await sb.from('re_service_orders').insert({
+    const { data: order, error: orderErr } = await sb.from('re_service_orders').insert({
       user_id:        req.user.id,
       service_id:     svc.id,
       amount_cents:   svc.price_cents,
       status:         'pending_payment',
       payment_method: 'boleto',
       invoice_id:     inv?.id || null,
+      contracted_at:  new Date().toISOString(),
     }).select().single();
+    if (orderErr) return res.status(500).json({ error: orderErr.message });
+
+    // Auto-assign journey if the service has one linked
+    if (svc.journey_id) {
+      sb.from('re_journey_assignments').upsert({
+        journey_id:  svc.journey_id,
+        user_id:     req.user.id,
+        assigned_by: null,
+        status:      'active',
+        notes:       `Atribuído automaticamente pela contratação do serviço "${svcName}"`,
+      }, { onConflict: 'journey_id,user_id' }).then(() => {}).catch(e => console.warn('[async journey assign]', e?.message));
+    }
 
     pushNotification(req.user.id, 'service', 'Pedido recebido!',
-      `Seu pedido para "${svc.name}" foi registrado. Aguarde o boleto.`,
+      `Seu pedido para "${svcName}" foi registrado. Aguarde o boleto.`,
       'service_order', order?.id).catch(e => console.warn('[async]', e?.message));
 
     res.json({ success: true, order, invoice: inv });
@@ -4482,13 +4497,17 @@ app.get('/api/admin/services', requireAdmin, async (req, res) => {
 // Admin: create service
 app.post('/api/admin/services', requireAdmin, async (req, res) => {
   try {
-    const { name, description, category, price_cents, delivery_days, features, featured } = req.body;
+    const { name, description, category, price_cents, delivery_days, features, featured, journey_id } = req.body;
     if (!name || !price_cents) return res.status(400).json({ error: 'name e price_cents são obrigatórios.' });
     const { data: svc, error } = await sb.from('re_services').insert({
-      name, description, category, price_cents: parseInt(price_cents),
+      name, title: name,
+      description, category,
+      price_cents: parseInt(price_cents),
+      price: parseInt(price_cents) / 100,
       delivery_days: delivery_days || null,
       features: features || null,
       featured: featured || false,
+      journey_id: journey_id || null,
       active: true,
       created_by: req.user.id,
     }).select().single();
@@ -4502,14 +4521,15 @@ app.post('/api/admin/services', requireAdmin, async (req, res) => {
 // Admin: update service
 app.put('/api/admin/services/:id', requireAdmin, async (req, res) => {
   try {
-    const { active, name, description, price_cents, category, featured } = req.body;
+    const { active, name, description, price_cents, category, featured, journey_id } = req.body;
     const updates = {};
     if (active      !== undefined) updates.active      = active;
-    if (name        !== undefined) updates.name        = name;
+    if (name        !== undefined) { updates.name = name; updates.title = name; }
     if (description !== undefined) updates.description = description;
-    if (price_cents !== undefined) updates.price_cents = parseInt(price_cents);
+    if (price_cents !== undefined) { updates.price_cents = parseInt(price_cents); updates.price = parseInt(price_cents) / 100; }
     if (category    !== undefined) updates.category    = category;
     if (featured    !== undefined) updates.featured    = featured;
+    if (journey_id  !== undefined) updates.journey_id  = journey_id || null;
     const { data: svc, error } = await sb.from('re_services').update(updates).eq('id', req.params.id).select().single();
     if (error) return res.status(500).json({ error: error.message });
     res.json({ success: true, service: svc });
@@ -4532,18 +4552,44 @@ app.put('/api/admin/service-orders/:id', requireAdmin, async (req, res) => {
   try {
     const { status, admin_notes, delivered_at } = req.body;
     const updates = { updated_at: new Date().toISOString() };
-    if (status      !== undefined) updates.status      = status;
-    if (admin_notes !== undefined) updates.admin_notes = admin_notes;
+    if (status       !== undefined) updates.status       = status;
+    if (admin_notes  !== undefined) updates.admin_notes  = admin_notes;
     if (delivered_at !== undefined) updates.delivered_at = delivered_at;
+    if (status === 'active')    updates.activated_at  = new Date().toISOString();
+    if (status === 'delivered') updates.completed_at  = new Date().toISOString();
+    if (status === 'cancelled') updates.cancelled_at  = new Date().toISOString();
+
     const { data: order, error } = await sb.from('re_service_orders')
       .update(updates).eq('id', req.params.id).select().single();
     if (error) return res.status(500).json({ error: error.message });
 
+    // Load service info for notifications + journey
+    const { data: o } = await sb.from('re_service_orders')
+      .select('user_id,re_services(id,name,title,journey_id)')
+      .eq('id', req.params.id).single();
+    const svcName = o?.re_services?.name || o?.re_services?.title || 'Serviço';
+
+    // On activation: auto-assign journey if service has one
+    if (status === 'active' && o?.re_services?.journey_id && o?.user_id) {
+      sb.from('re_journey_assignments').upsert({
+        journey_id:  o.re_services.journey_id,
+        user_id:     o.user_id,
+        assigned_by: req.user.id,
+        status:      'active',
+        notes:       `Ativado pelo consultor via pedido de serviço "${svcName}"`,
+      }, { onConflict: 'journey_id,user_id' }).then(() => {}).catch(e => console.warn('[async journey assign]', e?.message));
+    }
+
     // Notify client on key status changes
+    if (status === 'active') {
+      pushNotification(o?.user_id, 'service', 'Serviço ativo!',
+        `"${svcName}" foi ativado. Acesse Jornadas para ver as etapas.`,
+        'service_order', req.params.id).catch(e => console.warn('[async]', e?.message));
+    }
     if (status === 'delivered') {
-      const { data: o } = await sb.from('re_service_orders').select('user_id,re_services(name)').eq('id', req.params.id).single();
-      if (o) pushNotification(o.user_id, 'service', 'Serviço entregue!',
-        `"${o.re_services?.name}" foi concluído e entregue.`, 'service_order', req.params.id).catch(e => console.warn('[async]', e?.message));
+      pushNotification(o?.user_id, 'service', 'Serviço entregue!',
+        `"${svcName}" foi concluído e entregue.`,
+        'service_order', req.params.id).catch(e => console.warn('[async]', e?.message));
     }
     res.json({ success: true, order });
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -4555,13 +4601,13 @@ app.get('/api/admin/audit-log', requireAdmin, async (req, res) => {
     const { entity_type, actor_id, from, to, limit = '50', offset = '0' } = req.query;
     let q = sb.from('re_audit_log')
       .select('*')
-      .order('ts', { ascending: false })
+      .order('created_at', { ascending: false })
       .limit(parseInt(limit))
       .range(parseInt(offset), parseInt(offset) + parseInt(limit) - 1);
     if (entity_type) q = q.eq('entity_type', entity_type);
     if (actor_id)    q = q.eq('actor_id', actor_id);
-    if (from)        q = q.gte('ts', from);
-    if (to)          q = q.lte('ts', to);
+    if (from)        q = q.gte('created_at', from);
+    if (to)          q = q.lte('created_at', to);
     const { data: rows } = await q;
     res.json({ entries: rows || [] });
   } catch (e) {
@@ -4575,24 +4621,24 @@ app.get('/api/admin/audit-log/export', requireAdmin, async (req, res) => {
   try {
     const { entity_type, actor_id, from, to } = req.query;
     let q = sb.from('re_audit_log')
-      .select('ts,actor_id,actor_email,action,entity_type,entity_id,details')
-      .order('ts', { ascending: false })
+      .select('created_at,actor_id,actor_email,action,entity_type,entity_id,details,before_data,after_data')
+      .order('created_at', { ascending: false })
       .limit(10000);
     if (entity_type) q = q.eq('entity_type', entity_type);
     if (actor_id)    q = q.eq('actor_id', actor_id);
-    if (from)        q = q.gte('ts', from);
-    if (to)          q = q.lte('ts', to);
+    if (from)        q = q.gte('created_at', from);
+    if (to)          q = q.lte('created_at', to);
     const { data: rows } = await q;
 
     const header = ['Data/Hora', 'Actor ID', 'E-mail', 'Ação', 'Entidade', 'Entidade ID', 'Detalhes'];
     const csvRows = (rows || []).map(r => [
-      new Date(r.ts).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }),
+      new Date(r.created_at).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }),
       r.actor_id   || '',
       r.actor_email|| '',
       r.action     || '',
       r.entity_type|| '',
       r.entity_id  || '',
-      r.details ? JSON.stringify(r.details) : '',
+      r.after_data ? JSON.stringify(r.after_data) : (r.before_data ? JSON.stringify(r.before_data) : ''),
     ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(','));
 
     const csv = [header.join(','), ...csvRows].join('\r\n');
