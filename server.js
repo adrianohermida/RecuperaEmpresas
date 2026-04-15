@@ -949,7 +949,7 @@ app.post('/api/auth/register', async (req, res) => {
       if (Object.keys(updates).length) {
         await sb.from('re_users').update(updates).eq('id', profile.id);
       }
-    }).catch(() => {});
+    }).catch(e => console.warn('[async]', e?.message));
 
     logAccess(profile.id, email, 'register', req.ip);
 
@@ -1074,7 +1074,7 @@ app.post('/api/auth/confirm', async (req, res) => {
     if (error || !data?.user) return res.status(401).json({ error: 'Token de confirmação inválido ou expirado.' });
 
     const profile = await upsertProfileFromAuth(data.user);
-    await sbAnon.auth.signOut().catch(() => {}); // clear Supabase session — we use our own JWT
+    await sbAnon.auth.signOut().catch(e => console.warn('[async]', e?.message)); // clear Supabase session — we use our own JWT
     logAccess(profile.id, profile.email, 'confirm', req.ip);
     const token = signToken({ userId: profile.id, email: profile.email });
     res.json({ success: true, token, user: safeUser(profile) });
@@ -1360,7 +1360,7 @@ app.post('/api/step-complete', requireAuth, async (req, res) => {
     const ticketId = user.freshdesk_ticket_id;
     if (ticketId) {
       const noteHtml = `<h3>Etapa ${stepNum} / 14 — ${STEP_TITLES[stepNum]}</h3>${stepHtml}`;
-      addFreshdeskNote(ticketId, noteHtml).catch(() => {});
+      addFreshdeskNote(ticketId, noteHtml).catch(e => console.warn('[async]', e?.message));
     }
 
     logAccess(user.id, user.email, 'step_complete', req.ip, { step: stepNum });
@@ -1424,8 +1424,8 @@ app.post('/api/submit', requireAuth, upload.fields(fileFields), async (req, res)
     if (ticketId) {
       await addFreshdeskNote(ticketId,
         `<h3>Onboarding concluído em ${ts}</h3><p>Todos os dados foram enviados. Relatório completo segue por e-mail.</p>${fullHtml}`
-      ).catch(() => {});
-      await updateFreshdeskTicket(ticketId, { status: 4 }).catch(() => {});
+      ).catch(e => console.warn('[async]', e?.message));
+      await updateFreshdeskTicket(ticketId, { status: 4 }).catch(e => console.warn('[async]', e?.message));
     }
 
     // Freshsales CRM: update contact + create deal (fire and forget)
@@ -1438,11 +1438,11 @@ app.post('/api/submit', requireAuth, upload.fields(fileFields), async (req, res)
       }).then(async (fsContactId) => {
         const storedId = user.freshsales_contact_id || fsContactId;
         const dealName = `Recuperação — ${empresa.razaoSocial || user.company || user.name}`;
-        if (storedId) await createFreshsalesDeal(storedId, dealName, faturamento).catch(() => {});
+        if (storedId) await createFreshsalesDeal(storedId, dealName, faturamento).catch(e => console.warn('[async]', e?.message));
         if (fsContactId && !user.freshsales_contact_id) {
           await sb.from('re_users').update({ freshsales_contact_id: fsContactId }).eq('id', user.id);
         }
-      }).catch(() => {});
+      }).catch(e => console.warn('[async]', e?.message));
     }
 
     for (const fileList of Object.values(files))
@@ -1513,7 +1513,7 @@ app.post('/api/messages', requireAuth, async (req, res) => {
   for (const admin of (admins || [])) {
     pushNotification(admin.id, 'message', 'Nova mensagem de cliente',
       `${req.user.name || req.user.email}: ${text.trim().slice(0, 80)}`,
-      'message', req.user.id).catch(() => {});
+      'message', req.user.id).catch(e => console.warn('[async]', e?.message));
   }
   res.json({ success: true, message: msg });
 });
@@ -1583,12 +1583,12 @@ app.post('/api/admin/client/:id/task', requireAdmin, async (req, res) => {
   // Notify client about new task (fire-and-forget)
   pushNotification(req.params.id, 'task', 'Nova tarefa atribuída',
     title + (description ? ': ' + description.slice(0, 60) : ''),
-    'task', task?.id).catch(() => {});
+    'task', task?.id).catch(e => console.warn('[async]', e?.message));
 
   // Audit log
   auditLog({ actorId: req.user.id, actorEmail: req.user.email, actorRole: 'admin',
     entityType: 'task', entityId: task?.id, action: 'create',
-    after: { user_id: req.params.id, title, status: 'pendente' } }).catch(() => {});
+    after: { user_id: req.params.id, title, status: 'pendente' } }).catch(e => console.warn('[async]', e?.message));
 
   res.json({ success: true, task });
 });
@@ -1606,12 +1606,12 @@ app.put('/api/admin/client/:id/plan/chapter/:chapterId', requireAdmin, async (re
     const stLbl  = status === 'aprovado' ? 'aprovado ✅' : status === 'revisao' ? 'em revisão 🔄' : 'atualizado';
     pushNotification(req.params.id, 'plan', `Business Plan: capítulo ${stLbl}`,
       chap ? '"' + chap.title + '"' : 'Capítulo ' + req.params.chapterId,
-      'plan_chapter', req.params.chapterId).catch(() => {});
+      'plan_chapter', req.params.chapterId).catch(e => console.warn('[async]', e?.message));
   }
 
   auditLog({ actorId: req.user.id, actorEmail: req.user.email, actorRole: 'admin',
     entityType: 'plan_chapter', entityId: req.params.id + ':' + req.params.chapterId,
-    action: 'update', after: updates }).catch(() => {});
+    action: 'update', after: updates }).catch(e => console.warn('[async]', e?.message));
 
   res.json({ success: true });
 });
@@ -1628,7 +1628,7 @@ app.post('/api/admin/client/:id/message', requireAdmin, async (req, res) => {
 
   // Notify client about new message from consultant
   pushNotification(req.params.id, 'message', 'Nova mensagem do consultor',
-    text.trim().slice(0, 100), 'message', req.params.id).catch(() => {});
+    text.trim().slice(0, 100), 'message', req.params.id).catch(e => console.warn('[async]', e?.message));
 
   res.json({ success: true, message: msg });
 });
@@ -2187,7 +2187,7 @@ app.post('/api/agenda/book/:slotId', requireAuth, async (req, res) => {
     gcPatchEvent(evId, {
       summary: `${slot.title || 'Consultoria'} — ${req.user.company || req.user.name || req.user.email}`,
       attendees: [{ email: req.user.email, displayName: req.user.name || req.user.email }],
-    }).catch(() => {});
+    }).catch(e => console.warn('[async]', e?.message));
   } else if (!evId && GOOGLE_CALENDAR_ID) {
     // Slot criado antes do server restart — criar evento agora com attendee
     gcCreateEvent({
@@ -2195,7 +2195,7 @@ app.post('/api/agenda/book/:slotId', requireAuth, async (req, res) => {
       description: `Cliente: ${req.user.name || req.user.email} (${req.user.company || ''})\nBooking: ${booking.id}`,
       start: slot.starts_at, end: slot.ends_at,
       attendeeEmail: req.user.email,
-    }).then(id => { if (id) _calendarEventIds.set(slotId, id); }).catch(() => {});
+    }).then(id => { if (id) _calendarEventIds.set(slotId, id); }).catch(e => console.warn('[async]', e?.message));
   }
 
   // Confirmation email (fire and forget)
@@ -2215,13 +2215,13 @@ app.post('/api/agenda/book/:slotId', requireAuth, async (req, res) => {
            <td style="padding:6px 0;font-weight:600;">${newBal} crédito${newBal !== 1 ? 's' : ''}</td></tr>
      </table>
      <p style="font-size:13px;color:#64748B;">Você receberá um lembrete 24h antes da sessão.</p>`
-  )).catch(() => {});
+  )).catch(e => console.warn('[async]', e?.message));
 
   sendMail(EMAIL_TO, `[Agendamento] ${req.user.name || req.user.email} — ${startsAtFmt}`, emailWrapper(
     'Novo agendamento',
     `<p><b>${req.user.name || req.user.email}</b> (${req.user.company || '—'}) agendou uma sessão.</p>
      <p><b>Sessão:</b> ${slot.title || 'Consultoria'}<br><b>Data:</b> ${startsAtFmt}</p>`
-  )).catch(() => {});
+  )).catch(e => console.warn('[async]', e?.message));
 
   res.json({ success: true, booking, credits_balance: newBal });
 });
@@ -2247,7 +2247,7 @@ app.delete('/api/agenda/book/:bookingId', requireAuth, async (req, res) => {
     gcPatchEvent(evId, {
       summary: `[Disponível] ${slot?.title || 'Consultoria'} — Recupera Empresas`,
       attendees: [],
-    }).catch(() => {});
+    }).catch(e => console.warn('[async]', e?.message));
   }
 
   res.json({ success: true, credits_balance: newBal });
@@ -2345,7 +2345,7 @@ app.post('/api/stripe/webhook', async (req, res) => {
                 <b>${inv.number || inv.id}</b>
                 no valor de <b>R$ ${(inv.amount_paid / 100).toFixed(2).replace('.', ',')}</b>.</p>
              <p>Obrigado pela confiança.</p>`
-          )).catch(() => {});
+          )).catch(e => console.warn('[async]', e?.message));
         }
       }
     }
@@ -2362,7 +2362,7 @@ app.post('/api/stripe/webhook', async (req, res) => {
             `<p>Olá, <b>${user.name || user.company || user.email}</b>!</p>
              <p>Não foi possível processar o pagamento da fatura <b>${inv.number || inv.id}</b>.</p>
              <p><a href="${inv.hosted_invoice_url}" style="color:#2563EB;">Clique aqui para regularizar o pagamento.</a></p>`
-          )).catch(() => {});
+          )).catch(e => console.warn('[async]', e?.message));
         }
       }
     }
@@ -2408,7 +2408,7 @@ app.post('/api/admin/agenda/slots', requireAdmin, async (req, res) => {
     summary: `[Disponível] ${title || 'Consultoria'} — Recupera Empresas`,
     description: `Slot disponível para reserva de clientes.\nVagas: ${max_bookings || 1}  |  Créditos: ${credits_cost || 1}`,
     start: starts_at, end: ends_at,
-  }).then(evId => { if (evId) _calendarEventIds.set(data.id, evId); }).catch(() => {});
+  }).then(evId => { if (evId) _calendarEventIds.set(data.id, evId); }).catch(e => console.warn('[async]', e?.message));
 
   res.json({ success: true, slot: data });
 });
@@ -2418,7 +2418,7 @@ app.delete('/api/admin/agenda/slots/:slotId', requireAdmin, async (req, res) => 
   await sb.from('re_agenda_slots').delete().eq('id', slotId);
   // Google Calendar — remover evento
   const evId = _calendarEventIds.get(slotId);
-  if (evId) { gcDeleteEvent(evId).catch(() => {}); _calendarEventIds.delete(slotId); }
+  if (evId) { gcDeleteEvent(evId).catch(e => console.warn('[async]', e?.message)); _calendarEventIds.delete(slotId); }
   res.json({ success: true });
 });
 
@@ -2682,7 +2682,7 @@ app.post('/api/appointments', requireAuth, async (req, res) => {
       <p><b>Data/Hora:</b> ${new Date(date+'T12:00:00').toLocaleDateString('pt-BR')}${time ? ' às '+time : ''}</p>
       ${notes ? `<p><b>Observações:</b> ${notes}</p>` : ''}
     `)
-  ).catch(() => {});
+  ).catch(e => console.warn('[async]', e?.message));
 
   res.json({ success: true, appointment: appt });
 });
@@ -2791,7 +2791,7 @@ app.post('/api/financial/request-invoice', requireAuth, async (req, res) => {
         ${description ? `<p><b>Detalhe:</b> ${description}</p>` : ''}
       `)
     )
-  ]).catch(() => {});
+  ]).catch(e => console.warn('[async]', e?.message));
   res.json({ success: true, message: 'Solicitação enviada. Nossa equipe entrará em contato.' });
 });
 
@@ -3060,7 +3060,7 @@ app.post('/api/admin/forms', requireAdmin, async (req, res) => {
     // Auto-create first page
     await sb.from('re_form_pages').insert({ form_id: form.id, title: 'Página 1', order_index: 0 });
     auditLog({ actorId: req.user.id, actorEmail: req.user.email, actorRole: 'admin',
-      entityType: 'form', entityId: form.id, action: 'create', after: { title, type } }).catch(() => {});
+      entityType: 'form', entityId: form.id, action: 'create', after: { title, type } }).catch(e => console.warn('[async]', e?.message));
     res.json({ success: true, form });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -3158,7 +3158,7 @@ app.post('/api/admin/forms/:id/assign', requireAdmin, async (req, res) => {
     for (const uid of user_ids) {
       const { data: form } = await sb.from('re_forms').select('title').eq('id', req.params.id).single();
       pushNotification(uid, 'task', 'Novo formulário disponível',
-        form?.title || 'Formulário', 'form', req.params.id).catch(() => {});
+        form?.title || 'Formulário', 'form', req.params.id).catch(e => console.warn('[async]', e?.message));
     }
     res.json({ success: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -3349,7 +3349,7 @@ app.post('/api/admin/forms/:id/assign-email', requireAdmin, async (req, res) => 
     );
     const { data: form } = await sb.from('re_forms').select('title').eq('id', req.params.id).single();
     pushNotification(user.id, 'task', 'Novo formulário disponível',
-      form?.title || 'Formulário', 'form', req.params.id).catch(() => {});
+      form?.title || 'Formulário', 'form', req.params.id).catch(e => console.warn('[async]', e?.message));
     res.json({ success: true, user });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -3484,7 +3484,7 @@ app.post('/api/forms/:id/responses/:responseId/complete', requireAuth, async (re
     for (const adm of (admins || [])) {
       pushNotification(adm.id, 'task', 'Formulário concluído',
         `${form?.title || 'Formulário'} — resposta de ${req.user.name || req.user.email}`,
-        'form_response', req.params.responseId).catch(() => {});
+        'form_response', req.params.responseId).catch(e => console.warn('[async]', e?.message));
     }
     res.json({ success: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -3664,7 +3664,7 @@ app.post('/api/my-forms/:id/response', requireAuth, async (req, res) => {
       for (const adm of (admins || [])) {
         pushNotification(adm.id, 'task', 'Formulário concluído',
           `${form?.title || 'Formulário'} — resposta de ${req.user.name || req.user.email}`,
-          'form_response', responseId).catch(() => {});
+          'form_response', responseId).catch(e => console.warn('[async]', e?.message));
       }
     }
 
@@ -3870,12 +3870,12 @@ app.post('/api/admin/invoices', requireAdmin, async (req, res) => {
     // Push notification to client
     pushNotification(user_id, 'payment', 'Nova cobrança disponível',
       `${description} — vencimento: ${new Date(due_date + 'T12:00:00').toLocaleDateString('pt-BR')}`,
-      'invoice', inv.id).catch(() => {});
+      'invoice', inv.id).catch(e => console.warn('[async]', e?.message));
 
     // Audit log
     auditLog({ actorId: req.user.id, actorEmail: req.user.email, actorRole: 'admin',
       entityType: 'invoice', entityId: inv.id, action: 'create',
-      after: { user_id, description, amount_cents, due_date } }).catch(() => {});
+      after: { user_id, description, amount_cents, due_date } }).catch(e => console.warn('[async]', e?.message));
 
     res.json({ success: true, invoice: inv });
   } catch (e) {
@@ -3905,13 +3905,13 @@ app.put('/api/admin/invoices/:id', requireAdmin, async (req, res) => {
       const labels = { paid: 'Pagamento confirmado', overdue: 'Boleto vencido', cancelled: 'Boleto cancelado' };
       if (labels[status]) {
         pushNotification(before.user_id, 'payment', labels[status],
-          before.description, 'invoice', req.params.id).catch(() => {});
+          before.description, 'invoice', req.params.id).catch(e => console.warn('[async]', e?.message));
       }
     }
 
     auditLog({ actorId: req.user.id, actorEmail: req.user.email, actorRole: 'admin',
       entityType: 'invoice', entityId: req.params.id, action: 'update',
-      before: before, after: updates }).catch(() => {});
+      before: before, after: updates }).catch(e => console.warn('[async]', e?.message));
 
     res.json({ success: true, invoice: inv });
   } catch (e) {
@@ -3927,7 +3927,7 @@ app.delete('/api/admin/invoices/:id', requireAdmin, async (req, res) => {
     await sb.from('re_invoices').update({ status: 'cancelled' }).eq('id', req.params.id);
     auditLog({ actorId: req.user.id, actorEmail: req.user.email, actorRole: 'admin',
       entityType: 'invoice', entityId: req.params.id, action: 'cancel',
-      before: { status: before.status }, after: { status: 'cancelled' } }).catch(() => {});
+      before: { status: before.status }, after: { status: 'cancelled' } }).catch(e => console.warn('[async]', e?.message));
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -4070,7 +4070,7 @@ app.post('/api/services/:id/order', requireAuth, async (req, res) => {
 
     pushNotification(req.user.id, 'service', 'Pedido recebido!',
       `Seu pedido para "${svc.name}" foi registrado. Aguarde o boleto.`,
-      'service_order', order?.id).catch(() => {});
+      'service_order', order?.id).catch(e => console.warn('[async]', e?.message));
 
     res.json({ success: true, order, invoice: inv });
   } catch (e) {
@@ -4114,7 +4114,7 @@ app.post('/api/admin/services', requireAdmin, async (req, res) => {
     }).select().single();
     if (error) return res.status(500).json({ error: error.message });
     auditLog({ actorId: req.user.id, actorEmail: req.user.email, actorRole: 'admin',
-      entityType: 'service', entityId: svc.id, action: 'create', after: { name, price_cents } }).catch(() => {});
+      entityType: 'service', entityId: svc.id, action: 'create', after: { name, price_cents } }).catch(e => console.warn('[async]', e?.message));
     res.json({ success: true, service: svc });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -4163,7 +4163,7 @@ app.put('/api/admin/service-orders/:id', requireAdmin, async (req, res) => {
     if (status === 'delivered') {
       const { data: o } = await sb.from('re_service_orders').select('user_id,re_services(name)').eq('id', req.params.id).single();
       if (o) pushNotification(o.user_id, 'service', 'Serviço entregue!',
-        `"${o.re_services?.name}" foi concluído e entregue.`, 'service_order', req.params.id).catch(() => {});
+        `"${o.re_services?.name}" foi concluído e entregue.`, 'service_order', req.params.id).catch(e => console.warn('[async]', e?.message));
     }
     res.json({ success: true, order });
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -4274,7 +4274,7 @@ app.post('/api/cron/booking-reminders', async (req, res) => {
              <td style="padding:6px 0;font-weight:600;">${startsAtFmt}</td></tr>
        </table>
        <p style="font-size:13px;color:#64748B;">Em caso de imprevistos, acesse o portal para cancelar com antecedência.</p>`
-    )).catch(() => {});
+    )).catch(e => console.warn('[async]', e?.message));
 
     await sb.from('re_bookings').update({ reminder_sent: true }).eq('id', booking.id);
     sent++;
@@ -4319,7 +4319,7 @@ app.post('/api/cron/invoice-overdue', async (req, res) => {
                <td style="padding:6px 0;font-weight:600;">${dueFmt}</td></tr>
          </table>
          <p>Entre em contato com nossa equipe para regularizar.</p>`
-      )).catch(() => {});
+      )).catch(e => console.warn('[async]', e?.message));
     }
     marked++;
   }
@@ -4329,7 +4329,7 @@ app.post('/api/cron/invoice-overdue', async (req, res) => {
     sendMail(EMAIL_TO, `[Financeiro] ${marked} fatura(s) vencida(s) hoje`, emailWrapper(
       'Faturas vencidas',
       `<p>${marked} fatura(s) venceu/venceram hoje (${today}) e foram marcadas como em atraso.</p>`
-    )).catch(() => {});
+    )).catch(e => console.warn('[async]', e?.message));
   }
 
   console.log(`[CRON] invoice-overdue: ${marked} marcadas`);
