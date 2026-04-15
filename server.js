@@ -833,6 +833,13 @@ window.RE_FRESHCHAT_SITE_ID = ${JSON.stringify(process.env.RE_FRESHCHAT_SITE_ID 
 `);
 });
 
+app.use((req, res, next) => {
+  if (req.method === 'GET' && (req.path === '/' || /\.html?$/i.test(req.path))) {
+    res.setHeader('Cache-Control', 'no-store');
+  }
+  next();
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 const storage = multer.diskStorage({
