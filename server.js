@@ -1,17 +1,19 @@
 'use strict';
 require('dotenv').config();
 
-const express  = require('express');
-const multer   = require('multer');
-const bcrypt   = require('bcryptjs');
-const jwt      = require('jsonwebtoken');
-const crypto   = require('crypto');
-const path     = require('path');
-const fs       = require('fs');
-const https    = require('https');
+const express      = require('express');
+const cookieParser = require('cookie-parser');
+const multer       = require('multer');
+const bcrypt       = require('bcryptjs');
+const jwt          = require('jsonwebtoken');
+const crypto       = require('crypto');
+const path         = require('path');
+const fs           = require('fs');
+const https        = require('https');
 const { createClient } = require('@supabase/supabase-js');
 const XLSX    = require('xlsx');
 const PDFDoc  = require('pdfkit');
+const rateLimit = require('express-rate-limit');
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 const PORT       = process.env.PORT       || 3000;
@@ -65,11 +67,17 @@ const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || '';
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || 'contato@recuperaempresas.com.br,camilagbhmaia@gmail.com,adrianohermida@gmail.com')
                        .split(',').map(e => e.trim().toLowerCase());
 
+// ─── Google Calendar (service account) ───────────────────────────────────────
+const GOOGLE_CLIENT_EMAIL = process.env.GOOGLE_CLIENT_EMAIL || '';
+const GOOGLE_PRIVATE_KEY  = (process.env.GOOGLE_PRIVATE_KEY  || '').replace(/\\n/g, '\n');
+const GOOGLE_CALENDAR_ID  = process.env.GOOGLE_CALENDAR_ID  || '';
+const GOOGLE_CALENDAR_TZ  = process.env.GOOGLE_CALENDAR_TZ  || 'America/Sao_Paulo';
+
 // ─── Supabase — aceita nomes VITE_* (convenção do projeto) ou nomes genéricos ─
 const SUPABASE_URL = (
   process.env.VITE_SUPABASE_URL ||
   process.env.SUPABASE_URL      ||
-  'https://sspvizogbcyigquqycsz.supabase.co'
+  'https://riiajjmnzgagntiqqshs.supabase.co'
 );
 const SUPABASE_SERVICE_KEY = (
   process.env.VITE_SUPABASE_SERVICE_ROLE  ||
@@ -80,16 +88,21 @@ const SUPABASE_ANON_KEY = (
   process.env.VITE_SUPABASE_ANON_KEY                 ||
   process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY    ||
   process.env.SUPABASE_ANON_KEY                       ||
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNzcHZpem9nYmN5aWdxdXF5Y3N6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc3OTYxNTYsImV4cCI6MjA4MzM3MjE1Nn0.C1P4wlanONGA9EDNR4nBujJ136sSXlZCioFyd_CWIfs'
+  ''
 );
 
 // Service role bypasses RLS — OBRIGATÓRIO para queries server-side
 const SUPABASE_KEY = SUPABASE_SERVICE_KEY || SUPABASE_ANON_KEY;
+if (!SUPABASE_ANON_KEY) {
+  console.error('[SUPABASE] ❌  VITE_SUPABASE_ANON_KEY não definido — login/register vão falhar!');
+  console.error('[SUPABASE] ❌  Defina VITE_SUPABASE_ANON_KEY no .env ou nas env vars do Render.');
+}
 if (!SUPABASE_SERVICE_KEY) {
   console.warn('[SUPABASE] ⚠️  VITE_SUPABASE_SERVICE_ROLE não definido — usando anon key.');
   console.warn('[SUPABASE] ⚠️  Queries de escrita/leitura admin serão bloqueadas por RLS.');
   console.warn('[SUPABASE] ⚠️  Defina VITE_SUPABASE_SERVICE_ROLE no .env para operação completa.');
 }
+console.log(`[SUPABASE] Projeto: ${SUPABASE_URL}`);
 
 // sb = service role (DB + Auth admin operations)
 const sb = createClient(SUPABASE_URL, SUPABASE_KEY, {
@@ -100,6 +113,15 @@ const sb = createClient(SUPABASE_URL, SUPABASE_KEY, {
 const sbAnon = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: { autoRefreshToken: false, persistSession: false }
 });
+
+const AUTH_EMAIL_REDIRECTS = {
+  confirmSignUp:   `${BASE_URL}/login.html?confirmed=1`,
+  inviteUser:      `${BASE_URL}/login.html?invited=1`,
+  magicLink:       `${BASE_URL}/login.html?magic=1`,
+  changeEmail:     `${BASE_URL}/login.html?email_changed=1`,
+  resetPassword:   `${BASE_URL}/reset-password.html`,
+  reauthentication:`${BASE_URL}/login.html?reauthenticated=1`,
+};
 
 // ─── Upload dir (for temp file uploads) ──────────────────────────────────────
 const UPLOADS_DIR = path.join(__dirname, 'uploads');
@@ -205,6 +227,81 @@ async function updateAppointment(id, updates) {
   await sb.from('re_appointments').update(updates).eq('id', id);
 }
 
+// ─── In-memory stores (reset on restart — sem schema changes no Supabase) ─────
+const _calendarEventIds = new Map(); // slotId → googleCalendarEventId
+const _adminMsgSeen     = new Map(); // adminId → { clientId: ISO timestamp }
+
+// ─── Google Calendar (service account via REST) ───────────────────────────────
+let _gcToken = null, _gcTokenExp = 0;
+
+async function _gcAccessToken() {
+  if (_gcToken && Date.now() < _gcTokenExp - 60_000) return _gcToken;
+  if (!GOOGLE_CLIENT_EMAIL || !GOOGLE_PRIVATE_KEY) return null;
+  try {
+    const now     = Math.floor(Date.now() / 1000);
+    const header  = Buffer.from(JSON.stringify({ alg: 'RS256', typ: 'JWT' })).toString('base64url');
+    const payload = Buffer.from(JSON.stringify({
+      iss: GOOGLE_CLIENT_EMAIL,
+      scope: 'https://www.googleapis.com/auth/calendar',
+      aud:  'https://oauth2.googleapis.com/token',
+      iat:  now, exp: now + 3600,
+    })).toString('base64url');
+    const sign = crypto.createSign('RSA-SHA256');
+    sign.update(`${header}.${payload}`);
+    const sig = sign.sign(GOOGLE_PRIVATE_KEY, 'base64url');
+    const res  = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer', assertion: `${header}.${payload}.${sig}` }),
+    });
+    if (!res.ok) return null;
+    const d = await res.json();
+    _gcToken = d.access_token; _gcTokenExp = Date.now() + d.expires_in * 1000;
+    return _gcToken;
+  } catch (e) { console.warn('[GCAL] auth:', e.message); return null; }
+}
+
+async function gcCreateEvent({ summary, description, start, end, attendeeEmail }) {
+  if (!GOOGLE_CALENDAR_ID) return null;
+  const token = await _gcAccessToken();
+  if (!token) return null;
+  try {
+    const body = {
+      summary, description: description || '',
+      start: { dateTime: start, timeZone: GOOGLE_CALENDAR_TZ },
+      end:   { dateTime: end,   timeZone: GOOGLE_CALENDAR_TZ },
+      reminders: { useDefault: false, overrides: [{ method: 'email', minutes: 60 }, { method: 'popup', minutes: 30 }] },
+    };
+    if (attendeeEmail) body.attendees = [{ email: attendeeEmail }];
+    const res = await fetch(
+      `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(GOOGLE_CALENDAR_ID)}/events?sendUpdates=all`,
+      { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
+    );
+    if (!res.ok) { console.warn('[GCAL] create:', await res.text()); return null; }
+    return (await res.json()).id;
+  } catch (e) { console.warn('[GCAL] create:', e.message); return null; }
+}
+
+async function gcPatchEvent(eventId, patch) {
+  if (!GOOGLE_CALENDAR_ID || !eventId) return;
+  const token = await _gcAccessToken();
+  if (!token) return;
+  await fetch(
+    `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(GOOGLE_CALENDAR_ID)}/events/${eventId}?sendUpdates=all`,
+    { method: 'PATCH', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(patch) }
+  ).catch(e => console.warn('[GCAL] patch:', e.message));
+}
+
+async function gcDeleteEvent(eventId) {
+  if (!GOOGLE_CALENDAR_ID || !eventId) return;
+  const token = await _gcAccessToken();
+  if (!token) return;
+  await fetch(
+    `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(GOOGLE_CALENDAR_ID)}/events/${eventId}?sendUpdates=all`,
+    { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } }
+  ).catch(e => console.warn('[GCAL] delete:', e.message));
+}
+
 async function logAccess(userId, email, event, ip, extra = {}) {
   try {
     await sb.from('re_access_log').insert({
@@ -217,6 +314,39 @@ async function logAccess(userId, email, event, ip, extra = {}) {
   } catch {
     // Access log failures must never break auth flows.
   }
+}
+
+// ─── Audit log helper (fire-and-forget, never blocks) ────────────────────────
+async function auditLog({ actorId, actorEmail, actorRole, entityType, entityId, action, before, after, ip, notes } = {}) {
+  try {
+    await sb.from('re_audit_log').insert({
+      actor_id:    actorId    || null,
+      actor_email: actorEmail || null,
+      actor_role:  actorRole  || null,
+      entity_type: entityType || 'unknown',
+      entity_id:   entityId   ? String(entityId) : null,
+      action:      action     || 'unknown',
+      before_data: before     || null,
+      after_data:  after      || null,
+      ip:          ip         || null,
+      notes:       notes      || null,
+    });
+  } catch { /* audit failures must never break primary flows */ }
+}
+
+// ─── Notification helper (fire-and-forget) ────────────────────────────────────
+async function pushNotification(userId, type, title, body, entityType, entityId) {
+  try {
+    if (!userId) return;
+    await sb.from('re_notifications').insert({
+      user_id:     userId,
+      type:        type        || 'info',
+      title:       title       || '',
+      body:        body        || null,
+      entity_type: entityType  || null,
+      entity_id:   entityId ? String(entityId) : null,
+    });
+  } catch { /* notification failures must never block primary responses */ }
 }
 
 // ─── JWT ──────────────────────────────────────────────────────────────────────
@@ -244,21 +374,22 @@ async function requireAuth(req, res, next) {
   // Member token: has company_id field — look up in re_company_users
   if (decoded.company_id) {
     const { data: member } = await sb.from('re_company_users')
-      .select('id,name,email,role,active,company_id')
+      .select('id,name,email,role,active,company_id,permissions')
       .eq('id', decoded.id)
       .eq('active', true)
       .single();
     if (!member) return res.status(401).json({ error: 'Membro inativo ou não encontrado.' });
     // Expose company owner id as user.id so all routes read the correct data
     req.user = {
-      id:         member.company_id,   // data owner = the company owner
-      member_id:  member.id,
-      name:       member.name,
-      email:      member.email,
-      role:       member.role,
-      company_id: member.company_id,
-      is_admin:   false,
-      is_member:  true,
+      id:          member.company_id,   // data owner = the company owner
+      member_id:   member.id,
+      name:        member.name,
+      email:       member.email,
+      role:        member.role,
+      company_id:  member.company_id,
+      permissions: member.permissions || {},
+      is_admin:    false,
+      is_member:   true,
     };
     return next();
   }
@@ -332,6 +463,73 @@ async function addFreshdeskNote(ticketId, htmlBody) {
 async function updateFreshdeskTicket(ticketId, updates) {
   if (!ticketId) return;
   await freshdeskRequest('PUT', `tickets/${ticketId}`, updates);
+}
+
+// ─── Freshsales CRM ──────────────────────────────────────────────────────────
+function freshsalesRequest(method, endpoint, body) {
+  return new Promise((resolve) => {
+    if (!FRESHSALES_KEY) return resolve({ ok: false, data: {} });
+    const bodyStr = body ? JSON.stringify(body) : '';
+    const opts = {
+      hostname: FRESHSALES_HOST,
+      path: `/crm/sales/api/${endpoint}`,
+      method,
+      headers: {
+        'Authorization': `Token token=${FRESHSALES_KEY}`,
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(bodyStr),
+      },
+    };
+    const req = https.request(opts, r => {
+      let data = '';
+      r.on('data', c => data += c);
+      r.on('end', () => {
+        try { resolve({ ok: r.statusCode < 300, status: r.statusCode, data: JSON.parse(data) }); }
+        catch { resolve({ ok: r.statusCode < 300, data: {} }); }
+      });
+    });
+    req.on('error', () => resolve({ ok: false, data: {} }));
+    if (bodyStr) req.write(bodyStr);
+    req.end();
+  });
+}
+
+async function syncFreshsalesContact(email, name, company, phone, extra = {}) {
+  if (!FRESHSALES_KEY) return null;
+  const search = await freshsalesRequest('GET',
+    `contacts/search?q=${encodeURIComponent(email)}&include=owner`, null);
+  const existing = search.ok && search.data?.contacts?.[0];
+
+  const [firstName, ...rest] = (name || email).split(' ');
+  const payload = {
+    contact: {
+      first_name:   firstName,
+      last_name:    rest.join(' ') || '',
+      email,
+      work_number:  phone || undefined,
+      job_title:    extra.job_title || undefined,
+      company_name: company || undefined,
+    },
+  };
+
+  if (existing) {
+    const upd = await freshsalesRequest('PUT', `contacts/${existing.id}`, payload);
+    return upd.ok ? (upd.data?.contact?.id || existing.id) : existing.id;
+  }
+  const created = await freshsalesRequest('POST', 'contacts', payload);
+  return created.ok ? created.data?.contact?.id : null;
+}
+
+async function createFreshsalesDeal(contactId, name, amount) {
+  if (!FRESHSALES_KEY || !contactId) return null;
+  const result = await freshsalesRequest('POST', 'deals', {
+    deal: {
+      name,
+      amount: amount || 0,
+      contacts_list: [{ id: contactId }],
+    },
+  });
+  return result.ok ? result.data?.deal?.id : null;
 }
 
 // ─── Resend email ─────────────────────────────────────────────────────────────
@@ -552,6 +750,8 @@ const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || '')
 const DEFAULT_ORIGINS = [
   /^https?:\/\/localhost(:\d+)?$/,
   /^https?:\/\/127\.0\.0\.1(:\d+)?$/,
+  /^https:\/\/(www\.)?recuperaempresas\.com\.br$/,
+  /^https:\/\/recuperaempresas\.onrender\.com$/,
   // GitHub Pages: https://<user>.github.io  (any path)
   /^https:\/\/[^.]+\.github\.io$/,
   // Cloudflare Pages: https://<project>.pages.dev
@@ -574,10 +774,62 @@ app.use((req, res, next) => {
   next();
 });
 
+// ── Rate limiting ─────────────────────────────────────────────────────────────
+// Auth endpoints: 20 tentativas / 15 min por IP (login, register, forgot-password)
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Muitas tentativas. Tente novamente em 15 minutos.' },
+  skip: (req) => process.env.NODE_ENV === 'test',
+});
+app.use('/api/auth/login',               authLimiter);
+app.use('/api/auth/register',            authLimiter);
+app.use('/api/auth/forgot-password',     authLimiter);
+app.use('/api/auth/reset-password',      authLimiter);
+app.use('/api/auth/resend-confirmation', authLimiter);
+
+// API geral: 300 req / min por IP (protege contra flood/scraping)
+const apiLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 300,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Limite de requisições atingido. Tente novamente em instantes.' },
+  skip: (req) => process.env.NODE_ENV === 'test',
+});
+app.use('/api/', apiLimiter);
+
+// Upload de arquivos: 10 uploads / 10 min por IP
+const uploadLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Muitos uploads. Aguarde 10 minutos.' },
+  skip: (req) => process.env.NODE_ENV === 'test',
+});
+app.use('/api/documents/upload', uploadLimiter);
+app.use('/api/submit',           uploadLimiter);
+
 // Stripe webhook needs raw body — must be before express.json()
 app.use('/api/stripe/webhook', express.raw({ type: 'application/json' }));
 
+app.use(cookieParser());
 app.use(express.json({ limit: '5mb' }));
+
+// Serve config.js dynamically so the browser gets the correct Supabase URL/key
+app.get('/js/config.js', (req, res) => {
+  res.setHeader('Content-Type', 'application/javascript');
+  res.setHeader('Cache-Control', 'no-store');
+  res.send(`window.RE_API_BASE        = '';
+window.RE_SUPABASE_URL    = ${JSON.stringify(SUPABASE_URL)};
+window.RE_SUPABASE_ANON   = ${JSON.stringify(SUPABASE_ANON_KEY)};
+window.RE_OAUTH_CLIENT_ID = ${JSON.stringify(process.env.OAUTH_CLIENT_ID || '')};
+`);
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 const storage = multer.diskStorage({
@@ -669,7 +921,7 @@ app.post('/api/auth/register', async (req, res) => {
       email, password,
       options: {
         data: { name, company: company || '' },
-        emailRedirectTo: `${BASE_URL}/login.html?confirmed=1`,
+        emailRedirectTo: AUTH_EMAIL_REDIRECTS.confirmSignUp,
       }
     });
     if (signUpErr) {
@@ -684,18 +936,20 @@ app.post('/api/auth/register', async (req, res) => {
     const authUser = authData.user;
     const profile  = await upsertProfileFromAuth(authUser, { name, company: company || '' });
 
-    // Freshdesk contact + ticket (fire and forget)
+    // Freshdesk contact + ticket + Freshsales CRM (fire and forget)
     Promise.all([
       createFreshdeskContact(email, name),
-      createFreshdeskTicket(email, name, company)
-    ]).then(async ([contactId, ticketId]) => {
-      if (contactId || ticketId) {
-        await sb.from('re_users').update({
-          freshdesk_contact_id: contactId || null,
-          freshdesk_ticket_id:  ticketId  || null,
-        }).eq('id', profile.id);
+      createFreshdeskTicket(email, name, company),
+      syncFreshsalesContact(email, name, company, null),
+    ]).then(async ([contactId, ticketId, fsContactId]) => {
+      const updates = {};
+      if (contactId)   updates.freshdesk_contact_id  = contactId;
+      if (ticketId)    updates.freshdesk_ticket_id   = ticketId;
+      if (fsContactId) updates.freshsales_contact_id = fsContactId;
+      if (Object.keys(updates).length) {
+        await sb.from('re_users').update(updates).eq('id', profile.id);
       }
-    }).catch(() => {});
+    }).catch(e => console.warn('[async]', e?.message));
 
     logAccess(profile.id, email, 'register', req.ip);
 
@@ -705,18 +959,10 @@ app.post('/api/auth/register', async (req, res) => {
       return res.json({ success: true, pending_confirmation: true, email });
     }
 
-    // Email confirmation disabled (or admin bypass) → issue JWT immediately
-    sendMail(email, 'Bem-vindo ao Portal Recupera Empresas',
-      emailWrapper('Acesso criado com sucesso', `
-        <p>Olá, <b>${name}</b>!</p>
-        <p>Seu acesso ao portal foi criado. Inicie agora o preenchimento dos dados da sua empresa:</p>
-        <p style="text-align:center;margin:24px 0;">
-          <a href="${BASE_URL}/login.html" style="background:#1A56DB;color:#fff;padding:12px 28px;border-radius:6px;text-decoration:none;font-weight:600;">Acessar o Portal</a>
-        </p>
-        <p style="color:#64748B;font-size:13px;">Dúvidas: contato@recuperaempresas.com.br</p>
-      `)
-    ).catch(() => {});
-
+    // When email confirmation is disabled in Supabase, the account is already
+    // active and we can continue. We intentionally do not send a parallel auth
+    // email here so the Supabase templates remain the single source of truth
+    // for sign-up / invite / recovery communications.
     const token = signToken({ userId: profile.id, email: profile.email });
     res.json({ success: true, token, user: safeUser(profile) });
   } catch(e) {
@@ -742,7 +988,15 @@ app.post('/api/auth/login', async (req, res) => {
     logAccess(profile.id, email, 'login', req.ip);
 
     const token = signToken({ userId: profile.id, email: profile.email });
-    res.json({ success: true, token, user: safeUser(profile) });
+
+    // Also return the Supabase session so the browser can store it for the
+    // OAuth consent page (supabase.auth.oauth.approveAuthorization requires
+    // a live Supabase session in localStorage, not just our custom JWT).
+    const supabaseSession = authData.session
+      ? { access_token: authData.session.access_token, refresh_token: authData.session.refresh_token, expires_at: authData.session.expires_at }
+      : null;
+
+    res.json({ success: true, token, user: safeUser(profile), supabase_session: supabaseSession });
   } catch(e) {
     console.error('[LOGIN]', e.message);
     res.status(500).json({ error: 'Erro interno.' });
@@ -763,7 +1017,7 @@ app.post('/api/auth/forgot', async (req, res) => {
 
     // Supabase Auth sends the recovery email with a link pointing to redirectTo
     // The link will contain #access_token=...&type=recovery in the hash fragment
-    const resetRedirect = `${BASE_URL}/reset-password.html`;
+    const resetRedirect = AUTH_EMAIL_REDIRECTS.resetPassword;
     const { error } = await sbAnon.auth.resetPasswordForEmail(email, {
       redirectTo: resetRedirect,
     });
@@ -820,7 +1074,7 @@ app.post('/api/auth/confirm', async (req, res) => {
     if (error || !data?.user) return res.status(401).json({ error: 'Token de confirmação inválido ou expirado.' });
 
     const profile = await upsertProfileFromAuth(data.user);
-    await sbAnon.auth.signOut().catch(() => {}); // clear Supabase session — we use our own JWT
+    await sbAnon.auth.signOut().catch(e => console.warn('[async]', e?.message)); // clear Supabase session — we use our own JWT
     logAccess(profile.id, profile.email, 'confirm', req.ip);
     const token = signToken({ userId: profile.id, email: profile.email });
     res.json({ success: true, token, user: safeUser(profile) });
@@ -838,7 +1092,7 @@ app.post('/api/auth/resend-confirmation', async (req, res) => {
     await sbAnon.auth.resend({
       type: 'signup',
       email,
-      options: { emailRedirectTo: `${BASE_URL}/login.html?confirmed=1` },
+      options: { emailRedirectTo: AUTH_EMAIL_REDIRECTS.confirmSignUp },
     });
     res.json({ success: true });
   } catch(e) {
@@ -847,31 +1101,212 @@ app.post('/api/auth/resend-confirmation', async (req, res) => {
   }
 });
 
-// ─── OAuth Consent (Supabase OAuth Server) ────────────────────────────────────
-// GET /oauth/consent — serve the consent UI
+// /api/auth/magic-link — send Supabase magic-link email using the configured
+// "Magic link" template in the Supabase dashboard.
+app.post('/api/auth/magic-link', async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: 'Informe o e-mail.' });
+
+    const { error } = await sbAnon.auth.signInWithOtp({
+      email,
+      options: {
+        shouldCreateUser: false,
+        emailRedirectTo: AUTH_EMAIL_REDIRECTS.magicLink,
+      },
+    });
+
+    if (error) {
+      console.warn('[MAGIC LINK]', error.message);
+      return res.status(400).json({ error: 'Não foi possível enviar o magic link.' });
+    }
+
+    res.json({ success: true });
+  } catch (e) {
+    console.error('[MAGIC LINK]', e.message);
+    res.status(500).json({ error: 'Erro ao enviar magic link.' });
+  }
+});
+
+// /api/admin/invite-user — send Supabase invite email using the configured
+// "Invite user" template in the Supabase dashboard.
+app.post('/api/admin/invite-user', requireAdmin, async (req, res) => {
+  try {
+    const { email, name, company } = req.body;
+    if (!email) return res.status(400).json({ error: 'Informe o e-mail.' });
+
+    const { data, error } = await sb.auth.admin.inviteUserByEmail(email, {
+      redirectTo: AUTH_EMAIL_REDIRECTS.inviteUser,
+      data: {
+        name: name || email.split('@')[0],
+        company: company || '',
+      },
+    });
+
+    if (error) {
+      console.error('[INVITE USER]', error.message);
+      return res.status(400).json({ error: 'Não foi possível enviar o convite.' });
+    }
+
+    res.json({ success: true, invited: data?.user?.email || email });
+  } catch (e) {
+    console.error('[INVITE USER]', e.message);
+    res.status(500).json({ error: 'Erro ao enviar convite.' });
+  }
+});
+
+// ─── OAuth PKCE store (in-memory, TTL 10 min) ─────────────────────────────────
+const _pkceStore = new Map();
+function _pkceClean() {
+  const now = Date.now();
+  for (const [k, v] of _pkceStore) if (v.exp < now) _pkceStore.delete(k);
+}
+function _b64url(buf) {
+  return buf.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+}
+function _codeVerifier() { return _b64url(crypto.randomBytes(32)); }
+function _codeChallenge(v) {
+  return _b64url(crypto.createHash('sha256').update(v).digest());
+}
+
+// ─── OAuth Start — generates PKCE and redirects to Supabase authorize ──────────
+// Use this URL to initiate the OAuth flow instead of calling Supabase directly:
+//   https://recuperaempresas.onrender.com/api/auth/oauth/start
+// Optional query params: scope (default "openid email profile")
+app.get('/api/auth/oauth/start', (req, res) => {
+  const clientId = process.env.OAUTH_CLIENT_ID || '';
+  if (!clientId) return res.status(500).send('OAUTH_CLIENT_ID não configurado no Render.');
+
+  // Supabase OAuth Server requires PKCE for ALL clients (public and confidential).
+  _pkceClean();
+  const verifier  = _codeVerifier();
+  const challenge = _codeChallenge(verifier);
+  const state     = crypto.randomBytes(16).toString('hex');
+  _pkceStore.set(state, { verifier, challenge, exp: Date.now() + 10 * 60 * 1000 });
+
+  // Cookie carries the state through the consent redirect so /api/auth/oauth/decide
+  // can look up code_challenge and include it in the Supabase authorize call.
+  res.cookie('_oauth_st', state, {
+    httpOnly: true, secure: true, sameSite: 'lax', maxAge: 10 * 60 * 1000,
+  });
+
+  const params = new URLSearchParams({
+    client_id:             clientId,
+    response_type:         'code',
+    redirect_uri:          `${BASE_URL}/api/auth/oauth/callback`,
+    scope:                 req.query.scope || 'email profile',
+    state,
+    code_challenge:        challenge,
+    code_challenge_method: 'S256',
+  });
+  res.redirect(`${SUPABASE_URL}/auth/v1/oauth/authorize?${params}`);
+});
+
+// ─── OAuth Decide — server proxies the consent decision to Supabase ───────────
+// The browser calls GET /api/auth/oauth/decide?authorization_id=...&allow=true
+// The server adds client_id from env var (never exposed to the browser this way)
+// then redirects to Supabase's authorize endpoint.
+app.get('/api/auth/oauth/decide', (req, res) => {
+  const clientId        = process.env.OAUTH_CLIENT_ID || '';
+  const authorizationId = req.query.authorization_id  || '';
+  const allow           = req.query.allow === 'true' ? 'true' : 'false';
+
+  if (!clientId)        return res.status(500).send('OAUTH_CLIENT_ID não configurado no Render.');
+  if (!authorizationId) return res.status(400).send('authorization_id ausente.');
+
+  // Retrieve the original code_challenge from the PKCE store via the state cookie.
+  // Supabase requires all original PKCE params even on the consent-decision call.
+  const state = req.cookies?._oauth_st || '';
+  const pkce  = state ? _pkceStore.get(state) : null;
+
+  const params = new URLSearchParams({
+    authorization_id: authorizationId,
+    client_id:        clientId,
+    redirect_uri:     `${BASE_URL}/api/auth/oauth/callback`,
+    allow,
+  });
+
+  if (pkce?.challenge) {
+    params.set('code_challenge',        pkce.challenge);
+    params.set('code_challenge_method', 'S256');
+  } else {
+    console.warn('[OAUTH DECIDE] code_challenge not found — state cookie missing or expired');
+  }
+
+  res.redirect(`${SUPABASE_URL}/auth/v1/oauth/authorize?${params}`);
+});
+
+// ─── OAuth Consent page ────────────────────────────────────────────────────────
 app.get('/oauth/consent', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'oauth-consent.html'));
 });
 
-// POST /oauth/consent — user approved; forward decision to Supabase and redirect
-app.post('/oauth/consent', express.urlencoded({ extended: false }), async (req, res) => {
-  try {
-    const { allow, ...params } = req.body; // allow = '1' or '0'
-    const qs = new URLSearchParams(params).toString();
-    const supabaseAuthorize = `${SUPABASE_URL}/auth/v1/oauth/authorize?${qs}&allow=${allow === '1' ? 'true' : 'false'}`;
+// ─── OAuth Callback — exchanges code for tokens using stored PKCE verifier ─────
+// Registered Redirect URI in Supabase OAuth App:
+//   https://recuperaempresas.onrender.com/api/auth/oauth/callback
+app.get('/api/auth/oauth/callback', async (req, res) => {
+  const { code, state, error, error_description } = req.query;
 
-    // Proxy the decision to Supabase and follow their redirect
-    const r = await fetch(supabaseAuthorize, {
-      method: 'GET',
-      redirect: 'manual',
-      headers: { apikey: SUPABASE_ANON_KEY },
+  if (error) {
+    console.error('[OAUTH CALLBACK] error:', error, error_description);
+    return res.redirect(`/login.html?err=oauth&desc=${encodeURIComponent(error_description || error)}`);
+  }
+  if (!code) return res.redirect('/login.html?err=oauth&desc=no_code');
+
+  const clientId     = process.env.OAUTH_CLIENT_ID     || '';
+  const clientSecret = process.env.OAUTH_CLIENT_SECRET || '';
+  const pkce         = state ? _pkceStore.get(state) : null;
+  if (pkce) _pkceStore.delete(state);
+
+  try {
+    const body = new URLSearchParams({
+      grant_type:   'authorization_code',
+      code,
+      redirect_uri: `${BASE_URL}/api/auth/oauth/callback`,
+      client_id:    clientId,
     });
-    const location = r.headers.get('location');
-    if (location) return res.redirect(302, location);
-    res.status(400).send('Não foi possível processar a autorização.');
-  } catch(e) {
-    console.error('[OAUTH CONSENT]', e.message);
-    res.status(500).send('Erro interno.');
+
+    // Supabase requires code_verifier (PKCE) for all clients.
+    // Confidential clients also send client_secret alongside it.
+    if (pkce?.verifier) {
+      body.set('code_verifier', pkce.verifier);
+    } else {
+      console.error('[OAUTH CALLBACK] PKCE verifier missing (state expired or mismatch)');
+      return res.redirect('/login.html?err=oauth&desc=session_expired_retry');
+    }
+    if (clientSecret) {
+      body.set('client_secret', clientSecret);
+    }
+
+    const tokenRes  = await fetch(`${SUPABASE_URL}/auth/v1/oauth/token`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded', apikey: SUPABASE_ANON_KEY },
+      body,
+    });
+    const tokenData = await tokenRes.json();
+    console.log('[OAUTH CALLBACK] token response:', JSON.stringify(tokenData).slice(0, 200));
+
+    if (!tokenData.access_token) {
+      console.error('[OAUTH CALLBACK] token exchange failed:', tokenData);
+      return res.redirect('/login.html?err=oauth&desc=' + encodeURIComponent(tokenData.error_description || tokenData.msg || 'token_exchange_failed'));
+    }
+
+    const { data } = await sbAnon.auth.setSession({
+      access_token:  tokenData.access_token,
+      refresh_token: tokenData.refresh_token || tokenData.access_token,
+    });
+    if (!data?.user) return res.redirect('/login.html?err=oauth&desc=no_user');
+
+    const profile     = await upsertProfileFromAuth(data.user);
+    const portalToken = signToken({ userId: profile.id, email: profile.email });
+
+    // Pass token to browser via hash — login.html will store and redirect
+    return res.redirect(
+      `/login.html#oauth_token=${encodeURIComponent(portalToken)}&oauth_user=${encodeURIComponent(JSON.stringify(safeUser(profile)))}`
+    );
+  } catch (e) {
+    console.error('[OAUTH CALLBACK]', e.message);
+    return res.redirect('/login.html?err=oauth&desc=' + encodeURIComponent(e.message));
   }
 });
 
@@ -925,7 +1360,7 @@ app.post('/api/step-complete', requireAuth, async (req, res) => {
     const ticketId = user.freshdesk_ticket_id;
     if (ticketId) {
       const noteHtml = `<h3>Etapa ${stepNum} / 14 — ${STEP_TITLES[stepNum]}</h3>${stepHtml}`;
-      addFreshdeskNote(ticketId, noteHtml).catch(() => {});
+      addFreshdeskNote(ticketId, noteHtml).catch(e => console.warn('[async]', e?.message));
     }
 
     logAccess(user.id, user.email, 'step_complete', req.ip, { step: stepNum });
@@ -989,8 +1424,25 @@ app.post('/api/submit', requireAuth, upload.fields(fileFields), async (req, res)
     if (ticketId) {
       await addFreshdeskNote(ticketId,
         `<h3>Onboarding concluído em ${ts}</h3><p>Todos os dados foram enviados. Relatório completo segue por e-mail.</p>${fullHtml}`
-      ).catch(() => {});
-      await updateFreshdeskTicket(ticketId, { status: 4 }).catch(() => {});
+      ).catch(e => console.warn('[async]', e?.message));
+      await updateFreshdeskTicket(ticketId, { status: 4 }).catch(e => console.warn('[async]', e?.message));
+    }
+
+    // Freshsales CRM: update contact + create deal (fire and forget)
+    if (FRESHSALES_KEY) {
+      const fin = allData.financeiro || {};
+      const faturamento = parseFloat(String(fin.faturamento12meses || '0').replace(/\D/g, '')) / 100 || 0;
+      const phone = empresa.telefone || allData.responsavel?.telefone || null;
+      syncFreshsalesContact(user.email, user.name || empresa.razaoSocial, empresa.razaoSocial, phone, {
+        job_title: allData.responsavel?.cargo || undefined,
+      }).then(async (fsContactId) => {
+        const storedId = user.freshsales_contact_id || fsContactId;
+        const dealName = `Recuperação — ${empresa.razaoSocial || user.company || user.name}`;
+        if (storedId) await createFreshsalesDeal(storedId, dealName, faturamento).catch(e => console.warn('[async]', e?.message));
+        if (fsContactId && !user.freshsales_contact_id) {
+          await sb.from('re_users').update({ freshsales_contact_id: fsContactId }).eq('id', user.id);
+        }
+      }).catch(e => console.warn('[async]', e?.message));
     }
 
     for (const fileList of Object.values(files))
@@ -1056,6 +1508,13 @@ app.post('/api/messages', requireAuth, async (req, res) => {
     from_name: req.user.name || req.user.email,
     text:      text.trim(),
   });
+  // Notify admin users that a client sent a message
+  const { data: admins } = await sb.from('re_users').select('id').eq('is_admin', true).limit(20);
+  for (const admin of (admins || [])) {
+    pushNotification(admin.id, 'message', 'Nova mensagem de cliente',
+      `${req.user.name || req.user.email}: ${text.trim().slice(0, 80)}`,
+      'message', req.user.id).catch(e => console.warn('[async]', e?.message));
+  }
   res.json({ success: true, message: msg });
 });
 
@@ -1121,6 +1580,16 @@ app.post('/api/admin/client/:id/task', requireAdmin, async (req, res) => {
     created_by:  req.user.id,
   }).select().single();
 
+  // Notify client about new task (fire-and-forget)
+  pushNotification(req.params.id, 'task', 'Nova tarefa atribuída',
+    title + (description ? ': ' + description.slice(0, 60) : ''),
+    'task', task?.id).catch(e => console.warn('[async]', e?.message));
+
+  // Audit log
+  auditLog({ actorId: req.user.id, actorEmail: req.user.email, actorRole: 'admin',
+    entityType: 'task', entityId: task?.id, action: 'create',
+    after: { user_id: req.params.id, title, status: 'pendente' } }).catch(e => console.warn('[async]', e?.message));
+
   res.json({ success: true, task });
 });
 
@@ -1130,6 +1599,20 @@ app.put('/api/admin/client/:id/plan/chapter/:chapterId', requireAdmin, async (re
   if (status  !== undefined) updates.status  = status;
   if (content !== undefined) updates.content = content;
   await saveChapterStatus(req.params.id, parseInt(req.params.chapterId), updates);
+
+  // Notify client on chapter status change
+  if (status) {
+    const chap   = PLAN_CHAPTERS.find(c => c.id === parseInt(req.params.chapterId));
+    const stLbl  = status === 'aprovado' ? 'aprovado ✅' : status === 'revisao' ? 'em revisão 🔄' : 'atualizado';
+    pushNotification(req.params.id, 'plan', `Business Plan: capítulo ${stLbl}`,
+      chap ? '"' + chap.title + '"' : 'Capítulo ' + req.params.chapterId,
+      'plan_chapter', req.params.chapterId).catch(e => console.warn('[async]', e?.message));
+  }
+
+  auditLog({ actorId: req.user.id, actorEmail: req.user.email, actorRole: 'admin',
+    entityType: 'plan_chapter', entityId: req.params.id + ':' + req.params.chapterId,
+    action: 'update', after: updates }).catch(e => console.warn('[async]', e?.message));
+
   res.json({ success: true });
 });
 
@@ -1142,6 +1625,11 @@ app.post('/api/admin/client/:id/message', requireAdmin, async (req, res) => {
     from_name: req.user.name || req.user.email,
     text:      text.trim(),
   });
+
+  // Notify client about new message from consultant
+  pushNotification(req.params.id, 'message', 'Nova mensagem do consultor',
+    text.trim().slice(0, 100), 'message', req.params.id).catch(e => console.warn('[async]', e?.message));
+
   res.json({ success: true, message: msg });
 });
 
@@ -1692,6 +2180,49 @@ app.post('/api/agenda/book/:slotId', requireAuth, async (req, res) => {
   if (error) return res.status(500).json({ error: error.message });
 
   const newBal = await adjustCredits(userId, -slot.credits_cost, 'booking', booking.id);
+
+  // Google Calendar — adicionar cliente como attendee no evento do slot
+  const evId = _calendarEventIds.get(slotId);
+  if (evId && req.user.email) {
+    gcPatchEvent(evId, {
+      summary: `${slot.title || 'Consultoria'} — ${req.user.company || req.user.name || req.user.email}`,
+      attendees: [{ email: req.user.email, displayName: req.user.name || req.user.email }],
+    }).catch(e => console.warn('[async]', e?.message));
+  } else if (!evId && GOOGLE_CALENDAR_ID) {
+    // Slot criado antes do server restart — criar evento agora com attendee
+    gcCreateEvent({
+      summary: `${slot.title || 'Consultoria'} — ${req.user.company || req.user.name || req.user.email}`,
+      description: `Cliente: ${req.user.name || req.user.email} (${req.user.company || ''})\nBooking: ${booking.id}`,
+      start: slot.starts_at, end: slot.ends_at,
+      attendeeEmail: req.user.email,
+    }).then(id => { if (id) _calendarEventIds.set(slotId, id); }).catch(e => console.warn('[async]', e?.message));
+  }
+
+  // Confirmation email (fire and forget)
+  const startsAtFmt = new Date(slot.starts_at).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+  sendMail(req.user.email, 'Agendamento confirmado — Recupera Empresas', emailWrapper(
+    'Agendamento confirmado',
+    `<p>Olá, <b>${req.user.name || req.user.email}</b>!</p>
+     <p>Seu agendamento foi confirmado com sucesso:</p>
+     <table style="width:100%;border-collapse:collapse;font-size:14px;margin:16px 0;">
+       <tr><td style="padding:6px 0;color:#64748B;width:40%;">Sessão</td>
+           <td style="padding:6px 0;font-weight:600;">${slot.title || 'Consultoria'}</td></tr>
+       <tr><td style="padding:6px 0;color:#64748B;">Data e hora</td>
+           <td style="padding:6px 0;font-weight:600;">${startsAtFmt}</td></tr>
+       <tr><td style="padding:6px 0;color:#64748B;">Créditos utilizados</td>
+           <td style="padding:6px 0;font-weight:600;">${slot.credits_cost}</td></tr>
+       <tr><td style="padding:6px 0;color:#64748B;">Saldo restante</td>
+           <td style="padding:6px 0;font-weight:600;">${newBal} crédito${newBal !== 1 ? 's' : ''}</td></tr>
+     </table>
+     <p style="font-size:13px;color:#64748B;">Você receberá um lembrete 24h antes da sessão.</p>`
+  )).catch(e => console.warn('[async]', e?.message));
+
+  sendMail(EMAIL_TO, `[Agendamento] ${req.user.name || req.user.email} — ${startsAtFmt}`, emailWrapper(
+    'Novo agendamento',
+    `<p><b>${req.user.name || req.user.email}</b> (${req.user.company || '—'}) agendou uma sessão.</p>
+     <p><b>Sessão:</b> ${slot.title || 'Consultoria'}<br><b>Data:</b> ${startsAtFmt}</p>`
+  )).catch(e => console.warn('[async]', e?.message));
+
   res.json({ success: true, booking, credits_balance: newBal });
 });
 
@@ -1704,11 +2235,21 @@ app.delete('/api/agenda/book/:bookingId', requireAuth, async (req, res) => {
   if (booking.status === 'cancelled') return res.status(400).json({ error: 'Reserva já cancelada.' });
 
   // Only allow cancel if slot hasn't started
-  const { data: slot } = await sb.from('re_agenda_slots').select('starts_at').eq('id', booking.slot_id).single();
+  const { data: slot } = await sb.from('re_agenda_slots').select('starts_at, title').eq('id', booking.slot_id).single();
   if (slot && new Date(slot.starts_at) < new Date()) return res.status(400).json({ error: 'Sessão já iniciada.' });
 
   await sb.from('re_bookings').update({ status: 'cancelled' }).eq('id', booking.id);
   const newBal = await adjustCredits(userId, booking.credits_spent, 'refund', booking.id);
+
+  // Google Calendar — restaurar título do slot (remove attendee via patch)
+  const evId = _calendarEventIds.get(booking.slot_id);
+  if (evId) {
+    gcPatchEvent(evId, {
+      summary: `[Disponível] ${slot?.title || 'Consultoria'} — Recupera Empresas`,
+      attendees: [],
+    }).catch(e => console.warn('[async]', e?.message));
+  }
+
   res.json({ success: true, credits_balance: newBal });
 });
 
@@ -1789,6 +2330,43 @@ app.post('/api/stripe/webhook', async (req, res) => {
         console.log(`[CREDITS] +${delta} créditos para user ${user_id}`);
       }
     }
+
+    if (event.type === 'invoice.paid') {
+      const inv = event.data.object;
+      console.log(`[STRIPE] invoice.paid: ${inv.id} customer=${inv.customer} amount=${inv.amount_paid}`);
+      if (inv.customer) {
+        const { data: user } = await sb.from('re_users')
+          .select('email,name,company').eq('stripe_customer_id', inv.customer).single();
+        if (user) {
+          sendMail(user.email, 'Pagamento confirmado — Recupera Empresas', emailWrapper(
+            'Pagamento recebido',
+            `<p>Olá, <b>${user.name || user.company || user.email}</b>!</p>
+             <p>Confirmamos o recebimento do seu pagamento referente à fatura
+                <b>${inv.number || inv.id}</b>
+                no valor de <b>R$ ${(inv.amount_paid / 100).toFixed(2).replace('.', ',')}</b>.</p>
+             <p>Obrigado pela confiança.</p>`
+          )).catch(e => console.warn('[async]', e?.message));
+        }
+      }
+    }
+
+    if (event.type === 'invoice.payment_failed') {
+      const inv = event.data.object;
+      console.warn(`[STRIPE] invoice.payment_failed: ${inv.id} customer=${inv.customer}`);
+      if (inv.customer && inv.hosted_invoice_url) {
+        const { data: user } = await sb.from('re_users')
+          .select('email,name,company').eq('stripe_customer_id', inv.customer).single();
+        if (user) {
+          sendMail(user.email, 'Falha no pagamento — Recupera Empresas', emailWrapper(
+            'Falha no pagamento',
+            `<p>Olá, <b>${user.name || user.company || user.email}</b>!</p>
+             <p>Não foi possível processar o pagamento da fatura <b>${inv.number || inv.id}</b>.</p>
+             <p><a href="${inv.hosted_invoice_url}" style="color:#2563EB;">Clique aqui para regularizar o pagamento.</a></p>`
+          )).catch(e => console.warn('[async]', e?.message));
+        }
+      }
+    }
+
     res.json({ received: true });
   }
 );
@@ -1824,11 +2402,23 @@ app.post('/api/admin/agenda/slots', requireAdmin, async (req, res) => {
     created_by: req.user.id,
   }).select().single();
   if (error) return res.status(500).json({ error: error.message });
+
+  // Google Calendar — criar evento de disponibilidade
+  gcCreateEvent({
+    summary: `[Disponível] ${title || 'Consultoria'} — Recupera Empresas`,
+    description: `Slot disponível para reserva de clientes.\nVagas: ${max_bookings || 1}  |  Créditos: ${credits_cost || 1}`,
+    start: starts_at, end: ends_at,
+  }).then(evId => { if (evId) _calendarEventIds.set(data.id, evId); }).catch(e => console.warn('[async]', e?.message));
+
   res.json({ success: true, slot: data });
 });
 
 app.delete('/api/admin/agenda/slots/:slotId', requireAdmin, async (req, res) => {
-  await sb.from('re_agenda_slots').delete().eq('id', req.params.slotId);
+  const { slotId } = req.params;
+  await sb.from('re_agenda_slots').delete().eq('id', slotId);
+  // Google Calendar — remover evento
+  const evId = _calendarEventIds.get(slotId);
+  if (evId) { gcDeleteEvent(evId).catch(e => console.warn('[async]', e?.message)); _calendarEventIds.delete(slotId); }
   res.json({ success: true });
 });
 
@@ -2092,7 +2682,7 @@ app.post('/api/appointments', requireAuth, async (req, res) => {
       <p><b>Data/Hora:</b> ${new Date(date+'T12:00:00').toLocaleDateString('pt-BR')}${time ? ' às '+time : ''}</p>
       ${notes ? `<p><b>Observações:</b> ${notes}</p>` : ''}
     `)
-  ).catch(() => {});
+  ).catch(e => console.warn('[async]', e?.message));
 
   res.json({ success: true, appointment: appt });
 });
@@ -2129,9 +2719,57 @@ app.put('/api/admin/appointments/:userId/:id', requireAdmin, async (req, res) =>
   res.json({ success: true });
 });
 
-// Financial: invoices (Stripe placeholder)
-app.get('/api/financial/invoices', requireAuth, (req, res) => {
-  res.json({ invoices: [], stripeConfigured: !!process.env.STRIPE_SECRET_KEY });
+// Financial: invoices (Stripe real)
+app.get('/api/financial/invoices', requireAuth, async (req, res) => {
+  if (!STRIPE_SECRET_KEY) return res.json({ invoices: [], stripeConfigured: false });
+  try {
+    const Stripe = require('stripe');
+    const stripe = Stripe(STRIPE_SECRET_KEY);
+    const user   = req.user;
+
+    let customerId = user.stripe_customer_id;
+    if (!customerId) {
+      const found = await stripe.customers.list({ email: user.email, limit: 1 });
+      customerId  = found.data[0]?.id || null;
+      if (customerId) await sb.from('re_users').update({ stripe_customer_id: customerId }).eq('id', user.id);
+    }
+    if (!customerId) return res.json({ invoices: [], stripeConfigured: true });
+
+    const [invList, piList] = await Promise.all([
+      stripe.invoices.list({ customer: customerId, limit: 50 }),
+      stripe.paymentIntents.list({ customer: customerId, limit: 50 }),
+    ]);
+
+    const invoices = invList.data.map(inv => ({
+      id: inv.id, type: 'invoice',
+      amount: (inv.amount_due / 100).toFixed(2),
+      amountPaid: (inv.amount_paid / 100).toFixed(2),
+      currency: inv.currency.toUpperCase(),
+      status: inv.status,
+      date: new Date(inv.created * 1000).toISOString(),
+      dueDate: inv.due_date ? new Date(inv.due_date * 1000).toISOString() : null,
+      pdfUrl:    inv.invoice_pdf        || null,
+      hostedUrl: inv.hosted_invoice_url || null,
+      description: inv.description || inv.lines?.data?.[0]?.description || 'Fatura',
+    }));
+
+    // Inclui pagamentos de créditos que não geram invoice formal
+    const payments = piList.data
+      .filter(p => p.status === 'succeeded' && !invoices.find(i => i.id === p.invoice))
+      .map(p => ({
+        id: p.id, type: 'payment',
+        amount: (p.amount / 100).toFixed(2), amountPaid: (p.amount / 100).toFixed(2),
+        currency: p.currency.toUpperCase(), status: 'paid',
+        date: new Date(p.created * 1000).toISOString(),
+        description: p.description || 'Pagamento',
+      }));
+
+    const all = [...invoices, ...payments].sort((a, b) => b.date.localeCompare(a.date));
+    res.json({ invoices: all, stripeConfigured: true });
+  } catch (e) {
+    console.error('[FINANCIAL]', e.message);
+    res.json({ invoices: [], stripeConfigured: true, error: e.message });
+  }
 });
 
 // Financial: request 2nd copy
@@ -2153,8 +2791,2003 @@ app.post('/api/financial/request-invoice', requireAuth, async (req, res) => {
         ${description ? `<p><b>Detalhe:</b> ${description}</p>` : ''}
       `)
     )
-  ]).catch(() => {});
+  ]).catch(e => console.warn('[async]', e?.message));
   res.json({ success: true, message: 'Solicitação enviada. Nossa equipe entrará em contato.' });
+});
+
+// ─── Mensagens: polling em tempo real ────────────────────────────────────────
+// Cliente: busca mensagens novas desde 'since' (ISO timestamp)
+app.get('/api/messages/poll', requireAuth, async (req, res) => {
+  const since = req.query.since || new Date(0).toISOString();
+  const { data } = await sb.from('re_messages')
+    .select('*').eq('user_id', req.user.id)
+    .gt('ts', since).order('ts');
+  res.json({ messages: data || [] });
+});
+
+// Admin: conta mensagens de clientes não lidas por agente
+app.get('/api/admin/messages/unread', requireAdmin, async (req, res) => {
+  const adminId = req.user.id;
+  const seen    = _adminMsgSeen.get(adminId) || {};
+
+  const { data: msgs } = await sb.from('re_messages')
+    .select('user_id, ts, from_role')
+    .eq('from_role', 'client')
+    .order('ts', { ascending: false });
+
+  const unread = {};
+  (msgs || []).forEach(m => {
+    const lastSeen = seen[m.user_id] || '1970-01-01T00:00:00.000Z';
+    if (m.ts > lastSeen) unread[m.user_id] = (unread[m.user_id] || 0) + 1;
+  });
+  res.json({ unread });
+});
+
+// Admin: marca mensagens de um cliente como vistas
+app.post('/api/admin/messages/seen/:clientId', requireAdmin, async (req, res) => {
+  const adminId = req.user.id;
+  if (!_adminMsgSeen.has(adminId)) _adminMsgSeen.set(adminId, {});
+  _adminMsgSeen.get(adminId)[req.params.clientId] = new Date().toISOString();
+  res.json({ success: true });
+});
+
+// Admin: polling de mensagens de um cliente específico
+app.get('/api/admin/client/:id/messages/poll', requireAdmin, async (req, res) => {
+  const since = req.query.since || new Date(0).toISOString();
+  const { data } = await sb.from('re_messages')
+    .select('*').eq('user_id', req.params.id)
+    .gt('ts', since).order('ts');
+  res.json({ messages: data || [] });
+});
+
+// ─── Admin: visão financeira consolidada (Stripe) ────────────────────────────
+app.get('/api/admin/financial', requireAdmin, async (req, res) => {
+  if (!STRIPE_SECRET_KEY) return res.json({ configured: false, clients: [], totalRevenue: 0 });
+  try {
+    const Stripe = require('stripe');
+    const stripe = Stripe(STRIPE_SECRET_KEY);
+
+    const { data: users } = await sb.from('re_users')
+      .select('id, name, email, company, stripe_customer_id')
+      .eq('is_admin', false);
+
+    const results = await Promise.all((users || []).map(async u => {
+      try {
+        if (!u.stripe_customer_id) return { userId: u.id, name: u.name, email: u.email, company: u.company, totalPaid: 0, paymentsCount: 0, lastPaymentDate: null };
+        const piList = await stripe.paymentIntents.list({ customer: u.stripe_customer_id, limit: 20 });
+        const paid   = piList.data.filter(p => p.status === 'succeeded');
+        return {
+          userId: u.id, name: u.name, email: u.email, company: u.company,
+          customerId: u.stripe_customer_id,
+          totalPaid:      paid.reduce((s, p) => s + p.amount, 0) / 100,
+          paymentsCount:  paid.length,
+          lastPaymentDate: paid[0] ? new Date(paid[0].created * 1000).toISOString() : null,
+        };
+      } catch { return { userId: u.id, name: u.name, email: u.email, company: u.company, totalPaid: 0, paymentsCount: 0, lastPaymentDate: null }; }
+    }));
+
+    const totalRevenue = results.reduce((s, c) => s + (c.totalPaid || 0), 0);
+    res.json({ configured: true, clients: results, totalRevenue });
+  } catch (e) {
+    console.error('[ADMIN FINANCIAL]', e.message);
+    res.json({ configured: false, clients: [], totalRevenue: 0, error: e.message });
+  }
+});
+
+// Admin: invoices de um cliente específico
+app.get('/api/admin/client/:id/financial', requireAdmin, async (req, res) => {
+  if (!STRIPE_SECRET_KEY) return res.json({ invoices: [], configured: false });
+  try {
+    const Stripe = require('stripe');
+    const stripe = Stripe(STRIPE_SECRET_KEY);
+    const { data: user } = await sb.from('re_users').select('stripe_customer_id, email').eq('id', req.params.id).single();
+    if (!user) return res.status(404).json({ error: 'Cliente não encontrado.' });
+
+    let customerId = user.stripe_customer_id;
+    if (!customerId) {
+      const found = await stripe.customers.list({ email: user.email, limit: 1 });
+      customerId  = found.data[0]?.id || null;
+    }
+    if (!customerId) return res.json({ invoices: [], configured: true });
+
+    const piList = await stripe.paymentIntents.list({ customer: customerId, limit: 30 });
+    const invoices = piList.data.map(p => ({
+      id: p.id, amount: (p.amount / 100).toFixed(2),
+      currency: p.currency.toUpperCase(), status: p.status,
+      date: new Date(p.created * 1000).toISOString(),
+      description: p.description || 'Pagamento',
+    }));
+    res.json({ invoices, configured: true });
+  } catch (e) { res.json({ invoices: [], configured: true, error: e.message }); }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FORM BUILDER — configuração dinâmica do formulário de onboarding
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const FORM_CONFIG_PATH = path.join(__dirname, 'form-config.json');
+
+const FORM_CONFIG_DEFAULTS = {
+  steps: [
+    { id:1,  title:'Consentimento LGPD',       description:'', enabled:true,  required:true  },
+    { id:2,  title:'Dados da Empresa',          description:'', enabled:true,  required:true  },
+    { id:3,  title:'Sócios',                   description:'', enabled:true,  required:true  },
+    { id:4,  title:'Estrutura Operacional',     description:'', enabled:true,  required:false },
+    { id:5,  title:'Quadro de Funcionários',    description:'', enabled:true,  required:false },
+    { id:6,  title:'Ativos',                   description:'', enabled:true,  required:false },
+    { id:7,  title:'Dados Financeiros',         description:'', enabled:true,  required:true  },
+    { id:8,  title:'Dívidas e Credores',        description:'', enabled:true,  required:true  },
+    { id:9,  title:'Histórico da Crise',        description:'', enabled:true,  required:false },
+    { id:10, title:'Diagnóstico Estratégico',   description:'', enabled:true,  required:false },
+    { id:11, title:'Mercado e Operação',        description:'', enabled:true,  required:false },
+    { id:12, title:'Expectativas e Estratégia', description:'', enabled:true,  required:false },
+    { id:13, title:'Documentos',               description:'', enabled:true,  required:false },
+    { id:14, title:'Confirmação e Envio',       description:'', enabled:true,  required:true  },
+  ],
+  welcomeMessage: 'Preencha as informações da sua empresa para que possamos elaborar o Business Plan de recuperação.',
+  lastUpdated: null,
+};
+
+function readFormConfig() {
+  try {
+    if (fs.existsSync(FORM_CONFIG_PATH)) {
+      const raw = fs.readFileSync(FORM_CONFIG_PATH, 'utf8');
+      const cfg = JSON.parse(raw);
+      // Merge: keep defaults for any step missing in saved config
+      const savedIds = new Set((cfg.steps||[]).map(s => s.id));
+      const merged = FORM_CONFIG_DEFAULTS.steps.map(def => {
+        const saved = (cfg.steps||[]).find(s => s.id === def.id);
+        return saved ? { ...def, ...saved } : def;
+      });
+      return { ...FORM_CONFIG_DEFAULTS, ...cfg, steps: merged };
+    }
+  } catch (e) { console.warn('[FORM-CONFIG] read error:', e.message); }
+  return { ...FORM_CONFIG_DEFAULTS, steps: FORM_CONFIG_DEFAULTS.steps.map(s => ({ ...s })) };
+}
+
+function writeFormConfig(cfg) {
+  try { fs.writeFileSync(FORM_CONFIG_PATH, JSON.stringify(cfg, null, 2), 'utf8'); } catch (e) {
+    console.error('[FORM-CONFIG] write error:', e.message);
+    throw e;
+  }
+}
+
+// Authenticated clients: read enabled steps only
+app.get('/api/form-config', requireAuth, (req, res) => {
+  const cfg = readFormConfig();
+  res.json({
+    steps: cfg.steps.filter(s => s.enabled),
+    welcomeMessage: cfg.welcomeMessage || '',
+  });
+});
+
+// Admin: full config
+app.get('/api/admin/form-config', requireAdmin, (req, res) => {
+  res.json(readFormConfig());
+});
+
+// Admin: save config
+app.put('/api/admin/form-config', requireAdmin, (req, res) => {
+  try {
+    const current = readFormConfig();
+    const { steps, welcomeMessage } = req.body;
+    // Validate and sanitise steps
+    const merged = (FORM_CONFIG_DEFAULTS.steps).map(def => {
+      const incoming = (steps||[]).find(s => s.id === def.id);
+      if (!incoming) return current.steps.find(s => s.id === def.id) || def;
+      return {
+        id:          def.id,
+        title:       (typeof incoming.title === 'string' ? incoming.title.trim() : '') || def.title,
+        description: typeof incoming.description === 'string' ? incoming.description.trim() : '',
+        enabled:     !!incoming.enabled,
+        required:    !!incoming.required,
+      };
+    });
+    // Steps 1 and 14 are always enabled & required (LGPD + confirmação)
+    merged[0]  = { ...merged[0],  enabled: true, required: true };
+    merged[13] = { ...merged[13], enabled: true, required: true };
+
+    const updated = {
+      ...current,
+      steps: merged,
+      welcomeMessage: typeof welcomeMessage === 'string' ? welcomeMessage.trim() : current.welcomeMessage,
+      lastUpdated: new Date().toISOString(),
+    };
+    writeFormConfig(updated);
+    res.json({ success: true, config: updated });
+  } catch (e) {
+    console.error('[FORM-CONFIG PUT]', e.message);
+    res.status(500).json({ error: 'Erro ao salvar configuração.' });
+  }
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// FORM BUILDER — Full API
+// ══════════════════════════════════════════════════════════════════════════════
+
+// ── Helper: load full form (pages + questions + logic) ────────────────────────
+async function loadFullForm(formId) {
+  const { data: form }  = await sb.from('re_forms').select('*').eq('id', formId).single();
+  if (!form) return null;
+  const { data: pages } = await sb.from('re_form_pages')
+    .select('*').eq('form_id', formId).order('order_index');
+  const { data: qs }    = await sb.from('re_form_questions')
+    .select('*').eq('form_id', formId).order('order_index');
+  const { data: logic } = await sb.from('re_form_logic')
+    .select('*').eq('form_id', formId);
+
+  // Nest questions into their pages (makes it easy for front-end consumers)
+  const allPages = (pages || []).map(p => ({
+    ...p,
+    questions: (qs || []).filter(q => q.page_id === p.id).sort((a,b) => a.order_index - b.order_index),
+  }));
+
+  return { ...form, pages: allPages, logic: logic || [] };
+}
+
+// ── Admin: List forms ─────────────────────────────────────────────────────────
+app.get('/api/admin/forms', requireAdmin, async (req, res) => {
+  try {
+    const { type, status } = req.query;
+    let q = sb.from('re_forms').select('*').order('created_at', { ascending: false });
+    if (type)   q = q.eq('type', type);
+    if (status) q = q.eq('status', status);
+    const { data: forms } = await q;
+    // Attach response counts
+    const ids = (forms || []).map(f => f.id);
+    let counts = {};
+    if (ids.length) {
+      const { data: resp } = await sb.from('re_form_responses')
+        .select('form_id').in('form_id', ids).eq('status', 'completed');
+      (resp || []).forEach(r => { counts[r.form_id] = (counts[r.form_id] || 0) + 1; });
+    }
+    res.json({ forms: (forms || []).map(f => ({ ...f, response_count: counts[f.id] || 0 })) });
+  } catch (e) { console.error('[FORMS LIST]', e.message); res.json({ forms: [] }); }
+});
+
+// ── Admin: Create form ────────────────────────────────────────────────────────
+app.post('/api/admin/forms', requireAdmin, async (req, res) => {
+  try {
+    const { title, description, type, settings, linked_plan_chapter } = req.body;
+    if (!title) return res.status(400).json({ error: 'Título é obrigatório.' });
+    const { data: form, error } = await sb.from('re_forms').insert({
+      title, description: description || null, type: type || 'custom',
+      settings: settings || { scoring_enabled: false, show_progress: true, allow_resume: true },
+      linked_plan_chapter: linked_plan_chapter || null,
+      created_by: req.user.id, status: 'draft',
+    }).select().single();
+    if (error) return res.status(500).json({ error: error.message });
+    // Auto-create first page
+    await sb.from('re_form_pages').insert({ form_id: form.id, title: 'Página 1', order_index: 0 });
+    auditLog({ actorId: req.user.id, actorEmail: req.user.email, actorRole: 'admin',
+      entityType: 'form', entityId: form.id, action: 'create', after: { title, type } }).catch(e => console.warn('[async]', e?.message));
+    res.json({ success: true, form });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Admin: Get full form ──────────────────────────────────────────────────────
+app.get('/api/admin/forms/:id', requireAdmin, async (req, res) => {
+  try {
+    const form = await loadFullForm(req.params.id);
+    if (!form) return res.status(404).json({ error: 'Formulário não encontrado.' });
+    res.json({ form });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Admin: Update form metadata ───────────────────────────────────────────────
+app.put('/api/admin/forms/:id', requireAdmin, async (req, res) => {
+  try {
+    const { title, description, type, status, settings, linked_plan_chapter } = req.body;
+    const updates = { updated_at: new Date().toISOString() };
+    if (title  !== undefined) updates.title  = title;
+    if (description !== undefined) updates.description = description;
+    if (type   !== undefined) updates.type   = type;
+    if (status !== undefined) updates.status = status;
+    if (settings !== undefined) updates.settings = settings;
+    if (linked_plan_chapter !== undefined) updates.linked_plan_chapter = linked_plan_chapter;
+    const { data: form, error } = await sb.from('re_forms').update(updates).eq('id', req.params.id).select().single();
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ success: true, form });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Admin: Delete form ────────────────────────────────────────────────────────
+app.delete('/api/admin/forms/:id', requireAdmin, async (req, res) => {
+  try {
+    await sb.from('re_forms').delete().eq('id', req.params.id);
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Admin: Duplicate form ─────────────────────────────────────────────────────
+app.post('/api/admin/forms/:id/duplicate', requireAdmin, async (req, res) => {
+  try {
+    const src = await loadFullForm(req.params.id);
+    if (!src) return res.status(404).json({ error: 'Formulário não encontrado.' });
+
+    const { data: newForm } = await sb.from('re_forms').insert({
+      title: src.title + ' (cópia)', description: src.description,
+      type: src.type, settings: src.settings, status: 'draft',
+      linked_plan_chapter: src.linked_plan_chapter,
+      created_by: req.user.id, template_id: src.id, version: 1,
+    }).select().single();
+
+    const pageIdMap = {};
+    for (const p of src.pages) {
+      const { data: np } = await sb.from('re_form_pages').insert({
+        form_id: newForm.id, title: p.title, description: p.description, order_index: p.order_index,
+      }).select().single();
+      pageIdMap[p.id] = np.id;
+    }
+
+    const qIdMap = {};
+    for (const q of src.questions) {
+      const { data: nq } = await sb.from('re_form_questions').insert({
+        form_id: newForm.id, page_id: pageIdMap[q.page_id] || null,
+        order_index: q.order_index, type: q.type, label: q.label,
+        description: q.description, placeholder: q.placeholder,
+        required: q.required, options: q.options, settings: q.settings,
+        weight: q.weight, score_map: q.score_map, formula: q.formula,
+      }).select().single();
+      qIdMap[q.id] = nq.id;
+    }
+
+    for (const l of src.logic) {
+      await sb.from('re_form_logic').insert({
+        form_id: newForm.id,
+        source_question_id: qIdMap[l.source_question_id] || null,
+        operator: l.operator, condition_value: l.condition_value, action: l.action,
+        target_question_id: l.target_question_id ? qIdMap[l.target_question_id] : null,
+        target_page_id: l.target_page_id ? pageIdMap[l.target_page_id] : null,
+      });
+    }
+
+    res.json({ success: true, form: newForm });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Admin: Assign form to client(s) ──────────────────────────────────────────
+app.post('/api/admin/forms/:id/assign', requireAdmin, async (req, res) => {
+  try {
+    const { user_ids } = req.body;
+    if (!Array.isArray(user_ids) || !user_ids.length)
+      return res.status(400).json({ error: 'user_ids é obrigatório.' });
+    const rows = user_ids.map(uid => ({ form_id: req.params.id, user_id: uid, assigned_by: req.user.id }));
+    await sb.from('re_form_assignments').upsert(rows, { onConflict: 'form_id,user_id' });
+    // Notify clients
+    for (const uid of user_ids) {
+      const { data: form } = await sb.from('re_forms').select('title').eq('id', req.params.id).single();
+      pushNotification(uid, 'task', 'Novo formulário disponível',
+        form?.title || 'Formulário', 'form', req.params.id).catch(e => console.warn('[async]', e?.message));
+    }
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Admin: Get form assignments ───────────────────────────────────────────────
+app.get('/api/admin/forms/:id/assignments', requireAdmin, async (req, res) => {
+  try {
+    const { data } = await sb.from('re_form_assignments')
+      .select('*,re_users!re_form_assignments_user_id_fkey(name,email,company)')
+      .eq('form_id', req.params.id);
+    res.json({ assignments: data || [] });
+  } catch (e) { res.json({ assignments: [] }); }
+});
+
+// ── Admin: Remove assignment ──────────────────────────────────────────────────
+app.delete('/api/admin/forms/:id/assignments/:uid', requireAdmin, async (req, res) => {
+  try {
+    await sb.from('re_form_assignments').delete().eq('form_id', req.params.id).eq('user_id', req.params.uid);
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Admin: Pages CRUD ─────────────────────────────────────────────────────────
+app.post('/api/admin/forms/:id/pages', requireAdmin, async (req, res) => {
+  try {
+    const { title, description } = req.body;
+    const { data: last } = await sb.from('re_form_pages')
+      .select('order_index').eq('form_id', req.params.id).order('order_index', { ascending: false }).limit(1).single();
+    const { data: page } = await sb.from('re_form_pages').insert({
+      form_id: req.params.id, title: title || 'Nova Página',
+      description: description || null, order_index: (last?.order_index ?? -1) + 1,
+    }).select().single();
+    res.json({ success: true, page });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.put('/api/admin/forms/:id/pages/:pageId', requireAdmin, async (req, res) => {
+  try {
+    const { title, description, order_index } = req.body;
+    const upd = {};
+    if (title !== undefined)       upd.title       = title;
+    if (description !== undefined) upd.description = description;
+    if (order_index !== undefined) upd.order_index = order_index;
+    const { data: page } = await sb.from('re_form_pages').update(upd).eq('id', req.params.pageId).select().single();
+    res.json({ success: true, page });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete('/api/admin/forms/:id/pages/:pageId', requireAdmin, async (req, res) => {
+  try {
+    await sb.from('re_form_questions').delete().eq('page_id', req.params.pageId);
+    await sb.from('re_form_pages').delete().eq('id', req.params.pageId);
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Admin: Questions CRUD ─────────────────────────────────────────────────────
+app.post('/api/admin/forms/:id/questions', requireAdmin, async (req, res) => {
+  try {
+    const { page_id, type, label, description, placeholder, required,
+            options, settings, weight, score_map, formula } = req.body;
+    if (!page_id || !type) return res.status(400).json({ error: 'page_id e type são obrigatórios.' });
+    const { data: last } = await sb.from('re_form_questions')
+      .select('order_index').eq('page_id', page_id).order('order_index', { ascending: false }).limit(1).single();
+    const { data: q, error } = await sb.from('re_form_questions').insert({
+      form_id: req.params.id, page_id, type,
+      label: label || 'Nova Pergunta',
+      description: description || null,
+      placeholder: placeholder || null,
+      required: required || false,
+      options: options || null,
+      settings: settings || null,
+      weight: weight ?? 1,
+      score_map: score_map || null,
+      formula: formula || null,
+      order_index: (last?.order_index ?? -1) + 1,
+    }).select().single();
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ success: true, question: q });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.put('/api/admin/forms/:id/questions/:qId', requireAdmin, async (req, res) => {
+  try {
+    const allowed = ['label','description','placeholder','required','options','settings',
+                     'weight','score_map','formula','type','order_index','page_id'];
+    const upd = {};
+    allowed.forEach(k => { if (req.body[k] !== undefined) upd[k] = req.body[k]; });
+    const { data: q, error } = await sb.from('re_form_questions').update(upd).eq('id', req.params.qId).select().single();
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ success: true, question: q });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete('/api/admin/forms/:id/questions/:qId', requireAdmin, async (req, res) => {
+  try {
+    await sb.from('re_form_logic')
+      .delete().or(`source_question_id.eq.${req.params.qId},target_question_id.eq.${req.params.qId}`);
+    await sb.from('re_form_questions').delete().eq('id', req.params.qId);
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Reorder questions within a page
+app.post('/api/admin/forms/:id/questions/reorder', requireAdmin, async (req, res) => {
+  try {
+    // req.body.order = [{id, order_index}]
+    const { order } = req.body;
+    for (const item of (order || [])) {
+      await sb.from('re_form_questions').update({ order_index: item.order_index }).eq('id', item.id);
+    }
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Admin: List logic rules for a form ───────────────────────────────────────
+app.get('/api/admin/forms/:id/logic', requireAdmin, async (req, res) => {
+  try {
+    let q = sb.from('re_form_logic').select('*').eq('form_id', req.params.id);
+    if (req.query.question_id) q = q.eq('source_question_id', req.query.question_id);
+    const { data: rules } = await q.order('id');
+    res.json({ rules: rules || [] });
+  } catch (e) { res.json({ rules: [] }); }
+});
+
+// ── Admin: Logic CRUD ─────────────────────────────────────────────────────────
+app.post('/api/admin/forms/:id/logic', requireAdmin, async (req, res) => {
+  try {
+    const { source_question_id, operator, condition_value, action,
+            target_question_id, target_page_id } = req.body;
+    if (!source_question_id || !action)
+      return res.status(400).json({ error: 'source_question_id e action são obrigatórios.' });
+    const { data: rule } = await sb.from('re_form_logic').insert({
+      form_id: req.params.id, source_question_id, operator: operator || 'equals',
+      condition_value: condition_value ?? null, action,
+      target_question_id: target_question_id || null,
+      target_page_id:     target_page_id     || null,
+    }).select().single();
+    res.json({ success: true, rule });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete('/api/admin/forms/:id/logic/:ruleId', requireAdmin, async (req, res) => {
+  try {
+    await sb.from('re_form_logic').delete().eq('id', req.params.ruleId).eq('form_id', req.params.id);
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Admin: Responses ──────────────────────────────────────────────────────────
+app.get('/api/admin/forms/:id/responses', requireAdmin, async (req, res) => {
+  try {
+    const { status } = req.query;
+    let q = sb.from('re_form_responses')
+      .select('*,re_users!re_form_responses_user_id_fkey(name,email,company)')
+      .eq('form_id', req.params.id)
+      .order('started_at', { ascending: false });
+    if (status) q = q.eq('status', status);
+    const { data: responses } = await q;
+    res.json({ responses: responses || [] });
+  } catch (e) { res.json({ responses: [] }); }
+});
+
+app.get('/api/admin/forms/:id/responses/:responseId', requireAdmin, async (req, res) => {
+  try {
+    const { data: response } = await sb.from('re_form_responses')
+      .select('*,re_users!re_form_responses_user_id_fkey(name,email,company)')
+      .eq('id', req.params.responseId).single();
+    if (!response) return res.status(404).json({ error: 'Resposta não encontrada.' });
+    const { data: answers } = await sb.from('re_form_answers')
+      .select('*,re_form_questions(label,type)')
+      .eq('response_id', req.params.responseId);
+    res.json({ response, answers: answers || [] });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Admin: Assign form by email (looks up user first) ────────────────────────
+app.post('/api/admin/forms/:id/assign-email', requireAdmin, async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: 'Email obrigatório.' });
+    const { data: user } = await sb.from('re_users').select('id,name,email').eq('email', email).single();
+    if (!user) return res.status(404).json({ error: 'Cliente não encontrado com este email.' });
+    await sb.from('re_form_assignments').upsert(
+      { form_id: req.params.id, user_id: user.id, assigned_by: req.user.id },
+      { onConflict: 'form_id,user_id' }
+    );
+    const { data: form } = await sb.from('re_forms').select('title').eq('id', req.params.id).single();
+    pushNotification(user.id, 'task', 'Novo formulário disponível',
+      form?.title || 'Formulário', 'form', req.params.id).catch(e => console.warn('[async]', e?.message));
+    res.json({ success: true, user });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Client: List available forms ──────────────────────────────────────────────
+app.get('/api/forms', requireAuth, async (req, res) => {
+  try {
+    const uid = req.user.id;
+    // Get forms assigned to this user
+    const { data: assignments } = await sb.from('re_form_assignments')
+      .select('form_id').eq('user_id', uid);
+    const formIds = (assignments || []).map(a => a.form_id);
+
+    let forms = [];
+    if (formIds.length) {
+      const { data } = await sb.from('re_forms')
+        .select('id,title,description,type,settings')
+        .in('id', formIds).eq('status', 'active');
+      forms = data || [];
+    }
+
+    // Attach response status for each form
+    const withStatus = await Promise.all(forms.map(async f => {
+      const { data: resp } = await sb.from('re_form_responses')
+        .select('id,status,completed_at,score_pct')
+        .eq('form_id', f.id).eq('user_id', uid)
+        .order('started_at', { ascending: false }).limit(1);
+      const latest = resp?.[0] || null;
+      return { ...f, my_status: latest?.status || 'not_started',
+               my_response_id: latest?.id || null,
+               completed_at: latest?.completed_at || null,
+               score_pct: latest?.score_pct || null };
+    }));
+
+    res.json({ forms: withStatus });
+  } catch (e) { res.json({ forms: [] }); }
+});
+
+// ── Client: Get form for rendering (public structure) ─────────────────────────
+app.get('/api/forms/:id', requireAuth, async (req, res) => {
+  try {
+    // Check assignment
+    const { data: asgn } = await sb.from('re_form_assignments')
+      .select('id').eq('form_id', req.params.id).eq('user_id', req.user.id).single();
+    if (!asgn) return res.status(403).json({ error: 'Sem acesso a este formulário.' });
+
+    const form = await loadFullForm(req.params.id);
+    if (!form || form.status === 'inactive') return res.status(404).json({ error: 'Formulário não disponível.' });
+    res.json({ form });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Client: Start or resume a response ───────────────────────────────────────
+app.post('/api/forms/:id/responses', requireAuth, async (req, res) => {
+  try {
+    const formId = req.params.id;
+    // Resume existing in-progress response if any
+    const { data: existing } = await sb.from('re_form_responses')
+      .select('*').eq('form_id', formId).eq('user_id', req.user.id)
+      .eq('status', 'in_progress').order('started_at', { ascending: false }).limit(1).single();
+    if (existing) return res.json({ response: existing, resumed: true });
+
+    // Get first page
+    const { data: firstPage } = await sb.from('re_form_pages')
+      .select('id').eq('form_id', formId).order('order_index').limit(1).single();
+
+    const { data: response } = await sb.from('re_form_responses').insert({
+      form_id: formId, user_id: req.user.id, status: 'in_progress',
+      current_page_id: firstPage?.id || null,
+    }).select().single();
+
+    res.json({ response, resumed: false });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Client: Save answers (auto-save) ─────────────────────────────────────────
+app.put('/api/forms/:id/responses/:responseId', requireAuth, async (req, res) => {
+  try {
+    const { answers, current_page_id } = req.body;
+    // Verify ownership
+    const { data: resp } = await sb.from('re_form_responses')
+      .select('id,user_id').eq('id', req.params.responseId).single();
+    if (!resp || resp.user_id !== req.user.id)
+      return res.status(403).json({ error: 'Sem permissão.' });
+
+    if (current_page_id) {
+      await sb.from('re_form_responses').update({ current_page_id }).eq('id', req.params.responseId);
+    }
+
+    if (Array.isArray(answers)) {
+      for (const ans of answers) {
+        await sb.from('re_form_answers').upsert({
+          response_id: req.params.responseId,
+          question_id: ans.question_id,
+          value:       ans.value       ?? null,
+          value_json:  ans.value_json  ?? null,
+          file_path:   ans.file_path   ?? null,
+          updated_at:  new Date().toISOString(),
+        }, { onConflict: 'response_id,question_id' });
+      }
+    }
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Client: Complete form response ────────────────────────────────────────────
+app.post('/api/forms/:id/responses/:responseId/complete', requireAuth, async (req, res) => {
+  try {
+    const { score_total, score_max, score_pct, score_classification, score_details,
+            calculation_results, auto_report } = req.body;
+
+    const { data: resp } = await sb.from('re_form_responses')
+      .select('user_id').eq('id', req.params.responseId).single();
+    if (!resp || resp.user_id !== req.user.id)
+      return res.status(403).json({ error: 'Sem permissão.' });
+
+    await sb.from('re_form_responses').update({
+      status: 'completed',
+      completed_at: new Date().toISOString(),
+      score_total:          score_total          ?? null,
+      score_max:            score_max            ?? null,
+      score_pct:            score_pct            ?? null,
+      score_classification: score_classification ?? null,
+      score_details:        score_details        ?? null,
+      calculation_results:  calculation_results  ?? null,
+      auto_report:          auto_report          ?? null,
+    }).eq('id', req.params.responseId);
+
+    // Notify admin(s)
+    const { data: form } = await sb.from('re_forms').select('title').eq('id', req.params.id).single();
+    const { data: admins } = await sb.from('re_users').select('id').eq('is_admin', true).limit(10);
+    for (const adm of (admins || [])) {
+      pushNotification(adm.id, 'task', 'Formulário concluído',
+        `${form?.title || 'Formulário'} — resposta de ${req.user.name || req.user.email}`,
+        'form_response', req.params.responseId).catch(e => console.warn('[async]', e?.message));
+    }
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// FORM PLAYER — Simplified Client Routes (/api/my-forms/*)
+// ══════════════════════════════════════════════════════════════════════════════
+
+// ── GET /api/my-forms — list assigned forms with status ───────────────────────
+app.get('/api/my-forms', requireAuth, async (req, res) => {
+  try {
+    const uid = req.user.id;
+    const { data: assignments } = await sb.from('re_form_assignments').select('form_id').eq('user_id', uid);
+    const formIds = (assignments || []).map(a => a.form_id);
+    if (!formIds.length) return res.json([]);
+
+    const { data: forms } = await sb.from('re_forms')
+      .select('id,title,description,type,status')
+      .in('id', formIds).in('status', ['active','publicado']);
+
+    const withStatus = await Promise.all((forms || []).map(async f => {
+      const { data: resp } = await sb.from('re_form_responses')
+        .select('id,status,score_pct,score_classification,current_page_id,updated_at')
+        .eq('form_id', f.id).eq('user_id', uid)
+        .order('updated_at', { ascending: false }).limit(1);
+      const r = resp?.[0] || null;
+      const STATUS_MAP = { in_progress:'em_andamento', completed:'concluido' };
+      return {
+        ...f,
+        response_status:   r ? (STATUS_MAP[r.status] || r.status) : 'nao_iniciado',
+        response_id:       r?.id || null,
+        response_progress: null, // not tracked per-question for now
+        score_pct:         r?.score_pct || null,
+        score_classification: r?.score_classification || null,
+      };
+    }));
+    res.json(withStatus);
+  } catch (e) { res.json([]); }
+});
+
+// ── GET /api/my-forms/:id — form structure + existing response ────────────────
+app.get('/api/my-forms/:id', requireAuth, async (req, res) => {
+  try {
+    const uid    = req.user.id;
+    const formId = req.params.id;
+    // Check assignment
+    const { data: asgn } = await sb.from('re_form_assignments')
+      .select('id').eq('form_id', formId).eq('user_id', uid).single();
+    if (!asgn) return res.status(403).json({ error: 'Sem acesso a este formulário.' });
+
+    const form = await loadFullForm(formId);
+    if (!form) return res.status(404).json({ error: 'Formulário não encontrado.' });
+
+    // Get existing in-progress or completed response
+    const { data: existing } = await sb.from('re_form_responses')
+      .select('id,status,current_page_id,score_pct,score_total,score_max,score_classification,auto_report')
+      .eq('form_id', formId).eq('user_id', uid)
+      .order('updated_at', { ascending: false }).limit(1).single();
+
+    let existingWithAnswers = null;
+    if (existing) {
+      const { data: answers } = await sb.from('re_form_answers')
+        .select('question_id,value,value_json').eq('response_id', existing.id);
+      existingWithAnswers = { ...existing, answers: answers || [] };
+    }
+
+    res.json({ ...form, existing_response: existingWithAnswers });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── POST /api/my-forms/:id/response — upsert response + save all answers ─────
+app.post('/api/my-forms/:id/response', requireAuth, async (req, res) => {
+  try {
+    const uid    = req.user.id;
+    const formId = req.params.id;
+    const { answers, current_page_id, status } = req.body;
+
+    // Check assignment
+    const { data: asgn } = await sb.from('re_form_assignments')
+      .select('id').eq('form_id', formId).eq('user_id', uid).single();
+    if (!asgn) return res.status(403).json({ error: 'Sem acesso.' });
+
+    // Get or create response
+    let { data: resp } = await sb.from('re_form_responses')
+      .select('id,status').eq('form_id', formId).eq('user_id', uid)
+      .not('status', 'eq', 'completed')
+      .order('updated_at', { ascending: false }).limit(1).single();
+
+    const isCompleting = status === 'concluido';
+    const dbStatus     = isCompleting ? 'completed' : 'in_progress';
+
+    const now = new Date().toISOString();
+    if (!resp) {
+      const { data: newResp } = await sb.from('re_form_responses').insert({
+        form_id: formId, user_id: uid, status: dbStatus,
+        current_page_id: current_page_id || null,
+        last_active_at: now,
+        updated_at: now,
+      }).select('id,status,started_at').single();
+      resp = newResp;
+    } else {
+      const upd = { status: dbStatus, updated_at: now, last_active_at: now };
+      if (current_page_id) upd.current_page_id = current_page_id;
+      if (isCompleting) {
+        upd.completed_at = now;
+        // Compute time_to_complete_seconds from started_at
+        if (resp.started_at) {
+          const secs = Math.round((Date.now() - new Date(resp.started_at).getTime()) / 1000);
+          upd.time_to_complete_seconds = secs;
+        }
+      }
+      await sb.from('re_form_responses').update(upd).eq('id', resp.id);
+    }
+
+    const responseId = resp.id;
+
+    // Save answers (answers is a {questionId: value} object)
+    if (answers && typeof answers === 'object') {
+      for (const [qId, val] of Object.entries(answers)) {
+        const isArr     = Array.isArray(val);
+        const isComplex = isArr || (typeof val === 'object' && val !== null);
+        await sb.from('re_form_answers').upsert({
+          response_id: responseId,
+          question_id: parseInt(qId),
+          value:       isComplex ? null : (val == null ? null : String(val)),
+          value_json:  isComplex ? val  : null,
+          updated_at:  new Date().toISOString(),
+        }, { onConflict: 'response_id,question_id' });
+      }
+    }
+
+    // If completing, calculate scoring
+    let scoreData = {};
+    if (isCompleting) {
+      const { data: questions } = await sb.from('re_form_questions')
+        .select('id,weight,score_map,type').eq('form_id', formId);
+
+      let totalScore = 0, maxScore = 0;
+      const scoreDetails = {};
+      for (const q of (questions || [])) {
+        if (!q.weight) continue;
+        maxScore += q.weight;
+        const ansKey  = String(q.id);
+        const ansVal  = answers?.[ansKey];
+        const scoreMap = q.score_map || {};
+        let pts = 0;
+        if (ansVal != null && scoreMap[String(ansVal)] !== undefined) {
+          pts = parseFloat(scoreMap[String(ansVal)]) || 0;
+        } else if (typeof ansVal === 'number') {
+          pts = ansVal * (q.weight / 10); // default scale scoring
+        }
+        totalScore += pts;
+        scoreDetails[q.id] = pts;
+      }
+      const pct = maxScore > 0 ? (totalScore / maxScore) * 100 : null;
+      const classification = pct == null ? null
+        : pct >= 70 ? 'saudavel'
+        : pct >= 40 ? 'risco_moderado'
+        : 'risco_alto';
+
+      // Generate auto-report
+      const { data: form } = await sb.from('re_forms').select('title,type').eq('id', formId).single();
+      let autoReport = null;
+      if (pct != null) {
+        autoReport = `Relatório de ${form?.title || 'Diagnóstico'}\n\nPontuação: ${Math.round(pct)}% (${totalScore.toFixed(1)}/${maxScore} pontos)\n`;
+        autoReport += classification === 'saudavel'      ? 'Situação: SAUDÁVEL — A empresa apresenta boa saúde financeira e operacional.\n'
+                    : classification === 'risco_moderado' ? 'Situação: RISCO MODERADO — Há pontos de atenção que merecem acompanhamento.\n'
+                    : 'Situação: RISCO ALTO — A empresa necessita de intervenção imediata.\n';
+        autoReport += `\nEste relatório foi gerado automaticamente com base nas respostas fornecidas em ${new Date().toLocaleDateString('pt-BR')}.`;
+      }
+
+      await sb.from('re_form_responses').update({
+        score_total:          totalScore,
+        score_max:            maxScore,
+        score_pct:            pct,
+        score_classification: classification,
+        score_details:        scoreDetails,
+        auto_report:          autoReport,
+      }).eq('id', responseId);
+
+      scoreData = { score_total: totalScore, score_max: maxScore, score_pct: pct, score_classification: classification, auto_report: autoReport };
+
+      // Notify admins
+      const { data: admins } = await sb.from('re_users').select('id').eq('is_admin', true).limit(10);
+      for (const adm of (admins || [])) {
+        pushNotification(adm.id, 'task', 'Formulário concluído',
+          `${form?.title || 'Formulário'} — resposta de ${req.user.name || req.user.email}`,
+          'form_response', responseId).catch(e => console.warn('[async]', e?.message));
+      }
+    }
+
+    res.json({ response_id: responseId, ...scoreData });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Client: Get own responses ─────────────────────────────────────────────────
+app.get('/api/my-form-responses', requireAuth, async (req, res) => {
+  try {
+    const { data } = await sb.from('re_form_responses')
+      .select('*,re_forms(title,type)')
+      .eq('user_id', req.user.id)
+      .order('started_at', { ascending: false });
+    res.json({ responses: data || [] });
+  } catch (e) { res.json({ responses: [] }); }
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// FORM STATS — Admin
+// ══════════════════════════════════════════════════════════════════════════════
+
+app.get('/api/admin/forms/:id/stats', requireAdmin, async (req, res) => {
+  try {
+    const formId = req.params.id;
+
+    const { data: all } = await sb.from('re_form_responses')
+      .select('id,status,started_at,completed_at,abandoned_at,time_to_complete_seconds,last_active_at,metadata')
+      .eq('form_id', formId);
+
+    const rows = all || [];
+    const total       = rows.length;
+    const completed   = rows.filter(r => r.status === 'completed').length;
+    const abandoned   = rows.filter(r => r.abandoned_at != null || r.status === 'abandoned').length;
+    const inProgress  = total - completed - abandoned;
+
+    const completedRows = rows.filter(r => r.time_to_complete_seconds != null);
+    const avgTime = completedRows.length
+      ? Math.round(completedRows.reduce((s, r) => s + r.time_to_complete_seconds, 0) / completedRows.length)
+      : null;
+
+    const completionRate  = total > 0 ? Math.round((completed / total) * 100)  : 0;
+    const abandonmentRate = total > 0 ? Math.round((abandoned / total) * 100)  : 0;
+
+    // Daily starts (last 30 days)
+    const cutoff = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString();
+    const recentRows = rows.filter(r => r.started_at >= cutoff);
+    const dailyMap = {};
+    for (const r of recentRows) {
+      const day = r.started_at.slice(0, 10);
+      dailyMap[day] = (dailyMap[day] || 0) + 1;
+    }
+    const dailyStarts = Object.entries(dailyMap).map(([date, count]) => ({ date, count })).sort((a, b) => a.date.localeCompare(b.date));
+
+    res.json({
+      total, completed, abandoned, in_progress: inProgress,
+      completion_rate: completionRate,
+      abandonment_rate: abandonmentRate,
+      avg_time_seconds: avgTime,
+      daily_starts: dailyStarts,
+    });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Mark abandoned responses (called by cron or manually) ────────────────────
+app.post('/api/admin/forms/:id/responses/:responseId/abandon', requireAdmin, async (req, res) => {
+  try {
+    await sb.from('re_form_responses').update({
+      status: 'abandoned',
+      abandoned_at: new Date().toISOString(),
+    }).eq('id', req.params.responseId).eq('form_id', req.params.id);
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// JOURNEYS — Admin CRUD
+// ══════════════════════════════════════════════════════════════════════════════
+
+// ── List journeys ─────────────────────────────────────────────────────────────
+app.get('/api/admin/journeys', requireAdmin, async (req, res) => {
+  try {
+    const { data } = await sb.from('re_journeys')
+      .select('*')
+      .order('created_at', { ascending: false });
+    res.json(data || []);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Get single journey (with steps) ──────────────────────────────────────────
+app.get('/api/admin/journeys/:id', requireAdmin, async (req, res) => {
+  try {
+    const { data: journey } = await sb.from('re_journeys')
+      .select('*').eq('id', req.params.id).single();
+    if (!journey) return res.status(404).json({ error: 'Jornada não encontrada.' });
+
+    const { data: steps } = await sb.from('re_journey_steps')
+      .select('*,re_forms(id,title,type,status)')
+      .eq('journey_id', req.params.id)
+      .order('order_index', { ascending: true });
+
+    res.json({ ...journey, steps: steps || [] });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Create journey ────────────────────────────────────────────────────────────
+app.post('/api/admin/journeys', requireAdmin, async (req, res) => {
+  try {
+    const { name, description, status } = req.body;
+    if (!name) return res.status(400).json({ error: 'Nome é obrigatório.' });
+    const { data } = await sb.from('re_journeys').insert({
+      name, description: description || null,
+      status: status || 'draft',
+      created_by: req.user.id,
+    }).select().single();
+    res.json(data);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Update journey ────────────────────────────────────────────────────────────
+app.put('/api/admin/journeys/:id', requireAdmin, async (req, res) => {
+  try {
+    const { name, description, status } = req.body;
+    const upd = {};
+    if (name        !== undefined) upd.name        = name;
+    if (description !== undefined) upd.description = description;
+    if (status      !== undefined) upd.status      = status;
+    const { data } = await sb.from('re_journeys').update(upd).eq('id', req.params.id).select().single();
+    res.json(data);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Delete journey ────────────────────────────────────────────────────────────
+app.delete('/api/admin/journeys/:id', requireAdmin, async (req, res) => {
+  try {
+    await sb.from('re_journeys').delete().eq('id', req.params.id);
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Steps: add ────────────────────────────────────────────────────────────────
+app.post('/api/admin/journeys/:id/steps', requireAdmin, async (req, res) => {
+  try {
+    const { title, description, form_id, is_optional, unlock_condition } = req.body;
+    if (!title) return res.status(400).json({ error: 'Título da etapa é obrigatório.' });
+
+    // Auto order_index
+    const { count } = await sb.from('re_journey_steps')
+      .select('id', { count: 'exact', head: true }).eq('journey_id', req.params.id);
+
+    const { data } = await sb.from('re_journey_steps').insert({
+      journey_id: req.params.id,
+      form_id:    form_id    || null,
+      title, description: description || null,
+      order_index:      count || 0,
+      is_optional:      !!is_optional,
+      unlock_condition: unlock_condition || {},
+    }).select().single();
+    res.json(data);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Steps: update ─────────────────────────────────────────────────────────────
+app.put('/api/admin/journeys/:id/steps/:stepId', requireAdmin, async (req, res) => {
+  try {
+    const { title, description, form_id, is_optional, order_index, unlock_condition } = req.body;
+    const upd = {};
+    if (title            !== undefined) upd.title            = title;
+    if (description      !== undefined) upd.description      = description;
+    if (form_id          !== undefined) upd.form_id          = form_id || null;
+    if (is_optional      !== undefined) upd.is_optional      = !!is_optional;
+    if (order_index      !== undefined) upd.order_index      = order_index;
+    if (unlock_condition !== undefined) upd.unlock_condition = unlock_condition;
+    const { data } = await sb.from('re_journey_steps')
+      .update(upd).eq('id', req.params.stepId).eq('journey_id', req.params.id).select().single();
+    res.json(data);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Steps: reorder ────────────────────────────────────────────────────────────
+app.post('/api/admin/journeys/:id/steps/reorder', requireAdmin, async (req, res) => {
+  try {
+    const { order } = req.body; // array of { id, order_index }
+    if (!Array.isArray(order)) return res.status(400).json({ error: 'order deve ser um array.' });
+    for (const item of order) {
+      await sb.from('re_journey_steps')
+        .update({ order_index: item.order_index })
+        .eq('id', item.id).eq('journey_id', req.params.id);
+    }
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Steps: delete ─────────────────────────────────────────────────────────────
+app.delete('/api/admin/journeys/:id/steps/:stepId', requireAdmin, async (req, res) => {
+  try {
+    await sb.from('re_journey_steps').delete()
+      .eq('id', req.params.stepId).eq('journey_id', req.params.id);
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Assignments: list (admin — all clients for a journey) ─────────────────────
+app.get('/api/admin/journeys/:id/assignments', requireAdmin, async (req, res) => {
+  try {
+    const { data } = await sb.from('re_journey_assignments')
+      .select('*,re_users(id,name,email,company)')
+      .eq('journey_id', req.params.id)
+      .order('assigned_at', { ascending: false });
+    res.json(data || []);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Assignments: assign client to journey ─────────────────────────────────────
+app.post('/api/admin/journeys/:id/assignments', requireAdmin, async (req, res) => {
+  try {
+    const { user_id, notes } = req.body;
+    if (!user_id) return res.status(400).json({ error: 'user_id é obrigatório.' });
+    const { data } = await sb.from('re_journey_assignments').upsert({
+      journey_id:  req.params.id,
+      user_id,
+      assigned_by: req.user.id,
+      status:      'active',
+      notes:       notes || null,
+    }, { onConflict: 'journey_id,user_id' }).select().single();
+    res.json(data);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Assignments: update status / notes ───────────────────────────────────────
+app.put('/api/admin/journeys/:id/assignments/:asnId', requireAdmin, async (req, res) => {
+  try {
+    const { status, notes, current_step_index } = req.body;
+    const upd = {};
+    if (status             !== undefined) upd.status             = status;
+    if (notes              !== undefined) upd.notes              = notes;
+    if (current_step_index !== undefined) upd.current_step_index = current_step_index;
+    if (status === 'completed') upd.completed_at = new Date().toISOString();
+    const { data } = await sb.from('re_journey_assignments')
+      .update(upd).eq('id', req.params.asnId).select().single();
+    res.json(data);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Assignments: remove ───────────────────────────────────────────────────────
+app.delete('/api/admin/journeys/:id/assignments/:asnId', requireAdmin, async (req, res) => {
+  try {
+    await sb.from('re_journey_assignments')
+      .delete().eq('id', req.params.asnId).eq('journey_id', req.params.id);
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Step completions: mark complete ──────────────────────────────────────────
+app.post('/api/admin/journeys/:id/assignments/:asnId/complete-step', requireAdmin, async (req, res) => {
+  try {
+    const { step_id, form_response_id, notes } = req.body;
+    if (!step_id) return res.status(400).json({ error: 'step_id é obrigatório.' });
+
+    await sb.from('re_journey_step_completions').upsert({
+      assignment_id:    req.params.asnId,
+      step_id,
+      form_response_id: form_response_id || null,
+      notes:            notes || null,
+      completed_at:     new Date().toISOString(),
+    }, { onConflict: 'assignment_id,step_id' });
+
+    // Advance current_step_index to the next step
+    const { data: steps } = await sb.from('re_journey_steps')
+      .select('id,order_index').eq('journey_id', req.params.id).order('order_index');
+    const completedIdx = steps?.findIndex(s => s.id === step_id) ?? -1;
+    const nextIdx      = completedIdx + 1;
+    if (nextIdx < (steps?.length || 0)) {
+      await sb.from('re_journey_assignments')
+        .update({ current_step_index: nextIdx }).eq('id', req.params.asnId);
+    } else {
+      // All steps done
+      await sb.from('re_journey_assignments')
+        .update({ status: 'completed', completed_at: new Date().toISOString() })
+        .eq('id', req.params.asnId);
+    }
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Journey progress for a specific client (admin view) ──────────────────────
+app.get('/api/admin/journeys/:id/assignments/:asnId/progress', requireAdmin, async (req, res) => {
+  try {
+    const { data: assignment } = await sb.from('re_journey_assignments')
+      .select('*,re_users(name,email)').eq('id', req.params.asnId).single();
+    if (!assignment) return res.status(404).json({ error: 'Atribuição não encontrada.' });
+
+    const { data: steps } = await sb.from('re_journey_steps')
+      .select('*,re_forms(id,title)').eq('journey_id', req.params.id).order('order_index');
+
+    const { data: completions } = await sb.from('re_journey_step_completions')
+      .select('step_id,completed_at,form_response_id').eq('assignment_id', req.params.asnId);
+    const completionMap = {};
+    for (const c of (completions || [])) completionMap[c.step_id] = c;
+
+    const stepsWithStatus = (steps || []).map(s => ({
+      ...s,
+      completed: !!completionMap[s.id],
+      completed_at: completionMap[s.id]?.completed_at || null,
+      form_response_id: completionMap[s.id]?.form_response_id || null,
+    }));
+
+    res.json({ assignment, steps: stepsWithStatus });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// JOURNEYS — Client Routes (/api/my-journeys/*)
+// ══════════════════════════════════════════════════════════════════════════════
+
+app.get('/api/my-journeys', requireAuth, async (req, res) => {
+  try {
+    const uid = req.user.id;
+    const { data: assignments } = await sb.from('re_journey_assignments')
+      .select('*,re_journeys(id,name,description,status)')
+      .eq('user_id', uid).in('status', ['active','completed']);
+
+    // Check if user has completed the main onboarding (for auto-completing form steps)
+    const { data: onboarding } = await sb.from('re_onboarding')
+      .select('status').eq('user_id', uid).single();
+    const onboardingDone = onboarding?.status === 'completed';
+
+    const result = await Promise.all((assignments || []).map(async asn => {
+      const { data: steps } = await sb.from('re_journey_steps')
+        .select('id,title,description,order_index,is_optional,form_id,re_forms(id,title,is_system,system_key)')
+        .eq('journey_id', asn.journey_id).order('order_index');
+
+      const { data: completions } = await sb.from('re_journey_step_completions')
+        .select('step_id,completed_at').eq('assignment_id', asn.id);
+      const doneSet = new Set((completions || []).map(c => c.step_id));
+
+      // Auto-complete onboarding form steps for clients who already finished onboarding
+      if (onboardingDone) {
+        for (const step of (steps || [])) {
+          if (step.re_forms?.system_key === 'onboarding_14steps' && !doneSet.has(step.id)) {
+            await sb.from('re_journey_step_completions').upsert({
+              assignment_id: asn.id,
+              step_id:       step.id,
+              completed_at:  new Date().toISOString(),
+              notes:         'Completado automaticamente via onboarding do portal',
+            }, { onConflict: 'assignment_id,step_id' }).catch(e => console.warn('[auto-complete step]', e?.message));
+            doneSet.add(step.id);
+            // Advance pointer past this step
+            if (asn.current_step_index === step.order_index) {
+              const nextIdx = step.order_index + 1;
+              await sb.from('re_journey_assignments')
+                .update({ current_step_index: nextIdx }).eq('id', asn.id)
+                .catch(e => console.warn('[auto-advance journey]', e?.message));
+              asn.current_step_index = nextIdx;
+            }
+          }
+        }
+      }
+
+      return {
+        assignment_id:       asn.id,
+        journey_id:          asn.journey_id,
+        journey_name:        asn.re_journeys?.name,
+        journey_description: asn.re_journeys?.description,
+        status:              asn.status,
+        current_step_index:  asn.current_step_index,
+        assigned_at:         asn.assigned_at,
+        completed_at:        asn.completed_at,
+        steps: (steps || []).map(s => ({
+          ...s,
+          completed: doneSet.has(s.id),
+        })),
+        progress_pct: steps?.length
+          ? Math.round((doneSet.size / steps.length) * 100)
+          : 0,
+      };
+    }));
+    res.json(result);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Client: complete a journey step (linked to a form response they submitted)
+app.post('/api/my-journeys/:asnId/complete-step', requireAuth, async (req, res) => {
+  try {
+    const uid = req.user.id;
+    const { step_id, form_response_id } = req.body;
+    if (!step_id) return res.status(400).json({ error: 'step_id é obrigatório.' });
+
+    // Verify assignment belongs to this user
+    const { data: asn } = await sb.from('re_journey_assignments')
+      .select('id,journey_id').eq('id', req.params.asnId).eq('user_id', uid).single();
+    if (!asn) return res.status(403).json({ error: 'Sem acesso.' });
+
+    await sb.from('re_journey_step_completions').upsert({
+      assignment_id:    req.params.asnId,
+      step_id,
+      form_response_id: form_response_id || null,
+      completed_at:     new Date().toISOString(),
+    }, { onConflict: 'assignment_id,step_id' });
+
+    // Advance pointer
+    const { data: steps } = await sb.from('re_journey_steps')
+      .select('id,order_index').eq('journey_id', asn.journey_id).order('order_index');
+    const idx     = steps?.findIndex(s => s.id === step_id) ?? -1;
+    const nextIdx = idx + 1;
+    if (nextIdx < (steps?.length || 0)) {
+      await sb.from('re_journey_assignments')
+        .update({ current_step_index: nextIdx }).eq('id', req.params.asnId);
+    } else {
+      await sb.from('re_journey_assignments')
+        .update({ status: 'completed', completed_at: new Date().toISOString() })
+        .eq('id', req.params.asnId);
+    }
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Notifications ───────────────────────────────────────────────────────────
+app.get('/api/notifications', requireAuth, async (req, res) => {
+  try {
+    const uid   = req.user.id;
+    const limit = Math.min(parseInt(req.query.limit) || 30, 100);
+    const { data: rows } = await sb.from('re_notifications')
+      .select('*')
+      .eq('user_id', uid)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+    const items   = rows || [];
+    const unread  = items.filter(n => !n.read).length;
+    res.json({ notifications: items, unread_count: unread });
+  } catch (e) {
+    console.error('[NOTIF GET]', e.message);
+    res.json({ notifications: [], unread_count: 0 });
+  }
+});
+
+app.post('/api/notifications/:id/read', requireAuth, async (req, res) => {
+  try {
+    await sb.from('re_notifications')
+      .update({ read: true, read_at: new Date().toISOString() })
+      .eq('id', req.params.id)
+      .eq('user_id', req.user.id);
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/notifications/read-all', requireAuth, async (req, res) => {
+  try {
+    await sb.from('re_notifications')
+      .update({ read: true, read_at: new Date().toISOString() })
+      .eq('user_id', req.user.id)
+      .eq('read', false);
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Admin: push notification to a specific user or broadcast
+app.post('/api/admin/notifications/send', requireAdmin, async (req, res) => {
+  try {
+    const { user_id, type, title, body, entity_type, entity_id } = req.body;
+    if (!title) return res.status(400).json({ error: 'title é obrigatório.' });
+
+    if (user_id) {
+      await pushNotification(user_id, type || 'info', title, body, entity_type, entity_id);
+    } else {
+      // Broadcast to all active clients
+      const { data: users } = await sb.from('re_users')
+        .select('id')
+        .eq('is_admin', false)
+        .limit(500);
+      for (const u of (users || [])) {
+        await pushNotification(u.id, type || 'info', title, body, entity_type, entity_id);
+      }
+    }
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ─── Internal Invoices (hybrid billing) ──────────────────────────────────────
+
+// Client: list own internal invoices
+app.get('/api/financial/internal-invoices', requireAuth, async (req, res) => {
+  try {
+    const { data: invoices } = await sb.from('re_invoices')
+      .select('id,description,amount_cents,due_date,status,paid_at,payment_method,boleto_pdf_path,bank_data,created_at')
+      .eq('user_id', req.user.id)
+      .neq('status', 'cancelled')
+      .order('due_date', { ascending: false });
+    res.json({ invoices: invoices || [] });
+  } catch (e) {
+    console.error('[INVOICES GET]', e.message);
+    res.json({ invoices: [] });
+  }
+});
+
+// Client: download boleto PDF for an invoice
+app.get('/api/financial/internal-invoices/:id/pdf', requireAuth, async (req, res) => {
+  try {
+    const { data: inv } = await sb.from('re_invoices')
+      .select('*')
+      .eq('id', req.params.id)
+      .eq('user_id', req.user.id)
+      .single();
+    if (!inv) return res.status(404).json({ error: 'Boleto não encontrado.' });
+
+    // If a cached PDF exists, serve it
+    if (inv.boleto_pdf_path) {
+      const pdfPath = path.join(__dirname, inv.boleto_pdf_path);
+      if (fs.existsSync(pdfPath)) {
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="boleto-${inv.id}.pdf"`);
+        return fs.createReadStream(pdfPath).pipe(res);
+      }
+    }
+
+    // Generate PDF on the fly
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="boleto-${inv.id}.pdf"`);
+    const doc = new PDFDoc({ margin: 50, size: 'A4' });
+    doc.pipe(res);
+
+    const amtFmt = (inv.amount_cents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    const dueFmt = new Date(inv.due_date + 'T12:00:00').toLocaleDateString('pt-BR');
+    const bd     = inv.bank_data || {};
+
+    doc.fontSize(18).font('Helvetica-Bold').fillColor('#1e3a5f').text('Recupera Empresas', { align: 'center' });
+    doc.fontSize(13).font('Helvetica').fillColor('#374151').text('BOLETO DE COBRANÇA', { align: 'center' });
+    doc.moveDown(0.5);
+    doc.moveTo(50, doc.y).lineTo(545, doc.y).strokeColor('#E2E8F0').stroke();
+    doc.moveDown(0.5);
+
+    const field = (label, value) => {
+      doc.fontSize(9).fillColor('#6B7280').text(label.toUpperCase());
+      doc.fontSize(12).fillColor('#111827').font('Helvetica-Bold').text(value || '-');
+      doc.font('Helvetica').moveDown(0.4);
+    };
+
+    field('Beneficiário',       'Recupera Empresas Consultoria Ltda');
+    field('Descrição',          inv.description);
+    field('Valor',              amtFmt);
+    field('Vencimento',         dueFmt);
+    field('Status',             inv.status === 'paid' ? 'PAGO' : inv.status === 'overdue' ? 'VENCIDO' : 'EM ABERTO');
+    if (bd.linha_digitavel) field('Linha Digitável',   bd.linha_digitavel);
+    if (bd.banco)           field('Banco',             bd.banco);
+    if (bd.agencia)         field('Agência / Conta',   `${bd.agencia} / ${bd.conta}`);
+
+    doc.moveDown();
+    doc.fontSize(9).fillColor('#9CA3AF').text(`Gerado em ${new Date().toLocaleString('pt-BR')} — ID: ${inv.id}`, { align: 'center' });
+    doc.end();
+  } catch (e) {
+    console.error('[BOLETO PDF]', e.message);
+    res.status(500).json({ error: 'Erro ao gerar PDF.' });
+  }
+});
+
+// Admin: list all internal invoices with optional filters
+app.get('/api/admin/invoices', requireAdmin, async (req, res) => {
+  try {
+    const { status, user_id, from, to, limit = '50', offset = '0' } = req.query;
+    let q = sb.from('re_invoices')
+      .select('*,re_users!re_invoices_user_id_fkey(name,email,company)')
+      .order('created_at', { ascending: false })
+      .limit(parseInt(limit))
+      .range(parseInt(offset), parseInt(offset) + parseInt(limit) - 1);
+    if (status)  q = q.eq('status', status);
+    if (user_id) q = q.eq('user_id', user_id);
+    if (from)    q = q.gte('due_date', from);
+    if (to)      q = q.lte('due_date', to);
+    const { data: invoices, count } = await q;
+    res.json({ invoices: invoices || [], total: count || 0 });
+  } catch (e) {
+    console.error('[ADMIN INVOICES GET]', e.message);
+    res.json({ invoices: [], total: 0 });
+  }
+});
+
+// Admin: create internal invoice for a client
+app.post('/api/admin/invoices', requireAdmin, async (req, res) => {
+  try {
+    const { user_id, description, amount_cents, due_date, payment_method, bank_data, notes } = req.body;
+    if (!user_id || !description || !amount_cents || !due_date) {
+      return res.status(400).json({ error: 'user_id, description, amount_cents e due_date são obrigatórios.' });
+    }
+    const { data: inv, error } = await sb.from('re_invoices').insert({
+      user_id, description,
+      amount_cents: parseInt(amount_cents),
+      due_date,
+      status:         'pending',
+      payment_method: payment_method || 'boleto',
+      bank_data:      bank_data      || null,
+      notes:          notes          || null,
+      created_by:     req.user.id,
+    }).select().single();
+    if (error) return res.status(500).json({ error: error.message });
+
+    // Push notification to client
+    pushNotification(user_id, 'payment', 'Nova cobrança disponível',
+      `${description} — vencimento: ${new Date(due_date + 'T12:00:00').toLocaleDateString('pt-BR')}`,
+      'invoice', inv.id).catch(e => console.warn('[async]', e?.message));
+
+    // Audit log
+    auditLog({ actorId: req.user.id, actorEmail: req.user.email, actorRole: 'admin',
+      entityType: 'invoice', entityId: inv.id, action: 'create',
+      after: { user_id, description, amount_cents, due_date } }).catch(e => console.warn('[async]', e?.message));
+
+    res.json({ success: true, invoice: inv });
+  } catch (e) {
+    console.error('[ADMIN INVOICE POST]', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Admin: update invoice (status, paid_at, notes)
+app.put('/api/admin/invoices/:id', requireAdmin, async (req, res) => {
+  try {
+    const { status, paid_at, notes, bank_data } = req.body;
+    const { data: before } = await sb.from('re_invoices').select('*').eq('id', req.params.id).single();
+    if (!before) return res.status(404).json({ error: 'Boleto não encontrado.' });
+
+    const updates = {};
+    if (status    !== undefined) updates.status    = status;
+    if (paid_at   !== undefined) updates.paid_at   = paid_at;
+    if (notes     !== undefined) updates.notes     = notes;
+    if (bank_data !== undefined) updates.bank_data = bank_data;
+
+    const { data: inv, error } = await sb.from('re_invoices').update(updates).eq('id', req.params.id).select().single();
+    if (error) return res.status(500).json({ error: error.message });
+
+    // Notify client on status change
+    if (status && status !== before.status) {
+      const labels = { paid: 'Pagamento confirmado', overdue: 'Boleto vencido', cancelled: 'Boleto cancelado' };
+      if (labels[status]) {
+        pushNotification(before.user_id, 'payment', labels[status],
+          before.description, 'invoice', req.params.id).catch(e => console.warn('[async]', e?.message));
+      }
+    }
+
+    auditLog({ actorId: req.user.id, actorEmail: req.user.email, actorRole: 'admin',
+      entityType: 'invoice', entityId: req.params.id, action: 'update',
+      before: before, after: updates }).catch(e => console.warn('[async]', e?.message));
+
+    res.json({ success: true, invoice: inv });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Admin: cancel (soft-delete) invoice
+app.delete('/api/admin/invoices/:id', requireAdmin, async (req, res) => {
+  try {
+    const { data: before } = await sb.from('re_invoices').select('*').eq('id', req.params.id).single();
+    if (!before) return res.status(404).json({ error: 'Boleto não encontrado.' });
+    await sb.from('re_invoices').update({ status: 'cancelled' }).eq('id', req.params.id);
+    auditLog({ actorId: req.user.id, actorEmail: req.user.email, actorRole: 'admin',
+      entityType: 'invoice', entityId: req.params.id, action: 'cancel',
+      before: { status: before.status }, after: { status: 'cancelled' } }).catch(e => console.warn('[async]', e?.message));
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Admin: manually send invoice notification email
+app.post('/api/admin/invoices/:id/send-email', requireAdmin, async (req, res) => {
+  try {
+    const { data: inv } = await sb.from('re_invoices')
+      .select('*,re_users!re_invoices_user_id_fkey(name,email)')
+      .eq('id', req.params.id)
+      .single();
+    if (!inv) return res.status(404).json({ error: 'Boleto não encontrado.' });
+
+    const client     = inv.re_users || {};
+    const amtFmt     = ((inv.amount_cents || 0) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    const dueFmt     = new Date(inv.due_date + 'T12:00:00').toLocaleDateString('pt-BR');
+    const pdfUrl     = `${BASE_URL}/api/financial/internal-invoices/${inv.id}/pdf`;
+
+    await sendMail(
+      client.email,
+      `Boleto disponível: ${inv.description}`,
+      `<p>Olá, ${client.name || 'Cliente'}!</p>
+       <p>Um novo boleto está disponível no seu portal:</p>
+       <ul>
+         <li><strong>Descrição:</strong> ${inv.description}</li>
+         <li><strong>Valor:</strong> ${amtFmt}</li>
+         <li><strong>Vencimento:</strong> ${dueFmt}</li>
+       </ul>
+       <p><a href="${pdfUrl}" style="background:#1A56DB;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;">Baixar Boleto PDF</a></p>
+       <p>Acesse o <a href="${BASE_URL}/dashboard.html">Portal do Cliente</a> para mais detalhes.</p>`
+    );
+
+    await sb.from('re_invoices').update({ email_sent_at: new Date().toISOString() }).eq('id', req.params.id);
+    res.json({ success: true });
+  } catch (e) {
+    console.error('[INVOICE EMAIL]', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Admin: admin-side PDF generation (same as client endpoint but no user check)
+app.get('/api/admin/invoices/:id/pdf', requireAdmin, async (req, res) => {
+  try {
+    const { data: inv } = await sb.from('re_invoices').select('*').eq('id', req.params.id).single();
+    if (!inv) return res.status(404).json({ error: 'Boleto não encontrado.' });
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="boleto-${inv.id}.pdf"`);
+    const doc = new PDFDoc({ margin: 50, size: 'A4' });
+    doc.pipe(res);
+
+    const amtFmt = (inv.amount_cents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    const dueFmt = new Date(inv.due_date + 'T12:00:00').toLocaleDateString('pt-BR');
+    const bd     = inv.bank_data || {};
+
+    doc.fontSize(18).font('Helvetica-Bold').fillColor('#1e3a5f').text('Recupera Empresas', { align: 'center' });
+    doc.fontSize(13).font('Helvetica').fillColor('#374151').text('BOLETO DE COBRANÇA — CÓPIA ADMINISTRATIVA', { align: 'center' });
+    doc.moveDown(0.5);
+    doc.moveTo(50, doc.y).lineTo(545, doc.y).strokeColor('#E2E8F0').stroke();
+    doc.moveDown(0.5);
+
+    const field = (label, value) => {
+      doc.fontSize(9).fillColor('#6B7280').font('Helvetica').text(label.toUpperCase());
+      doc.fontSize(12).fillColor('#111827').font('Helvetica-Bold').text(value || '-');
+      doc.font('Helvetica').moveDown(0.4);
+    };
+
+    field('Descrição',        inv.description);
+    field('Valor',            amtFmt);
+    field('Vencimento',       dueFmt);
+    field('Status',           inv.status === 'paid' ? 'PAGO' : inv.status === 'overdue' ? 'VENCIDO' : inv.status === 'cancelled' ? 'CANCELADO' : 'EM ABERTO');
+    field('ID do Boleto',     inv.id);
+    if (bd.linha_digitavel)  field('Linha Digitável', bd.linha_digitavel);
+    if (bd.banco)            field('Banco',           bd.banco);
+    if (bd.agencia)          field('Agência / Conta', `${bd.agencia} / ${bd.conta}`);
+    if (inv.notes)           field('Observações',     inv.notes);
+
+    doc.moveDown();
+    doc.fontSize(9).fillColor('#9CA3AF').text(`Gerado em ${new Date().toLocaleString('pt-BR')}`, { align: 'center' });
+    doc.end();
+  } catch (e) {
+    console.error('[ADMIN BOLETO PDF]', e.message);
+    res.status(500).json({ error: 'Erro ao gerar PDF.' });
+  }
+});
+
+// ─── Service Marketplace ─────────────────────────────────────────────────────
+
+// Client: list active services
+app.get('/api/services', requireAuth, async (req, res) => {
+  try {
+    const { data: services } = await sb.from('re_services')
+      .select('id,name,description,category,price_cents,features,delivery_days,featured')
+      .eq('active', true)
+      .order('featured', { ascending: false })
+      .order('created_at');
+    res.json({ services: services || [] });
+  } catch (e) {
+    res.json({ services: [] });
+  }
+});
+
+// Client: get single service
+app.get('/api/services/:id', requireAuth, async (req, res) => {
+  try {
+    const { data: s } = await sb.from('re_services').select('*').eq('id', req.params.id).eq('active', true).single();
+    if (!s) return res.status(404).json({ error: 'Serviço não encontrado.' });
+    res.json({ service: s });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Client: place an order for a service
+app.post('/api/services/:id/order', requireAuth, async (req, res) => {
+  try {
+    const { data: svc } = await sb.from('re_services').select('*').eq('id', req.params.id).eq('active', true).single();
+    if (!svc) return res.status(404).json({ error: 'Serviço não encontrado.' });
+
+    const svcName = svc.name || svc.title || 'Serviço';
+
+    // Create internal invoice
+    const { data: inv } = await sb.from('re_invoices').insert({
+      user_id:        req.user.id,
+      description:    `Serviço: ${svcName}`,
+      amount_cents:   svc.price_cents,
+      due_date:       new Date(Date.now() + 3*86400000).toISOString().split('T')[0],
+      status:         'pending',
+      payment_method: 'boleto',
+      created_by:     null,
+    }).select().single();
+
+    // Create order referencing the invoice
+    const { data: order, error: orderErr } = await sb.from('re_service_orders').insert({
+      user_id:        req.user.id,
+      service_id:     svc.id,
+      amount_cents:   svc.price_cents,
+      status:         'pending_payment',
+      payment_method: 'boleto',
+      invoice_id:     inv?.id || null,
+      contracted_at:  new Date().toISOString(),
+    }).select().single();
+    if (orderErr) return res.status(500).json({ error: orderErr.message });
+
+    // Auto-assign journey if the service has one linked
+    if (svc.journey_id) {
+      sb.from('re_journey_assignments').upsert({
+        journey_id:  svc.journey_id,
+        user_id:     req.user.id,
+        assigned_by: null,
+        status:      'active',
+        notes:       `Atribuído automaticamente pela contratação do serviço "${svcName}"`,
+      }, { onConflict: 'journey_id,user_id' }).then(() => {}).catch(e => console.warn('[async journey assign]', e?.message));
+    }
+
+    pushNotification(req.user.id, 'service', 'Pedido recebido!',
+      `Seu pedido para "${svcName}" foi registrado. Aguarde o boleto.`,
+      'service_order', order?.id).catch(e => console.warn('[async]', e?.message));
+
+    res.json({ success: true, order, invoice: inv });
+  } catch (e) {
+    console.error('[SERVICE ORDER]', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Client: list own orders
+app.get('/api/service-orders', requireAuth, async (req, res) => {
+  try {
+    const { data: orders } = await sb.from('re_service_orders')
+      .select('*,re_services(name,category)')
+      .eq('user_id', req.user.id)
+      .order('created_at', { ascending: false });
+    res.json({ orders: orders || [] });
+  } catch (e) { res.json({ orders: [] }); }
+});
+
+// Admin: list all services (including inactive)
+app.get('/api/admin/services', requireAdmin, async (req, res) => {
+  try {
+    const { data: services } = await sb.from('re_services')
+      .select('*').order('created_at', { ascending: false });
+    res.json({ services: services || [] });
+  } catch (e) { res.json({ services: [] }); }
+});
+
+// Admin: create service
+app.post('/api/admin/services', requireAdmin, async (req, res) => {
+  try {
+    const { name, description, category, price_cents, delivery_days, features, featured, journey_id } = req.body;
+    if (!name || !price_cents) return res.status(400).json({ error: 'name e price_cents são obrigatórios.' });
+    const { data: svc, error } = await sb.from('re_services').insert({
+      name, title: name,
+      description, category,
+      price_cents: parseInt(price_cents),
+      price: parseInt(price_cents) / 100,
+      delivery_days: delivery_days || null,
+      features: features || null,
+      featured: featured || false,
+      journey_id: journey_id || null,
+      active: true,
+      created_by: req.user.id,
+    }).select().single();
+    if (error) return res.status(500).json({ error: error.message });
+    auditLog({ actorId: req.user.id, actorEmail: req.user.email, actorRole: 'admin',
+      entityType: 'service', entityId: svc.id, action: 'create', after: { name, price_cents } }).catch(e => console.warn('[async]', e?.message));
+    res.json({ success: true, service: svc });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Admin: update service
+app.put('/api/admin/services/:id', requireAdmin, async (req, res) => {
+  try {
+    const { active, name, description, price_cents, category, featured, journey_id } = req.body;
+    const updates = {};
+    if (active      !== undefined) updates.active      = active;
+    if (name        !== undefined) { updates.name = name; updates.title = name; }
+    if (description !== undefined) updates.description = description;
+    if (price_cents !== undefined) { updates.price_cents = parseInt(price_cents); updates.price = parseInt(price_cents) / 100; }
+    if (category    !== undefined) updates.category    = category;
+    if (featured    !== undefined) updates.featured    = featured;
+    if (journey_id  !== undefined) updates.journey_id  = journey_id || null;
+    const { data: svc, error } = await sb.from('re_services').update(updates).eq('id', req.params.id).select().single();
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ success: true, service: svc });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Admin: list all service orders
+app.get('/api/admin/service-orders', requireAdmin, async (req, res) => {
+  try {
+    const { data: orders } = await sb.from('re_service_orders')
+      .select('*,re_users!re_service_orders_user_id_fkey(name,email),re_services(name,category)')
+      .order('created_at', { ascending: false })
+      .limit(200);
+    res.json({ orders: orders || [] });
+  } catch (e) { res.json({ orders: [] }); }
+});
+
+// Admin: update order status
+app.put('/api/admin/service-orders/:id', requireAdmin, async (req, res) => {
+  try {
+    const { status, admin_notes, delivered_at } = req.body;
+    const updates = { updated_at: new Date().toISOString() };
+    if (status       !== undefined) updates.status       = status;
+    if (admin_notes  !== undefined) updates.admin_notes  = admin_notes;
+    if (delivered_at !== undefined) updates.delivered_at = delivered_at;
+    if (status === 'active')    updates.activated_at  = new Date().toISOString();
+    if (status === 'delivered') updates.completed_at  = new Date().toISOString();
+    if (status === 'cancelled') updates.cancelled_at  = new Date().toISOString();
+
+    const { data: order, error } = await sb.from('re_service_orders')
+      .update(updates).eq('id', req.params.id).select().single();
+    if (error) return res.status(500).json({ error: error.message });
+
+    // Load service info for notifications + journey
+    const { data: o } = await sb.from('re_service_orders')
+      .select('user_id,re_services(id,name,title,journey_id)')
+      .eq('id', req.params.id).single();
+    const svcName = o?.re_services?.name || o?.re_services?.title || 'Serviço';
+
+    // On activation: auto-assign journey if service has one
+    if (status === 'active' && o?.re_services?.journey_id && o?.user_id) {
+      sb.from('re_journey_assignments').upsert({
+        journey_id:  o.re_services.journey_id,
+        user_id:     o.user_id,
+        assigned_by: req.user.id,
+        status:      'active',
+        notes:       `Ativado pelo consultor via pedido de serviço "${svcName}"`,
+      }, { onConflict: 'journey_id,user_id' }).then(() => {}).catch(e => console.warn('[async journey assign]', e?.message));
+    }
+
+    // Notify client on key status changes
+    if (status === 'active') {
+      pushNotification(o?.user_id, 'service', 'Serviço ativo!',
+        `"${svcName}" foi ativado. Acesse Jornadas para ver as etapas.`,
+        'service_order', req.params.id).catch(e => console.warn('[async]', e?.message));
+    }
+    if (status === 'delivered') {
+      pushNotification(o?.user_id, 'service', 'Serviço entregue!',
+        `"${svcName}" foi concluído e entregue.`,
+        'service_order', req.params.id).catch(e => console.warn('[async]', e?.message));
+    }
+    res.json({ success: true, order });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ─── Audit Log ───────────────────────────────────────────────────────────────
+app.get('/api/admin/audit-log', requireAdmin, async (req, res) => {
+  try {
+    const { entity_type, actor_id, from, to, limit = '50', offset = '0' } = req.query;
+    let q = sb.from('re_audit_log')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(parseInt(limit))
+      .range(parseInt(offset), parseInt(offset) + parseInt(limit) - 1);
+    if (entity_type) q = q.eq('entity_type', entity_type);
+    if (actor_id)    q = q.eq('actor_id', actor_id);
+    if (from)        q = q.gte('created_at', from);
+    if (to)          q = q.lte('created_at', to);
+    const { data: rows } = await q;
+    res.json({ entries: rows || [] });
+  } catch (e) {
+    console.error('[AUDIT LOG GET]', e.message);
+    res.json({ entries: [] });
+  }
+});
+
+// Audit log export CSV (sem paginação — retorna até 10.000 registros)
+app.get('/api/admin/audit-log/export', requireAdmin, async (req, res) => {
+  try {
+    const { entity_type, actor_id, from, to } = req.query;
+    let q = sb.from('re_audit_log')
+      .select('created_at,actor_id,actor_email,action,entity_type,entity_id,details,before_data,after_data')
+      .order('created_at', { ascending: false })
+      .limit(10000);
+    if (entity_type) q = q.eq('entity_type', entity_type);
+    if (actor_id)    q = q.eq('actor_id', actor_id);
+    if (from)        q = q.gte('created_at', from);
+    if (to)          q = q.lte('created_at', to);
+    const { data: rows } = await q;
+
+    const header = ['Data/Hora', 'Actor ID', 'E-mail', 'Ação', 'Entidade', 'Entidade ID', 'Detalhes'];
+    const csvRows = (rows || []).map(r => [
+      new Date(r.created_at).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }),
+      r.actor_id   || '',
+      r.actor_email|| '',
+      r.action     || '',
+      r.entity_type|| '',
+      r.entity_id  || '',
+      r.after_data ? JSON.stringify(r.after_data) : (r.before_data ? JSON.stringify(r.before_data) : ''),
+    ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(','));
+
+    const csv = [header.join(','), ...csvRows].join('\r\n');
+    const filename = `audit_log_${new Date().toISOString().slice(0,10)}.csv`;
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send('\uFEFF' + csv); // BOM para Excel abrir corretamente
+  } catch (e) {
+    console.error('[AUDIT LOG EXPORT]', e.message);
+    res.status(500).json({ error: 'Erro ao exportar log.' });
+  }
+});
+
+// ─── Booking reminders cron (call daily, e.g. via Render cron job) ───────────
+app.post('/api/cron/booking-reminders', async (req, res) => {
+  const secret = req.headers['x-cron-secret'] || req.body?.secret;
+  if (secret !== (process.env.CRON_SECRET || JWT_SECRET)) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+
+  // Find confirmed bookings starting in the next 23–25 hours, reminder not yet sent
+  const from = new Date(Date.now() + 23 * 60 * 60 * 1000).toISOString();
+  const to   = new Date(Date.now() + 25 * 60 * 60 * 1000).toISOString();
+
+  const { data: slots } = await sb.from('re_agenda_slots')
+    .select('id,title,starts_at')
+    .gte('starts_at', from)
+    .lte('starts_at', to);
+
+  if (!slots?.length) return res.json({ sent: 0 });
+
+  const slotIds = slots.map(s => s.id);
+  const { data: bookings } = await sb.from('re_bookings')
+    .select('id,user_id,slot_id,reminder_sent')
+    .in('slot_id', slotIds)
+    .eq('status', 'confirmed')
+    .neq('reminder_sent', true);
+
+  if (!bookings?.length) return res.json({ sent: 0 });
+
+  const slotMap = Object.fromEntries(slots.map(s => [s.id, s]));
+  let sent = 0;
+
+  for (const booking of bookings) {
+    const slot = slotMap[booking.slot_id];
+    if (!slot) continue;
+    const user = await findUserById(booking.user_id);
+    if (!user?.email) continue;
+
+    const startsAtFmt = new Date(slot.starts_at).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+    await sendMail(user.email, 'Lembrete: sessão amanhã — Recupera Empresas', emailWrapper(
+      'Lembrete de sessão',
+      `<p>Olá, <b>${user.name || user.email}</b>!</p>
+       <p>Lembrete: você tem uma sessão agendada para <b>amanhã</b>:</p>
+       <table style="width:100%;border-collapse:collapse;font-size:14px;margin:16px 0;">
+         <tr><td style="padding:6px 0;color:#64748B;width:40%;">Sessão</td>
+             <td style="padding:6px 0;font-weight:600;">${slot.title || 'Consultoria'}</td></tr>
+         <tr><td style="padding:6px 0;color:#64748B;">Data e hora</td>
+             <td style="padding:6px 0;font-weight:600;">${startsAtFmt}</td></tr>
+       </table>
+       <p style="font-size:13px;color:#64748B;">Em caso de imprevistos, acesse o portal para cancelar com antecedência.</p>`
+    )).catch(e => console.warn('[async]', e?.message));
+
+    await sb.from('re_bookings').update({ reminder_sent: true }).eq('id', booking.id);
+    sent++;
+  }
+
+  console.log(`[CRON] booking-reminders: ${sent} enviados`);
+  res.json({ sent });
+});
+
+// ─── Invoice overdue cron (mark overdue + notify) ─────────────────────────────
+app.post('/api/cron/invoice-overdue', async (req, res) => {
+  const secret = req.headers['x-cron-secret'] || req.body?.secret;
+  if (secret !== (process.env.CRON_SECRET || JWT_SECRET)) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+
+  const today = new Date().toISOString().split('T')[0];
+
+  // Mark past-due pending invoices as overdue
+  const { data: overdueInvs } = await sb.from('re_invoices')
+    .select('id,user_id,description,amount_cents,due_date')
+    .eq('status', 'pending')
+    .lt('due_date', today);
+
+  let marked = 0;
+  for (const inv of overdueInvs || []) {
+    await sb.from('re_invoices').update({ status: 'overdue' }).eq('id', inv.id);
+    const user = await findUserById(inv.user_id);
+    if (user?.email) {
+      const dueFmt = new Date(inv.due_date + 'T12:00:00').toLocaleDateString('pt-BR');
+      const valor  = 'R$ ' + (inv.amount_cents / 100).toFixed(2).replace('.', ',');
+      sendMail(user.email, 'Fatura vencida — Recupera Empresas', emailWrapper(
+        'Fatura em atraso',
+        `<p>Olá, <b>${user.name || user.email}</b>!</p>
+         <p>Sua fatura está em atraso:</p>
+         <table style="width:100%;border-collapse:collapse;font-size:14px;margin:16px 0;">
+           <tr><td style="padding:6px 0;color:#64748B;width:40%;">Descrição</td>
+               <td style="padding:6px 0;font-weight:600;">${inv.description}</td></tr>
+           <tr><td style="padding:6px 0;color:#64748B;">Valor</td>
+               <td style="padding:6px 0;font-weight:600;color:#DC2626;">${valor}</td></tr>
+           <tr><td style="padding:6px 0;color:#64748B;">Vencimento</td>
+               <td style="padding:6px 0;font-weight:600;">${dueFmt}</td></tr>
+         </table>
+         <p>Entre em contato com nossa equipe para regularizar.</p>`
+      )).catch(e => console.warn('[async]', e?.message));
+    }
+    marked++;
+  }
+
+  // Also notify admin summary
+  if (marked > 0) {
+    sendMail(EMAIL_TO, `[Financeiro] ${marked} fatura(s) vencida(s) hoje`, emailWrapper(
+      'Faturas vencidas',
+      `<p>${marked} fatura(s) venceu/venceram hoje (${today}) e foram marcadas como em atraso.</p>`
+    )).catch(e => console.warn('[async]', e?.message));
+  }
+
+  console.log(`[CRON] invoice-overdue: ${marked} marcadas`);
+  res.json({ marked });
 });
 
 // ─── Health check (used by Render.com and uptime monitors) ───────────────────
@@ -2183,22 +4816,23 @@ async function seedAdminAccounts() {
       let   authUser    = authUsers.find(u => u.email?.toLowerCase() === email.toLowerCase());
 
       if (!authUser) {
-        // Create Supabase Auth account with email confirmed
-        const { data: created, error: createErr } = await sb.auth.admin.createUser({
-          email,
-          password:       defaultPwd,
-          email_confirm:  true,
-          user_metadata:  { name: email.split('@')[0], company: 'Recupera Empresas' },
+        // Use the native Supabase invite flow so the configured "Invite user"
+        // email template is used instead of bypassing auth emails with a
+        // pre-confirmed account and shared default password.
+        const { data: invited, error: inviteErr } = await sb.auth.admin.inviteUserByEmail(email, {
+          redirectTo: AUTH_EMAIL_REDIRECTS.inviteUser,
+          data: { name: email.split('@')[0], company: 'Recupera Empresas' },
         });
-        if (createErr) {
-          console.warn(`[SEED] Erro Supabase Auth ao criar ${email}:`, createErr.message);
+        if (inviteErr) {
+          console.warn(`[SEED] Erro Supabase Auth ao convidar ${email}:`, inviteErr.message);
           continue;
         }
-        authUser = created.user;
-        console.log(`[SEED] Supabase Auth criado: ${email}`);
+        authUser = invited.user;
+        console.log(`[SEED] Convite Supabase enviado: ${email}`);
       }
 
       // Ensure re_users profile exists and is marked as admin
+      if (!authUser?.id) continue;
       const existing = await findUserByEmail(email);
       if (!existing) {
         await sb.from('re_users').insert({

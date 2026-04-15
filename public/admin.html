@@ -41,6 +41,26 @@
     </div>
     <div class="header-right">
       <span class="admin-badge">Admin</span>
+      <!-- Admin Notification Bell -->
+      <div style="position:relative;" id="adminNotifBellWrap">
+        <button id="adminNotifBell" onclick="toggleAdminNotifDropdown()" title="Notificações"
+          style="background:none;border:none;cursor:pointer;padding:6px;border-radius:8px;color:#64748B;display:flex;align-items:center;position:relative;transition:background .15s;"
+          onmouseover="this.style.background='#F1F5F9'" onmouseout="this.style.background='none'">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+          </svg>
+          <span id="adminNotifBadge" style="display:none;position:absolute;top:2px;right:2px;background:#DC2626;color:#fff;border-radius:9999px;font-size:9px;font-weight:700;min-width:14px;height:14px;line-height:14px;text-align:center;padding:0 2px;">0</span>
+        </button>
+        <div id="adminNotifDropdown" style="display:none;position:absolute;top:44px;right:0;width:320px;max-height:420px;overflow-y:auto;background:#fff;border:1px solid #E2E8F0;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.12);z-index:300;">
+          <div style="padding:12px 16px;border-bottom:1px solid #F1F5F9;display:flex;align-items:center;justify-content:space-between;">
+            <span style="font-weight:700;font-size:14px;color:#1E293B;">Notificações do Admin</span>
+            <button onclick="adminMarkAllNotifRead()" style="background:none;border:none;font-size:12px;color:#1A56DB;cursor:pointer;padding:0;">Marcar todas lidas</button>
+          </div>
+          <div id="adminNotifList" style="padding:4px 0;">
+            <div style="padding:20px;text-align:center;color:#94A3B8;font-size:13px;">Carregando...</div>
+          </div>
+        </div>
+      </div>
       <div class="user-chip" id="userChip">
         <div class="user-avatar" id="userAvatar">?</div>
         <span id="userName">Carregando...</span>
@@ -69,9 +89,33 @@
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
         Agenda
       </button>
+      <button class="sidebar-link" onclick="showSection('financeiro',this)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        Financeiro
+      </button>
+      <button class="sidebar-link" onclick="showSection('formularios',this)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+        Formulários
+      </button>
+      <button class="sidebar-link" onclick="showSection('jornadas',this)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        Jornadas
+      </button>
       <button class="sidebar-link" onclick="showSection('logs',this)">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
         Log de Acesso
+      </button>
+      <button class="sidebar-link" onclick="showSection('adminInvoices',this)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+        Cobranças
+      </button>
+      <button class="sidebar-link" onclick="showSection('adminMarketplace',this)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+        Marketplace
+      </button>
+      <button class="sidebar-link" onclick="showSection('auditlog',this)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        Auditoria
       </button>
     </div>
   </nav>
@@ -135,6 +179,7 @@
                 <th>Etapa</th>
                 <th>Última atividade</th>
                 <th>Tarefas</th>
+                <th>Msgs</th>
               </tr>
             </thead>
             <tbody id="clientTableBody">
@@ -202,6 +247,442 @@
       </div>
     </div>
 
+    <!-- FINANCEIRO -->
+    <div id="sec-financeiro" class="tab-content">
+      <div class="section-header">
+        <div>
+          <div class="section-title">Financeiro</div>
+          <div class="section-sub" id="finSub">Receita consolidada dos clientes via Stripe</div>
+        </div>
+        <button class="btn-ghost" onclick="loadAdminFinanceiro()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/></svg>
+          Atualizar
+        </button>
+      </div>
+
+      <!-- Summary cards -->
+      <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:24px;">
+        <div class="stat-card green">
+          <div class="stat-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
+          <div class="stat-value" id="finTotalRevenue">—</div>
+          <div class="stat-label">Receita total</div>
+        </div>
+        <div class="stat-card blue">
+          <div class="stat-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div>
+          <div class="stat-value" id="finClientsPaid">—</div>
+          <div class="stat-label">Clientes pagantes</div>
+        </div>
+        <div class="stat-card amber">
+          <div class="stat-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></div>
+          <div class="stat-value" id="finTotalPayments">—</div>
+          <div class="stat-label">Total de pagamentos</div>
+        </div>
+      </div>
+
+      <!-- Clients table -->
+      <div class="portal-card">
+        <div class="portal-card-header"><span class="portal-card-title">Clientes — histórico financeiro</span></div>
+        <div id="finClientsList" style="overflow-x:auto;">
+          <div style="padding:20px;color:var(--text-muted);font-size:14px;">Carregando...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FORMULÁRIOS (Professional Form Builder) -->
+    <div id="sec-formularios" class="tab-content">
+
+      <!-- ── VIEW: LIST ─────────────────────────────────────────────────── -->
+      <div id="fb-view-list">
+        <div class="section-header">
+          <div>
+            <div class="section-title">Formulários</div>
+            <div class="section-sub">Crie diagnósticos, pesquisas e avaliações profissionais</div>
+          </div>
+          <button class="btn-primary" onclick="fbOpenNewFormModal()" style="font-size:13px;padding:8px 16px;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Novo Formulário
+          </button>
+        </div>
+        <div id="fb-forms-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;">
+          <div style="padding:24px;color:#94A3B8;text-align:center;">Carregando...</div>
+        </div>
+      </div>
+
+      <!-- ── VIEW: BUILDER ──────────────────────────────────────────────── -->
+      <div id="fb-view-builder" style="display:none;">
+        <!-- Builder header -->
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
+          <button class="btn-ghost" onclick="fbLoadFormsList()" style="font-size:13px;padding:6px 12px;">
+            ← Todos os formulários
+          </button>
+          <h1 id="fb-builder-title" style="font-size:18px;font-weight:700;color:#1E293B;margin:0;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">—</h1>
+          <button class="btn-ghost" onclick="fbToggleSettings()" style="font-size:13px;padding:6px 12px;">
+            ⚙️ Configurações
+          </button>
+          <button class="btn-ghost" onclick="fbOpenAssignModal()" style="font-size:13px;padding:6px 12px;">
+            👥 Atribuir clientes
+          </button>
+          <button class="btn-ghost" onclick="fbOpenStatsPanel()" style="font-size:13px;padding:6px 12px;">
+            📊 Estatísticas
+          </button>
+        </div>
+
+        <!-- Read-only banner — shown only for system forms -->
+        <div id="fb-readonly-banner" style="display:none;background:#FFF7ED;border:1px solid #FCD34D;border-radius:8px;padding:10px 16px;margin-bottom:14px;font-size:13px;color:#92400E;">
+          🔒 <strong>Formulário de Sistema</strong> — Somente leitura. As perguntas e páginas refletem o onboarding oficial e não podem ser editadas diretamente.
+        </div>
+
+        <!-- Settings panel (collapsible) -->
+        <div id="fb-settings-panel" style="display:none;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px;padding:16px 20px;margin-bottom:16px;">
+          <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:12px;align-items:end;">
+            <div>
+              <label style="font-size:12px;color:#64748B;font-weight:500;display:block;margin-bottom:4px;">Título</label>
+              <input id="fb-settings-title" class="portal-input" placeholder="Título do formulário">
+            </div>
+            <div>
+              <label style="font-size:12px;color:#64748B;font-weight:500;display:block;margin-bottom:4px;">Status</label>
+              <select id="fb-settings-status" class="portal-input">
+                <option value="draft">Rascunho</option>
+                <option value="active">Publicado</option>
+                <option value="inactive">Arquivado</option>
+              </select>
+            </div>
+            <button class="btn-primary" onclick="fbSaveFormSettings()" style="font-size:13px;padding:8px 14px;">Salvar</button>
+          </div>
+          <div style="margin-top:10px;">
+            <label style="font-size:12px;color:#64748B;font-weight:500;display:block;margin-bottom:4px;">Descrição</label>
+            <input id="fb-settings-desc" class="portal-input" placeholder="Descrição (opcional)">
+          </div>
+        </div>
+
+        <!-- Stats panel (collapsible) -->
+        <div id="fb-stats-panel" style="display:none;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px;padding:16px 20px;margin-bottom:16px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+            <div style="font-size:14px;font-weight:700;color:#1E293B;">Estatísticas do Formulário</div>
+            <button class="btn-ghost" onclick="fbOpenStatsPanel()" style="font-size:12px;padding:4px 10px;">Atualizar</button>
+          </div>
+          <div id="fb-stats-content" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;">
+            <div style="text-align:center;color:#94A3B8;">Carregando...</div>
+          </div>
+          <div id="fb-stats-chart" style="margin-top:14px;"></div>
+        </div>
+
+        <!-- Page tabs -->
+        <div id="fb-page-tabs" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;"></div>
+
+        <!-- 3-column layout -->
+        <div style="display:grid;grid-template-columns:220px 1fr 280px;gap:12px;min-height:500px;">
+
+          <!-- Left: Question palette -->
+          <div style="background:#fff;border:1px solid #E2E8F0;border-radius:10px;overflow:hidden;">
+            <div style="padding:10px 12px;background:#F8FAFC;border-bottom:1px solid #E2E8F0;font-size:11px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:.5px;">
+              Tipos de questão
+            </div>
+            <div id="fb-palette" style="padding:8px;display:flex;flex-direction:column;gap:2px;overflow-y:auto;max-height:580px;">
+              <!-- filled by fbRenderPalette() -->
+            </div>
+          </div>
+
+          <!-- Center: Canvas -->
+          <div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px;padding:16px;overflow-y:auto;max-height:600px;" id="fb-canvas">
+            <div style="padding:40px;text-align:center;color:#94A3B8;">
+              <div style="font-size:32px;margin-bottom:10px;">📋</div>
+              <div style="font-size:14px;">Clique em um tipo de questão para adicionar</div>
+            </div>
+          </div>
+
+          <!-- Right: Properties panel -->
+          <div style="background:#fff;border:1px solid #E2E8F0;border-radius:10px;overflow:hidden;">
+            <div style="padding:10px 12px;background:#F8FAFC;border-bottom:1px solid #E2E8F0;font-size:11px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:.5px;">
+              Propriedades
+            </div>
+            <div id="fb-props-panel" style="overflow-y:auto;max-height:560px;">
+              <div style="padding:24px;text-align:center;color:#94A3B8;">
+                <div style="font-size:28px;margin-bottom:8px;">👈</div>
+                <div style="font-size:13px;">Clique em uma questão para editar</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── VIEW: RESPONSES ────────────────────────────────────────────── -->
+      <div id="fb-view-responses" style="display:none;">
+        <div class="section-header">
+          <div>
+            <div class="section-title" id="fb-resp-title">Respostas</div>
+            <div class="section-sub">Visualize e exporte as respostas dos clientes</div>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button class="btn-ghost" onclick="fbExportResponsesCSV()" style="font-size:13px;padding:8px 14px;">
+              📥 Exportar CSV
+            </button>
+            <button class="btn-ghost" onclick="fbLoadFormsList()" style="font-size:13px;padding:8px 14px;">
+              ← Voltar
+            </button>
+          </div>
+        </div>
+        <div class="portal-card">
+          <div style="overflow-x:auto;" id="fb-resp-list">
+            <div style="padding:24px;color:#94A3B8;text-align:center;">Carregando...</div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /sec-formularios -->
+
+    <!-- JORNADAS -->
+    <div id="sec-jornadas" class="tab-content" style="display:none;">
+
+      <!-- ── VIEW: LIST ──────────────────────────────────────────────────── -->
+      <div id="jrn-view-list">
+        <div class="section-header">
+          <div>
+            <div class="section-title">Jornadas</div>
+            <div class="section-sub">Crie trilhas de formulários e atribua a clientes específicos</div>
+          </div>
+          <button class="btn-primary" onclick="jrnOpenNewModal()" style="font-size:13px;padding:8px 16px;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Nova Jornada
+          </button>
+        </div>
+        <div id="jrn-list-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;">
+          <div style="padding:24px;color:#94A3B8;text-align:center;">Carregando...</div>
+        </div>
+      </div>
+
+      <!-- ── VIEW: EDITOR ────────────────────────────────────────────────── -->
+      <div id="jrn-view-editor" style="display:none;">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
+          <button class="btn-ghost" onclick="jrnLoadList()" style="font-size:13px;padding:6px 12px;">← Todas as jornadas</button>
+          <h1 id="jrn-editor-title" style="font-size:18px;font-weight:700;color:#1E293B;margin:0;flex:1;">—</h1>
+          <span id="jrn-editor-status-badge" style="font-size:11px;padding:4px 10px;border-radius:20px;background:#E2E8F0;color:#64748B;"></span>
+          <button class="btn-ghost" onclick="jrnOpenEditModal()" style="font-size:13px;padding:6px 12px;">✏️ Editar</button>
+          <button class="btn-primary" onclick="jrnOpenAssignModal()" style="font-size:13px;padding:8px 14px;">👥 Atribuir cliente</button>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 340px;gap:16px;align-items:start;">
+
+          <!-- Left: Steps builder -->
+          <div class="portal-card" style="padding:20px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+              <div style="font-size:14px;font-weight:700;color:#1E293B;">Etapas da Jornada</div>
+              <button class="btn-primary" onclick="jrnOpenAddStepModal()" style="font-size:12px;padding:6px 12px;">+ Adicionar etapa</button>
+            </div>
+            <div id="jrn-steps-list" style="display:flex;flex-direction:column;gap:8px;">
+              <div style="color:#94A3B8;text-align:center;padding:20px;">Nenhuma etapa ainda.</div>
+            </div>
+          </div>
+
+          <!-- Right: Clients assigned -->
+          <div class="portal-card" style="padding:20px;">
+            <div style="font-size:14px;font-weight:700;color:#1E293B;margin-bottom:14px;">Clientes nesta jornada</div>
+            <div id="jrn-assignments-list" style="display:flex;flex-direction:column;gap:8px;">
+              <div style="color:#94A3B8;text-align:center;padding:16px;">Nenhum cliente atribuído.</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ── VIEW: PROGRESS ──────────────────────────────────────────────── -->
+      <div id="jrn-view-progress" style="display:none;">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+          <button class="btn-ghost" id="jrn-progress-back-btn" style="font-size:13px;padding:6px 12px;">← Voltar</button>
+          <h1 id="jrn-progress-title" style="font-size:18px;font-weight:700;color:#1E293B;margin:0;flex:1;">Progresso</h1>
+        </div>
+        <div id="jrn-progress-content" class="portal-card" style="padding:20px;">
+          <div style="color:#94A3B8;text-align:center;padding:20px;">Carregando...</div>
+        </div>
+      </div>
+
+    </div><!-- /sec-jornadas -->
+
+    <!-- ── MODAL: New/Edit Journey ──────────────────────────────────────────── -->
+    <div id="jrn-modal-form" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;align-items:center;justify-content:center;">
+      <div style="background:#fff;border-radius:14px;padding:28px;width:100%;max-width:480px;box-shadow:0 20px 60px rgba(0,0,0,.2);">
+        <div id="jrn-modal-title" style="font-size:18px;font-weight:700;color:#1E293B;margin-bottom:20px;">Nova Jornada</div>
+        <div style="display:flex;flex-direction:column;gap:14px;">
+          <div>
+            <label style="font-size:12px;color:#64748B;font-weight:500;display:block;margin-bottom:4px;">Nome *</label>
+            <input id="jrn-f-name" class="portal-input" placeholder="Ex: Onboarding Completo">
+          </div>
+          <div>
+            <label style="font-size:12px;color:#64748B;font-weight:500;display:block;margin-bottom:4px;">Descrição</label>
+            <textarea id="jrn-f-desc" class="portal-input" rows="2" placeholder="Descrição opcional" style="resize:vertical;"></textarea>
+          </div>
+          <div>
+            <label style="font-size:12px;color:#64748B;font-weight:500;display:block;margin-bottom:4px;">Status</label>
+            <select id="jrn-f-status" class="portal-input">
+              <option value="draft">Rascunho</option>
+              <option value="active">Ativo</option>
+              <option value="archived">Arquivado</option>
+            </select>
+          </div>
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:20px;">
+          <button class="btn-ghost" onclick="jrnCloseFormModal()" style="font-size:13px;">Cancelar</button>
+          <button class="btn-primary" onclick="jrnSaveForm()" style="font-size:13px;" id="jrn-save-btn">Criar Jornada</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── MODAL: Add Step ─────────────────────────────────────────────────── -->
+    <div id="jrn-modal-step" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;align-items:center;justify-content:center;">
+      <div style="background:#fff;border-radius:14px;padding:28px;width:100%;max-width:500px;box-shadow:0 20px 60px rgba(0,0,0,.2);">
+        <div id="jrn-step-modal-title" style="font-size:18px;font-weight:700;color:#1E293B;margin-bottom:20px;">Adicionar Etapa</div>
+        <input type="hidden" id="jrn-step-editing-id">
+        <div style="display:flex;flex-direction:column;gap:14px;">
+          <div>
+            <label style="font-size:12px;color:#64748B;font-weight:500;display:block;margin-bottom:4px;">Título *</label>
+            <input id="jrn-step-title" class="portal-input" placeholder="Ex: Diagnóstico Inicial">
+          </div>
+          <div>
+            <label style="font-size:12px;color:#64748B;font-weight:500;display:block;margin-bottom:4px;">Descrição</label>
+            <input id="jrn-step-desc" class="portal-input" placeholder="Opcional">
+          </div>
+          <div>
+            <label style="font-size:12px;color:#64748B;font-weight:500;display:block;margin-bottom:4px;">Formulário vinculado</label>
+            <select id="jrn-step-form" class="portal-input">
+              <option value="">— Nenhum formulário —</option>
+            </select>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <input type="checkbox" id="jrn-step-optional" style="width:16px;height:16px;">
+            <label for="jrn-step-optional" style="font-size:13px;color:#374151;">Etapa opcional</label>
+          </div>
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:20px;">
+          <button class="btn-ghost" onclick="jrnCloseStepModal()" style="font-size:13px;">Cancelar</button>
+          <button class="btn-primary" onclick="jrnSaveStep()" style="font-size:13px;">Salvar Etapa</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── MODAL: Assign client to Journey ─────────────────────────────────── -->
+    <div id="jrn-modal-assign" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;align-items:center;justify-content:center;">
+      <div style="background:#fff;border-radius:14px;padding:28px;width:100%;max-width:480px;box-shadow:0 20px 60px rgba(0,0,0,.2);">
+        <div style="font-size:18px;font-weight:700;color:#1E293B;margin-bottom:20px;">Atribuir Cliente</div>
+        <div style="display:flex;flex-direction:column;gap:14px;">
+          <div>
+            <label style="font-size:12px;color:#64748B;font-weight:500;display:block;margin-bottom:4px;">Cliente *</label>
+            <select id="jrn-assign-user" class="portal-input">
+              <option value="">Selecione um cliente...</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:12px;color:#64748B;font-weight:500;display:block;margin-bottom:4px;">Observações</label>
+            <input id="jrn-assign-notes" class="portal-input" placeholder="Opcional">
+          </div>
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:20px;">
+          <button class="btn-ghost" onclick="document.getElementById('jrn-modal-assign').style.display='none'" style="font-size:13px;">Cancelar</button>
+          <button class="btn-primary" onclick="jrnSaveAssign()" style="font-size:13px;">Atribuir</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── MODAL: New Form ────────────────────────────────────────────────── -->
+    <div id="fb-modal-new" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;align-items:center;justify-content:center;">
+      <div style="background:#fff;border-radius:14px;padding:28px;width:100%;max-width:480px;box-shadow:0 20px 60px rgba(0,0,0,.2);">
+        <div style="font-size:18px;font-weight:700;color:#1E293B;margin-bottom:20px;">Novo Formulário</div>
+        <div style="display:flex;flex-direction:column;gap:14px;">
+          <div>
+            <label style="font-size:12px;color:#64748B;font-weight:500;display:block;margin-bottom:4px;">Título *</label>
+            <input id="fb-new-title" class="portal-input" placeholder="Ex: Diagnóstico Financeiro">
+          </div>
+          <div>
+            <label style="font-size:12px;color:#64748B;font-weight:500;display:block;margin-bottom:4px;">Tipo</label>
+            <select id="fb-new-type" class="portal-input">
+              <option value="diagnostico">Diagnóstico</option>
+              <option value="pesquisa">Pesquisa</option>
+              <option value="avaliacao">Avaliação</option>
+              <option value="onboarding">Onboarding</option>
+              <option value="outro">Outro</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:12px;color:#64748B;font-weight:500;display:block;margin-bottom:4px;">Descrição</label>
+            <textarea id="fb-new-desc" class="portal-input" rows="2" placeholder="Descreva o objetivo deste formulário..."></textarea>
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;">
+          <button class="btn-ghost" onclick="fbCloseNewModal()">Cancelar</button>
+          <button class="btn-primary" onclick="fbSubmitNewForm()">Criar formulário →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── MODAL: Logic Editor ────────────────────────────────────────────── -->
+    <div id="fb-logic-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;align-items:center;justify-content:center;">
+      <div style="background:#fff;border-radius:14px;padding:24px;width:100%;max-width:560px;box-shadow:0 20px 60px rgba(0,0,0,.2);max-height:80vh;overflow-y:auto;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+          <div style="font-size:16px;font-weight:700;color:#1E293B;">🔀 Lógica Condicional</div>
+          <button onclick="fbCloseLogicModal()" style="background:none;border:none;color:#94A3B8;font-size:20px;cursor:pointer;line-height:1;">×</button>
+        </div>
+        <div id="fb-logic-rules" style="margin-bottom:16px;"></div>
+        <div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;padding:14px;">
+          <div style="font-size:12px;font-weight:700;color:#64748B;margin-bottom:10px;text-transform:uppercase;">Nova Regra</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px;">
+            <div>
+              <label style="font-size:11px;color:#64748B;display:block;margin-bottom:3px;">Operador</label>
+              <select id="fb-logic-op" class="portal-input" style="font-size:12px;padding:6px;">
+                <option value="equals">É igual a</option>
+                <option value="not_equals">Diferente de</option>
+                <option value="contains">Contém</option>
+                <option value="greater_than">Maior que</option>
+                <option value="less_than">Menor que</option>
+                <option value="is_answered">Foi respondida</option>
+                <option value="is_empty">Não foi respondida</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:11px;color:#64748B;display:block;margin-bottom:3px;">Valor</label>
+              <input id="fb-logic-val" class="portal-input" style="font-size:12px;padding:6px;" placeholder="Ex: Sim">
+            </div>
+            <div>
+              <label style="font-size:11px;color:#64748B;display:block;margin-bottom:3px;">Ação</label>
+              <select id="fb-logic-action" class="portal-input" style="font-size:12px;padding:6px;">
+                <option value="skip_to_page">Ir para página</option>
+                <option value="hide_question">Ocultar questão</option>
+              </select>
+            </div>
+          </div>
+          <div style="margin-bottom:10px;">
+            <label style="font-size:11px;color:#64748B;display:block;margin-bottom:3px;">Página de destino (ID)</label>
+            <input id="fb-logic-target-page" type="number" class="portal-input" style="font-size:12px;padding:6px;max-width:160px;" placeholder="ID da página">
+          </div>
+          <button class="btn-primary" onclick="fbAddLogicRule()" style="font-size:12px;padding:7px 14px;">+ Adicionar regra</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── MODAL: Assign Clients ──────────────────────────────────────────── -->
+    <div id="fb-assign-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;align-items:center;justify-content:center;">
+      <div style="background:#fff;border-radius:14px;padding:24px;width:100%;max-width:480px;box-shadow:0 20px 60px rgba(0,0,0,.2);max-height:80vh;overflow-y:auto;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+          <div style="font-size:16px;font-weight:700;color:#1E293B;">👥 Atribuir Clientes</div>
+          <button onclick="fbCloseAssignModal()" style="background:none;border:none;color:#94A3B8;font-size:20px;cursor:pointer;line-height:1;">×</button>
+        </div>
+        <div id="fb-assign-list" style="margin-bottom:14px;max-height:200px;overflow-y:auto;"></div>
+        <div style="display:flex;gap:8px;">
+          <input id="fb-assign-email" class="portal-input" placeholder="Email do cliente" style="flex:1;">
+          <button class="btn-primary" onclick="fbAssignClient()" style="font-size:13px;padding:8px 14px;">Atribuir</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── MODAL: Response detail ─────────────────────────────────────────── -->
+    <div id="fb-resp-detail-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;align-items:center;justify-content:center;">
+      <div style="background:#fff;border-radius:14px;padding:24px;width:100%;max-width:600px;box-shadow:0 20px 60px rgba(0,0,0,.2);max-height:88vh;overflow-y:auto;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+          <div style="font-size:16px;font-weight:700;color:#1E293B;">📊 Detalhes da Resposta</div>
+          <button onclick="fbCloseRespDetailModal()" style="background:none;border:none;color:#94A3B8;font-size:20px;cursor:pointer;line-height:1;">×</button>
+        </div>
+        <div id="fb-resp-detail-body"></div>
+      </div>
+    </div>
+
     <!-- LOGS -->
     <div id="sec-logs" class="tab-content">
       <div class="section-header">
@@ -230,6 +711,111 @@
               <tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:20px;">Carregando...</td></tr>
             </tbody>
           </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ADMIN INVOICES (Cobranças) -->
+    <div id="sec-adminInvoices" class="tab-content">
+      <div class="section-header">
+        <div>
+          <div class="section-title">Cobranças Internas</div>
+          <div class="section-sub">Gerencie boletos e faturas bancárias</div>
+        </div>
+        <button class="btn-primary" style="font-size:13px;" onclick="openCreateInvoiceModal()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Nova Cobrança
+        </button>
+      </div>
+
+      <!-- Filters -->
+      <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center;">
+        <select id="invFilterStatus" onchange="loadAdminInvoices()" style="border:1px solid var(--border);border-radius:6px;padding:7px 10px;font-size:13px;color:var(--text);">
+          <option value="">Todos os status</option>
+          <option value="pending">Em aberto</option>
+          <option value="paid">Pago</option>
+          <option value="overdue">Vencido</option>
+          <option value="cancelled">Cancelado</option>
+        </select>
+        <input type="date" id="invFilterFrom" onchange="loadAdminInvoices()" style="border:1px solid var(--border);border-radius:6px;padding:7px 10px;font-size:13px;" placeholder="De"/>
+        <input type="date" id="invFilterTo"   onchange="loadAdminInvoices()" style="border:1px solid var(--border);border-radius:6px;padding:7px 10px;font-size:13px;" placeholder="Até"/>
+        <button class="btn-ghost" onclick="loadAdminInvoices()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/></svg>
+          Atualizar
+        </button>
+      </div>
+
+      <div class="portal-card">
+        <div style="overflow-x:auto;" id="adminInvoiceTableWrap">
+          <div style="padding:20px;text-align:center;color:var(--text-muted);font-size:13px;">Carregando...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ADMIN MARKETPLACE -->
+    <div id="sec-adminMarketplace" class="tab-content">
+      <div class="section-header">
+        <div>
+          <div class="section-title">Marketplace de Serviços</div>
+          <div class="section-sub">Catálogo de serviços e pedidos</div>
+        </div>
+        <button class="btn-primary" style="font-size:13px;" onclick="openCreateServiceModal()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Novo Serviço
+        </button>
+      </div>
+
+      <div class="portal-card" style="margin-bottom:16px;">
+        <div class="portal-card-header"><span class="portal-card-title">Serviços Cadastrados</span></div>
+        <div style="overflow-x:auto;" id="adminServicesTableWrap">
+          <div style="padding:20px;text-align:center;color:var(--text-muted);font-size:13px;">Carregando...</div>
+        </div>
+      </div>
+
+      <div class="portal-card">
+        <div class="portal-card-header"><span class="portal-card-title">Pedidos de Clientes</span></div>
+        <div style="overflow-x:auto;" id="adminOrdersTableWrap">
+          <div style="padding:20px;text-align:center;color:var(--text-muted);font-size:13px;">Carregando...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AUDIT LOG -->
+    <div id="sec-auditlog" class="tab-content">
+      <div class="section-header">
+        <div>
+          <div class="section-title">Auditoria</div>
+          <div class="section-sub">Registro detalhado de ações no sistema</div>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn-ghost" onclick="loadAuditLog()">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/></svg>
+            Atualizar
+          </button>
+          <button class="btn-ghost" onclick="exportAuditLog()" title="Exportar CSV">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Exportar CSV
+          </button>
+        </div>
+      </div>
+
+      <!-- Filters -->
+      <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center;">
+        <select id="auditFilterType" onchange="loadAuditLog()" style="border:1px solid var(--border);border-radius:6px;padding:7px 10px;font-size:13px;color:var(--text);">
+          <option value="">Todos os tipos</option>
+          <option value="invoice">Cobrança</option>
+          <option value="task">Tarefa</option>
+          <option value="document">Documento</option>
+          <option value="service_order">Pedido</option>
+          <option value="member">Membro</option>
+        </select>
+        <input type="date" id="auditFilterFrom" onchange="loadAuditLog()" style="border:1px solid var(--border);border-radius:6px;padding:7px 10px;font-size:13px;"/>
+        <input type="date" id="auditFilterTo"   onchange="loadAuditLog()" style="border:1px solid var(--border);border-radius:6px;padding:7px 10px;font-size:13px;"/>
+      </div>
+
+      <div class="portal-card">
+        <div style="overflow-x:auto;" id="auditLogTableWrap">
+          <div style="padding:20px;text-align:center;color:var(--text-muted);font-size:13px;">Carregando...</div>
         </div>
       </div>
     </div>
@@ -267,10 +853,11 @@
     <button class="drawer-tab active" onclick="switchDrawerTab('overview',this)">Visão Geral</button>
     <button class="drawer-tab" onclick="switchDrawerTab('plan',this)">Business Plan</button>
     <button class="drawer-tab" onclick="switchDrawerTab('tasks',this)">Tarefas</button>
-    <button class="drawer-tab" onclick="switchDrawerTab('messages',this)">Mensagens</button>
+    <button class="drawer-tab" id="drawerTabMessages" onclick="switchDrawerTab('messages',this)">Mensagens</button>
     <button class="drawer-tab" onclick="switchDrawerTab('agenda',this)">Agenda</button>
     <button class="drawer-tab" onclick="switchDrawerTab('docs',this)">Documentos</button>
     <button class="drawer-tab" onclick="switchDrawerTab('equipe',this)">Equipe</button>
+    <button class="drawer-tab" onclick="switchDrawerTab('financeiro_client',this)">Financeiro</button>
     <button class="drawer-tab" onclick="switchDrawerTab('data',this)">Dados</button>
   </div>
   <div class="drawer-body" id="drawerBody"></div>
@@ -321,8 +908,13 @@ function showSection(name, el) {
   document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
   document.getElementById('sec-'+name)?.classList.add('active');
   if (el) el.classList.add('active');
-  if (name === 'logs')   loadLogs();
-  if (name === 'agenda') loadAdminAgenda();
+  if (name === 'logs')             loadLogs();
+  if (name === 'agenda')           loadAdminAgenda();
+  if (name === 'financeiro')       loadAdminFinanceiro();
+  if (name === 'formularios')      fbLoadFormsList();
+  if (name === 'adminInvoices')    loadAdminInvoices();
+  if (name === 'adminMarketplace') loadAdminMarketplace();
+  if (name === 'auditlog')         loadAuditLog();
   window.scrollTo({ top:0, behavior:'instant' });
 }
 
@@ -339,16 +931,22 @@ function filterClients() {
   renderClientTable(filtered);
 }
 
+let _unreadMsgs = {}; // clientId → count (updated by polling)
+
 function renderClientTable(clients) {
   const tbody = document.getElementById('clientTableBody');
   if (!clients.length) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:24px;">Nenhum cliente encontrado.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:24px;">Nenhum cliente encontrado.</td></tr>';
     return;
   }
   tbody.innerHTML = clients.map(c => {
     const st      = STATUS_LABELS[c.status] || STATUS_LABELS.nao_iniciado;
     const pct     = c.completed ? 100 : c.progress;
     const lastAct = c.lastActivity ? new Date(c.lastActivity).toLocaleDateString('pt-BR') : '—';
+    const unread  = _unreadMsgs[c.id] || 0;
+    const msgBadge = unread
+      ? `<span class="badge badge-red" style="animation:pulse 1.5s infinite;">${unread}</span>`
+      : '<span style="color:var(--text-muted);font-size:13px;">—</span>';
     return `<tr onclick="openClient('${c.id}')">
       <td>
         <div class="company-cell">${c.company || c.name}</div>
@@ -364,6 +962,7 @@ function renderClientTable(clients) {
       <td style="font-size:13px;color:var(--text-muted);">${c.step}/14</td>
       <td style="font-size:13px;color:var(--text-muted);">${lastAct}</td>
       <td>${c.pendingTasks ? `<span class="badge badge-amber">${c.pendingTasks}</span>` : '<span style="color:var(--text-muted);font-size:13px;">—</span>'}</td>
+      <td>${msgBadge}</td>
     </tr>`;
   }).join('');
 }
@@ -475,6 +1074,37 @@ async function deleteSlot(slotId) {
 // ── Drawer ────────────────────────────────────────────────────────────────────
 let _currentClientId   = null;
 let _currentClientData = null;
+let _drawerMsgPollTimer = null;
+
+function _stopDrawerMsgPoll() {
+  if (_drawerMsgPollTimer) { clearInterval(_drawerMsgPollTimer); _drawerMsgPollTimer = null; }
+}
+
+async function _drawerMsgPollTick() {
+  if (!_currentClientId) return;
+  const thread = document.getElementById('adminMsgThread');
+  if (!thread) { _stopDrawerMsgPoll(); return; }
+  try {
+    const r = await fetch(`/api/admin/client/${_currentClientId}`, { headers: authH() });
+    if (!r.ok) return;
+    const data = await r.json();
+    const msgs = data.messages || [];
+    if (msgs.length !== (_currentClientData?.messages?.length || 0) ||
+        (msgs.length && msgs[msgs.length-1].ts !== (_currentClientData?.messages?.slice(-1)[0]?.ts))) {
+      _currentClientData = data;
+      thread.innerHTML = !msgs.length
+        ? '<div class="empty-state"><p>Nenhuma mensagem.</p></div>'
+        : msgs.map(m=>`<div>
+            <div class="message-bubble from-${m.fromRole||m.from}">
+              <div class="message-from">${(m.fromRole||m.from)==='admin'?'Recupera Empresas':m.fromName||'Cliente'}</div>
+              ${m.text}
+              <div class="message-ts">${new Date(m.ts).toLocaleString('pt-BR')}</div>
+            </div>
+          </div>`).join('');
+      thread.scrollTop = thread.scrollHeight;
+    }
+  } catch {}
+}
 
 async function openClient(id) {
   _currentClientId = id;
@@ -498,6 +1128,7 @@ async function openClient(id) {
 }
 
 function closeDrawer() {
+  _stopDrawerMsgPoll();
   document.getElementById('drawerOverlay').classList.remove('open');
   document.getElementById('clientDrawer').classList.remove('open');
   _currentClientId   = null;
@@ -505,9 +1136,13 @@ function closeDrawer() {
 }
 
 function switchDrawerTab(tab, el) {
+  _stopDrawerMsgPoll();
   document.querySelectorAll('.drawer-tab').forEach(t => t.classList.remove('active'));
   if (el) el.classList.add('active');
   renderDrawerTab(tab);
+  if (tab === 'messages') {
+    _drawerMsgPollTimer = setInterval(_drawerMsgPollTick, 10000);
+  }
 }
 
 function stepIconDone() {
@@ -626,7 +1261,70 @@ async function renderDrawerTab(tab) {
       </div>`;
   }
 
+  if (tab === 'financeiro_client') {
+    body.innerHTML = '<div style="padding:16px;color:var(--text-muted);font-size:14px;">Carregando financeiro...</div>';
+    try {
+      const res = await fetch(`/api/admin/client/${_currentClientId}/financial`, { headers: authH() });
+      if (!res.ok) throw new Error('Erro');
+      const data = await res.json();
+      const invoices = data.invoices || [];
+      const stripeConfigured = data.configured ?? data.stripeConfigured ?? true;
+      if (!stripeConfigured) {
+        body.innerHTML = '<div class="empty-state"><p>Stripe não configurado.</p></div>';
+        return;
+      }
+      if (!invoices || !invoices.length) {
+        body.innerHTML = '<div class="empty-state"><p>Nenhuma cobrança encontrada.</p></div>';
+        return;
+      }
+      const total = invoices.reduce((s, inv) => s + parseFloat(inv.amount || 0), 0);
+      const paid  = invoices.filter(inv => inv.status === 'paid' || inv.status === 'succeeded');
+      const paidTotal = paid.reduce((s, inv) => s + parseFloat(inv.amount || 0), 0);
+      body.innerHTML = `
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
+          <div class="stat-card blue" style="margin:0;">
+            <div class="stat-value" style="font-size:18px;">R$ ${paidTotal.toLocaleString('pt-BR',{minimumFractionDigits:2})}</div>
+            <div class="stat-label">Total pago</div>
+          </div>
+          <div class="stat-card" style="margin:0;">
+            <div class="stat-value" style="font-size:18px;">${invoices.length}</div>
+            <div class="stat-label">Cobranças (${paid.length} pagas)</div>
+          </div>
+        </div>
+        <div style="font-size:13px;font-weight:700;margin-bottom:10px;">Histórico de cobranças</div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          ${invoices.map(inv => {
+            const isPaid = inv.status === 'paid' || inv.status === 'succeeded';
+            const stCls  = isPaid ? 'badge-green' : inv.status === 'open' ? 'badge-amber' : 'badge-red';
+            const stLbl  = isPaid ? 'Pago' : inv.status === 'open' ? 'Em aberto' : inv.status;
+            const dt = new Date(inv.date).toLocaleDateString('pt-BR');
+            const amt = parseFloat(inv.amount || 0).toLocaleString('pt-BR',{minimumFractionDigits:2});
+            const link = inv.pdfUrl || inv.hostedUrl;
+            return `<div style="background:#F8FAFC;border:1px solid var(--border);border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:10px;">
+              <div style="flex:1;min-width:0;">
+                <div style="font-weight:600;font-size:13px;">${inv.description || 'Cobrança'}</div>
+                <div style="font-size:11px;color:var(--text-muted);">${dt}</div>
+              </div>
+              <div style="font-weight:700;font-size:13px;">R$ ${amt}</div>
+              <span class="badge ${stCls}">${stLbl}</span>
+              ${link ? `<a href="${link}" target="_blank" style="font-size:11px;color:var(--primary);">Ver</a>` : ''}
+            </div>`;
+          }).join('')}
+        </div>`;
+    } catch (e) {
+      body.innerHTML = '<div class="empty-state"><p>Erro ao carregar dados financeiros.</p></div>';
+    }
+    return;
+  }
+
   if (tab === 'messages') {
+    // Mark messages as seen
+    if (_currentClientId) {
+      fetch(`/api/admin/messages/seen/${_currentClientId}`, { method: 'POST', headers: authH() }).catch(() => {});
+      if (_unreadMsgs) { _unreadMsgs[_currentClientId] = 0; }
+      const btn = document.getElementById('drawerTabMessages');
+      if (btn) btn.innerHTML = btn.innerHTML.replace(/\s*<span[^>]*>.*?<\/span>/g, '') + '';
+    }
     const MSG_TEMPLATES = [
       { label: 'Solicitar dados pendentes', icon: '📋',
         text: 'Identificamos que algumas informações estão pendentes no seu cadastro. Para avançarmos na elaboração do Business Plan, precisamos que você complemente os dados do formulário de onboarding. Caso tenha dúvidas, estamos à disposição.' },
@@ -1428,22 +2126,26 @@ async function impersonateClient(clientId) {
 }
 
 // ── Freshchat operator widget init ─────────────────────────────────────────────
+// NOTE: window.fcSettings (token only) is set in a <script> block BEFORE the CDN
+// so the CDN auto-inits the widget. Here we only apply user identity after load.
+function _fcAdminPoll(cb, attempts) {
+  if (typeof window.fcWidget !== 'undefined') { cb(); return; }
+  if (attempts <= 0) { console.warn('[Freshchat] operator widget not ready'); return; }
+  setTimeout(function() { _fcAdminPoll(cb, attempts - 1); }, 500);
+}
+
 function initFreshchatOperator(user) {
-  try {
-    window.fcSettings = {
-      token:  'b487776b-ed4f-4b81-9240-16403eb40d5a',
-      host:   'https://msdk.freshchat.com',
-      siteId: 'e1458f85-7f7b-46cc-8a00-32871dbdc352',
-      config: { headerProperty: { appName: 'Recupera Empresas — Operador' } },
-      firstName: user.name ? user.name.split(' ')[0] : '',
-      lastName:  user.name ? user.name.split(' ').slice(1).join(' ') : '',
-      email:     user.email,
-      externalId: user.id || user.email,
-    };
-    if (typeof window.fcWidget !== 'undefined') {
-      fcWidget.init(window.fcSettings);
-    }
-  } catch(e) { console.warn('Freshchat operator init:', e); }
+  _fcAdminPoll(function() {
+    try {
+      // Do NOT call fcWidget.init() again — CDN already initialized via window.fcSettings.
+      // Just set user identity so the conversation is linked to this operator.
+      window.fcWidget.setExternalId(user.id || user.email);
+      window.fcWidget.user.setFirstName(user.name ? user.name.split(' ')[0] : '');
+      window.fcWidget.user.setLastName(user.name ? user.name.split(' ').slice(1).join(' ') : '');
+      window.fcWidget.user.setEmail(user.email);
+      window.fcWidget.user.setProperties({ role: 'consultor', app: 'Recupera Empresas — Operador' });
+    } catch(e) { console.warn('[Freshchat] operator init error:', e.message); }
+  }, 30);
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
@@ -1484,12 +2186,1159 @@ function initFreshchatOperator(user) {
 
   await loadAdminData();
 
+  // Freshchat operador
   setTimeout(() => initFreshchatOperator(user), 2000);
+
+  // Notification bell polling
+  startAdminNotifPolling();
+
+  // Polling de mensagens não lidas — atualiza badges na lista de clientes a cada 15s
+  await pollUnreadMessages();
+  setInterval(pollUnreadMessages, 15000);
 })();
+
+// ── Mensagens não lidas — polling + notificação ───────────────────────────────
+let _prevUnreadTotal = 0;
+
+async function pollUnreadMessages() {
+  try {
+    const res = await fetch('/api/admin/messages/unread', { headers: authH() });
+    if (!res.ok) return;
+    const { unread } = await res.json();
+    _unreadMsgs = unread || {};
+
+    const newTotal = Object.values(_unreadMsgs).reduce((s, n) => s + n, 0);
+
+    // Atualiza tabela (se visível)
+    if (document.getElementById('sec-clients')?.classList.contains('active')) {
+      renderClientTable(_allClients);
+    }
+
+    // Badge no título da aba do browser
+    document.title = newTotal > 0 ? `(${newTotal}) Admin — Recupera Empresas` : 'Admin — Recupera Empresas';
+
+    // Notificação do browser ao receber nova mensagem
+    if (newTotal > _prevUnreadTotal && _prevUnreadTotal >= 0) {
+      const diff = newTotal - _prevUnreadTotal;
+      if (Notification.permission === 'granted') {
+        new Notification('Recupera Empresas', { body: `${diff} nova${diff>1?'s':''} mensagem${diff>1?'s':''} de cliente${diff>1?'s':''}`, icon: '/favicon.ico' });
+      } else if (Notification.permission === 'default') {
+        Notification.requestPermission();
+      }
+    }
+    _prevUnreadTotal = newTotal;
+  } catch {}
+}
+
+// ── Financeiro admin ──────────────────────────────────────────────────────────
+async function loadAdminFinanceiro() {
+  const listEl = document.getElementById('finClientsList');
+  listEl.innerHTML = '<div style="padding:20px;color:var(--text-muted);font-size:14px;">Carregando dados do Stripe...</div>';
+
+  const res = await fetch('/api/admin/financial', { headers: authH() });
+  if (!res.ok) { listEl.innerHTML = '<div style="padding:20px;color:var(--text-muted);">Erro ao carregar dados financeiros.</div>'; return; }
+  const { configured, clients = [], totalRevenue = 0 } = await res.json();
+
+  if (!configured) {
+    listEl.innerHTML = '<div style="padding:20px;color:var(--text-muted);">Stripe não configurado. Defina STRIPE_SECRET_KEY nas variáveis de ambiente.</div>';
+    return;
+  }
+
+  const paying    = clients.filter(c => c.paymentsCount > 0);
+  const totalPmts = clients.reduce((s, c) => s + (c.paymentsCount || 0), 0);
+
+  document.getElementById('finTotalRevenue').textContent  = `R$ ${totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  document.getElementById('finClientsPaid').textContent   = paying.length;
+  document.getElementById('finTotalPayments').textContent = totalPmts;
+  document.getElementById('finSub').textContent           = `${clients.length} cliente${clients.length !== 1 ? 's' : ''} — R$ ${totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} em receita total`;
+
+  if (!clients.length) {
+    listEl.innerHTML = '<div style="padding:20px;color:var(--text-muted);">Nenhum cliente com histórico financeiro.</div>';
+    return;
+  }
+
+  const sorted = [...clients].sort((a, b) => (b.totalPaid||0) - (a.totalPaid||0));
+  let html = '<table style="width:100%;border-collapse:collapse;font-size:13px;">';
+  html += '<thead><tr style="border-bottom:1px solid var(--border);">';
+  ['Cliente','Empresa','Pagamentos','Total pago','Último pagamento',''].forEach(h => {
+    html += `<th style="text-align:left;padding:10px 14px;color:var(--text-muted);font-weight:600;">${h}</th>`;
+  });
+  html += '</tr></thead><tbody>';
+  sorted.forEach(c => {
+    const lastDate = c.lastPaymentDate ? new Date(c.lastPaymentDate).toLocaleDateString('pt-BR') : '—';
+    html += `<tr style="border-bottom:1px solid var(--border-light,#F1F5F9);cursor:pointer;" onclick="openClient('${c.userId}')">
+      <td style="padding:10px 14px;"><div style="font-weight:600;">${c.name||'—'}</div><div style="font-size:11px;color:var(--text-muted);">${c.email}</div></td>
+      <td style="padding:10px 14px;color:var(--text-muted);">${c.company||'—'}</td>
+      <td style="padding:10px 14px;text-align:center;">${c.paymentsCount||0}</td>
+      <td style="padding:10px 14px;font-weight:700;color:${c.totalPaid>0?'#059669':'var(--text-muted)'};">R$ ${(c.totalPaid||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
+      <td style="padding:10px 14px;color:var(--text-muted);">${lastDate}</td>
+      <td style="padding:10px 14px;"><button class="btn-ghost" style="font-size:12px;padding:4px 10px;" onclick="event.stopPropagation();openClientFinanceiro('${c.userId}')">Ver faturas</button></td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  listEl.innerHTML = html;
+}
+
+// Abre drawer do cliente e exibe aba Financeiro
+function openClientFinanceiro(clientId) {
+  openClient(clientId);
+  setTimeout(() => {
+    const tabs = document.querySelectorAll('.drawer-tab');
+    tabs.forEach(t => { if (t.textContent.trim() === 'Financeiro') t.click(); });
+  }, 400);
+}
+
+// ── Form Builder ──────────────────────────────────────────────────────────────
+let _formConfig = null;
+
+const FB_STEP_ICONS = ['🔒','🏢','👥','⚙️','👷','🏭','💰','📋','📉','🧠','📊','🎯','📁','✅'];
+
+async function loadFormBuilder() {
+  const el = document.getElementById('fbStepsList');
+  if (!el) return;
+  el.innerHTML = '<div style="padding:20px;color:var(--text-muted);font-size:14px;">Carregando...</div>';
+  try {
+    const res = await fetch('/api/admin/form-config', { headers: authH() });
+    if (!res.ok) throw new Error('Erro ao carregar');
+    _formConfig = await res.json();
+
+    // Set welcome message
+    const wm = document.getElementById('fbWelcomeMsg');
+    if (wm) wm.value = _formConfig.welcomeMessage || '';
+
+    // Render steps
+    el.innerHTML = `
+      <div style="border-top:1px solid var(--border);">
+        ${_formConfig.steps.map((s, i) => {
+          const locked = s.id === 1 || s.id === 14;
+          return `
+          <div style="display:grid;grid-template-columns:36px 1fr 1fr auto auto;align-items:center;gap:12px;padding:14px 20px;border-bottom:1px solid var(--border-light,#F1F5F9);${locked?'background:#FAFBFF;':''}" id="fbStep_${s.id}">
+            <!-- Toggle -->
+            <div style="display:flex;align-items:center;justify-content:center;">
+              ${locked
+                ? `<span style="font-size:17px;" title="Etapa obrigatória (não pode ser desativada)">${FB_STEP_ICONS[i]}</span>`
+                : `<label style="position:relative;display:inline-block;width:36px;height:20px;cursor:pointer;" title="${s.enabled?'Clique para desativar':'Clique para ativar'}">
+                    <input type="checkbox" id="fbEnabled_${s.id}" ${s.enabled?'checked':''} style="opacity:0;width:0;height:0;"
+                           onchange="fbToggleStep(${s.id},this.checked)"/>
+                    <span id="fbTrack_${s.id}" style="position:absolute;inset:0;border-radius:20px;background:${s.enabled?'#2563eb':'#cbd5e1'};transition:background .2s;">
+                      <span style="position:absolute;left:${s.enabled?'18px':'2px'};top:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.2);" id="fbThumb_${s.id}"></span>
+                    </span>
+                  </label>`
+              }
+            </div>
+            <!-- Step number + icon -->
+            <div style="${!s.enabled?'opacity:.45':''}">
+              <div style="font-size:12px;color:var(--text-muted);margin-bottom:2px;">Etapa ${s.id}</div>
+              <div style="font-weight:600;font-size:13px;display:flex;align-items:center;gap:6px;">
+                <span>${FB_STEP_ICONS[i]}</span>
+                <input type="text" id="fbTitle_${s.id}" value="${escHtml(s.title)}"
+                  style="border:1px solid transparent;border-radius:4px;padding:2px 6px;font-size:13px;font-weight:600;color:var(--dark);background:transparent;width:200px;outline:none;"
+                  onfocus="this.style.borderColor='var(--primary)';this.style.background='#fff';"
+                  onblur="this.style.borderColor='transparent';this.style.background='transparent';"
+                  ${locked?'readonly style="cursor:default;"':''}
+                  placeholder="Título da etapa"/>
+              </div>
+            </div>
+            <!-- Description -->
+            <div style="${!s.enabled?'opacity:.45':''}">
+              <input type="text" id="fbDesc_${s.id}" value="${escHtml(s.description||'')}"
+                style="width:100%;border:1px solid transparent;border-radius:4px;padding:4px 8px;font-size:12px;color:var(--text-muted);background:transparent;outline:none;box-sizing:border-box;"
+                onfocus="this.style.borderColor='var(--primary)';this.style.background='#fff';"
+                onblur="this.style.borderColor='transparent';this.style.background='transparent';"
+                placeholder="Instrução adicional (opcional)"/>
+            </div>
+            <!-- Required toggle -->
+            <div style="display:flex;align-items:center;gap:6px;white-space:nowrap;${!s.enabled?'opacity:.45':''}">
+              <input type="checkbox" id="fbRequired_${s.id}" ${s.required?'checked':''}
+                ${locked?'disabled':''}
+                style="width:14px;height:14px;accent-color:var(--primary);cursor:pointer;"/>
+              <label for="fbRequired_${s.id}" style="font-size:12px;color:var(--text-muted);cursor:pointer;">Obrigatória</label>
+            </div>
+            <!-- Status badge -->
+            <div>
+              ${locked
+                ? `<span class="badge badge-blue" style="font-size:10px;">Fixo</span>`
+                : s.enabled
+                  ? `<span class="badge badge-green" id="fbBadge_${s.id}" style="font-size:10px;">Ativa</span>`
+                  : `<span class="badge badge-gray" id="fbBadge_${s.id}" style="font-size:10px;">Inativa</span>`
+              }
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+      ${_formConfig.lastUpdated ? `<div style="padding:10px 20px;font-size:11px;color:var(--text-muted);">Última atualização: ${new Date(_formConfig.lastUpdated).toLocaleString('pt-BR')}</div>` : ''}
+    `;
+  } catch (e) {
+    el.innerHTML = `<div class="empty-state"><p>Erro ao carregar configuração do formulário.</p></div>`;
+  }
+}
+
+function fbToggleStep(stepId, enabled) {
+  const track = document.getElementById(`fbTrack_${stepId}`);
+  const thumb = document.getElementById(`fbThumb_${stepId}`);
+  const badge = document.getElementById(`fbBadge_${stepId}`);
+  const row   = document.getElementById(`fbStep_${stepId}`);
+  if (track) track.style.background = enabled ? '#2563eb' : '#cbd5e1';
+  if (thumb) thumb.style.left = enabled ? '18px' : '2px';
+  if (badge) { badge.textContent = enabled ? 'Ativa' : 'Inativa'; badge.className = enabled ? 'badge badge-green' : 'badge badge-gray'; badge.style.fontSize = '10px'; }
+  // Dim row content when disabled
+  row?.querySelectorAll('[style*="opacity"]').forEach(el => el.style.opacity = enabled ? '' : '.45');
+}
+
+function escHtml(str) {
+  return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+async function saveFormConfig() {
+  if (!_formConfig) return;
+  const welcomeMessage = document.getElementById('fbWelcomeMsg')?.value?.trim() || '';
+  const steps = _formConfig.steps.map(s => ({
+    id:          s.id,
+    title:       document.getElementById(`fbTitle_${s.id}`)?.value?.trim() || s.title,
+    description: document.getElementById(`fbDesc_${s.id}`)?.value?.trim() || '',
+    enabled:     s.id === 1 || s.id === 14 ? true : !!(document.getElementById(`fbEnabled_${s.id}`)?.checked),
+    required:    s.id === 1 || s.id === 14 ? true : !!(document.getElementById(`fbRequired_${s.id}`)?.checked),
+  }));
+  try {
+    const res = await fetch('/api/admin/form-config', {
+      method: 'PUT', headers: authH(),
+      body: JSON.stringify({ steps, welcomeMessage }),
+    });
+    const json = await res.json();
+    if (json.success) {
+      _formConfig = json.config;
+      showToast('Configuração salva com sucesso!', 'success');
+    } else {
+      showToast(json.error || 'Erro ao salvar.', 'error');
+    }
+  } catch (e) {
+    showToast('Erro de conexão.', 'error');
+  }
+}
+
+// ── Admin Notification Bell ───────────────────────────────────────────────────
+let _adminNotifOpen = false;
+let _adminNotifInterval = null;
+
+function toggleAdminNotifDropdown() {
+  const dd = document.getElementById('adminNotifDropdown');
+  _adminNotifOpen = !_adminNotifOpen;
+  dd.style.display = _adminNotifOpen ? 'block' : 'none';
+  if (_adminNotifOpen) loadAdminNotifications();
+}
+
+document.addEventListener('click', e => {
+  const wrap = document.getElementById('adminNotifBellWrap');
+  if (wrap && !wrap.contains(e.target) && _adminNotifOpen) {
+    _adminNotifOpen = false;
+    document.getElementById('adminNotifDropdown').style.display = 'none';
+  }
+});
+
+async function loadAdminNotifications() {
+  const listEl  = document.getElementById('adminNotifList');
+  const badgeEl = document.getElementById('adminNotifBadge');
+  try {
+    const res = await fetch('/api/notifications?limit=20', { headers: authH() });
+    if (!res.ok) return;
+    const { notifications = [], unread_count = 0 } = await res.json();
+    if (unread_count > 0) {
+      badgeEl.style.display = 'block';
+      badgeEl.textContent   = unread_count > 99 ? '99+' : unread_count;
+    } else {
+      badgeEl.style.display = 'none';
+    }
+    if (!notifications.length) {
+      listEl.innerHTML = '<div style="padding:20px;text-align:center;color:#94A3B8;font-size:13px;">Nenhuma notificação.</div>';
+      return;
+    }
+    const iconMap = { message:'💬', task:'✅', payment:'💰', plan:'📋', appointment:'📅', service:'🛒', info:'ℹ️' };
+    listEl.innerHTML = notifications.map(n => {
+      const ts  = new Date(n.created_at).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
+      const unr = !n.read;
+      return `<div onclick="adminReadNotif('${n.id}',this)"
+        style="padding:12px 16px;cursor:pointer;border-bottom:1px solid #F1F5F9;display:flex;gap:10px;align-items:flex-start;background:${unr?'#EFF6FF':'#fff'};"
+        onmouseover="this.style.background='#F8FAFC'" onmouseout="this.style.background='${unr?'#EFF6FF':'#fff'}'">
+        <span style="font-size:18px;line-height:1.4;">${iconMap[n.type]||'ℹ️'}</span>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;font-weight:${unr?700:500};color:#1E293B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(n.title)}</div>
+          ${n.body ? `<div style="font-size:12px;color:#64748B;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(n.body)}</div>` : ''}
+          <div style="font-size:11px;color:#94A3B8;margin-top:3px;">${ts}</div>
+        </div>
+        ${unr ? '<div style="width:7px;height:7px;border-radius:50%;background:#2563EB;flex-shrink:0;margin-top:6px;"></div>' : ''}
+      </div>`;
+    }).join('');
+  } catch (e) { console.warn('[ADMIN NOTIF]', e.message); }
+}
+
+async function adminReadNotif(id, el) {
+  el.style.background = '#fff';
+  const dot = el.querySelector('div[style*="border-radius:50%"]');
+  if (dot) dot.remove();
+  fetch(`/api/notifications/${id}/read`, { method: 'POST', headers: authH() }).catch(() => {});
+  loadAdminNotifications();
+}
+
+async function adminMarkAllNotifRead() {
+  await fetch('/api/notifications/read-all', { method: 'POST', headers: authH() });
+  loadAdminNotifications();
+}
+
+function startAdminNotifPolling() {
+  if (_adminNotifInterval) return;
+  loadAdminNotifications();
+  _adminNotifInterval = setInterval(loadAdminNotifications, 30000);
+}
+
+// ── Admin Invoices (Cobranças Internas) ───────────────────────────────────────
+async function loadAdminInvoices() {
+  const wrap = document.getElementById('adminInvoiceTableWrap');
+  if (!wrap) return;
+  wrap.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:13px;">Carregando...</div>';
+
+  const status = document.getElementById('invFilterStatus')?.value || '';
+  const from   = document.getElementById('invFilterFrom')?.value   || '';
+  const to     = document.getElementById('invFilterTo')?.value     || '';
+  const params = new URLSearchParams({ limit:'100' });
+  if (status) params.set('status', status);
+  if (from)   params.set('from', from);
+  if (to)     params.set('to', to);
+
+  try {
+    const res = await fetch(`/api/admin/invoices?${params}`, { headers: authH() });
+    if (!res.ok) { wrap.innerHTML = '<div style="padding:20px;color:var(--danger);">Erro ao carregar.</div>'; return; }
+    const { invoices = [] } = await res.json();
+
+    if (!invoices.length) {
+      wrap.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:13px;">Nenhuma cobrança encontrada.</div>';
+      return;
+    }
+
+    const stClass = { pending:'badge-amber', paid:'badge-green', overdue:'badge-red', cancelled:'badge-gray' };
+    const stLabel = { pending:'Em aberto', paid:'Pago', overdue:'Vencido', cancelled:'Cancelado' };
+
+    wrap.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:13px;">
+      <thead><tr style="border-bottom:1px solid var(--border);">
+        <th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-weight:600;">Cliente</th>
+        <th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-weight:600;">Descrição</th>
+        <th style="text-align:right;padding:8px 12px;color:var(--text-muted);font-weight:600;">Valor</th>
+        <th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-weight:600;">Vencimento</th>
+        <th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-weight:600;">Status</th>
+        <th style="padding:8px 12px;"></th>
+      </tr></thead>
+      <tbody>${invoices.map(inv => {
+        const client = inv.re_users || {};
+        const amt    = ((inv.amount_cents||0)/100).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+        const due    = inv.due_date ? new Date(inv.due_date+'T12:00:00').toLocaleDateString('pt-BR') : '-';
+        const sCls   = stClass[inv.status] || 'badge-gray';
+        const sLbl   = stLabel[inv.status] || inv.status;
+        const isOvr  = inv.status === 'pending' && inv.due_date && new Date(inv.due_date) < new Date();
+        return `<tr style="border-bottom:1px solid #F1F5F9;${isOvr?'background:#FFF7ED;':''}">
+          <td style="padding:10px 12px;">
+            <div style="font-weight:600;font-size:13px;">${escHtml(client.name||'—')}</div>
+            <div style="font-size:11px;color:var(--text-muted);">${escHtml(client.email||'')}</div>
+          </td>
+          <td style="padding:10px 12px;font-weight:500;">${escHtml(inv.description)}</td>
+          <td style="padding:10px 12px;text-align:right;font-weight:700;">${amt}</td>
+          <td style="padding:10px 12px;color:var(--text-muted);">${due}</td>
+          <td style="padding:10px 12px;"><span class="badge ${isOvr?'badge-red':sCls}">${isOvr?'Vencido':sLbl}</span></td>
+          <td style="padding:10px 12px;display:flex;gap:6px;flex-wrap:wrap;">
+            <a href="/api/admin/invoices/${inv.id}/pdf" target="_blank" title="Baixar PDF"
+              style="border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:11px;text-decoration:none;color:var(--text);cursor:pointer;">📄 PDF</a>
+            <button onclick="sendInvoiceEmail('${inv.id}')" title="Enviar e-mail"
+              style="border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:11px;background:none;cursor:pointer;">📧</button>
+            ${inv.status !== 'paid' && inv.status !== 'cancelled' ? `
+            <button onclick="markInvoicePaid('${inv.id}')" title="Marcar como pago"
+              style="border:1px solid #D1FAE5;background:#ECFDF5;border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer;color:#059669;">✓ Pago</button>
+            <button onclick="cancelInvoice('${inv.id}')" title="Cancelar"
+              style="border:1px solid #FEE2E2;background:#FFF5F5;border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer;color:#DC2626;">✕</button>` : ''}
+          </td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table>`;
+  } catch (e) {
+    wrap.innerHTML = '<div style="padding:20px;color:var(--danger);">Erro ao carregar cobranças.</div>';
+    console.error('[ADMIN INVOICES]', e.message);
+  }
+}
+
+function openCreateInvoiceModal() {
+  const clientSel = _allClients.map(c => `<option value="${c.id}">${escHtml(c.name)} (${escHtml(c.email)})</option>`).join('');
+  const today = new Date().toISOString().split('T')[0];
+  const dueDefault = new Date(Date.now() + 7*86400000).toISOString().split('T')[0];
+
+  const html = `<div id="createInvoiceModal" style="position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:1000;">
+    <div style="background:#fff;border-radius:12px;padding:28px;width:440px;max-width:96vw;max-height:90vh;overflow-y:auto;">
+      <div style="font-size:17px;font-weight:700;color:var(--dark);margin-bottom:18px;">Nova Cobrança</div>
+      <label style="font-size:12px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px;">Cliente *</label>
+      <select id="ciClient" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:9px;font-size:13px;margin-bottom:12px;">${clientSel}</select>
+      <label style="font-size:12px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px;">Descrição *</label>
+      <input id="ciDesc" type="text" placeholder="Ex: Mensalidade Janeiro 2026" style="width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:6px;padding:9px;font-size:13px;margin-bottom:12px;"/>
+      <label style="font-size:12px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px;">Valor (R$) *</label>
+      <input id="ciAmount" type="number" step="0.01" min="0" placeholder="0,00" style="width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:6px;padding:9px;font-size:13px;margin-bottom:12px;"/>
+      <label style="font-size:12px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px;">Vencimento *</label>
+      <input id="ciDue" type="date" value="${dueDefault}" style="width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:6px;padding:9px;font-size:13px;margin-bottom:12px;"/>
+      <label style="font-size:12px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px;">Linha Digitável / Código de Barras</label>
+      <input id="ciLinhaDigitavel" type="text" placeholder="Opcional" style="width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:6px;padding:9px;font-size:13px;margin-bottom:12px;"/>
+      <label style="font-size:12px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px;">Observações</label>
+      <textarea id="ciNotes" rows="2" style="width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:6px;padding:9px;font-size:13px;margin-bottom:18px;resize:vertical;"></textarea>
+      <div style="display:flex;gap:10px;justify-content:flex-end;">
+        <button onclick="document.getElementById('createInvoiceModal').remove()" style="background:none;border:1px solid var(--border);border-radius:7px;padding:9px 18px;font-size:13px;cursor:pointer;">Cancelar</button>
+        <button onclick="submitCreateInvoice()" style="background:var(--primary);color:#fff;border:none;border-radius:7px;padding:9px 18px;font-size:13px;cursor:pointer;font-weight:600;">Criar Cobrança</button>
+      </div>
+    </div>
+  </div>`;
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+
+async function submitCreateInvoice() {
+  const user_id     = document.getElementById('ciClient')?.value;
+  const description = document.getElementById('ciDesc')?.value?.trim();
+  const amountRaw   = parseFloat(document.getElementById('ciAmount')?.value || 0);
+  const due_date    = document.getElementById('ciDue')?.value;
+  const linha       = document.getElementById('ciLinhaDigitavel')?.value?.trim();
+  const notes       = document.getElementById('ciNotes')?.value?.trim();
+
+  if (!user_id || !description || !amountRaw || !due_date) {
+    showToast('Preencha todos os campos obrigatórios.', 'error'); return;
+  }
+
+  const body = { user_id, description, amount_cents: Math.round(amountRaw * 100), due_date, notes };
+  if (linha) body.bank_data = { linha_digitavel: linha };
+
+  const res = await fetch('/api/admin/invoices', { method:'POST', headers: authH(), body: JSON.stringify(body) });
+  const j   = await res.json();
+  if (res.ok) {
+    document.getElementById('createInvoiceModal')?.remove();
+    showToast('Cobrança criada com sucesso!', 'success');
+    loadAdminInvoices();
+  } else {
+    showToast(j.error || 'Erro ao criar cobrança.', 'error');
+  }
+}
+
+async function markInvoicePaid(id) {
+  if (!confirm('Marcar este boleto como PAGO?')) return;
+  const res = await fetch(`/api/admin/invoices/${id}`, {
+    method: 'PUT', headers: authH(),
+    body: JSON.stringify({ status: 'paid', paid_at: new Date().toISOString() })
+  });
+  if (res.ok) { showToast('Marcado como pago!', 'success'); loadAdminInvoices(); }
+  else { const j = await res.json(); showToast(j.error || 'Erro.', 'error'); }
+}
+
+async function cancelInvoice(id) {
+  if (!confirm('Cancelar este boleto?')) return;
+  const res = await fetch(`/api/admin/invoices/${id}`, { method: 'DELETE', headers: authH() });
+  if (res.ok) { showToast('Boleto cancelado.', 'success'); loadAdminInvoices(); }
+  else { const j = await res.json(); showToast(j.error || 'Erro.', 'error'); }
+}
+
+async function sendInvoiceEmail(id) {
+  const res = await fetch(`/api/admin/invoices/${id}/send-email`, { method: 'POST', headers: authH() });
+  if (res.ok) showToast('E-mail enviado ao cliente!', 'success');
+  else { const j = await res.json(); showToast(j.error || 'Erro ao enviar e-mail.', 'error'); }
+}
+
+// ── Admin Marketplace ─────────────────────────────────────────────────────────
+async function loadAdminMarketplace() {
+  const sWrap = document.getElementById('adminServicesTableWrap');
+  const oWrap = document.getElementById('adminOrdersTableWrap');
+  if (!sWrap) return;
+  sWrap.innerHTML = '<div style="padding:16px;color:var(--text-muted);font-size:13px;">Carregando serviços...</div>';
+  if (oWrap) oWrap.innerHTML = '<div style="padding:16px;color:var(--text-muted);font-size:13px;">Carregando pedidos...</div>';
+
+  try {
+    const [svcRes, ordRes, jrnRes] = await Promise.all([
+      fetch('/api/admin/services',       { headers: authH() }),
+      fetch('/api/admin/service-orders', { headers: authH() }),
+      fetch('/api/admin/journeys',       { headers: authH() }),
+    ]);
+
+    // Cache journeys for modal
+    window._mktJourneys = jrnRes.ok ? await jrnRes.json() : [];
+
+    if (svcRes.ok) {
+      const { services = [] } = await svcRes.json();
+      const jMap = {};
+      (window._mktJourneys || []).forEach(j => { jMap[j.id] = j.name; });
+
+      if (!services.length) {
+        sWrap.innerHTML = '<div style="padding:16px;color:var(--text-muted);font-size:13px;">Nenhum serviço cadastrado.</div>';
+      } else {
+        sWrap.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:13px;">
+          <thead><tr style="border-bottom:1px solid var(--border);">
+            <th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-weight:600;">Nome</th>
+            <th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-weight:600;">Categoria</th>
+            <th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-weight:600;">Jornada vinculada</th>
+            <th style="text-align:right;padding:8px 12px;color:var(--text-muted);font-weight:600;">Valor</th>
+            <th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-weight:600;">Status</th>
+            <th style="padding:8px 12px;"></th>
+          </tr></thead>
+          <tbody>${services.map(s => {
+            const svcName = s.name || s.title || '—';
+            const price = ((s.price_cents || Math.round((s.price||0)*100)) / 100)
+              .toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+            const jName = s.journey_id ? (jMap[s.journey_id] || s.journey_id) : '—';
+            return `<tr style="border-bottom:1px solid #F1F5F9;">
+              <td style="padding:10px 12px;font-weight:600;">${escHtml(svcName)}</td>
+              <td style="padding:10px 12px;color:var(--text-muted);">${escHtml(s.category||'—')}</td>
+              <td style="padding:10px 12px;font-size:12px;color:#6366F1;">${s.journey_id ? '🗺️ '+escHtml(jName) : '<span style="color:var(--text-muted);">Nenhuma</span>'}</td>
+              <td style="padding:10px 12px;text-align:right;font-weight:700;">${price}</td>
+              <td style="padding:10px 12px;"><span class="badge ${s.active?'badge-green':'badge-gray'}">${s.active?'Ativo':'Inativo'}</span></td>
+              <td style="padding:10px 12px;display:flex;gap:6px;">
+                <button onclick="openEditServiceModal('${s.id}','${escHtml(svcName)}','${escHtml(s.category||'')}','${escHtml(s.description||'')}',${s.price_cents||Math.round((s.price||0)*100)},'${s.journey_id||''}')"
+                  style="border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:11px;background:none;cursor:pointer;">Editar</button>
+                <button onclick="toggleService('${s.id}',${!s.active})"
+                  style="border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:11px;background:none;cursor:pointer;">
+                  ${s.active?'Desativar':'Ativar'}
+                </button>
+              </td>
+            </tr>`;
+          }).join('')}</tbody>
+        </table>`;
+      }
+    }
+
+    if (ordRes.ok && oWrap) {
+      const { orders = [] } = await ordRes.json();
+      const stMap = {
+        pending_payment:'Aguardando pagamento', active:'Ativo',
+        in_progress:'Em andamento', delivered:'Entregue', cancelled:'Cancelado'
+      };
+      if (!orders.length) {
+        oWrap.innerHTML = '<div style="padding:16px;color:var(--text-muted);font-size:13px;">Nenhum pedido ainda.</div>';
+      } else {
+        oWrap.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:13px;">
+          <thead><tr style="border-bottom:1px solid var(--border);">
+            <th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-weight:600;">Cliente</th>
+            <th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-weight:600;">Serviço</th>
+            <th style="text-align:right;padding:8px 12px;color:var(--text-muted);font-weight:600;">Valor</th>
+            <th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-weight:600;">Status</th>
+            <th style="padding:8px 12px;"></th>
+          </tr></thead>
+          <tbody>${orders.map(o => {
+            const amt = ((o.amount_cents||0)/100).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+            const client = o.re_users || {};
+            const svcName = o.re_services?.name || o.re_services?.title || '—';
+            return `<tr style="border-bottom:1px solid #F1F5F9;">
+              <td style="padding:10px 12px;">
+                <div style="font-weight:600;">${escHtml(client.name||'—')}</div>
+                <div style="font-size:11px;color:var(--text-muted);">${escHtml(client.email||'')}</div>
+              </td>
+              <td style="padding:10px 12px;">${escHtml(svcName)}</td>
+              <td style="padding:10px 12px;text-align:right;font-weight:700;">${amt}</td>
+              <td style="padding:10px 12px;"><span class="badge badge-gray">${stMap[o.status]||o.status}</span></td>
+              <td style="padding:10px 12px;">
+                <select onchange="updateOrderStatus('${o.id}',this.value)" style="border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:11px;">
+                  ${Object.entries(stMap).map(([v,l]) => `<option value="${v}"${o.status===v?' selected':''}>${l}</option>`).join('')}
+                </select>
+              </td>
+            </tr>`;
+          }).join('')}</tbody>
+        </table>`;
+      }
+    }
+  } catch (e) {
+    sWrap.innerHTML = '<div style="padding:16px;color:var(--danger);">Erro ao carregar.</div>';
+    console.error('[ADMIN MARKETPLACE]', e.message);
+  }
+}
+
+function _buildServiceModalHtml(id, name, cat, desc, price_cents, journey_id) {
+  const isEdit = !!id;
+  const journeys = window._mktJourneys || [];
+  const jornSelect = `<select id="svcJourney" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:9px;font-size:13px;margin-bottom:12px;">
+    <option value="">— Nenhuma jornada —</option>
+    ${journeys.map(j => `<option value="${j.id}"${journey_id===j.id?' selected':''}>${escHtml(j.name)}</option>`).join('')}
+  </select>`;
+  return `<div id="svcModal" style="position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:1000;">
+    <div style="background:#fff;border-radius:12px;padding:28px;width:460px;max-width:96vw;max-height:90vh;overflow-y:auto;">
+      <div style="font-size:17px;font-weight:700;color:var(--dark);margin-bottom:18px;">${isEdit ? 'Editar Serviço' : 'Novo Serviço'}</div>
+      ${isEdit ? `<input type="hidden" id="svcEditId" value="${id}">` : ''}
+      <label style="font-size:12px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px;">Nome *</label>
+      <input id="svcName" type="text" value="${escHtml(name||'')}" style="width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:6px;padding:9px;font-size:13px;margin-bottom:12px;"/>
+      <label style="font-size:12px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px;">Categoria</label>
+      <select id="svcCat" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:9px;font-size:13px;margin-bottom:12px;">
+        ${['juridico','financeiro','consultoria','outro'].map(v => `<option value="${v}"${cat===v?' selected':''}>${v.charAt(0).toUpperCase()+v.slice(1)}</option>`).join('')}
+      </select>
+      <label style="font-size:12px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px;">Descrição</label>
+      <textarea id="svcDesc" rows="2" style="width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:6px;padding:9px;font-size:13px;margin-bottom:12px;resize:vertical;">${escHtml(desc||'')}</textarea>
+      <label style="font-size:12px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px;">Valor (R$) *</label>
+      <input id="svcPrice" type="number" step="0.01" min="0" value="${price_cents ? (price_cents/100).toFixed(2) : ''}" style="width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:6px;padding:9px;font-size:13px;margin-bottom:12px;"/>
+      <label style="font-size:12px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px;">Jornada vinculada
+        <span style="font-weight:400;color:var(--text-muted);"> — ativada automaticamente ao confirmar o pedido</span>
+      </label>
+      ${jornSelect}
+      <div style="display:flex;gap:10px;justify-content:flex-end;">
+        <button onclick="document.getElementById('svcModal').remove()" style="background:none;border:1px solid var(--border);border-radius:7px;padding:9px 18px;font-size:13px;cursor:pointer;">Cancelar</button>
+        <button onclick="submitServiceForm()" style="background:var(--primary);color:#fff;border:none;border-radius:7px;padding:9px 18px;font-size:13px;cursor:pointer;font-weight:600;">${isEdit ? 'Salvar' : 'Criar Serviço'}</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+async function openCreateServiceModal() {
+  // Pre-load journeys if not cached
+  if (!window._mktJourneys) {
+    const r = await fetch('/api/admin/journeys', { headers: authH() });
+    window._mktJourneys = r.ok ? await r.json() : [];
+  }
+  document.getElementById('svcModal')?.remove();
+  document.body.insertAdjacentHTML('beforeend', _buildServiceModalHtml(null,'','consultoria','',0,''));
+}
+
+function openEditServiceModal(id, name, cat, desc, price_cents, journey_id) {
+  document.getElementById('svcModal')?.remove();
+  document.body.insertAdjacentHTML('beforeend', _buildServiceModalHtml(id, name, cat, desc, price_cents, journey_id));
+}
+
+async function submitServiceForm() {
+  const editId    = document.getElementById('svcEditId')?.value;
+  const name      = document.getElementById('svcName')?.value?.trim();
+  const cat       = document.getElementById('svcCat')?.value;
+  const desc      = document.getElementById('svcDesc')?.value?.trim();
+  const price     = parseFloat(document.getElementById('svcPrice')?.value || 0);
+  const journeyId = document.getElementById('svcJourney')?.value || null;
+
+  if (!name || !price) { showToast('Nome e valor são obrigatórios.', 'error'); return; }
+
+  const payload = {
+    name, category: cat, description: desc,
+    price_cents: Math.round(price * 100),
+    journey_id: journeyId || null,
+  };
+
+  const url    = editId ? `/api/admin/services/${editId}` : '/api/admin/services';
+  const method = editId ? 'PUT' : 'POST';
+  const res    = await fetch(url, { method, headers: authH(), body: JSON.stringify(payload) });
+  const j      = await res.json();
+  if (res.ok) {
+    document.getElementById('svcModal')?.remove();
+    showToast(editId ? 'Serviço atualizado!' : 'Serviço criado!', 'success');
+    loadAdminMarketplace();
+  } else {
+    showToast(j.error || 'Erro ao salvar.', 'error');
+  }
+}
+
+// Backwards-compat alias (old onclick in HTML may call openCreateServiceModal)
+function submitCreateService() { submitServiceForm(); }
+
+async function toggleService(id, active) {
+  const res = await fetch(`/api/admin/services/${id}`, {
+    method: 'PUT', headers: authH(), body: JSON.stringify({ active })
+  });
+  if (res.ok) { showToast(active ? 'Serviço ativado.' : 'Serviço desativado.', 'success'); loadAdminMarketplace(); }
+  else { const j = await res.json(); showToast(j.error || 'Erro.', 'error'); }
+}
+
+async function updateOrderStatus(id, status) {
+  const res = await fetch(`/api/admin/service-orders/${id}`, {
+    method: 'PUT', headers: authH(), body: JSON.stringify({ status })
+  });
+  const j = await res.json();
+  if (!res.ok) showToast(j.error || 'Erro ao atualizar.', 'error');
+  else {
+    showToast('Status atualizado.', 'success');
+    if (status === 'active') showToast('Jornada ativada automaticamente para o cliente!', 'success');
+    loadAdminMarketplace();
+  }
+}
+
+// ── Audit Log ─────────────────────────────────────────────────────────────────
+async function loadAuditLog() {
+  const wrap = document.getElementById('auditLogTableWrap');
+  if (!wrap) return;
+  wrap.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:13px;">Carregando...</div>';
+
+  const type = document.getElementById('auditFilterType')?.value || '';
+  const from = document.getElementById('auditFilterFrom')?.value || '';
+  const to   = document.getElementById('auditFilterTo')?.value   || '';
+  const params = new URLSearchParams({ limit: '100' });
+  if (type) params.set('entity_type', type);
+  if (from) params.set('from', from);
+  if (to)   params.set('to', to);
+
+  try {
+    const res = await fetch(`/api/admin/audit-log?${params}`, { headers: authH() });
+    if (!res.ok) { wrap.innerHTML = '<div style="padding:20px;color:var(--danger);">Erro ao carregar.</div>'; return; }
+    const { entries = [] } = await res.json();
+
+    if (!entries.length) {
+      wrap.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:13px;">Nenhum registro encontrado.</div>';
+      return;
+    }
+
+    const actionIcon = { create:'➕', update:'✏️', delete:'🗑️', cancel:'❌', status_change:'🔄', payment:'💰' };
+    wrap.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:13px;">
+      <thead><tr style="border-bottom:1px solid var(--border);">
+        <th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-weight:600;">Data/Hora</th>
+        <th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-weight:600;">Ator</th>
+        <th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-weight:600;">Entidade</th>
+        <th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-weight:600;">Ação</th>
+        <th style="padding:8px 12px;"></th>
+      </tr></thead>
+      <tbody>${entries.map((e,i) => {
+        const ts = new Date(e.ts).toLocaleString('pt-BR');
+        const hasDiff = e.before_data || e.after_data;
+        return `<tr style="border-bottom:1px solid #F1F5F9;">
+          <td style="padding:9px 12px;color:var(--text-muted);white-space:nowrap;font-size:12px;">${ts}</td>
+          <td style="padding:9px 12px;">
+            <div style="font-weight:600;font-size:12px;">${escHtml(e.actor_email||'—')}</div>
+            <div style="font-size:10px;color:var(--text-muted);">${escHtml(e.actor_role||'')}</div>
+          </td>
+          <td style="padding:9px 12px;">
+            <span class="badge badge-gray">${escHtml(e.entity_type)}</span>
+          </td>
+          <td style="padding:9px 12px;">
+            <span>${actionIcon[e.action]||'•'} ${escHtml(e.action)}</span>
+          </td>
+          <td style="padding:9px 12px;">
+            ${hasDiff ? `<button onclick="toggleAuditDetail(${i})" style="border:1px solid var(--border);border-radius:6px;padding:3px 8px;font-size:11px;background:none;cursor:pointer;">Detalhes</button>
+            <div id="auditDetail${i}" style="display:none;margin-top:8px;font-size:11px;font-family:monospace;background:#F8FAFC;border:1px solid var(--border);border-radius:6px;padding:8px;max-width:340px;word-break:break-all;white-space:pre-wrap;">${hasDiff?escHtml(JSON.stringify({before:e.before_data,after:e.after_data},null,2)):''}
+            </div>` : '—'}
+          </td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table>`;
+  } catch (e) {
+    wrap.innerHTML = '<div style="padding:20px;color:var(--danger);">Erro ao carregar auditoria.</div>';
+    console.error('[AUDIT LOG]', e.message);
+  }
+}
+
+function exportAuditLog() {
+  const type = document.getElementById('auditFilterType')?.value || '';
+  const from = document.getElementById('auditFilterFrom')?.value || '';
+  const to   = document.getElementById('auditFilterTo')?.value   || '';
+  const params = new URLSearchParams();
+  if (type) params.set('entity_type', type);
+  if (from) params.set('from', from);
+  if (to)   params.set('to', to);
+  const token = localStorage.getItem('re_admin_token') || localStorage.getItem('re_token') || '';
+  // Use hidden anchor to trigger download with auth header via fetch
+  fetch(`/api/admin/audit-log/export?${params}`, { headers: { Authorization: 'Bearer ' + token } })
+    .then(r => r.blob())
+    .then(blob => {
+      const url = URL.createObjectURL(blob);
+      const a   = document.createElement('a');
+      a.href    = url;
+      a.download = `audit_log_${new Date().toISOString().slice(0,10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    })
+    .catch(() => showToast('Erro ao exportar log.', 'error'));
+}
+
+function toggleAuditDetail(i) {
+  const el = document.getElementById('auditDetail'+i);
+  if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
 </script>
 
-<!-- Freshchat operator widget -->
-<script src="https://wchat.freshchat.com/js/widget.js" async></script>
+<!-- Form Builder styles -->
+<style>
+  .fb-prop-group { margin-bottom:10px; }
+  .fb-prop-label { display:block;font-size:11px;color:#64748B;font-weight:600;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px; }
+  .fb-prop-input { width:100%;padding:7px 10px;border:1px solid #E2E8F0;border-radius:6px;font-size:13px;box-sizing:border-box;color:#1E293B; }
+  .fb-prop-input:focus { border-color:#1A56DB;outline:none;box-shadow:0 0 0 2px rgba(26,86,219,.1); }
+  .fb-palette-btn { display:flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid transparent;border-radius:7px;background:none;cursor:pointer;font-size:12px;color:#374151;width:100%;text-align:left;transition:all .12s; }
+  .fb-palette-btn:hover { background:#EFF6FF;border-color:#BFDBFE;color:#1A56DB; }
+</style>
+
+<!-- Form Builder JS -->
+<script src="./js/form-builder.js?v=20260416"></script>
+
+<!-- Jornadas JS -->
+<script>
+// ── State ────────────────────────────────────────────────────────────────────
+const JRN = { currentId: null, forms: [], clients: [] };
+
+function jrnAuthH() {
+  const t = localStorage.getItem('re_token') || sessionStorage.getItem('re_token') || '';
+  return { 'Content-Type':'application/json', 'Authorization': `Bearer ${t}` };
+}
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+async function jrnInit() {
+  await Promise.all([jrnLoadList(), jrnLoadForms(), jrnLoadClients()]);
+}
+
+async function jrnLoadForms() {
+  const res = await fetch('/api/admin/forms', { headers: jrnAuthH() });
+  if (!res.ok) return;
+  const j = await res.json();
+  JRN.forms = j.forms || j || [];
+  // populate step form select
+  const sel = document.getElementById('jrn-step-form');
+  if (sel) {
+    sel.innerHTML = '<option value="">— Nenhum formulário —</option>' +
+      JRN.forms.map(f => `<option value="${f.id}">${f.title}</option>`).join('');
+  }
+}
+
+async function jrnLoadClients() {
+  const res = await fetch('/api/admin/users', { headers: jrnAuthH() });
+  if (!res.ok) return;
+  const j = await res.json();
+  JRN.clients = (j.users || j || []).filter(u => !u.is_admin);
+  const sel = document.getElementById('jrn-assign-user');
+  if (sel) {
+    sel.innerHTML = '<option value="">Selecione um cliente...</option>' +
+      JRN.clients.map(c => `<option value="${c.id}">${c.name || c.email} (${c.email})</option>`).join('');
+  }
+}
+
+// ── List view ────────────────────────────────────────────────────────────────
+async function jrnLoadList() {
+  jrnShowView('list');
+  const grid = document.getElementById('jrn-list-grid');
+  if (!grid) return;
+  grid.innerHTML = '<div style="padding:24px;color:#94A3B8;text-align:center;">Carregando...</div>';
+
+  const res = await fetch('/api/admin/journeys', { headers: jrnAuthH() });
+  if (!res.ok) { grid.innerHTML = '<div style="padding:24px;color:#EF4444;">Erro ao carregar.</div>'; return; }
+  const journeys = await res.json();
+
+  if (!journeys.length) {
+    grid.innerHTML = `<div style="padding:40px;text-align:center;color:#94A3B8;">
+      <div style="font-size:40px;margin-bottom:12px;">🗺️</div>
+      <div style="font-size:15px;font-weight:600;color:#64748B;margin-bottom:8px;">Nenhuma jornada criada</div>
+      <div style="font-size:13px;">Clique em "Nova Jornada" para começar.</div>
+    </div>`;
+    return;
+  }
+
+  const STATUS_COLOR = { draft:'#94A3B8', active:'#10B981', archived:'#F59E0B' };
+  const STATUS_LBL   = { draft:'Rascunho', active:'Ativo', archived:'Arquivado' };
+
+  grid.innerHTML = journeys.map(j => `
+    <div style="background:#fff;border:1px solid #E2E8F0;border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:12px;cursor:pointer;transition:box-shadow .15s;"
+         onclick="jrnOpenEditor('${j.id}')"
+         onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,.08)'" onmouseout="this.style.boxShadow=''">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
+        <div style="font-weight:700;font-size:15px;color:#1E293B;">${jrnEsc(j.name)}</div>
+        <span style="font-size:11px;padding:3px 9px;border-radius:20px;background:#F1F5F9;color:${STATUS_COLOR[j.status] || '#94A3B8'};white-space:nowrap;">${STATUS_LBL[j.status] || j.status}</span>
+      </div>
+      ${j.description ? `<div style="font-size:13px;color:#64748B;line-height:1.5;">${jrnEsc(j.description)}</div>` : ''}
+      <div style="display:flex;gap:12px;font-size:12px;color:#94A3B8;">
+        <span>📅 ${new Date(j.created_at).toLocaleDateString('pt-BR')}</span>
+      </div>
+      <div style="display:flex;gap:6px;">
+        <button class="btn-primary" style="font-size:12px;padding:6px 12px;" onclick="event.stopPropagation();jrnOpenEditor('${j.id}')">Gerenciar</button>
+        <button class="btn-ghost" style="font-size:12px;padding:6px 12px;color:#EF4444;" onclick="event.stopPropagation();jrnDelete('${j.id}','${jrnEsc(j.name)}')">Excluir</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ── Editor view ──────────────────────────────────────────────────────────────
+async function jrnOpenEditor(id) {
+  JRN.currentId = id;
+  jrnShowView('editor');
+
+  const res = await fetch(`/api/admin/journeys/${id}`, { headers: jrnAuthH() });
+  if (!res.ok) { alert('Erro ao carregar jornada.'); return; }
+  const j = await res.json();
+
+  document.getElementById('jrn-editor-title').textContent = j.name;
+  const STATUS_COLOR = { draft:'#94A3B8', active:'#10B981', archived:'#F59E0B' };
+  const STATUS_LBL   = { draft:'Rascunho', active:'Ativo', archived:'Arquivado' };
+  const badge = document.getElementById('jrn-editor-status-badge');
+  badge.textContent = STATUS_LBL[j.status] || j.status;
+  badge.style.color = STATUS_COLOR[j.status] || '#94A3B8';
+
+  // Store for edit modal
+  JRN.current = j;
+
+  jrnRenderSteps(j.steps || []);
+  await jrnLoadAssignments(id);
+}
+
+function jrnRenderSteps(steps) {
+  const el = document.getElementById('jrn-steps-list');
+  if (!steps.length) {
+    el.innerHTML = '<div style="color:#94A3B8;text-align:center;padding:20px;">Nenhuma etapa ainda.</div>';
+    return;
+  }
+  el.innerHTML = steps.map((s, i) => `
+    <div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;padding:12px 14px;display:flex;align-items:center;gap:10px;">
+      <div style="width:24px;height:24px;border-radius:50%;background:#1A56DB;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${i+1}</div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-weight:600;font-size:13px;color:#1E293B;">${jrnEsc(s.title)}</div>
+        ${s.re_forms ? `<div style="font-size:11px;color:#6366F1;margin-top:2px;">📋 ${jrnEsc(s.re_forms.title)}</div>` : ''}
+        ${s.is_optional ? `<div style="font-size:10px;color:#94A3B8;">Opcional</div>` : ''}
+      </div>
+      <div style="display:flex;gap:4px;">
+        <button class="btn-ghost" style="font-size:11px;padding:4px 8px;" onclick="jrnEditStep('${s.id}','${jrnEsc(s.title)}','${jrnEsc(s.description||'')}','${s.form_id||''}',${s.is_optional})">✏️</button>
+        <button class="btn-ghost" style="font-size:11px;padding:4px 8px;color:#EF4444;" onclick="jrnDeleteStep('${s.id}')">🗑️</button>
+        ${i > 0 ? `<button class="btn-ghost" style="font-size:11px;padding:4px 8px;" onclick="jrnMoveStep('${s.id}','up')">↑</button>` : ''}
+        ${i < steps.length-1 ? `<button class="btn-ghost" style="font-size:11px;padding:4px 8px;" onclick="jrnMoveStep('${s.id}','down')">↓</button>` : ''}
+      </div>
+    </div>
+  `).join('');
+}
+
+async function jrnLoadAssignments(id) {
+  const res = await fetch(`/api/admin/journeys/${id}/assignments`, { headers: jrnAuthH() });
+  const el  = document.getElementById('jrn-assignments-list');
+  if (!res.ok) { el.innerHTML = '<div style="color:#EF4444;">Erro ao carregar.</div>'; return; }
+  const list = await res.json();
+
+  if (!list.length) {
+    el.innerHTML = '<div style="color:#94A3B8;text-align:center;padding:16px;">Nenhum cliente atribuído.</div>';
+    return;
+  }
+
+  const STATUS_LBL = { active:'Ativo', paused:'Pausado', completed:'Concluído', cancelled:'Cancelado' };
+  const STATUS_COLOR = { active:'#10B981', paused:'#F59E0B', completed:'#6366F1', cancelled:'#EF4444' };
+
+  el.innerHTML = list.map(a => {
+    const u = a.re_users || {};
+    const pct = 0; // computed below
+    return `
+    <div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;padding:10px 12px;display:flex;align-items:center;gap:8px;">
+      <div style="flex:1;min-width:0;">
+        <div style="font-weight:600;font-size:13px;color:#1E293B;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${jrnEsc(u.name || u.email || '—')}</div>
+        <div style="font-size:11px;color:#94A3B8;">${jrnEsc(u.email || '')}</div>
+      </div>
+      <span style="font-size:11px;padding:2px 8px;border-radius:12px;background:#F1F5F9;color:${STATUS_COLOR[a.status]||'#94A3B8'};white-space:nowrap;">${STATUS_LBL[a.status]||a.status}</span>
+      <button class="btn-ghost" style="font-size:11px;padding:4px 8px;" onclick="jrnViewProgress('${id}','${a.id}','${jrnEsc(u.name||u.email||'')}')">Ver progresso</button>
+      <button class="btn-ghost" style="font-size:11px;padding:4px 8px;color:#EF4444;" onclick="jrnRemoveAssignment('${id}','${a.id}')">✕</button>
+    </div>`;
+  }).join('');
+}
+
+// ── Progress view ─────────────────────────────────────────────────────────────
+async function jrnViewProgress(journeyId, asnId, clientName) {
+  jrnShowView('progress');
+  document.getElementById('jrn-progress-title').textContent = `Progresso — ${clientName}`;
+  document.getElementById('jrn-progress-back-btn').onclick = () => jrnOpenEditor(journeyId);
+  const el = document.getElementById('jrn-progress-content');
+  el.innerHTML = '<div style="color:#94A3B8;text-align:center;padding:20px;">Carregando...</div>';
+
+  const res = await fetch(`/api/admin/journeys/${journeyId}/assignments/${asnId}/progress`, { headers: jrnAuthH() });
+  if (!res.ok) { el.innerHTML = '<div style="color:#EF4444;">Erro.</div>'; return; }
+  const d = await res.json();
+
+  const done  = d.steps.filter(s => s.completed).length;
+  const total = d.steps.length;
+  const pct   = total ? Math.round((done/total)*100) : 0;
+
+  el.innerHTML = `
+    <div style="margin-bottom:16px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+        <div style="font-size:13px;font-weight:600;color:#1E293B;">Progresso geral</div>
+        <div style="font-size:13px;font-weight:700;color:#1A56DB;">${pct}%</div>
+      </div>
+      <div style="height:8px;background:#E2E8F0;border-radius:4px;overflow:hidden;">
+        <div style="height:100%;width:${pct}%;background:#1A56DB;border-radius:4px;transition:width .4s;"></div>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      ${d.steps.map((s, i) => `
+        <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:${s.completed?'#F0FDF4':'#F8FAFC'};border:1px solid ${s.completed?'#BBF7D0':'#E2E8F0'};border-radius:8px;">
+          <div style="width:22px;height:22px;border-radius:50%;background:${s.completed?'#10B981':'#E2E8F0'};color:${s.completed?'#fff':'#94A3B8'};font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${s.completed?'✓':i+1}</div>
+          <div style="flex:1;">
+            <div style="font-size:13px;font-weight:600;color:#1E293B;">${jrnEsc(s.title)}</div>
+            ${s.completed_at ? `<div style="font-size:11px;color:#10B981;">Concluído em ${new Date(s.completed_at).toLocaleString('pt-BR')}</div>` : '<div style="font-size:11px;color:#94A3B8;">Pendente</div>'}
+          </div>
+          ${!s.completed ? `<button class="btn-ghost" style="font-size:11px;padding:4px 10px;" onclick="jrnMarkStepDone('${journeyId}','${asnId}','${s.id}','${clientName}')">Marcar concluído</button>` : ''}
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+async function jrnMarkStepDone(journeyId, asnId, stepId, clientName) {
+  const res = await fetch(`/api/admin/journeys/${journeyId}/assignments/${asnId}/complete-step`, {
+    method: 'POST', headers: jrnAuthH(),
+    body: JSON.stringify({ step_id: stepId }),
+  });
+  if (res.ok) jrnViewProgress(journeyId, asnId, clientName);
+  else alert('Erro ao marcar etapa.');
+}
+
+// ── CRUD helpers ──────────────────────────────────────────────────────────────
+function jrnShowView(view) {
+  ['list','editor','progress'].forEach(v => {
+    const el = document.getElementById(`jrn-view-${v}`);
+    if (el) el.style.display = v === view ? 'block' : 'none';
+  });
+}
+
+function jrnEsc(s) { return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+// ── New journey modal ─────────────────────────────────────────────────────────
+function jrnOpenNewModal() {
+  JRN.editingId = null;
+  document.getElementById('jrn-modal-title').textContent = 'Nova Jornada';
+  document.getElementById('jrn-save-btn').textContent    = 'Criar Jornada';
+  document.getElementById('jrn-f-name').value   = '';
+  document.getElementById('jrn-f-desc').value   = '';
+  document.getElementById('jrn-f-status').value = 'draft';
+  document.getElementById('jrn-modal-form').style.display = 'flex';
+}
+
+function jrnOpenEditModal() {
+  if (!JRN.current) return;
+  JRN.editingId = JRN.current.id;
+  document.getElementById('jrn-modal-title').textContent = 'Editar Jornada';
+  document.getElementById('jrn-save-btn').textContent    = 'Salvar';
+  document.getElementById('jrn-f-name').value   = JRN.current.name   || '';
+  document.getElementById('jrn-f-desc').value   = JRN.current.description || '';
+  document.getElementById('jrn-f-status').value = JRN.current.status  || 'draft';
+  document.getElementById('jrn-modal-form').style.display = 'flex';
+}
+
+function jrnCloseFormModal() { document.getElementById('jrn-modal-form').style.display = 'none'; }
+
+async function jrnSaveForm() {
+  const body = {
+    name:        document.getElementById('jrn-f-name').value.trim(),
+    description: document.getElementById('jrn-f-desc').value.trim(),
+    status:      document.getElementById('jrn-f-status').value,
+  };
+  if (!body.name) { alert('Nome é obrigatório.'); return; }
+
+  const isEdit = !!JRN.editingId;
+  const url    = isEdit ? `/api/admin/journeys/${JRN.editingId}` : '/api/admin/journeys';
+  const res    = await fetch(url, { method: isEdit ? 'PUT' : 'POST', headers: jrnAuthH(), body: JSON.stringify(body) });
+  if (!res.ok) { alert('Erro ao salvar jornada.'); return; }
+  jrnCloseFormModal();
+  if (isEdit) jrnOpenEditor(JRN.editingId);
+  else jrnLoadList();
+}
+
+async function jrnDelete(id, name) {
+  if (!confirm(`Excluir a jornada "${name}"? Todas as etapas e atribuições serão removidas.`)) return;
+  const res = await fetch(`/api/admin/journeys/${id}`, { method:'DELETE', headers: jrnAuthH() });
+  if (res.ok) jrnLoadList();
+  else alert('Erro ao excluir.');
+}
+
+// ── Steps modal ───────────────────────────────────────────────────────────────
+function jrnOpenAddStepModal() {
+  document.getElementById('jrn-step-modal-title').textContent = 'Adicionar Etapa';
+  document.getElementById('jrn-step-editing-id').value  = '';
+  document.getElementById('jrn-step-title').value       = '';
+  document.getElementById('jrn-step-desc').value        = '';
+  document.getElementById('jrn-step-form').value        = '';
+  document.getElementById('jrn-step-optional').checked  = false;
+  document.getElementById('jrn-modal-step').style.display = 'flex';
+}
+
+function jrnEditStep(id, title, desc, formId, isOptional) {
+  document.getElementById('jrn-step-modal-title').textContent = 'Editar Etapa';
+  document.getElementById('jrn-step-editing-id').value  = id;
+  document.getElementById('jrn-step-title').value       = title;
+  document.getElementById('jrn-step-desc').value        = desc;
+  document.getElementById('jrn-step-form').value        = formId || '';
+  document.getElementById('jrn-step-optional').checked  = !!isOptional;
+  document.getElementById('jrn-modal-step').style.display = 'flex';
+}
+
+function jrnCloseStepModal() { document.getElementById('jrn-modal-step').style.display = 'none'; }
+
+async function jrnSaveStep() {
+  const editId = document.getElementById('jrn-step-editing-id').value;
+  const body = {
+    title:       document.getElementById('jrn-step-title').value.trim(),
+    description: document.getElementById('jrn-step-desc').value.trim(),
+    form_id:     document.getElementById('jrn-step-form').value || null,
+    is_optional: document.getElementById('jrn-step-optional').checked,
+  };
+  if (!body.title) { alert('Título é obrigatório.'); return; }
+
+  const url = editId
+    ? `/api/admin/journeys/${JRN.currentId}/steps/${editId}`
+    : `/api/admin/journeys/${JRN.currentId}/steps`;
+  const res = await fetch(url, { method: editId ? 'PUT' : 'POST', headers: jrnAuthH(), body: JSON.stringify(body) });
+  if (!res.ok) { alert('Erro ao salvar etapa.'); return; }
+  jrnCloseStepModal();
+  jrnOpenEditor(JRN.currentId);
+}
+
+async function jrnDeleteStep(stepId) {
+  if (!confirm('Remover esta etapa?')) return;
+  const res = await fetch(`/api/admin/journeys/${JRN.currentId}/steps/${stepId}`, { method:'DELETE', headers: jrnAuthH() });
+  if (res.ok) jrnOpenEditor(JRN.currentId);
+  else alert('Erro ao remover etapa.');
+}
+
+async function jrnMoveStep(stepId, direction) {
+  const res = await fetch(`/api/admin/journeys/${JRN.currentId}`, { headers: jrnAuthH() });
+  const j   = await res.json();
+  const steps = [...(j.steps || [])].sort((a,b) => a.order_index - b.order_index);
+  const idx   = steps.findIndex(s => s.id === stepId);
+  const swap  = direction === 'up' ? idx - 1 : idx + 1;
+  if (swap < 0 || swap >= steps.length) return;
+  const order = steps.map((s, i) => {
+    if (i === idx)  return { id: s.id, order_index: steps[swap].order_index };
+    if (i === swap) return { id: s.id, order_index: steps[idx].order_index };
+    return { id: s.id, order_index: s.order_index };
+  });
+  await fetch(`/api/admin/journeys/${JRN.currentId}/steps/reorder`, {
+    method:'POST', headers: jrnAuthH(), body: JSON.stringify({ order })
+  });
+  jrnOpenEditor(JRN.currentId);
+}
+
+// ── Assign modal ──────────────────────────────────────────────────────────────
+async function jrnOpenAssignModal() {
+  await jrnLoadClients();
+  document.getElementById('jrn-assign-notes').value = '';
+  document.getElementById('jrn-modal-assign').style.display = 'flex';
+}
+
+async function jrnSaveAssign() {
+  const body = {
+    user_id: document.getElementById('jrn-assign-user').value,
+    notes:   document.getElementById('jrn-assign-notes').value.trim(),
+  };
+  if (!body.user_id) { alert('Selecione um cliente.'); return; }
+  const res = await fetch(`/api/admin/journeys/${JRN.currentId}/assignments`, {
+    method: 'POST', headers: jrnAuthH(), body: JSON.stringify(body)
+  });
+  if (!res.ok) { alert('Erro ao atribuir cliente.'); return; }
+  document.getElementById('jrn-modal-assign').style.display = 'none';
+  jrnOpenEditor(JRN.currentId);
+}
+
+async function jrnRemoveAssignment(journeyId, asnId) {
+  if (!confirm('Remover este cliente da jornada?')) return;
+  const res = await fetch(`/api/admin/journeys/${journeyId}/assignments/${asnId}`, { method:'DELETE', headers: jrnAuthH() });
+  if (res.ok) jrnOpenEditor(journeyId);
+  else alert('Erro ao remover.');
+}
+
+// ── Wire up showSection hook ──────────────────────────────────────────────────
+const _origShowSection = typeof showSection === 'function' ? showSection : null;
+// Patch to init jornadas on first visit
+document.addEventListener('DOMContentLoaded', () => {
+  const orig = window.showSection;
+  window.showSection = function(sec, btn) {
+    if (orig) orig(sec, btn);
+    if (sec === 'jornadas' && !JRN._inited) { JRN._inited = true; jrnInit(); }
+  };
+});
+</script>
+
+<!-- Freshchat: pré-configura token ANTES do CDN para auto-init funcionar -->
+<script>
+  window.fcSettings = {
+    token:  'b487776b-ed4f-4b81-9240-16403eb40d5a',
+    host:   'https://msdk.freshchat.com',
+    siteId: 'e1458f85-7f7b-46cc-8a00-32871dbdc352',
+    config: {
+      headerProperty: { appName: 'Recupera Empresas — Operador', backgroundColor: '#1e3a5f', foregroundColor: '#ffffff' },
+      content: { placeholders: { search_field: 'Buscar conversa...', reply_field: 'Responder...' } }
+    }
+  };
+</script>
+<!-- Freshchat operator widget (CDN unificado) -->
+<script src='//fw-cdn.com/16078787/7064112.js' chat='true'></script>
 
 </body>
 </html>
