@@ -893,6 +893,66 @@ function readAdminResponse(res) {
   });
 }
 
+function drawerDebugSummarize(value) {
+  if (Array.isArray(value)) return { type: 'array', length: value.length };
+  if (!value || typeof value !== 'object') return value;
+  const keys = Object.keys(value);
+  const summary = { type: 'object', keys };
+  if (Array.isArray(value.bookings)) summary.bookings = value.bookings.length;
+  if (Array.isArray(value.documents)) summary.documents = value.documents.length;
+  if (Array.isArray(value.members)) summary.members = value.members.length;
+  if (Array.isArray(value.tasks)) summary.tasks = value.tasks.length;
+  if (Array.isArray(value.messages)) summary.messages = value.messages.length;
+  if (Array.isArray(value.chapters)) summary.chapters = value.chapters.length;
+  if (Array.isArray(value.comments)) summary.comments = value.comments.length;
+  return summary;
+}
+
+function logDrawerDiagnostic(tabLabel, details = {}) {
+  const {
+    route,
+    method = 'GET',
+    source = 'fetch',
+    expectedKeys = [],
+    actualPayload,
+    response,
+    note,
+    error,
+  } = details;
+  const actualKeys = actualPayload && typeof actualPayload === 'object' && !Array.isArray(actualPayload)
+    ? Object.keys(actualPayload)
+    : [];
+  const missingKeys = expectedKeys.filter(key => !actualKeys.includes(key));
+  const prefix = error || (response && !response.ok) ? '[CLIENT DRAWER ERROR]' : '[CLIENT DRAWER DEBUG]';
+  const title = `${prefix} ${tabLabel}`;
+  const logger = error || (response && !response.ok) ? console.error : console.info;
+  if (typeof console.groupCollapsed === 'function') console.groupCollapsed(title);
+  logger('rota:', route || '(cache local)');
+  logger('metodo:', method);
+  logger('fonte:', source);
+  if (response) logger('status:', response.status, response.statusText || '');
+  if (note) logger('como deveria ser:', note);
+  if (expectedKeys.length) logger('chaves esperadas:', expectedKeys);
+  if (actualKeys.length) logger('chaves recebidas:', actualKeys);
+  if (missingKeys.length) logger('chaves ausentes:', missingKeys);
+  if (error) logger('erro:', error);
+  logger('como esta:', drawerDebugSummarize(actualPayload));
+  logger('payload bruto:', actualPayload);
+  if (typeof console.groupEnd === 'function') console.groupEnd();
+}
+
+async function readDrawerResponse(tabLabel, route, res, expectedKeys = [], note = '') {
+  const payload = await readAdminResponse(res);
+  logDrawerDiagnostic(tabLabel, {
+    route,
+    response: res,
+    expectedKeys,
+    actualPayload: payload,
+    note,
+  });
+  return payload;
+}
+
 function isFreshchatEnabled() {
   return !!(window.RE_ENABLE_FRESHCHAT && window.RE_FRESHCHAT_TOKEN && window.RE_FRESHCHAT_SITE_ID);
 }
@@ -1422,10 +1482,12 @@ async function openClient(id) {
   document.getElementById('drawerTitle').textContent = 'Carregando...';
   document.getElementById('drawerBody').innerHTML    = '<p style="color:var(--text-muted);padding:20px 0;">Carregando dados...</p>';
 
-  const res = await fetch(`/api/admin/client/${id}`, { headers: authH() });
-  if (!res.ok) { showToast('Erro ao carregar cliente.','error'); return; }
+  const route = `/api/admin/client/${id}`;
+  const res = await fetch(route, { headers: authH() });
+  const payload = await readDrawerResponse('Base do Drawer', route, res, ['user', 'onboarding', 'tasks', 'plan', 'messages'], 'Deveria retornar a estrutura completa do drawer do cliente, com user, onboarding, tasks, plan e messages.');
+  if (!res.ok) { showToast(payload.error || 'Erro ao carregar cliente.','error'); return; }
 
-  _currentClientData = await res.json();
+  _currentClientData = payload;
   const { user } = _currentClientData;
 
   document.getElementById('drawerTitle').textContent = user.company || user.name;
@@ -1473,6 +1535,13 @@ async function renderDrawerTab(tab) {
   const { user, onboarding, tasks, plan, messages } = _currentClientData;
 
   if (tab === 'overview') {
+    logDrawerDiagnostic('Visão Geral', {
+      route: `/api/admin/client/${_currentClientId}`,
+      source: 'cache:/api/admin/client/:id',
+      expectedKeys: ['user', 'onboarding'],
+      actualPayload: { user, onboarding },
+      note: 'Deveria usar os dados já carregados da rota base do drawer e conter user e onboarding preenchidos.',
+    });
     const step = onboarding.step || 1;
     const pct  = onboarding.completed ? 100 : Math.round((step-1)/14*100);
     const st   = STATUS_LABELS[onboarding.status] || STATUS_LABELS.nao_iniciado;
@@ -1513,6 +1582,13 @@ async function renderDrawerTab(tab) {
   }
 
   if (tab === 'plan') {
+    logDrawerDiagnostic('Business Plan', {
+      route: `/api/admin/client/${_currentClientId}`,
+      source: 'cache:/api/admin/client/:id',
+      expectedKeys: ['chapters'],
+      actualPayload: plan,
+      note: 'Deveria usar o campo plan da rota base e conter chapters para montar o Business Plan.',
+    });
     body.innerHTML = `<div class="chapter-list">
       ${(plan.chapters||[]).map(ch=>{
         const st = CHAPTER_STATUS[ch.status]||CHAPTER_STATUS.pendente;
@@ -1542,6 +1618,13 @@ async function renderDrawerTab(tab) {
   }
 
   if (tab === 'tasks') {
+    logDrawerDiagnostic('Tarefas', {
+      route: `/api/admin/client/${_currentClientId}`,
+      source: 'cache:/api/admin/client/:id',
+      expectedKeys: ['tasks'],
+      actualPayload: { tasks },
+      note: 'Deveria usar o array tasks da rota base; quando vazio, o array ainda precisa existir.',
+    });
     body.innerHTML = `
       <div style="margin-bottom:16px;">
         <div style="font-size:14px;font-weight:700;margin-bottom:10px;">Adicionar tarefa</div>
@@ -1573,9 +1656,10 @@ async function renderDrawerTab(tab) {
   if (tab === 'financeiro_client') {
     body.innerHTML = '<div style="padding:16px;color:var(--text-muted);font-size:14px;">Carregando financeiro...</div>';
     try {
-      const res = await fetch(`/api/admin/client/${_currentClientId}/financial`, { headers: authH() });
-      if (!res.ok) throw new Error('Erro');
-      const data = await res.json();
+      const route = `/api/admin/client/${_currentClientId}/financial`;
+      const res = await fetch(route, { headers: authH() });
+      const data = await readDrawerResponse('Financeiro', route, res, ['invoices'], 'Deveria retornar invoices e, opcionalmente, configured/stripeConfigured.');
+      if (!res.ok) throw new Error(data.error || 'Erro');
       const invoices = data.invoices || [];
       const stripeConfigured = data.configured ?? data.stripeConfigured ?? true;
       if (!stripeConfigured) {
@@ -1621,12 +1705,27 @@ async function renderDrawerTab(tab) {
           }).join('')}
         </div>`;
     } catch (e) {
+      logDrawerDiagnostic('Financeiro', {
+        route: `/api/admin/client/${_currentClientId}/financial`,
+        source: 'fetch',
+        expectedKeys: ['invoices'],
+        actualPayload: null,
+        note: 'Deveria retornar invoices e dados de configuração de Stripe.',
+        error: e.message,
+      });
       body.innerHTML = '<div class="empty-state"><p>Erro ao carregar dados financeiros.</p></div>';
     }
     return;
   }
 
   if (tab === 'messages') {
+    logDrawerDiagnostic('Mensagens', {
+      route: `/api/admin/client/${_currentClientId}`,
+      source: 'cache:/api/admin/client/:id',
+      expectedKeys: ['messages'],
+      actualPayload: { messages },
+      note: 'Deveria usar o array messages da rota base; ao abrir a guia, o POST de seen é apenas efeito colateral.',
+    });
     // Mark messages as seen
     if (_currentClientId) {
       fetch(`/api/admin/messages/seen/${_currentClientId}`, { method: 'POST', headers: authH() }).catch(() => {});
@@ -1685,9 +1784,20 @@ async function renderDrawerTab(tab) {
     body.innerHTML = '<div style="padding:16px;color:var(--text-muted);font-size:14px;">Carregando agendamentos...</div>';
     let bookings = [];
     try {
-      const bRes = await fetch(`/api/admin/client/${_currentClientId}/bookings`, { headers: authH() });
-      if (bRes.ok) bookings = (await bRes.json()).bookings || [];
-    } catch {}
+      const route = `/api/admin/client/${_currentClientId}/bookings`;
+      const bRes = await fetch(route, { headers: authH() });
+      const payload = await readDrawerResponse('Agenda', route, bRes, ['bookings'], 'Deveria retornar bookings com re_agenda_slots aninhado para cada agendamento.');
+      if (bRes.ok) bookings = payload.bookings || [];
+    } catch (e) {
+      logDrawerDiagnostic('Agenda', {
+        route: `/api/admin/client/${_currentClientId}/bookings`,
+        source: 'fetch',
+        expectedKeys: ['bookings'],
+        actualPayload: null,
+        note: 'Deveria retornar bookings com dados do slot vinculado.',
+        error: e.message,
+      });
+    }
 
     const ST_MAP = {
       pending:     { bg:'#FEF3C7', color:'#D97706', label:'Pendente'   },
@@ -1754,9 +1864,11 @@ async function renderDrawerTab(tab) {
 
   if (tab === 'docs') {
     body.innerHTML = '<div style="padding:16px;color:var(--text-muted);font-size:14px;">Carregando...</div>';
-    const res = await fetch(`/api/admin/client/${_currentClientId}/documents`, { headers: authH() });
-    if (!res.ok) { body.innerHTML = '<div class="empty-state"><p>Erro ao carregar documentos.</p></div>'; return; }
-    const { documents } = await res.json();
+    const route = `/api/admin/client/${_currentClientId}/documents`;
+    const res = await fetch(route, { headers: authH() });
+    const payload = await readDrawerResponse('Documentos', route, res, ['documents'], 'Deveria retornar documents com name, status, createdAt e comentários quando existirem.');
+    if (!res.ok) { body.innerHTML = `<div class="empty-state"><p>${escHtml(payload.error || 'Erro ao carregar documentos.')}</p></div>`; return; }
+    const { documents } = payload;
 
     const DOC_ST = {
       pendente:          { label:'Pendente',          cls:'badge-gray'  },
@@ -1833,8 +1945,9 @@ async function renderDrawerTab(tab) {
 
   if (tab === 'equipe') {
     body.innerHTML = '<div style="padding:16px;color:var(--text-muted);font-size:14px;">Carregando equipe...</div>';
-    const res = await fetch(`/api/admin/client/${_currentClientId}/members`, { headers: authH() });
-    const j = await readAdminResponse(res);
+    const route = `/api/admin/client/${_currentClientId}/members`;
+    const res = await fetch(route, { headers: authH() });
+    const j = await readDrawerResponse('Equipe', route, res, ['members'], 'Deveria retornar members com name, email, role, active e last_login quando disponível.');
     if (!res.ok) { body.innerHTML = `<div class="empty-state"><p>${escHtml(j.error || 'Erro ao carregar equipe.')}</p></div>`; return; }
     const { members = [] } = j;
     const ROLE_LABELS = { financeiro:'Financeiro', contador:'Contador', operacional:'Operacional', visualizador:'Visualizador' };
