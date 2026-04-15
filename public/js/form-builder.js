@@ -107,36 +107,38 @@ async function fbLoadFormsList() {
   const STATUS_CLS  = { draft:'badge-gray', rascunho:'badge-gray', active:'badge-green', publicado:'badge-green', inactive:'badge-amber', arquivado:'badge-amber' };
   const STATUS_LBL  = { draft:'Rascunho', rascunho:'Rascunho', active:'Publicado', publicado:'Publicado', inactive:'Arquivado', arquivado:'Arquivado' };
 
-  grid.innerHTML = FB.forms.map(f => `
-    <div style="background:#fff;border:1px solid #E2E8F0;border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:12px;transition:box-shadow .15s;"
+  grid.innerHTML = FB.forms.map(f => {
+    const fid = f.id;
+    const isSystem = !!(f.is_system);
+    const systemNote = f.settings?.system_note || '';
+    const statusBadge = `<span class="badge ${STATUS_CLS[f.status] || 'badge-gray'}">${STATUS_LBL[f.status] || f.status}</span>`;
+    const systemBadge = isSystem ? `<span class="badge badge-gray" style="background:#EFF6FF;color:#1A56DB;border:1px solid #BFDBFE;">Sistema</span>` : '';
+    const actionBtns = isSystem
+      ? `<button class="btn-ghost" style="font-size:12px;padding:6px 12px;" onclick="fbOpenResponses('${fid}','${fbEsc(f.title)}')">📊 Respostas</button>
+         <button class="btn-ghost" style="font-size:12px;padding:6px 12px;" onclick="fbOpenStatsPanel('${fid}')">📈 Estatísticas</button>`
+      : `<button class="btn-primary" style="font-size:12px;padding:6px 12px;" onclick="fbOpenBuilder('${fid}')">✏️ Editar</button>
+         <button class="btn-ghost" style="font-size:12px;padding:6px 12px;" onclick="fbOpenResponses('${fid}','${fbEsc(f.title)}')">📊 Respostas</button>
+         <button class="btn-ghost" style="font-size:12px;padding:6px 12px;" onclick="fbOpenStatsPanel('${fid}')">📈 Estatísticas</button>
+         <button class="btn-ghost" style="font-size:12px;padding:6px 12px;" onclick="fbDuplicateForm('${fid}')">📋 Duplicar</button>
+         <button class="btn-ghost" style="font-size:12px;padding:6px 12px;color:#EF4444;" onclick="fbDeleteForm('${fid}','${fbEsc(f.title)}')">🗑️ Excluir</button>`;
+    return `
+    <div style="background:#fff;border:1px solid ${isSystem ? '#BFDBFE' : '#E2E8F0'};border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:12px;transition:box-shadow .15s;"
          onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,.08)'" onmouseout="this.style.boxShadow=''">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
         <div>
           <div style="font-weight:700;font-size:15px;color:#1E293B;">${fbEsc(f.title)}</div>
           <div style="font-size:12px;color:#94A3B8;margin-top:2px;">${TYPE_LABELS[f.type] || f.type || '—'}</div>
         </div>
-        <span class="badge ${STATUS_CLS[f.status] || 'badge-gray'}">${STATUS_LBL[f.status] || f.status}</span>
+        <div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end;">${systemBadge}${statusBadge}</div>
       </div>
       ${f.description ? `<div style="font-size:13px;color:#64748B;line-height:1.5;">${fbEsc(f.description)}</div>` : ''}
+      ${isSystem && systemNote ? `<div style="font-size:11px;color:#6366F1;background:#EEF2FF;padding:6px 10px;border-radius:6px;">ℹ️ ${fbEsc(systemNote)}</div>` : ''}
       <div style="display:flex;gap:8px;font-size:12px;color:#94A3B8;">
         <span>📬 ${f.response_count || 0} respostas</span>
       </div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;">
-        <button class="btn-primary" style="font-size:12px;padding:6px 12px;" onclick="fbOpenBuilder(${f.id})">
-          ✏️ Editar
-        </button>
-        <button class="btn-ghost" style="font-size:12px;padding:6px 12px;" onclick="fbOpenResponses(${f.id},'${fbEsc(f.title)}')">
-          📊 Respostas
-        </button>
-        <button class="btn-ghost" style="font-size:12px;padding:6px 12px;" onclick="fbDuplicateForm(${f.id})">
-          📋 Duplicar
-        </button>
-        <button class="btn-ghost" style="font-size:12px;padding:6px 12px;color:#EF4444;" onclick="fbDeleteForm(${f.id},'${fbEsc(f.title)}')">
-          🗑️ Excluir
-        </button>
-      </div>
-    </div>
-  `).join('');
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;">${actionBtns}</div>
+    </div>`;
+  }).join('');
 }
 
 async function fbDuplicateForm(id) {
@@ -150,6 +152,82 @@ async function fbDeleteForm(id, title) {
   const res = await fetch(`/api/admin/forms/${id}`, { method:'DELETE', headers: fbAuthH() });
   if (res.ok) { fbToast('Formulário excluído.','success'); fbLoadFormsList(); }
   else fbToast('Erro ao excluir.','error');
+}
+
+async function fbOpenStatsPanel(formIdOverride) {
+  const formId = formIdOverride || FB.currentFormId;
+  if (!formId) return;
+  const panel = document.getElementById('fb-stats-panel');
+  if (!panel) return;
+  // Show panel
+  panel.style.display = 'block';
+  document.getElementById('fb-stats-content').innerHTML = '<div style="text-align:center;color:#94A3B8;">Carregando...</div>';
+  document.getElementById('fb-stats-chart').innerHTML = '';
+
+  // If called from list view, open the builder first (stats panel is there)
+  if (formIdOverride && FB.currentFormId !== formIdOverride) {
+    FB.currentFormId = formIdOverride;
+    fbShowView('builder');
+    document.getElementById('fb-builder-title').textContent = FB.forms?.find(f=>f.id===formIdOverride)?.title || '—';
+    panel.style.display = 'block';
+  }
+
+  const res = await fetch(`/api/admin/forms/${formId}/stats`, { headers: fbAuthH() });
+  if (!res.ok) {
+    document.getElementById('fb-stats-content').innerHTML = '<div style="color:#EF4444;">Erro ao carregar estatísticas.</div>';
+    return;
+  }
+  const s = await res.json();
+
+  const fmt = v => v == null ? '—' : v;
+  const fmtTime = secs => {
+    if (secs == null) return '—';
+    if (secs < 60) return `${secs}s`;
+    return `${Math.floor(secs/60)}min ${secs%60}s`;
+  };
+
+  document.getElementById('fb-stats-content').innerHTML = `
+    <div style="background:#fff;border:1px solid #E2E8F0;border-radius:8px;padding:14px;text-align:center;">
+      <div style="font-size:22px;font-weight:800;color:#1A56DB;">${fmt(s.total)}</div>
+      <div style="font-size:12px;color:#64748B;margin-top:2px;">Total de respostas</div>
+    </div>
+    <div style="background:#fff;border:1px solid #E2E8F0;border-radius:8px;padding:14px;text-align:center;">
+      <div style="font-size:22px;font-weight:800;color:#10B981;">${fmt(s.completed)}</div>
+      <div style="font-size:12px;color:#64748B;margin-top:2px;">Concluídas</div>
+    </div>
+    <div style="background:#fff;border:1px solid #E2E8F0;border-radius:8px;padding:14px;text-align:center;">
+      <div style="font-size:22px;font-weight:800;color:#F59E0B;">${fmt(s.in_progress)}</div>
+      <div style="font-size:12px;color:#64748B;margin-top:2px;">Em andamento</div>
+    </div>
+    <div style="background:#fff;border:1px solid #E2E8F0;border-radius:8px;padding:14px;text-align:center;">
+      <div style="font-size:22px;font-weight:800;color:#EF4444;">${fmt(s.abandoned)}</div>
+      <div style="font-size:12px;color:#64748B;margin-top:2px;">Abandonadas</div>
+    </div>
+    <div style="background:#fff;border:1px solid #E2E8F0;border-radius:8px;padding:14px;text-align:center;">
+      <div style="font-size:22px;font-weight:800;color:#8B5CF6;">${s.completion_rate ?? 0}%</div>
+      <div style="font-size:12px;color:#64748B;margin-top:2px;">Taxa de conclusão</div>
+    </div>
+    <div style="background:#fff;border:1px solid #E2E8F0;border-radius:8px;padding:14px;text-align:center;">
+      <div style="font-size:22px;font-weight:800;color:#EC4899;">${s.abandonment_rate ?? 0}%</div>
+      <div style="font-size:12px;color:#64748B;margin-top:2px;">Taxa de abandono</div>
+    </div>
+    <div style="background:#fff;border:1px solid #E2E8F0;border-radius:8px;padding:14px;text-align:center;">
+      <div style="font-size:22px;font-weight:800;color:#0EA5E9;">${fmtTime(s.avg_time_seconds)}</div>
+      <div style="font-size:12px;color:#64748B;margin-top:2px;">Tempo médio</div>
+    </div>
+  `;
+
+  // Render daily starts sparkline (pure CSS bar chart)
+  if (s.daily_starts && s.daily_starts.length) {
+    const maxCount = Math.max(...s.daily_starts.map(d=>d.count), 1);
+    const bars = s.daily_starts.slice(-14).map(d => {
+      const h = Math.round((d.count / maxCount) * 40);
+      return `<div title="${d.date}: ${d.count} inícios" style="width:16px;height:${h}px;background:#1A56DB;border-radius:2px 2px 0 0;opacity:.75;"></div>`;
+    }).join('');
+    document.getElementById('fb-stats-chart').innerHTML = `
+      <div style="font-size:11px;color:#64748B;margin-bottom:6px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;">Inícios por dia (últimos 14 dias)</div>
+      <div style="display:flex;align-items:flex-end;gap:4px;height:44px;">${bars}</div>`;
+  }
 }
 
 /* ──────────────────────────────────────────────────────────────────────────────

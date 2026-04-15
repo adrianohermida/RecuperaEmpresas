@@ -708,3 +708,82 @@ function fpShowCompletion(data) {
   const titleEl = document.getElementById('fp-player-title');
   if (titleEl) titleEl.textContent = 'Concluído';
 }
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   CLIENT JOURNEYS
+══════════════════════════════════════════════════════════════════════════════*/
+
+async function loadClientJourneys() {
+  const el = document.getElementById('client-journeys-list');
+  if (!el) return;
+
+  // Show nav button only when there are journeys
+  el.innerHTML = '<div style="padding:24px;color:#94A3B8;text-align:center;">Carregando...</div>';
+
+  let journeys = [];
+  try {
+    const res = await fetch('/api/my-journeys', { headers: { Authorization: 'Bearer ' + getToken() } });
+    if (res.ok) journeys = await res.json();
+  } catch {}
+
+  // Show/hide sidebar button
+  const btn = document.getElementById('jornadasSideLink');
+  if (btn) btn.style.display = journeys.length ? '' : 'none';
+
+  if (!journeys.length) {
+    el.innerHTML = `<div style="padding:40px;text-align:center;color:#94A3B8;">
+      <div style="font-size:36px;margin-bottom:12px;">🗺️</div>
+      <div style="font-size:15px;font-weight:600;color:#64748B;margin-bottom:8px;">Nenhuma jornada atribuída</div>
+      <div style="font-size:13px;">Sua consultoria ainda não atribuiu nenhuma jornada à sua conta.</div>
+    </div>`;
+    return;
+  }
+
+  const STATUS_LBL   = { active:'Em andamento', completed:'Concluída', paused:'Pausada', cancelled:'Cancelada' };
+  const STATUS_COLOR = { active:'#1A56DB', completed:'#10B981', paused:'#F59E0B', cancelled:'#EF4444' };
+
+  el.innerHTML = journeys.map(j => {
+    const done  = j.steps.filter(s => s.completed).length;
+    const total = j.steps.length;
+    const pct   = total ? Math.round((done / total) * 100) : 0;
+    const stepsHtml = j.steps.map((s, i) => `
+      <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 0;${i < j.steps.length-1 ? 'border-bottom:1px solid #F1F5F9;' : ''}">
+        <div style="width:26px;height:26px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;
+             background:${s.completed ? '#10B981' : (i === j.current_step_index ? '#1A56DB' : '#E2E8F0')};
+             color:${s.completed || i === j.current_step_index ? '#fff' : '#94A3B8'};">
+          ${s.completed ? '✓' : i + 1}
+        </div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;font-weight:${i === j.current_step_index && !s.completed ? '700' : '500'};color:${s.completed ? '#64748B' : '#1E293B'};
+               ${s.completed ? 'text-decoration:line-through;' : ''}">
+            ${fpEsc(s.title)}
+          </div>
+          ${s.re_forms ? `<div style="font-size:11px;color:#6366F1;margin-top:2px;">📋 ${fpEsc(s.re_forms.title)}</div>` : ''}
+          ${i === j.current_step_index && !s.completed && s.re_forms
+            ? `<button class="btn-primary" style="font-size:11px;padding:4px 12px;margin-top:6px;" onclick="fpOpenPlayer('${s.re_forms.id}')">Responder formulário →</button>`
+            : ''}
+        </div>
+      </div>
+    `).join('');
+
+    return `
+    <div class="portal-card" style="padding:0;overflow:hidden;">
+      <div style="padding:16px 20px;background:linear-gradient(135deg,#1e3a5f,#1A56DB);color:#fff;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+          <div style="font-size:16px;font-weight:700;">${fpEsc(j.journey_name)}</div>
+          <span style="font-size:11px;padding:3px 10px;border-radius:20px;background:rgba(255,255,255,.2);color:#fff;">${STATUS_LBL[j.status] || j.status}</span>
+        </div>
+        ${j.journey_description ? `<div style="font-size:12px;opacity:.8;margin-bottom:8px;">${fpEsc(j.journey_description)}</div>` : ''}
+        <div style="display:flex;align-items:center;gap:8px;margin-top:8px;">
+          <div style="flex:1;height:6px;background:rgba(255,255,255,.25);border-radius:4px;overflow:hidden;">
+            <div style="height:100%;width:${pct}%;background:#fff;border-radius:4px;transition:width .4s;"></div>
+          </div>
+          <span style="font-size:12px;opacity:.9;white-space:nowrap;">${done}/${total} etapas • ${pct}%</span>
+        </div>
+      </div>
+      <div style="padding:4px 20px 16px;">
+        ${stepsHtml || '<div style="padding:16px 0;color:#94A3B8;font-size:13px;">Nenhuma etapa configurada.</div>'}
+      </div>
+    </div>`;
+  }).join('');
+}

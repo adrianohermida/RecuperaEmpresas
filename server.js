@@ -3577,17 +3577,26 @@ app.post('/api/my-forms/:id/response', requireAuth, async (req, res) => {
     const isCompleting = status === 'concluido';
     const dbStatus     = isCompleting ? 'completed' : 'in_progress';
 
+    const now = new Date().toISOString();
     if (!resp) {
       const { data: newResp } = await sb.from('re_form_responses').insert({
         form_id: formId, user_id: uid, status: dbStatus,
         current_page_id: current_page_id || null,
-        updated_at: new Date().toISOString(),
-      }).select('id,status').single();
+        last_active_at: now,
+        updated_at: now,
+      }).select('id,status,started_at').single();
       resp = newResp;
     } else {
-      const upd = { status: dbStatus, updated_at: new Date().toISOString() };
+      const upd = { status: dbStatus, updated_at: now, last_active_at: now };
       if (current_page_id) upd.current_page_id = current_page_id;
-      if (isCompleting)    upd.completed_at     = new Date().toISOString();
+      if (isCompleting) {
+        upd.completed_at = now;
+        // Compute time_to_complete_seconds from started_at
+        if (resp.started_at) {
+          const secs = Math.round((Date.now() - new Date(resp.started_at).getTime()) / 1000);
+          upd.time_to_complete_seconds = secs;
+        }
+      }
       await sb.from('re_form_responses').update(upd).eq('id', resp.id);
     }
 
@@ -3681,6 +3690,377 @@ app.get('/api/my-form-responses', requireAuth, async (req, res) => {
       .order('started_at', { ascending: false });
     res.json({ responses: data || [] });
   } catch (e) { res.json({ responses: [] }); }
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// FORM STATS — Admin
+// ══════════════════════════════════════════════════════════════════════════════
+
+app.get('/api/admin/forms/:id/stats', requireAdmin, async (req, res) => {
+  try {
+    const formId = req.params.id;
+
+    const { data: all } = await sb.from('re_form_responses')
+      .select('id,status,started_at,completed_at,abandoned_at,time_to_complete_seconds,last_active_at,metadata')
+      .eq('form_id', formId);
+
+    const rows = all || [];
+    const total       = rows.length;
+    const completed   = rows.filter(r => r.status === 'completed').length;
+    const abandoned   = rows.filter(r => r.abandoned_at != null || r.status === 'abandoned').length;
+    const inProgress  = total - completed - abandoned;
+
+    const completedRows = rows.filter(r => r.time_to_complete_seconds != null);
+    const avgTime = completedRows.length
+      ? Math.round(completedRows.reduce((s, r) => s + r.time_to_complete_seconds, 0) / completedRows.length)
+      : null;
+
+    const completionRate  = total > 0 ? Math.round((completed / total) * 100)  : 0;
+    const abandonmentRate = total > 0 ? Math.round((abandoned / total) * 100)  : 0;
+
+    // Daily starts (last 30 days)
+    const cutoff = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString();
+    const recentRows = rows.filter(r => r.started_at >= cutoff);
+    const dailyMap = {};
+    for (const r of recentRows) {
+      const day = r.started_at.slice(0, 10);
+      dailyMap[day] = (dailyMap[day] || 0) + 1;
+    }
+    const dailyStarts = Object.entries(dailyMap).map(([date, count]) => ({ date, count })).sort((a, b) => a.date.localeCompare(b.date));
+
+    res.json({
+      total, completed, abandoned, in_progress: inProgress,
+      completion_rate: completionRate,
+      abandonment_rate: abandonmentRate,
+      avg_time_seconds: avgTime,
+      daily_starts: dailyStarts,
+    });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Mark abandoned responses (called by cron or manually) ────────────────────
+app.post('/api/admin/forms/:id/responses/:responseId/abandon', requireAdmin, async (req, res) => {
+  try {
+    await sb.from('re_form_responses').update({
+      status: 'abandoned',
+      abandoned_at: new Date().toISOString(),
+    }).eq('id', req.params.responseId).eq('form_id', req.params.id);
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// JOURNEYS — Admin CRUD
+// ══════════════════════════════════════════════════════════════════════════════
+
+// ── List journeys ─────────────────────────────────────────────────────────────
+app.get('/api/admin/journeys', requireAdmin, async (req, res) => {
+  try {
+    const { data } = await sb.from('re_journeys')
+      .select('*')
+      .order('created_at', { ascending: false });
+    res.json(data || []);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Get single journey (with steps) ──────────────────────────────────────────
+app.get('/api/admin/journeys/:id', requireAdmin, async (req, res) => {
+  try {
+    const { data: journey } = await sb.from('re_journeys')
+      .select('*').eq('id', req.params.id).single();
+    if (!journey) return res.status(404).json({ error: 'Jornada não encontrada.' });
+
+    const { data: steps } = await sb.from('re_journey_steps')
+      .select('*,re_forms(id,title,type,status)')
+      .eq('journey_id', req.params.id)
+      .order('order_index', { ascending: true });
+
+    res.json({ ...journey, steps: steps || [] });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Create journey ────────────────────────────────────────────────────────────
+app.post('/api/admin/journeys', requireAdmin, async (req, res) => {
+  try {
+    const { name, description, status } = req.body;
+    if (!name) return res.status(400).json({ error: 'Nome é obrigatório.' });
+    const { data } = await sb.from('re_journeys').insert({
+      name, description: description || null,
+      status: status || 'draft',
+      created_by: req.user.id,
+    }).select().single();
+    res.json(data);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Update journey ────────────────────────────────────────────────────────────
+app.put('/api/admin/journeys/:id', requireAdmin, async (req, res) => {
+  try {
+    const { name, description, status } = req.body;
+    const upd = {};
+    if (name        !== undefined) upd.name        = name;
+    if (description !== undefined) upd.description = description;
+    if (status      !== undefined) upd.status      = status;
+    const { data } = await sb.from('re_journeys').update(upd).eq('id', req.params.id).select().single();
+    res.json(data);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Delete journey ────────────────────────────────────────────────────────────
+app.delete('/api/admin/journeys/:id', requireAdmin, async (req, res) => {
+  try {
+    await sb.from('re_journeys').delete().eq('id', req.params.id);
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Steps: add ────────────────────────────────────────────────────────────────
+app.post('/api/admin/journeys/:id/steps', requireAdmin, async (req, res) => {
+  try {
+    const { title, description, form_id, is_optional, unlock_condition } = req.body;
+    if (!title) return res.status(400).json({ error: 'Título da etapa é obrigatório.' });
+
+    // Auto order_index
+    const { count } = await sb.from('re_journey_steps')
+      .select('id', { count: 'exact', head: true }).eq('journey_id', req.params.id);
+
+    const { data } = await sb.from('re_journey_steps').insert({
+      journey_id: req.params.id,
+      form_id:    form_id    || null,
+      title, description: description || null,
+      order_index:      count || 0,
+      is_optional:      !!is_optional,
+      unlock_condition: unlock_condition || {},
+    }).select().single();
+    res.json(data);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Steps: update ─────────────────────────────────────────────────────────────
+app.put('/api/admin/journeys/:id/steps/:stepId', requireAdmin, async (req, res) => {
+  try {
+    const { title, description, form_id, is_optional, order_index, unlock_condition } = req.body;
+    const upd = {};
+    if (title            !== undefined) upd.title            = title;
+    if (description      !== undefined) upd.description      = description;
+    if (form_id          !== undefined) upd.form_id          = form_id || null;
+    if (is_optional      !== undefined) upd.is_optional      = !!is_optional;
+    if (order_index      !== undefined) upd.order_index      = order_index;
+    if (unlock_condition !== undefined) upd.unlock_condition = unlock_condition;
+    const { data } = await sb.from('re_journey_steps')
+      .update(upd).eq('id', req.params.stepId).eq('journey_id', req.params.id).select().single();
+    res.json(data);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Steps: reorder ────────────────────────────────────────────────────────────
+app.post('/api/admin/journeys/:id/steps/reorder', requireAdmin, async (req, res) => {
+  try {
+    const { order } = req.body; // array of { id, order_index }
+    if (!Array.isArray(order)) return res.status(400).json({ error: 'order deve ser um array.' });
+    for (const item of order) {
+      await sb.from('re_journey_steps')
+        .update({ order_index: item.order_index })
+        .eq('id', item.id).eq('journey_id', req.params.id);
+    }
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Steps: delete ─────────────────────────────────────────────────────────────
+app.delete('/api/admin/journeys/:id/steps/:stepId', requireAdmin, async (req, res) => {
+  try {
+    await sb.from('re_journey_steps').delete()
+      .eq('id', req.params.stepId).eq('journey_id', req.params.id);
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Assignments: list (admin — all clients for a journey) ─────────────────────
+app.get('/api/admin/journeys/:id/assignments', requireAdmin, async (req, res) => {
+  try {
+    const { data } = await sb.from('re_journey_assignments')
+      .select('*,re_users(id,name,email,company)')
+      .eq('journey_id', req.params.id)
+      .order('assigned_at', { ascending: false });
+    res.json(data || []);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Assignments: assign client to journey ─────────────────────────────────────
+app.post('/api/admin/journeys/:id/assignments', requireAdmin, async (req, res) => {
+  try {
+    const { user_id, notes } = req.body;
+    if (!user_id) return res.status(400).json({ error: 'user_id é obrigatório.' });
+    const { data } = await sb.from('re_journey_assignments').upsert({
+      journey_id:  req.params.id,
+      user_id,
+      assigned_by: req.user.id,
+      status:      'active',
+      notes:       notes || null,
+    }, { onConflict: 'journey_id,user_id' }).select().single();
+    res.json(data);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Assignments: update status / notes ───────────────────────────────────────
+app.put('/api/admin/journeys/:id/assignments/:asnId', requireAdmin, async (req, res) => {
+  try {
+    const { status, notes, current_step_index } = req.body;
+    const upd = {};
+    if (status             !== undefined) upd.status             = status;
+    if (notes              !== undefined) upd.notes              = notes;
+    if (current_step_index !== undefined) upd.current_step_index = current_step_index;
+    if (status === 'completed') upd.completed_at = new Date().toISOString();
+    const { data } = await sb.from('re_journey_assignments')
+      .update(upd).eq('id', req.params.asnId).select().single();
+    res.json(data);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Assignments: remove ───────────────────────────────────────────────────────
+app.delete('/api/admin/journeys/:id/assignments/:asnId', requireAdmin, async (req, res) => {
+  try {
+    await sb.from('re_journey_assignments')
+      .delete().eq('id', req.params.asnId).eq('journey_id', req.params.id);
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Step completions: mark complete ──────────────────────────────────────────
+app.post('/api/admin/journeys/:id/assignments/:asnId/complete-step', requireAdmin, async (req, res) => {
+  try {
+    const { step_id, form_response_id, notes } = req.body;
+    if (!step_id) return res.status(400).json({ error: 'step_id é obrigatório.' });
+
+    await sb.from('re_journey_step_completions').upsert({
+      assignment_id:    req.params.asnId,
+      step_id,
+      form_response_id: form_response_id || null,
+      notes:            notes || null,
+      completed_at:     new Date().toISOString(),
+    }, { onConflict: 'assignment_id,step_id' });
+
+    // Advance current_step_index to the next step
+    const { data: steps } = await sb.from('re_journey_steps')
+      .select('id,order_index').eq('journey_id', req.params.id).order('order_index');
+    const completedIdx = steps?.findIndex(s => s.id === step_id) ?? -1;
+    const nextIdx      = completedIdx + 1;
+    if (nextIdx < (steps?.length || 0)) {
+      await sb.from('re_journey_assignments')
+        .update({ current_step_index: nextIdx }).eq('id', req.params.asnId);
+    } else {
+      // All steps done
+      await sb.from('re_journey_assignments')
+        .update({ status: 'completed', completed_at: new Date().toISOString() })
+        .eq('id', req.params.asnId);
+    }
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Journey progress for a specific client (admin view) ──────────────────────
+app.get('/api/admin/journeys/:id/assignments/:asnId/progress', requireAdmin, async (req, res) => {
+  try {
+    const { data: assignment } = await sb.from('re_journey_assignments')
+      .select('*,re_users(name,email)').eq('id', req.params.asnId).single();
+    if (!assignment) return res.status(404).json({ error: 'Atribuição não encontrada.' });
+
+    const { data: steps } = await sb.from('re_journey_steps')
+      .select('*,re_forms(id,title)').eq('journey_id', req.params.id).order('order_index');
+
+    const { data: completions } = await sb.from('re_journey_step_completions')
+      .select('step_id,completed_at,form_response_id').eq('assignment_id', req.params.asnId);
+    const completionMap = {};
+    for (const c of (completions || [])) completionMap[c.step_id] = c;
+
+    const stepsWithStatus = (steps || []).map(s => ({
+      ...s,
+      completed: !!completionMap[s.id],
+      completed_at: completionMap[s.id]?.completed_at || null,
+      form_response_id: completionMap[s.id]?.form_response_id || null,
+    }));
+
+    res.json({ assignment, steps: stepsWithStatus });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// JOURNEYS — Client Routes (/api/my-journeys/*)
+// ══════════════════════════════════════════════════════════════════════════════
+
+app.get('/api/my-journeys', requireAuth, async (req, res) => {
+  try {
+    const uid = req.user.id;
+    const { data: assignments } = await sb.from('re_journey_assignments')
+      .select('*,re_journeys(id,name,description,status)')
+      .eq('user_id', uid).in('status', ['active','completed']);
+
+    const result = await Promise.all((assignments || []).map(async asn => {
+      const { data: steps } = await sb.from('re_journey_steps')
+        .select('id,title,description,order_index,is_optional,form_id,re_forms(id,title)')
+        .eq('journey_id', asn.journey_id).order('order_index');
+
+      const { data: completions } = await sb.from('re_journey_step_completions')
+        .select('step_id,completed_at').eq('assignment_id', asn.id);
+      const doneSet = new Set((completions || []).map(c => c.step_id));
+
+      return {
+        assignment_id:       asn.id,
+        journey_id:          asn.journey_id,
+        journey_name:        asn.re_journeys?.name,
+        journey_description: asn.re_journeys?.description,
+        status:              asn.status,
+        current_step_index:  asn.current_step_index,
+        assigned_at:         asn.assigned_at,
+        completed_at:        asn.completed_at,
+        steps: (steps || []).map(s => ({
+          ...s,
+          completed: doneSet.has(s.id),
+        })),
+        progress_pct: steps?.length
+          ? Math.round((doneSet.size / steps.length) * 100)
+          : 0,
+      };
+    }));
+    res.json(result);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Client: complete a journey step (linked to a form response they submitted)
+app.post('/api/my-journeys/:asnId/complete-step', requireAuth, async (req, res) => {
+  try {
+    const uid = req.user.id;
+    const { step_id, form_response_id } = req.body;
+    if (!step_id) return res.status(400).json({ error: 'step_id é obrigatório.' });
+
+    // Verify assignment belongs to this user
+    const { data: asn } = await sb.from('re_journey_assignments')
+      .select('id,journey_id').eq('id', req.params.asnId).eq('user_id', uid).single();
+    if (!asn) return res.status(403).json({ error: 'Sem acesso.' });
+
+    await sb.from('re_journey_step_completions').upsert({
+      assignment_id:    req.params.asnId,
+      step_id,
+      form_response_id: form_response_id || null,
+      completed_at:     new Date().toISOString(),
+    }, { onConflict: 'assignment_id,step_id' });
+
+    // Advance pointer
+    const { data: steps } = await sb.from('re_journey_steps')
+      .select('id,order_index').eq('journey_id', asn.journey_id).order('order_index');
+    const idx     = steps?.findIndex(s => s.id === step_id) ?? -1;
+    const nextIdx = idx + 1;
+    if (nextIdx < (steps?.length || 0)) {
+      await sb.from('re_journey_assignments')
+        .update({ current_step_index: nextIdx }).eq('id', req.params.asnId);
+    } else {
+      await sb.from('re_journey_assignments')
+        .update({ status: 'completed', completed_at: new Date().toISOString() })
+        .eq('id', req.params.asnId);
+    }
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // ── Notifications ───────────────────────────────────────────────────────────
