@@ -881,6 +881,21 @@ function extractMissingColumnName(message) {
   return null;
 }
 
+function isSchemaCompatibilityError(message, hints = []) {
+  const text = String(message || '').toLowerCase();
+  const hasSchemaSignal = [
+    'does not exist',
+    'could not find',
+    'schema cache',
+    'has no field',
+    'relation',
+  ].some((signal) => text.includes(signal));
+
+  if (!hasSchemaSignal) return false;
+  if (!hints.length) return true;
+  return hints.some((hint) => text.includes(String(hint).toLowerCase()));
+}
+
 async function selectWithColumnFallback(table, options) {
   let columns = [...(options.columns || [])];
   let orderBy = [...(options.orderBy || [])];
@@ -2059,7 +2074,13 @@ app.get('/api/company/members', requireAuth, async (req, res) => {
     orderBy: ['created_at', 'invited_at', 'id'],
     apply: (query) => query.eq('company_id', companyId),
   });
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) {
+    if (isSchemaCompatibilityError(error.message, ['re_company_users', 'company_id', 'invited_at', 'last_login', 'role', 'active'])) {
+      console.warn('[COMPANY MEMBERS] recurso multiusuário indisponível neste schema:', error.message);
+      return res.json({ members: [] });
+    }
+    return res.status(500).json({ error: error.message });
+  }
   res.json({ members: (data || []).map((member) => ({
     ...member,
     name: member.name || member.email || 'Membro',
@@ -2203,7 +2224,13 @@ app.get('/api/admin/client/:id/members', requireAdmin, async (req, res) => {
     orderBy: ['created_at', 'invited_at', 'id'],
     apply: (query) => query.eq('company_id', req.params.id),
   });
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) {
+    if (isSchemaCompatibilityError(error.message, ['re_company_users', 'company_id', 'invited_at', 'last_login', 'role', 'active'])) {
+      console.warn('[ADMIN COMPANY MEMBERS] recurso multiusuário indisponível neste schema:', error.message);
+      return res.json({ members: [] });
+    }
+    return res.status(500).json({ error: error.message });
+  }
   res.json({ members: (data || []).map((member) => ({
     ...member,
     name: member.name || member.email || 'Membro',
