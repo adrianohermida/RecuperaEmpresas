@@ -1662,28 +1662,70 @@ async function renderDrawerTab(tab) {
   }
 
   if (tab === 'agenda') {
-    const appts = _currentClientData.appointments || [];
-    let html = `<div style="font-size:14px;font-weight:700;margin-bottom:12px;">Agendamentos do cliente</div>`;
-    if (!appts.length) {
+    body.innerHTML = '<div style="padding:16px;color:var(--text-muted);font-size:14px;">Carregando agendamentos...</div>';
+    let bookings = [];
+    try {
+      const bRes = await fetch(`/api/admin/client/${_currentClientId}/bookings`, { headers: authH() });
+      if (bRes.ok) bookings = (await bRes.json()).bookings || [];
+    } catch {}
+
+    const ST_MAP = {
+      pending:     { bg:'#FEF3C7', color:'#D97706', label:'Pendente'   },
+      confirmed:   { bg:'#DCFCE7', color:'#16A34A', label:'Confirmado' },
+      cancelled:   { bg:'#FEE2E2', color:'#DC2626', label:'Cancelado'  },
+      rescheduled: { bg:'#EDE9FE', color:'#7C3AED', label:'Remarcado'  },
+    };
+
+    let html = `
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+        <div style="font-size:14px;font-weight:700;">Agendamentos</div>
+        <button onclick="openBookForClientFromDrawer('${_currentClientId}')"
+          style="background:#1e3a5f;color:#fff;border:none;border-radius:6px;padding:6px 12px;cursor:pointer;font-size:12px;font-weight:600;">
+          📅 Novo agendamento
+        </button>
+      </div>`;
+
+    if (!bookings.length) {
       html += `<div class="empty-state">
         <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-        <p>Nenhum agendamento.</p>
+        <p>Nenhum agendamento encontrado.</p>
       </div>`;
     } else {
-      const sorted = [...appts].sort((a,b)=>a.date.localeCompare(b.date));
-      html += sorted.map(a => {
-        const stBadge = a.status==='confirmado' ? 'badge-green' : a.status==='cancelado' ? 'badge-red' : 'badge-amber';
-        const stLabel = a.status==='confirmado' ? 'Confirmada' : a.status==='cancelado' ? 'Cancelada' : 'Solicitada';
-        return `<div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);">
-          <div style="flex:1;">
-            <div style="font-weight:600;font-size:13px;">${APPT_TYPES[a.type]||a.type}</div>
-            <div style="font-size:12px;color:var(--text-muted);">${new Date(a.date+'T12:00:00').toLocaleDateString('pt-BR')}${a.time?' às '+a.time:''}</div>
-            ${a.notes?`<div style="font-size:11px;color:var(--text-muted);font-style:italic;margin-top:2px;">${a.notes}</div>`:''}
+      const sorted = [...bookings].sort((a,b) => {
+        const da = a.re_agenda_slots?.starts_at || '';
+        const db = b.re_agenda_slots?.starts_at || '';
+        return db.localeCompare(da); // most recent first
+      });
+      html += sorted.map(b => {
+        const slot = b.re_agenda_slots || {};
+        const d    = slot.starts_at ? new Date(slot.starts_at) : null;
+        const de   = slot.ends_at   ? new Date(slot.ends_at)   : null;
+        const st   = ST_MAP[b.status] || { bg:'#F1F5F9', color:'#64748b', label: b.status };
+        const isPast = d && d < new Date();
+        return `
+        <div style="padding:11px 0;border-bottom:1px solid var(--border);${isPast?'opacity:.7':''}">
+          <div style="display:flex;align-items:flex-start;gap:10px;">
+            <div style="flex:1;min-width:0;">
+              <div style="font-weight:600;font-size:13px;color:#1e293b;">${slot.title || '—'}</div>
+              ${d ? `<div style="font-size:12px;color:var(--text-muted);">
+                ${d.toLocaleDateString('pt-BR')} às ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}
+                ${de ? `– ${String(de.getHours()).padStart(2,'0')}:${String(de.getMinutes()).padStart(2,'0')}` : ''}
+              </div>` : ''}
+              ${b.notes ? `<div style="font-size:11px;color:var(--text-muted);font-style:italic;margin-top:2px;">${b.notes}</div>` : ''}
+              ${b.cancel_reason ? `<div style="font-size:11px;color:#DC2626;margin-top:2px;">Motivo: ${b.cancel_reason}</div>` : ''}
+            </div>
+            <span style="font-size:10px;padding:2px 8px;border-radius:12px;background:${st.bg};color:${st.color};font-weight:600;white-space:nowrap;">${st.label}</span>
           </div>
-          <span class="badge ${stBadge}">${stLabel}</span>
-          ${a.status!=='confirmado' && a.status!=='cancelado'
-            ? `<button class="btn-sm btn-sm-approve" onclick="confirmApptDrawer('${a.id}')">Confirmar</button>`
-            : ''}
+          ${b.status === 'pending' ? `
+          <div style="display:flex;gap:6px;margin-top:8px;">
+            <button onclick="agendaConfirmBooking('${b.id}');renderDrawerTab('agenda');" style="background:#DCFCE7;border:1px solid #86EFAC;border-radius:5px;padding:3px 8px;cursor:pointer;color:#15803D;font-size:11px;font-weight:600;">✅ Confirmar</button>
+            <button onclick="agendaRescheduleBooking('${b.id}','${(_currentClientData.user?.name||'').replace(/'/g,'')}')" style="background:#EEF2FF;border:1px solid #A5B4FC;border-radius:5px;padding:3px 8px;cursor:pointer;color:#4338CA;font-size:11px;font-weight:600;">↕️ Remarcar</button>
+            <button onclick="agendaCancelBooking('${b.id}','${(_currentClientData.user?.name||'').replace(/'/g,'')}')" style="background:#FEF2F2;border:1px solid #FECACA;border-radius:5px;padding:3px 8px;cursor:pointer;color:#DC2626;font-size:11px;font-weight:600;">❌ Cancelar</button>
+          </div>` : b.status === 'confirmed' ? `
+          <div style="display:flex;gap:6px;margin-top:8px;">
+            <button onclick="agendaRescheduleBooking('${b.id}','${(_currentClientData.user?.name||'').replace(/'/g,'')}')" style="background:#EEF2FF;border:1px solid #A5B4FC;border-radius:5px;padding:3px 8px;cursor:pointer;color:#4338CA;font-size:11px;font-weight:600;">↕️ Remarcar</button>
+            <button onclick="agendaCancelBooking('${b.id}','${(_currentClientData.user?.name||'').replace(/'/g,'')}')" style="background:#FEF2F2;border:1px solid #FECACA;border-radius:5px;padding:3px 8px;cursor:pointer;color:#DC2626;font-size:11px;font-weight:600;">❌ Cancelar</button>
+          </div>` : ''}
         </div>`;
       }).join('');
     }

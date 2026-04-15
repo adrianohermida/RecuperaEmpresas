@@ -1779,30 +1779,46 @@ async function loadAgendaSlots() {
           const noSlots = !s.available && !s.my_booking;
           const canBook = s.available && !s.my_booking && bal >= s.credits_cost && !past;
           return `
-          <div style="background:#fff;border:1px solid ${s.my_booking?'#2563eb':'#E2E8F0'};border-radius:10px;padding:14px 18px;display:flex;align-items:center;gap:14px;${past?'opacity:.6':''}">
-            <div style="min-width:58px;text-align:center;background:${s.my_booking?'#EFF6FF':'#F8FAFC'};border-radius:8px;padding:8px 4px;">
-              <div style="font-size:20px;font-weight:800;color:#1e3a5f;line-height:1;">${new Date(s.starts_at).getDate()}</div>
-              <div style="font-size:10px;color:#64748b;font-weight:600;">${MONTH_PT[new Date(s.starts_at).getMonth()]}</div>
-            </div>
-            <div style="flex:1;">
-              <div style="font-weight:700;font-size:14px;color:#1e293b;">${s.title}</div>
-              <div style="font-size:12px;color:#64748b;margin-top:2px;">
-                ${fmtSlotTime(s.starts_at)} – ${fmtSlotTime(s.ends_at)} &nbsp;·&nbsp; ${s.duration_min}min
-                &nbsp;·&nbsp; ${s.credits_cost} crédito${s.credits_cost>1?'s':''}
+          <div style="background:#fff;border:1px solid ${s.my_booking?'#2563eb':'#E2E8F0'};border-radius:10px;padding:14px 18px;${past?'opacity:.6':''}">
+            <div style="display:flex;align-items:center;gap:14px;">
+              <div style="min-width:58px;text-align:center;background:${s.my_booking?'#EFF6FF':'#F8FAFC'};border-radius:8px;padding:8px 4px;">
+                <div style="font-size:20px;font-weight:800;color:#1e3a5f;line-height:1;">${new Date(s.starts_at).getDate()}</div>
+                <div style="font-size:10px;color:#64748b;font-weight:600;">${MONTH_PT[new Date(s.starts_at).getMonth()]}</div>
               </div>
+              <div style="flex:1;min-width:0;">
+                <div style="font-weight:700;font-size:14px;color:#1e293b;">${s.title}</div>
+                <div style="font-size:12px;color:#64748b;margin-top:2px;">
+                  ${fmtSlotTime(s.starts_at)} – ${fmtSlotTime(s.ends_at)} &nbsp;·&nbsp; ${s.duration_min}min
+                  &nbsp;·&nbsp; ${s.credits_cost} crédito${s.credits_cost>1?'s':''}
+                  ${s.location === 'presencial' ? '&nbsp;·&nbsp; 📍 Presencial' : '&nbsp;·&nbsp; 🔗 Online'}
+                </div>
+                ${s.meeting_link && s.my_booking_detail?.status === 'confirmed' ? `<div style="font-size:11px;margin-top:3px;"><a href="${s.meeting_link}" target="_blank" style="color:#1e3a5f;">🔗 Entrar na reunião</a></div>` : ''}
+              </div>
+              ${(() => {
+                const bd = s.my_booking_detail;
+                if (!bd) {
+                  if (noSlots) return '<span style="background:#F1F5F9;color:#94a3b8;font-size:11px;padding:4px 12px;border-radius:20px;">Lotado</span>';
+                  if (past)   return '<span style="background:#F1F5F9;color:#94a3b8;font-size:11px;padding:4px 12px;border-radius:20px;">Encerrado</span>';
+                  if (bal < s.credits_cost) return '<button onclick="buyCredits()" style="background:#FEF3C7;color:#92400e;border:1px solid #FDE68A;border-radius:6px;padding:6px 12px;font-size:11px;cursor:pointer;font-weight:600;">Comprar créditos</button>';
+                  return '<button onclick="bookSlot(\''+s.id+'\','+s.credits_cost+')" style="background:#1e3a5f;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:12px;cursor:pointer;font-weight:600;">Reservar</button>';
+                }
+                if (bd.status === 'pending') return '<span style="background:#FEF3C7;color:#D97706;font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px;">Aguardando confirmação</span>'
+                  + '<button onclick="cancelBooking(\''+s.id+'\')" style="background:none;border:1px solid #fecaca;color:#ef4444;border-radius:6px;padding:5px 10px;font-size:11px;cursor:pointer;">Cancelar</button>';
+                if (bd.status === 'confirmed') return '<span style="background:#DCFCE7;color:#16A34A;font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px;">✅ Confirmado</span>'
+                  + (!past ? '<button onclick="cancelBooking(\''+s.id+'\')" style="background:none;border:1px solid #fecaca;color:#ef4444;border-radius:6px;padding:5px 10px;font-size:11px;cursor:pointer;">Cancelar</button>' : '');
+                if (bd.status === 'cancelled') return '<span style="background:#FEE2E2;color:#DC2626;font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px;">Cancelado</span>';
+                if (bd.status === 'rescheduled') return '<span style="background:#EDE9FE;color:#7C3AED;font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px;">Remarcado</span>';
+                return '';
+              })()}
             </div>
-            ${s.my_booking ? `
-              <span style="background:#EFF6FF;color:#2563eb;font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px;">Reservado</span>
-              <button onclick="cancelBooking('${s.id}')" style="background:none;border:1px solid #fecaca;color:#ef4444;border-radius:6px;padding:5px 10px;font-size:11px;cursor:pointer;">Cancelar</button>
-            ` : noSlots ? `
-              <span style="background:#F1F5F9;color:#94a3b8;font-size:11px;padding:4px 12px;border-radius:20px;">Lotado</span>
-            ` : past ? `
-              <span style="background:#F1F5F9;color:#94a3b8;font-size:11px;padding:4px 12px;border-radius:20px;">Encerrado</span>
-            ` : bal < s.credits_cost ? `
-              <button onclick="buyCredits()" style="background:#FEF3C7;color:#92400e;border:1px solid #FDE68A;border-radius:6px;padding:6px 12px;font-size:11px;cursor:pointer;font-weight:600;">Comprar créditos</button>
-            ` : `
-              <button onclick="bookSlot('${s.id}',${s.credits_cost})" style="background:#1e3a5f;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:12px;cursor:pointer;font-weight:600;">Reservar</button>
-            `}
+            ${s.my_booking_detail?.status === 'cancelled' && s.my_booking_detail?.cancel_reason ? `
+              <div style="margin-top:8px;padding:8px 12px;background:#FEF2F2;border-radius:6px;font-size:12px;color:#DC2626;">
+                <strong>Cancelado pela consultoria:</strong> ${s.my_booking_detail.cancel_reason}
+              </div>` : ''}
+            ${s.my_booking_detail?.status === 'rescheduled' && s.my_booking_detail?.reschedule_reason ? `
+              <div style="margin-top:8px;padding:8px 12px;background:#EDE9FE;border-radius:6px;font-size:12px;color:#7C3AED;">
+                <strong>Remarcado:</strong> ${s.my_booking_detail.reschedule_reason}
+              </div>` : ''}
           </div>`;
         }).join('')}
       </div>`;
@@ -1832,7 +1848,7 @@ async function bookSlot(slotId, cost) {
   const res = await fetch(`/api/agenda/book/${slotId}`, { method: 'POST', headers: authH(), body: JSON.stringify({}) });
   const j   = await res.json();
   if (res.ok) {
-    showToast('Sessão reservada com sucesso!', 'success');
+    showToast('Solicitação enviada! Aguardando confirmação da consultoria.', 'success');
     document.getElementById('creditsCount').textContent = j.credits_balance;
     loadAgendaSlots();
   } else {
@@ -1842,18 +1858,12 @@ async function bookSlot(slotId, cost) {
 }
 
 async function cancelBooking(slotId) {
-  // Find booking id from current slots
-  if (!confirm('Cancelar esta reserva? Seus créditos serão devolvidos.')) return;
-  // We need booking id — refetch slots to get it, but the cancel endpoint uses bookingId
-  // Use the slot approach: re-fetch bookings
-  const res = await fetch('/api/agenda/slots', { headers: authH() });
-  if (!res.ok) return;
-  const { slots } = await res.json();
-  const slot = slots.find(s => s.id === slotId);
-  // We don't store booking id on client — use a dedicated cancel-by-slot endpoint
-  // For now call DELETE /api/agenda/book/:bookingId — need to get booking id first
-  // Workaround: add slot-based cancel endpoint
-  const cancelRes = await fetch(`/api/agenda/cancel-slot/${slotId}`, { method: 'DELETE', headers: authH() });
+  const reason = prompt('Motivo do cancelamento (opcional — ajuda a consultoria a melhorar os horários):');
+  if (reason === null) return; // user dismissed
+  const cancelRes = await fetch(`/api/agenda/cancel-slot/${slotId}`, {
+    method: 'DELETE', headers: authH(),
+    body: JSON.stringify({ reason: reason.trim() || null })
+  });
   const j = await cancelRes.json();
   if (cancelRes.ok) { showToast('Reserva cancelada. Créditos devolvidos.', 'success'); loadAgendaSlots(); }
   else showToast(j.error || 'Erro ao cancelar.', 'error');
