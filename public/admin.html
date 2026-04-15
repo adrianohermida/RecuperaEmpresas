@@ -880,6 +880,11 @@
 <script>
 'use strict';
 
+function readAdminResponse(res) {
+  if (typeof window.readApiResponse === 'function') return window.readApiResponse(res);
+  return res.json();
+}
+
 const STEP_TITLES = {
   1:'LGPD', 2:'Empresa', 3:'Sócios', 4:'Operacional', 5:'Funcionários', 6:'Ativos',
   7:'Financeiro', 8:'Dívidas', 9:'Histórico da Crise', 10:'Diagnóstico',
@@ -1814,8 +1819,9 @@ async function renderDrawerTab(tab) {
   if (tab === 'equipe') {
     body.innerHTML = '<div style="padding:16px;color:var(--text-muted);font-size:14px;">Carregando equipe...</div>';
     const res = await fetch(`/api/admin/client/${_currentClientId}/members`, { headers: authH() });
-    if (!res.ok) { body.innerHTML = '<div class="empty-state"><p>Erro ao carregar equipe.</p></div>'; return; }
-    const { members } = await res.json();
+    const j = await readAdminResponse(res);
+    if (!res.ok) { body.innerHTML = `<div class="empty-state"><p>${escHtml(j.error || 'Erro ao carregar equipe.')}</p></div>`; return; }
+    const { members = [] } = j;
     const ROLE_LABELS = { financeiro:'Financeiro', contador:'Contador', operacional:'Operacional', visualizador:'Visualizador' };
     const ROLE_COLORS = { financeiro:'#2563eb', contador:'#7c3aed', operacional:'#059669', visualizador:'#6b7280' };
     let html = `<div style="font-size:14px;font-weight:700;color:#1e3a5f;margin-bottom:14px;">Membros da empresa (${members.length})</div>`;
@@ -3143,7 +3149,7 @@ async function submitServiceForm() {
   const url    = editId ? `/api/admin/services/${editId}` : '/api/admin/services';
   const method = editId ? 'PUT' : 'POST';
   const res    = await fetch(url, { method, headers: authH(), body: JSON.stringify(payload) });
-  const j      = await res.json();
+  const j      = await readAdminResponse(res);
   if (res.ok) {
     document.getElementById('svcModal')?.remove();
     showToast(editId ? 'Serviço atualizado!' : 'Serviço criado!', 'success');

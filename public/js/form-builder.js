@@ -25,6 +25,11 @@ function fbToast(msg, type) {
   else console.log('[FB]', type, msg);
 }
 
+async function fbRead(res) {
+  if (typeof window.readApiResponse === 'function') return window.readApiResponse(res);
+  return res.json();
+}
+
 /* ──────────────────────────────────────────────────────────────────────────────
    State
 ──────────────────────────────────────────────────────────────────────────────*/
@@ -253,7 +258,7 @@ async function fbSubmitNewForm() {
     type:        document.getElementById('fb-new-type').value,
   };
   const res = await fetch('/api/admin/forms', { method:'POST', headers: fbAuthH(), body: JSON.stringify(body) });
-  const j   = await res.json();
+  const j   = await fbRead(res);
   if (res.ok) {
     fbCloseNewModal();
     fbToast('Formulário criado!','success');

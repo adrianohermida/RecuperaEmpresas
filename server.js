@@ -863,6 +863,99 @@ function safeUser(u) {
   };
 }
 
+function extractMissingColumnName(message) {
+  const text = String(message || '');
+  const patterns = [
+    /column\s+"?([a-zA-Z0-9_]+)"?\s+does not exist/i,
+    /Could not find the ['"]?([a-zA-Z0-9_]+)['"]? column/i,
+    /record\s+['"]?(?:new|old)['"]?\s+has no field\s+['"]?([a-zA-Z0-9_]+)['"]?/i,
+    /schema cache.*column\s+['"]?([a-zA-Z0-9_]+)['"]?/i,
+  ];
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match?.[1]) return match[1];
+  }
+  return null;
+}
+
+async function selectWithColumnFallback(table, options) {
+  let columns = [...(options.columns || [])];
+  let orderBy = [...(options.orderBy || [])];
+  const requiredColumns = new Set(options.requiredColumns || []);
+
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    let query = sb.from(table).select(columns.join(','));
+    if (typeof options.apply === 'function') query = options.apply(query);
+    if (orderBy[0]) query = query.order(orderBy[0], { ascending: options.ascending ?? true });
+
+    const { data, error } = await query;
+    if (!error) return { data, error: null, columns, order: orderBy[0] || null };
+
+    const missingColumn = extractMissingColumnName(error.message);
+    if (!missingColumn) return { data: null, error, columns, order: orderBy[0] || null };
+
+    if (columns.includes(missingColumn) && !requiredColumns.has(missingColumn)) {
+      columns = columns.filter((column) => column !== missingColumn);
+      console.warn(`[SCHEMA FALLBACK] ${table}: coluna ausente removida do select: ${missingColumn}`);
+      continue;
+    }
+
+    if (orderBy.includes(missingColumn)) {
+      orderBy = orderBy.filter((column) => column !== missingColumn);
+      console.warn(`[SCHEMA FALLBACK] ${table}: coluna ausente removida do order: ${missingColumn}`);
+      continue;
+    }
+
+    return { data: null, error, columns, order: orderBy[0] || null };
+  }
+
+  return { data: null, error: new Error(`Falha ao consultar ${table} com fallback de schema.`), columns, order: orderBy[0] || null };
+}
+
+async function insertWithColumnFallback(table, payload, options = {}) {
+  const candidate = { ...payload };
+  const requiredColumns = new Set(options.requiredColumns || []);
+
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    const { data, error } = await sb.from(table).insert(candidate).select().single();
+    if (!error) return { data, error: null, payload: candidate };
+
+    const missingColumn = extractMissingColumnName(error.message);
+    if (!missingColumn || !(missingColumn in candidate) || requiredColumns.has(missingColumn)) {
+      return { data: null, error, payload: candidate };
+    }
+
+    delete candidate[missingColumn];
+    console.warn(`[SCHEMA FALLBACK] ${table}: coluna ausente removida do insert: ${missingColumn}`);
+  }
+
+  return { data: null, error: new Error(`Falha ao inserir em ${table} com fallback de schema.`), payload: candidate };
+}
+
+async function updateWithColumnFallback(table, match, payload, options = {}) {
+  let candidate = { ...payload };
+  const requiredColumns = new Set(options.requiredColumns || []);
+
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    let query = sb.from(table).update(candidate);
+    Object.entries(match || {}).forEach(([column, value]) => {
+      query = query.eq(column, value);
+    });
+    const { data, error } = await query.select().single();
+    if (!error) return { data, error: null, payload: candidate };
+
+    const missingColumn = extractMissingColumnName(error.message);
+    if (!missingColumn || !(missingColumn in candidate) || requiredColumns.has(missingColumn)) {
+      return { data: null, error, payload: candidate };
+    }
+
+    delete candidate[missingColumn];
+    console.warn(`[SCHEMA FALLBACK] ${table}: coluna ausente removida do update: ${missingColumn}`);
+  }
+
+  return { data: null, error: new Error(`Falha ao atualizar ${table} com fallback de schema.`), payload: candidate };
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // AUTH ROUTES
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1957,10 +2050,12 @@ app.get('/api/admin/client/:id/export/pdf', requireAdmin, async (req, res) => {
 // List members of a client company
 app.get('/api/company/members', requireAuth, async (req, res) => {
   const companyId = req.user.company_id || req.user.id;
-  const { data, error } = await sb.from('re_company_users')
-    .select('id,name,email,role,active,invited_at,last_login')
-    .eq('company_id', companyId)
-    .order('created_at', { ascending: true });
+  const { data, error } = await selectWithColumnFallback('re_company_users', {
+    columns: ['id', 'name', 'email', 'role', 'active', 'invited_at', 'last_login'],
+    requiredColumns: ['id', 'name', 'email', 'role', 'active'],
+    orderBy: ['created_at', 'invited_at', 'id'],
+    apply: (query) => query.eq('company_id', companyId),
+  });
   if (error) return res.status(500).json({ error: error.message });
   res.json({ members: data || [] });
 });
@@ -1981,13 +2076,13 @@ app.post('/api/company/members', requireAuth, async (req, res) => {
   if (existing) return res.status(409).json({ error: 'E-mail já cadastrado nesta empresa.' });
 
   const hash = await bcrypt.hash(password, 10);
-  const { data: member, error } = await sb.from('re_company_users').insert({
+  const { data: member, error } = await insertWithColumnFallback('re_company_users', {
     company_id:    companyId,
     name:          name.trim(),
     email:         email.toLowerCase().trim(),
     role:          role || 'operacional',
     password_hash: hash,
-  }).select('id,name,email,role,active,invited_at').single();
+  }, { requiredColumns: ['company_id', 'name', 'email', 'role', 'password_hash'] });
 
   if (error) return res.status(500).json({ error: error.message });
   res.json({ success: true, member });
@@ -2060,7 +2155,12 @@ app.post('/api/auth/member-login', async (req, res) => {
   if (!ok) return res.status(401).json({ error: 'Credenciais inválidas.' });
 
   // Update last_login
-  await sb.from('re_company_users').update({ last_login: new Date().toISOString() }).eq('id', member.id);
+  const lastLoginUpdate = await updateWithColumnFallback('re_company_users', { id: member.id }, {
+    last_login: new Date().toISOString(),
+  });
+  if (lastLoginUpdate.error) {
+    console.warn('[COMPANY MEMBER LOGIN] Não foi possível atualizar last_login:', lastLoginUpdate.error.message);
+  }
 
   // Fetch owner (company) data for context
   const owner = await findUserById(member.company_id);
@@ -2089,10 +2189,12 @@ app.post('/api/auth/member-login', async (req, res) => {
 
 // ─── Admin: list members for a client ────────────────────────────────────────
 app.get('/api/admin/client/:id/members', requireAdmin, async (req, res) => {
-  const { data, error } = await sb.from('re_company_users')
-    .select('id,name,email,role,active,invited_at,last_login')
-    .eq('company_id', req.params.id)
-    .order('created_at', { ascending: true });
+  const { data, error } = await selectWithColumnFallback('re_company_users', {
+    columns: ['id', 'name', 'email', 'role', 'active', 'invited_at', 'last_login'],
+    requiredColumns: ['id', 'name', 'email', 'role', 'active'],
+    orderBy: ['created_at', 'invited_at', 'id'],
+    apply: (query) => query.eq('company_id', req.params.id),
+  });
   if (error) return res.status(500).json({ error: error.message });
   res.json({ members: data || [] });
 });
@@ -3302,12 +3404,12 @@ app.post('/api/admin/forms', requireAdmin, async (req, res) => {
   try {
     const { title, description, type, settings, linked_plan_chapter } = req.body;
     if (!title) return res.status(400).json({ error: 'Título é obrigatório.' });
-    const { data: form, error } = await sb.from('re_forms').insert({
+    const { data: form, error } = await insertWithColumnFallback('re_forms', {
       title, description: description || null, type: type || 'custom',
       settings: settings || { scoring_enabled: false, show_progress: true, allow_resume: true },
       linked_plan_chapter: linked_plan_chapter || null,
       created_by: req.user.id, status: 'draft',
-    }).select().single();
+    }, { requiredColumns: ['title', 'type', 'settings'] });
     if (error) return res.status(500).json({ error: error.message });
     // Auto-create first page
     await sb.from('re_form_pages').insert({ form_id: form.id, title: 'Página 1', order_index: 0 });
@@ -3337,7 +3439,9 @@ app.put('/api/admin/forms/:id', requireAdmin, async (req, res) => {
     if (status !== undefined) updates.status = status;
     if (settings !== undefined) updates.settings = settings;
     if (linked_plan_chapter !== undefined) updates.linked_plan_chapter = linked_plan_chapter;
-    const { data: form, error } = await sb.from('re_forms').update(updates).eq('id', req.params.id).select().single();
+    const { data: form, error } = await updateWithColumnFallback('re_forms', { id: req.params.id }, updates, {
+      requiredColumns: ['updated_at'],
+    });
     if (error) return res.status(500).json({ error: error.message });
     res.json({ success: true, form });
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -3357,12 +3461,13 @@ app.post('/api/admin/forms/:id/duplicate', requireAdmin, async (req, res) => {
     const src = await loadFullForm(req.params.id);
     if (!src) return res.status(404).json({ error: 'Formulário não encontrado.' });
 
-    const { data: newForm } = await sb.from('re_forms').insert({
+    const { data: newForm, error: formInsertError } = await insertWithColumnFallback('re_forms', {
       title: src.title + ' (cópia)', description: src.description,
       type: src.type, settings: src.settings, status: 'draft',
       linked_plan_chapter: src.linked_plan_chapter,
       created_by: req.user.id, template_id: src.id, version: 1,
-    }).select().single();
+    }, { requiredColumns: ['title', 'type', 'settings'] });
+    if (formInsertError) return res.status(500).json({ error: formInsertError.message });
 
     const pageIdMap = {};
     for (const p of src.pages) {
@@ -4779,7 +4884,7 @@ app.post('/api/admin/services', requireAdmin, async (req, res) => {
   try {
     const { name, description, category, price_cents, delivery_days, features, featured, journey_id } = req.body;
     if (!name || !price_cents) return res.status(400).json({ error: 'name e price_cents são obrigatórios.' });
-    const { data: svc, error } = await sb.from('re_services').insert({
+    const { data: svc, error } = await insertWithColumnFallback('re_services', {
       name, title: name,
       description, category,
       price_cents: parseInt(price_cents),
@@ -4790,7 +4895,7 @@ app.post('/api/admin/services', requireAdmin, async (req, res) => {
       journey_id: journey_id || null,
       active: true,
       created_by: req.user.id,
-    }).select().single();
+    }, { requiredColumns: ['name', 'price_cents', 'active'] });
     if (error) return res.status(500).json({ error: error.message });
     auditLog({ actorId: req.user.id, actorEmail: req.user.email, actorRole: 'admin',
       entityType: 'service', entityId: svc.id, action: 'create', after: { name, price_cents } }).catch(e => console.warn('[async]', e?.message));
@@ -4810,7 +4915,7 @@ app.put('/api/admin/services/:id', requireAdmin, async (req, res) => {
     if (category    !== undefined) updates.category    = category;
     if (featured    !== undefined) updates.featured    = featured;
     if (journey_id  !== undefined) updates.journey_id  = journey_id || null;
-    const { data: svc, error } = await sb.from('re_services').update(updates).eq('id', req.params.id).select().single();
+    const { data: svc, error } = await updateWithColumnFallback('re_services', { id: req.params.id }, updates);
     if (error) return res.status(500).json({ error: error.message });
     res.json({ success: true, service: svc });
   } catch (e) { res.status(500).json({ error: e.message }); }

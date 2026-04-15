@@ -21,6 +21,21 @@
     return _fetch(resolveUrl(url), opts);
   };
 
+  window.readApiResponse = async function (response) {
+    var text = await response.text();
+    if (!text) return {};
+
+    try {
+      return JSON.parse(text);
+    } catch (error) {
+      var cleaned = text.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+      return {
+        error: cleaned || ('HTTP ' + response.status),
+        rawText: text
+      };
+    }
+  };
+
   // Patch XMLHttpRequest (Freshchat widget etc.)
   var _open = XMLHttpRequest.prototype.open;
   XMLHttpRequest.prototype.open = function (method, url) {
