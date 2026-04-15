@@ -10,6 +10,6 @@
  * For GitHub Pages: CI (deploy-pages.yml) rewrites this file with real values
  * before deploying to gh-pages.
  */
-window.RE_API_BASE      = 'https://recuperaempresas.onrender.com';
+window.RE_API_BASE      = '';
 window.RE_SUPABASE_URL  = 'https://riiajjmnzgagntiqqshs.supabase.co';
 window.RE_SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJpaWFqam1uemdhZ250aXFxc2hzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYxNzY0ODUsImV4cCI6MjA5MTc1MjQ4NX0.zyOFjVFIBJem5FZmXBD-ya78RheD_a-YHetibyVvXcI';
