@@ -5134,11 +5134,13 @@ app.post('/api/admin/services', requireAdmin, async (req, res) => {
   try {
     const { name, description, category, price_cents, delivery_days, features, featured, journey_id } = req.body;
     if (!name || !price_cents) return res.status(400).json({ error: 'name e price_cents são obrigatórios.' });
+    const parsedPriceCents = parseInt(price_cents, 10);
+    const parsedPrice = parsedPriceCents / 100;
     const basePayload = {
       name, title: name,
       description, category,
-      price_cents: parseInt(price_cents),
-      price: parseInt(price_cents) / 100,
+      price_cents: parsedPriceCents,
+      price: parsedPrice,
       delivery_days: delivery_days || null,
       features: features || null,
       featured: featured || false,
@@ -5146,47 +5148,70 @@ app.post('/api/admin/services', requireAdmin, async (req, res) => {
       active: true,
       created_by: req.user.id,
     };
+    const cleanPayload = (payload) => Object.fromEntries(Object.entries(payload).filter(([, value]) => value !== undefined));
     const serviceReturningColumns = ['id', 'name', 'title', 'description', 'category', 'price_cents', 'price', 'delivery_days', 'features', 'featured', 'journey_id', 'active', 'created_by', 'created_at', 'updated_at'];
-    let insertResult = await insertWithColumnFallback('re_services', basePayload, {
-      requiredColumns: ['name', 'price_cents', 'active'],
-      returningColumns: serviceReturningColumns,
-      requiredReturningColumns: ['id', 'name', 'price_cents', 'active'],
-    });
-
-    if (insertResult.error && /invalid input value.*category|violates .*category/i.test(String(insertResult.error.message || ''))) {
-      const retryPayload = { ...basePayload, category: null };
-      insertResult = await insertWithColumnFallback('re_services', retryPayload, {
+    const serviceInsertAttempts = [
+      {
+        payload: basePayload,
         requiredColumns: ['name', 'price_cents', 'active'],
-        returningColumns: serviceReturningColumns,
         requiredReturningColumns: ['id', 'name', 'price_cents', 'active'],
+      },
+      {
+        payload: { ...basePayload, category: null, journey_id: null, created_by: null },
+        requiredColumns: ['name', 'price_cents', 'active'],
+        requiredReturningColumns: ['id', 'name', 'price_cents', 'active'],
+      },
+      {
+        payload: { ...basePayload, active: undefined, category: null, journey_id: null, created_by: null },
+        requiredColumns: ['name', 'price_cents'],
+        requiredReturningColumns: ['id', 'name', 'price_cents'],
+      },
+      {
+        payload: { title: name, description, price_cents: parsedPriceCents, delivery_days: delivery_days || null, features: features || null, featured: featured || false, category: null },
+        requiredColumns: ['title', 'price_cents'],
+        requiredReturningColumns: ['id', 'title', 'price_cents'],
+      },
+      {
+        payload: { title: name, description, price: parsedPrice, delivery_days: delivery_days || null, features: features || null, featured: featured || false, category: null },
+        requiredColumns: ['title', 'price'],
+        requiredReturningColumns: ['id', 'title', 'price'],
+      },
+      {
+        payload: { name, description, price: parsedPrice, delivery_days: delivery_days || null, features: features || null, featured: featured || false, category: null },
+        requiredColumns: ['name', 'price'],
+        requiredReturningColumns: ['id', 'name', 'price'],
+      },
+    ];
+
+    let insertResult = null;
+    for (const attempt of serviceInsertAttempts) {
+      insertResult = await insertWithColumnFallback('re_services', cleanPayload(attempt.payload), {
+        requiredColumns: attempt.requiredColumns,
+        returningColumns: serviceReturningColumns,
+        requiredReturningColumns: attempt.requiredReturningColumns,
       });
+      if (!insertResult.error) break;
     }
 
-    if (insertResult.error && /journey_id/i.test(String(insertResult.error.message || ''))) {
-      const retryPayload = { ...basePayload, journey_id: null };
-      insertResult = await insertWithColumnFallback('re_services', retryPayload, {
-        requiredColumns: ['name', 'price_cents', 'active'],
-        returningColumns: serviceReturningColumns,
-        requiredReturningColumns: ['id', 'name', 'price_cents', 'active'],
-      });
-    }
-
-    if (insertResult.error && /created_by/i.test(String(insertResult.error.message || ''))) {
-      const retryPayload = { ...basePayload, created_by: null };
-      insertResult = await insertWithColumnFallback('re_services', retryPayload, {
-        requiredColumns: ['name', 'price_cents', 'active'],
-        returningColumns: serviceReturningColumns,
-        requiredReturningColumns: ['id', 'name', 'price_cents', 'active'],
-      });
-    }
-
-    const { data: svc, error } = insertResult;
+    const { data: rawService, error } = insertResult;
     if (error) {
       if (isSchemaCompatibilityError(error.message, ['re_services', 'name', 'title', 'description', 'category', 'price_cents', 'price', 'delivery_days', 'features', 'featured', 'journey_id', 'active', 'created_by'])) {
         return res.status(503).json({ error: 'Serviços temporariamente indisponíveis até concluir a atualização do banco.' });
       }
       return res.status(500).json({ error: error.message });
     }
+    const svc = {
+      ...rawService,
+      name: rawService?.name || rawService?.title || name,
+      title: rawService?.title || rawService?.name || name,
+      price_cents: rawService?.price_cents ?? parsedPriceCents,
+      price: rawService?.price ?? parsedPrice,
+      active: rawService?.active ?? true,
+      description: rawService?.description ?? description ?? null,
+      category: rawService?.category ?? category ?? null,
+      featured: rawService?.featured ?? !!featured,
+      journey_id: rawService?.journey_id ?? journey_id ?? null,
+    };
     auditLog({ actorId: req.user.id, actorEmail: req.user.email, actorRole: 'admin',
       entityType: 'service', entityId: svc.id, action: 'create', after: { name, price_cents } }).catch(e => console.warn('[async]', e?.message));
     res.json({ success: true, service: svc });
