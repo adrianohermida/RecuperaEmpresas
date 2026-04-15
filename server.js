@@ -3543,12 +3543,47 @@ app.post('/api/admin/forms', requireAdmin, async (req, res) => {
   try {
     const { title, description, type, settings, linked_plan_chapter } = req.body;
     if (!title) return res.status(400).json({ error: 'Título é obrigatório.' });
-    const { data: form, error } = await insertWithColumnFallback('re_forms', {
-      title, description: description || null, type: type || 'custom',
+    const basePayload = {
+      title,
+      description: description || null,
+      type: type || 'custom',
       settings: settings || { scoring_enabled: false, show_progress: true, allow_resume: true },
       linked_plan_chapter: linked_plan_chapter || null,
-      created_by: req.user.id, status: 'draft',
-    }, { requiredColumns: ['title', 'type', 'settings'] });
+      created_by: req.user.id,
+      status: 'draft',
+    };
+    const formReturningColumns = ['id', 'title', 'description', 'type', 'settings', 'linked_plan_chapter', 'created_by', 'status', 'created_at', 'updated_at'];
+    let formInsert = await insertWithColumnFallback('re_forms', basePayload, {
+      requiredColumns: ['title'],
+      returningColumns: formReturningColumns,
+      requiredReturningColumns: ['id', 'title'],
+    });
+
+    if (formInsert.error && /invalid input value.*type|violates .*type/i.test(String(formInsert.error.message || ''))) {
+      formInsert = await insertWithColumnFallback('re_forms', { ...basePayload, type: 'custom' }, {
+        requiredColumns: ['title'],
+        returningColumns: formReturningColumns,
+        requiredReturningColumns: ['id', 'title'],
+      });
+    }
+
+    if (formInsert.error && /created_by/i.test(String(formInsert.error.message || ''))) {
+      formInsert = await insertWithColumnFallback('re_forms', { ...basePayload, created_by: null }, {
+        requiredColumns: ['title'],
+        returningColumns: formReturningColumns,
+        requiredReturningColumns: ['id', 'title'],
+      });
+    }
+
+    if (formInsert.error && /linked_plan_chapter/i.test(String(formInsert.error.message || ''))) {
+      formInsert = await insertWithColumnFallback('re_forms', { ...basePayload, linked_plan_chapter: null }, {
+        requiredColumns: ['title'],
+        returningColumns: formReturningColumns,
+        requiredReturningColumns: ['id', 'title'],
+      });
+    }
+
+    const { data: form, error } = formInsert;
     if (error) {
       if (isSchemaCompatibilityError(error.message, ['re_forms', 'title', 'description', 'type', 'settings', 'linked_plan_chapter', 'created_by', 'status'])) {
         return res.status(503).json({ error: 'Formulários temporariamente indisponíveis até concluir a atualização do banco.' });
@@ -3560,12 +3595,17 @@ app.post('/api/admin/forms', requireAdmin, async (req, res) => {
       form_id: form.id,
       title: 'Página 1',
       order_index: 0,
-    }, { requiredColumns: ['form_id', 'title'] });
+    }, {
+      requiredColumns: ['form_id', 'title'],
+      returningColumns: ['id', 'form_id', 'title', 'order_index'],
+      requiredReturningColumns: ['id', 'form_id', 'title'],
+    });
     if (pageError) {
       if (isSchemaCompatibilityError(pageError.message, ['re_form_pages', 'form_id', 'title', 'order_index'])) {
-        return res.status(503).json({ error: 'Formulários temporariamente indisponíveis até concluir a atualização do banco.' });
+        console.warn('[FORMS CREATE] first page unavailable due to schema mismatch, continuing with empty form:', pageError.message);
+      } else {
+        return res.status(500).json({ error: pageError.message });
       }
-      return res.status(500).json({ error: pageError.message });
     }
     auditLog({ actorId: req.user.id, actorEmail: req.user.email, actorRole: 'admin',
       entityType: 'form', entityId: form.id, action: 'create', after: { title, type } }).catch(e => console.warn('[async]', e?.message));
