@@ -96,7 +96,7 @@ function renderClientTable(clients) {
   var tbody = document.getElementById('clientTableBody');
   if (!tbody) return;
   if (!clients.length) {
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:24px;">Nenhum cliente encontrado.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" class="admin-client-empty-cell">Nenhum cliente encontrado.</td></tr>';
     return;
   }
 
@@ -106,8 +106,8 @@ function renderClientTable(clients) {
     var lastActivity = client.lastActivity ? new Date(client.lastActivity).toLocaleDateString('pt-BR') : '—';
     var unread = _unreadMsgs[client.id] || 0;
     var msgBadge = unread
-      ? '<span class="badge badge-red" style="animation:pulse 1.5s infinite;">' + unread + '</span>'
-      : '<span style="color:var(--text-muted);font-size:13px;">—</span>';
+      ? '<span class="badge badge-red admin-unread-pulse">' + unread + '</span>'
+      : '<span class="admin-client-empty-dash">—</span>';
     return `<tr onclick="openClient('${client.id}')">
       <td>
         <div class="company-cell">${client.company || client.name}</div>
@@ -115,14 +115,14 @@ function renderClientTable(clients) {
       </td>
       <td><span class="badge ${status.cls}">${status.label}</span></td>
       <td>
-        <div style="display:flex;align-items:center;gap:8px;">
+        <div class="admin-client-progress-wrap">
           <div class="mini-progress"><div class="mini-progress-fill" style="width:${progress}%"></div></div>
-          <span style="font-size:13px;font-weight:600;color:var(--primary);">${progress}%</span>
+          <span class="admin-client-progress-value">${progress}%</span>
         </div>
       </td>
-      <td style="font-size:13px;color:var(--text-muted);">${client.step}/14</td>
-      <td style="font-size:13px;color:var(--text-muted);">${lastActivity}</td>
-      <td>${client.pendingTasks ? `<span class="badge badge-amber">${client.pendingTasks}</span>` : '<span style="color:var(--text-muted);font-size:13px;">—</span>'}</td>
+      <td class="admin-client-meta">${client.step}/14</td>
+      <td class="admin-client-meta">${lastActivity}</td>
+      <td>${client.pendingTasks ? `<span class="badge badge-amber">${client.pendingTasks}</span>` : '<span class="admin-client-empty-dash">—</span>'}</td>
       <td>${msgBadge}</td>
     </tr>`;
   }).join('');

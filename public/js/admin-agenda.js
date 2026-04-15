@@ -2,16 +2,21 @@
 
 (function () {
   const SLOT_MONTHS = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+  const BOOKING_STATUS_MAP = {
+    pending: { className: 'agenda-booking-badge-pending', label: 'Pendente' },
+    confirmed: { className: 'agenda-booking-badge-confirmed', label: 'Confirmado' },
+    cancelled: { className: 'agenda-booking-badge-cancelled', label: 'Cancelado' },
+    rescheduled: { className: 'agenda-booking-badge-rescheduled', label: 'Remarcado' },
+  };
+  const SLOT_STATUS_MAP = {
+    past: { className: 'agenda-slot-status-past', label: 'Encerrado' },
+    full: { className: 'agenda-slot-status-full', label: 'Lotado' },
+    available: { className: 'agenda-slot-status-available', label: 'Disponível' },
+  };
 
   function bookingStatusBadge(status) {
-    const map = {
-      pending: { bg: '#FEF3C7', color: '#92400e', label: 'Pendente' },
-      confirmed: { bg: '#DCFCE7', color: '#166534', label: 'Confirmado' },
-      cancelled: { bg: '#FEE2E2', color: '#991B1B', label: 'Cancelado' },
-      rescheduled: { bg: '#E0E7FF', color: '#3730A3', label: 'Remarcado' },
-    };
-    const badge = map[status] || { bg: '#F1F5F9', color: '#64748b', label: status };
-    return `<span style="font-size:10px;padding:2px 8px;border-radius:12px;background:${badge.bg};color:${badge.color};font-weight:600;">${badge.label}</span>`;
+    const badge = BOOKING_STATUS_MAP[status] || { className: 'agenda-booking-badge-default', label: status };
+    return `<span class="agenda-booking-badge ${badge.className}">${badge.label}</span>`;
   }
 
   function bookingClientName(booking) {
@@ -20,14 +25,14 @@
       const externalContact = typeof booking.external_contact === 'string'
         ? JSON.parse(booking.external_contact)
         : booking.external_contact;
-      return (externalContact.name || externalContact.email || 'Contato externo') + ' <span style="font-size:10px;color:#94a3b8;">(externo)</span>';
+      return (externalContact.name || externalContact.email || 'Contato externo') + ' <span class="agenda-booking-external">(externo)</span>';
     }
     return 'Cliente';
   }
 
   async function loadAdminAgenda() {
     const listEl = document.getElementById('adminSlotsList');
-    if (listEl) listEl.innerHTML = '<div style="padding:16px;color:var(--text-muted);font-size:14px;">Carregando...</div>';
+    if (listEl) listEl.innerHTML = '<div class="agenda-loading-state">Carregando...</div>';
 
     const response = await fetch('/api/admin/agenda/slots', { headers: authH() });
     const payload = await readAdminResponse(response);
@@ -47,7 +52,7 @@
       return;
     }
 
-    listEl.innerHTML = `<div style="display:flex;flex-direction:column;gap:10px;">
+    listEl.innerHTML = `<div class="agenda-slot-list">
       ${slots.map(slot => {
         const startDate = new Date(slot.starts_at);
         const endDate = new Date(slot.ends_at);
@@ -56,63 +61,60 @@
         const activeCount = bookings.filter(booking => booking.status === 'pending' || booking.status === 'confirmed').length;
         const locationIcon = slot.location === 'presencial' ? '📍' : '🔗';
         const locationLabel = slot.location === 'presencial' ? 'Presencial' : 'Online';
-        const slotStatusStyle = isPast
-          ? 'background:#F1F5F9;color:#94a3b8;'
+        const slotStatus = isPast
+          ? SLOT_STATUS_MAP.past
           : activeCount >= slot.max_bookings
-            ? 'background:#FEE2E2;color:#DC2626;'
-            : 'background:#DCFCE7;color:#16A34A;';
-        const slotStatusLabel = isPast ? 'Encerrado' : activeCount >= slot.max_bookings ? 'Lotado' : 'Disponível';
+            ? SLOT_STATUS_MAP.full
+            : SLOT_STATUS_MAP.available;
 
         return `
-        <div style="background:#fff;border:1px solid #E2E8F0;border-radius:10px;padding:14px 18px;${isPast ? 'opacity:.65' : ''}">
-          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-            <div style="min-width:52px;text-align:center;background:#F8FAFC;border-radius:8px;padding:6px 4px;">
-              <div style="font-size:18px;font-weight:800;color:#1e3a5f;">${startDate.getDate()}</div>
-              <div style="font-size:10px;color:#64748b;font-weight:600;">${SLOT_MONTHS[startDate.getMonth()]} ${startDate.getFullYear()}</div>
+        <div class="agenda-slot-card${isPast ? ' agenda-slot-card-past' : ''}">
+          <div class="agenda-slot-header">
+            <div class="agenda-slot-date-card">
+              <div class="agenda-slot-day">${startDate.getDate()}</div>
+              <div class="agenda-slot-month">${SLOT_MONTHS[startDate.getMonth()]} ${startDate.getFullYear()}</div>
             </div>
-            <div style="flex:1;min-width:0;">
-              <div style="font-weight:700;font-size:14px;color:#1e293b;">${slot.title}</div>
-              <div style="font-size:12px;color:#64748b;margin-top:2px;">
+            <div class="agenda-slot-main">
+              <div class="agenda-slot-title">${slot.title}</div>
+              <div class="agenda-slot-meta">
                 ${String(startDate.getHours()).padStart(2, '0')}:${String(startDate.getMinutes()).padStart(2, '0')}
                 – ${String(endDate.getHours()).padStart(2, '0')}:${String(endDate.getMinutes()).padStart(2, '0')}
                 &nbsp;·&nbsp; ${slot.duration_min}min &nbsp;·&nbsp; ${slot.credits_cost} crédito${slot.credits_cost > 1 ? 's' : ''}
                 &nbsp;·&nbsp; ${activeCount}/${slot.max_bookings} vagas
                 &nbsp;·&nbsp; ${locationIcon} ${locationLabel}
               </div>
-              ${slot.meeting_link ? `<div style="font-size:11px;margin-top:3px;"><a href="${slot.meeting_link}" target="_blank" style="color:#1e3a5f;">🔗 ${slot.meeting_link}</a></div>` : ''}
+              ${slot.meeting_link ? `<div class="agenda-slot-link-wrap"><a href="${slot.meeting_link}" target="_blank" class="agenda-slot-link">🔗 ${slot.meeting_link}</a></div>` : ''}
             </div>
-            <span style="font-size:11px;padding:3px 10px;border-radius:20px;white-space:nowrap;${slotStatusStyle}">${slotStatusLabel}</span>
-            ${!isPast ? `<button onclick="openBookForClientModal('${slot.id}')" title="Agendar cliente"
-              style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:6px;padding:5px 10px;cursor:pointer;color:#1e3a5f;font-size:11px;font-weight:600;white-space:nowrap;">
+            <span class="agenda-slot-status ${slotStatus.className}">${slotStatus.label}</span>
+            ${!isPast ? `<button onclick="openBookForClientModal('${slot.id}')" title="Agendar cliente" class="agenda-slot-action agenda-slot-action-book">
               + Agendar
             </button>` : ''}
-            <button onclick="deleteSlot('${slot.id}')" title="Remover horário"
-              style="background:none;border:1px solid #fecaca;border-radius:6px;padding:5px 8px;cursor:pointer;color:#ef4444;">
+            <button onclick="deleteSlot('${slot.id}')" title="Remover horário" class="agenda-slot-action agenda-slot-action-delete">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
             </button>
           </div>
           ${bookings.length ? `
-          <div style="margin-top:10px;padding-top:10px;border-top:1px solid #F1F5F9;">
-            <div style="font-size:11px;font-weight:600;color:#64748b;margin-bottom:8px;">RESERVAS</div>
-            <div style="display:flex;flex-direction:column;gap:6px;">
+          <div class="agenda-bookings-section">
+            <div class="agenda-bookings-title">RESERVAS</div>
+            <div class="agenda-bookings-list">
               ${bookings.map(booking => {
                 const clientName = bookingClientName(booking).replace(/'/g, '&#39;');
                 const clientNamePlain = clientName.replace(/<[^>]+>/g, '').trim();
                 return `
-              <div style="display:flex;align-items:center;gap:8px;background:#F8FAFC;border-radius:8px;padding:8px 12px;flex-wrap:wrap;">
-                <div style="flex:1;min-width:0;">
-                  <span style="font-size:12px;font-weight:600;color:#1e293b;">${clientName}</span>
-                  ${booking.notes ? `<div style="font-size:11px;color:#94a3b8;margin-top:1px;">${booking.notes}</div>` : ''}
-                  ${booking.cancel_reason && (booking.status === 'cancelled' || booking.status === 'rescheduled') ? `<div style="font-size:11px;color:#94a3b8;font-style:italic;margin-top:1px;">Motivo: ${booking.cancel_reason}</div>` : ''}
+              <div class="agenda-booking-row">
+                <div class="agenda-booking-main">
+                  <span class="agenda-booking-name">${clientName}</span>
+                  ${booking.notes ? `<div class="agenda-booking-note">${booking.notes}</div>` : ''}
+                  ${booking.cancel_reason && (booking.status === 'cancelled' || booking.status === 'rescheduled') ? `<div class="agenda-booking-reason">Motivo: ${booking.cancel_reason}</div>` : ''}
                 </div>
                 ${bookingStatusBadge(booking.status)}
                 ${booking.status === 'pending' ? `
-                  <button onclick="agendaConfirmBooking('${booking.id}')" style="background:#DCFCE7;border:1px solid #86EFAC;border-radius:5px;padding:3px 8px;cursor:pointer;color:#15803D;font-size:11px;font-weight:600;">✅ Confirmar</button>
-                  <button onclick="agendaRescheduleBooking('${booking.id}','${clientNamePlain}')" style="background:#EEF2FF;border:1px solid #A5B4FC;border-radius:5px;padding:3px 8px;cursor:pointer;color:#4338CA;font-size:11px;font-weight:600;">↕️ Remarcar</button>
-                  <button onclick="agendaCancelBooking('${booking.id}','${clientNamePlain}')" style="background:#FEF2F2;border:1px solid #FECACA;border-radius:5px;padding:3px 8px;cursor:pointer;color:#DC2626;font-size:11px;font-weight:600;">❌ Cancelar</button>
+                  <button onclick="agendaConfirmBooking('${booking.id}')" class="agenda-booking-action agenda-booking-action-confirm">✅ Confirmar</button>
+                  <button onclick="agendaRescheduleBooking('${booking.id}','${clientNamePlain}')" class="agenda-booking-action agenda-booking-action-reschedule">↕️ Remarcar</button>
+                  <button onclick="agendaCancelBooking('${booking.id}','${clientNamePlain}')" class="agenda-booking-action agenda-booking-action-cancel">❌ Cancelar</button>
                 ` : booking.status === 'confirmed' ? `
-                  <button onclick="agendaRescheduleBooking('${booking.id}','${clientNamePlain}')" style="background:#EEF2FF;border:1px solid #A5B4FC;border-radius:5px;padding:3px 8px;cursor:pointer;color:#4338CA;font-size:11px;font-weight:600;">↕️ Remarcar</button>
-                  <button onclick="agendaCancelBooking('${booking.id}','${clientNamePlain}')" style="background:#FEF2F2;border:1px solid #FECACA;border-radius:5px;padding:3px 8px;cursor:pointer;color:#DC2626;font-size:11px;font-weight:600;">❌ Cancelar</button>
+                  <button onclick="agendaRescheduleBooking('${booking.id}','${clientNamePlain}')" class="agenda-booking-action agenda-booking-action-reschedule">↕️ Remarcar</button>
+                  <button onclick="agendaCancelBooking('${booking.id}','${clientNamePlain}')" class="agenda-booking-action agenda-booking-action-cancel">❌ Cancelar</button>
                 ` : ''}
               </div>`;
               }).join('')}
@@ -125,8 +127,8 @@
 
   function toggleSlotForm() {
     const formCard = document.getElementById('slotFormCard');
-    formCard.style.display = formCard.style.display === 'none' ? 'block' : 'none';
-    if (formCard.style.display === 'block') {
+    formCard.hidden = !formCard.hidden;
+    if (!formCard.hidden) {
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
       tomorrow.setHours(10, 0, 0, 0);
@@ -241,24 +243,24 @@
 
     const modal = document.createElement('div');
     modal.id = 'rescheduleModal';
-    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;';
+    modal.className = 'admin-modal-overlay admin-modal-overlay-high';
     modal.innerHTML = `
-      <div style="background:#fff;border-radius:12px;padding:28px;width:440px;max-width:94vw;box-shadow:0 20px 60px rgba(0,0,0,.25);">
-        <div style="font-weight:700;font-size:16px;color:#1e3a5f;margin-bottom:4px;">↕️ Remarcar agendamento</div>
-        <div style="font-size:13px;color:#64748b;margin-bottom:16px;">Cliente: ${clientName}</div>
-        <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">Novo horário</label>
-        <select id="rescheduleSlotSelect" style="width:100%;padding:9px 10px;border:1px solid #CBD5E1;border-radius:6px;font-size:13px;margin-bottom:14px;">
+      <div class="admin-modal agenda-modal-card agenda-modal-card-md">
+        <div class="agenda-modal-title">↕️ Remarcar agendamento</div>
+        <div class="agenda-modal-subtitle">Cliente: ${clientName}</div>
+        <label class="agenda-modal-label">Novo horário</label>
+        <select id="rescheduleSlotSelect" class="portal-select agenda-modal-field agenda-modal-field-lg">
           ${futureSlots.map(slot => {
             const startDate = new Date(slot.starts_at);
             const endDate = new Date(slot.ends_at);
             return `<option value="${slot.id}">${startDate.toLocaleDateString('pt-BR')} ${String(startDate.getHours()).padStart(2, '0')}:${String(startDate.getMinutes()).padStart(2, '0')}–${String(endDate.getHours()).padStart(2, '0')}:${String(endDate.getMinutes()).padStart(2, '0')} · ${slot.title}</option>`;
           }).join('')}
         </select>
-        <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">Motivo / observação (obrigatório)</label>
-        <textarea id="rescheduleReason" rows="3" placeholder="Ex.: Solicitação da empresa, conflito de agenda..." style="width:100%;padding:9px 10px;border:1px solid #CBD5E1;border-radius:6px;font-size:13px;box-sizing:border-box;resize:vertical;margin-bottom:18px;"></textarea>
-        <div style="display:flex;gap:8px;justify-content:flex-end;">
-          <button onclick="document.getElementById('rescheduleModal').remove()" style="padding:8px 16px;border:1px solid #CBD5E1;border-radius:6px;background:#fff;cursor:pointer;font-size:13px;">Cancelar</button>
-          <button onclick="_submitReschedule('${bookingId}')" style="padding:8px 18px;border:none;border-radius:6px;background:#1e3a5f;color:#fff;cursor:pointer;font-size:13px;font-weight:600;">Remarcar</button>
+        <label class="agenda-modal-label">Motivo / observação (obrigatório)</label>
+        <textarea id="rescheduleReason" rows="3" class="portal-input agenda-modal-field agenda-modal-textarea" placeholder="Ex.: Solicitação da empresa, conflito de agenda..."></textarea>
+        <div class="admin-modal-actions agenda-modal-actions-tight">
+          <button onclick="document.getElementById('rescheduleModal').remove()" class="btn-ghost admin-modal-btn">Cancelar</button>
+          <button onclick="_submitReschedule('${bookingId}')" class="btn-primary admin-modal-btn">Remarcar</button>
         </div>
       </div>`;
     document.body.appendChild(modal);
@@ -292,57 +294,55 @@
 
     const modal = document.createElement('div');
     modal.id = 'bookForClientModal';
-    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;';
+    modal.className = 'admin-modal-overlay admin-modal-overlay-high';
     modal.innerHTML = `
-      <div style="background:#fff;border-radius:12px;padding:28px;width:480px;max-width:94vw;box-shadow:0 20px 60px rgba(0,0,0,.25);">
-        <div style="font-weight:700;font-size:16px;color:#1e3a5f;margin-bottom:16px;">📅 Agendar cliente neste horário</div>
+      <div class="admin-modal agenda-modal-card agenda-modal-card-lg">
+        <div class="agenda-modal-title agenda-modal-title-spaced">📅 Agendar cliente neste horário</div>
 
-        <div style="display:flex;gap:0;border:1px solid #E2E8F0;border-radius:8px;overflow:hidden;margin-bottom:18px;">
-          <button id="bfcTabExisting" onclick="_bfcTab('existing')"
-            style="flex:1;padding:8px;border:none;background:#1e3a5f;color:#fff;cursor:pointer;font-size:13px;font-weight:600;">
+        <div class="agenda-book-tab-strip">
+          <button id="bfcTabExisting" onclick="_bfcTab('existing')" class="agenda-book-tab agenda-book-tab-active">
             Cliente existente
           </button>
-          <button id="bfcTabExternal" onclick="_bfcTab('external')"
-            style="flex:1;padding:8px;border:none;background:#F1F5F9;color:#64748b;cursor:pointer;font-size:13px;font-weight:600;">
+          <button id="bfcTabExternal" onclick="_bfcTab('external')" class="agenda-book-tab">
             Novo contato externo
           </button>
         </div>
 
         <div id="bfcPanelExisting">
-          <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">Selecionar cliente</label>
-          <select id="bfcClientSelect" style="width:100%;padding:9px 10px;border:1px solid #CBD5E1;border-radius:6px;font-size:13px;margin-bottom:12px;">
+          <label class="agenda-modal-label">Selecionar cliente</label>
+          <select id="bfcClientSelect" class="portal-select agenda-modal-field">
             <option value="">— selecione —</option>
             ${clients.map(client => `<option value="${client.id}">${client.company || client.name} (${client.email})</option>`).join('')}
           </select>
         </div>
 
-        <div id="bfcPanelExternal" style="display:none;">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+        <div id="bfcPanelExternal" class="agenda-book-panel-hidden">
+          <div class="agenda-book-grid">
             <div>
-              <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Nome *</label>
-              <input id="bfcExtName" placeholder="Nome completo" style="width:100%;padding:8px 10px;border:1px solid #CBD5E1;border-radius:6px;font-size:13px;box-sizing:border-box;">
+              <label class="agenda-book-grid-label">Nome *</label>
+              <input id="bfcExtName" placeholder="Nome completo" class="portal-input agenda-book-grid-input">
             </div>
             <div>
-              <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">E-mail *</label>
-              <input id="bfcExtEmail" type="email" placeholder="email@empresa.com" style="width:100%;padding:8px 10px;border:1px solid #CBD5E1;border-radius:6px;font-size:13px;box-sizing:border-box;">
+              <label class="agenda-book-grid-label">E-mail *</label>
+              <input id="bfcExtEmail" type="email" placeholder="email@empresa.com" class="portal-input agenda-book-grid-input">
             </div>
             <div>
-              <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Telefone</label>
-              <input id="bfcExtPhone" placeholder="(11) 99999-9999" style="width:100%;padding:8px 10px;border:1px solid #CBD5E1;border-radius:6px;font-size:13px;box-sizing:border-box;">
+              <label class="agenda-book-grid-label">Telefone</label>
+              <input id="bfcExtPhone" placeholder="(11) 99999-9999" class="portal-input agenda-book-grid-input">
             </div>
             <div>
-              <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Empresa</label>
-              <input id="bfcExtCompany" placeholder="Empresa S.A." style="width:100%;padding:8px 10px;border:1px solid #CBD5E1;border-radius:6px;font-size:13px;box-sizing:border-box;">
+              <label class="agenda-book-grid-label">Empresa</label>
+              <input id="bfcExtCompany" placeholder="Empresa S.A." class="portal-input agenda-book-grid-input">
             </div>
           </div>
         </div>
 
-        <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Observações (opcional)</label>
-        <textarea id="bfcNotes" rows="2" placeholder="Pauta, objetivo da reunião..." style="width:100%;padding:8px 10px;border:1px solid #CBD5E1;border-radius:6px;font-size:13px;box-sizing:border-box;resize:vertical;margin-bottom:18px;"></textarea>
+        <label class="agenda-book-notes-label">Observações (opcional)</label>
+        <textarea id="bfcNotes" rows="2" placeholder="Pauta, objetivo da reunião..." class="portal-input agenda-modal-field agenda-modal-textarea"></textarea>
 
-        <div style="display:flex;gap:8px;justify-content:flex-end;">
-          <button onclick="document.getElementById('bookForClientModal').remove()" style="padding:8px 16px;border:1px solid #CBD5E1;border-radius:6px;background:#fff;cursor:pointer;font-size:13px;">Cancelar</button>
-          <button onclick="_submitBookForClient('${slotId}')" style="padding:8px 18px;border:none;border-radius:6px;background:#1e3a5f;color:#fff;cursor:pointer;font-size:13px;font-weight:600;">Confirmar agendamento</button>
+        <div class="admin-modal-actions agenda-modal-actions-tight">
+          <button onclick="document.getElementById('bookForClientModal').remove()" class="btn-ghost admin-modal-btn">Cancelar</button>
+          <button onclick="_submitBookForClient('${slotId}')" class="btn-primary admin-modal-btn">Confirmar agendamento</button>
         </div>
       </div>`;
     document.body.appendChild(modal);
@@ -351,10 +351,10 @@
 
   function switchBookForClientTab(mode) {
     window._bfcMode = mode;
-    document.getElementById('bfcPanelExisting').style.display = mode === 'existing' ? '' : 'none';
-    document.getElementById('bfcPanelExternal').style.display = mode === 'external' ? '' : 'none';
-    document.getElementById('bfcTabExisting').style.cssText += mode === 'existing' ? ';background:#1e3a5f;color:#fff;' : ';background:#F1F5F9;color:#64748b;';
-    document.getElementById('bfcTabExternal').style.cssText += mode === 'external' ? ';background:#1e3a5f;color:#fff;' : ';background:#F1F5F9;color:#64748b;';
+    document.getElementById('bfcPanelExisting').classList.toggle('agenda-book-panel-hidden', mode !== 'existing');
+    document.getElementById('bfcPanelExternal').classList.toggle('agenda-book-panel-hidden', mode !== 'external');
+    document.getElementById('bfcTabExisting').classList.toggle('agenda-book-tab-active', mode === 'existing');
+    document.getElementById('bfcTabExternal').classList.toggle('agenda-book-tab-active', mode === 'external');
   }
 
   async function submitBookForClient(slotId) {
@@ -410,23 +410,23 @@
 
     const modal = document.createElement('div');
     modal.id = 'bookDrawerModal';
-    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;';
+    modal.className = 'admin-modal-overlay admin-modal-overlay-high';
     modal.innerHTML = `
-      <div style="background:#fff;border-radius:12px;padding:28px;width:420px;max-width:94vw;box-shadow:0 20px 60px rgba(0,0,0,.25);">
-        <div style="font-weight:700;font-size:16px;color:#1e3a5f;margin-bottom:16px;">📅 Novo agendamento</div>
-        <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">Horário disponível</label>
-        <select id="bookDrawerSlot" style="width:100%;padding:9px 10px;border:1px solid #CBD5E1;border-radius:6px;font-size:13px;margin-bottom:12px;">
+      <div class="admin-modal agenda-modal-card agenda-modal-card-sm">
+        <div class="agenda-modal-title agenda-modal-title-spaced">📅 Novo agendamento</div>
+        <label class="agenda-modal-label">Horário disponível</label>
+        <select id="bookDrawerSlot" class="portal-select agenda-modal-field">
           ${futureSlots.map(slot => {
             const startDate = new Date(slot.starts_at);
             const endDate = new Date(slot.ends_at);
             return `<option value="${slot.id}">${startDate.toLocaleDateString('pt-BR')} ${String(startDate.getHours()).padStart(2, '0')}:${String(startDate.getMinutes()).padStart(2, '0')}–${String(endDate.getHours()).padStart(2, '0')}:${String(endDate.getMinutes()).padStart(2, '0')} · ${slot.title}</option>`;
           }).join('')}
         </select>
-        <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Observações (opcional)</label>
-        <textarea id="bookDrawerNotes" rows="2" placeholder="Pauta, objetivo..." style="width:100%;padding:8px 10px;border:1px solid #CBD5E1;border-radius:6px;font-size:13px;box-sizing:border-box;resize:vertical;margin-bottom:18px;"></textarea>
-        <div style="display:flex;gap:8px;justify-content:flex-end;">
-          <button onclick="document.getElementById('bookDrawerModal').remove()" style="padding:8px 16px;border:1px solid #CBD5E1;border-radius:6px;background:#fff;cursor:pointer;font-size:13px;">Cancelar</button>
-          <button onclick="_submitBookFromDrawer('${clientId}')" style="padding:8px 18px;border:none;border-radius:6px;background:#1e3a5f;color:#fff;cursor:pointer;font-size:13px;font-weight:600;">Agendar</button>
+        <label class="agenda-book-notes-label">Observações (opcional)</label>
+        <textarea id="bookDrawerNotes" rows="2" placeholder="Pauta, objetivo..." class="portal-input agenda-modal-field agenda-modal-textarea"></textarea>
+        <div class="admin-modal-actions agenda-modal-actions-tight">
+          <button onclick="document.getElementById('bookDrawerModal').remove()" class="btn-ghost admin-modal-btn">Cancelar</button>
+          <button onclick="_submitBookFromDrawer('${clientId}')" class="btn-primary admin-modal-btn">Agendar</button>
         </div>
       </div>`;
     document.body.appendChild(modal);
