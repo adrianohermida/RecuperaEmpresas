@@ -27,7 +27,14 @@ function fbToast(msg, type) {
 
 async function fbRead(res) {
   if (typeof window.readApiResponse === 'function') return window.readApiResponse(res);
-  return res.json();
+  const text = await res.text();
+  if (!text) return {};
+  try {
+    return JSON.parse(text);
+  } catch {
+    const cleaned = text.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
+    return { error: cleaned && !/^<!doctype/i.test(text.trim()) ? cleaned : `Erro ${res.status || ''}`.trim() };
+  }
 }
 
 /* ──────────────────────────────────────────────────────────────────────────────
@@ -285,8 +292,8 @@ async function fbOpenBuilder(formId, readOnly = false) {
   if (titleEl) titleEl.textContent = 'Carregando...';
 
   const res = await fetch(`/api/admin/forms/${formId}`, { headers: fbAuthH() });
-  if (!res.ok) { fbToast('Erro ao carregar formulário.','error'); return; }
-  const jf = await res.json();
+  const jf = await fbRead(res);
+  if (!res.ok) { fbToast(jf.error || 'Erro ao carregar formulário.','error'); return; }
   FB.currentForm = jf.form || jf;
 
   // Set title
@@ -343,7 +350,7 @@ async function fbAddPage() {
 
 async function fbRefreshForm() {
   const res = await fetch(`/api/admin/forms/${FB.currentFormId}`, { headers: fbAuthH() });
-  if (res.ok) { const j = await res.json(); FB.currentForm = j.form || j; }
+  if (res.ok) { const j = await fbRead(res); FB.currentForm = j.form || j; }
 }
 
 /* ──────────────────────────────────────────────────────────────────────────────

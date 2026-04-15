@@ -4873,6 +4873,10 @@ app.post('/api/admin/invoices', requireAdmin, async (req, res) => {
     if (!user_id || !description || !amount_cents || !due_date) {
       return res.status(400).json({ error: 'user_id, description, amount_cents e due_date são obrigatórios.' });
     }
+    const { data: invoiceUser, error: invoiceUserError } = await sb.from('re_users').select('id,email,name,company').eq('id', user_id).single();
+    if (invoiceUserError || !invoiceUser) {
+      return res.status(400).json({ error: 'Cliente informado não foi encontrado para a cobrança.', diagnostic: { route: '/api/admin/invoices', user_id } });
+    }
     const basePayload = {
       user_id,
       description,
@@ -4926,7 +4930,16 @@ app.post('/api/admin/invoices', requireAdmin, async (req, res) => {
     const { data: inv, error } = invoiceInsert;
     if (error) {
       if (isSchemaCompatibilityError(error.message, ['re_invoices', 'user_id', 'description', 'amount_cents', 'due_date', 'status', 'payment_method', 'bank_data', 'notes', 'created_by'])) {
-        return res.status(503).json({ error: 'Cobranças temporariamente indisponíveis até concluir a atualização do banco.' });
+        return res.status(503).json({
+          error: 'Cobranças temporariamente indisponíveis até concluir a atualização do banco.',
+          diagnostic: buildRouteDiagnostic('/api/admin/invoices', error, [
+            { payload: basePayload, requiredColumns: ['user_id', 'description', 'amount_cents', 'due_date'], returningColumns: invoiceReturningColumns },
+            { payload: { ...basePayload, payment_method: null }, requiredColumns: ['user_id', 'description', 'amount_cents', 'due_date'], returningColumns: invoiceReturningColumns },
+            { payload: { ...basePayload, created_by: null }, requiredColumns: ['user_id', 'description', 'amount_cents', 'due_date'], returningColumns: invoiceReturningColumns },
+            { payload: { ...basePayload, bank_data: null }, requiredColumns: ['user_id', 'description', 'amount_cents', 'due_date'], returningColumns: invoiceReturningColumns },
+            { payload: { ...basePayload, notes: null }, requiredColumns: ['user_id', 'description', 'amount_cents', 'due_date'], returningColumns: invoiceReturningColumns },
+          ]),
+        });
       }
       return res.status(500).json({ error: error.message });
     }
