@@ -13,6 +13,7 @@ const https        = require('https');
 const { createClient } = require('@supabase/supabase-js');
 const XLSX    = require('xlsx');
 const PDFDoc  = require('pdfkit');
+const rateLimit = require('express-rate-limit');
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 const PORT       = process.env.PORT       || 3000;
@@ -772,6 +773,45 @@ app.use((req, res, next) => {
   if (req.method === 'OPTIONS') return res.sendStatus(204);
   next();
 });
+
+// ── Rate limiting ─────────────────────────────────────────────────────────────
+// Auth endpoints: 20 tentativas / 15 min por IP (login, register, forgot-password)
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Muitas tentativas. Tente novamente em 15 minutos.' },
+  skip: (req) => process.env.NODE_ENV === 'test',
+});
+app.use('/api/auth/login',               authLimiter);
+app.use('/api/auth/register',            authLimiter);
+app.use('/api/auth/forgot-password',     authLimiter);
+app.use('/api/auth/reset-password',      authLimiter);
+app.use('/api/auth/resend-confirmation', authLimiter);
+
+// API geral: 300 req / min por IP (protege contra flood/scraping)
+const apiLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 300,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Limite de requisições atingido. Tente novamente em instantes.' },
+  skip: (req) => process.env.NODE_ENV === 'test',
+});
+app.use('/api/', apiLimiter);
+
+// Upload de arquivos: 10 uploads / 10 min por IP
+const uploadLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Muitos uploads. Aguarde 10 minutos.' },
+  skip: (req) => process.env.NODE_ENV === 'test',
+});
+app.use('/api/documents/upload', uploadLimiter);
+app.use('/api/submit',           uploadLimiter);
 
 // Stripe webhook needs raw body — must be before express.json()
 app.use('/api/stripe/webhook', express.raw({ type: 'application/json' }));
@@ -4147,6 +4187,42 @@ app.get('/api/admin/audit-log', requireAdmin, async (req, res) => {
   } catch (e) {
     console.error('[AUDIT LOG GET]', e.message);
     res.json({ entries: [] });
+  }
+});
+
+// Audit log export CSV (sem paginação — retorna até 10.000 registros)
+app.get('/api/admin/audit-log/export', requireAdmin, async (req, res) => {
+  try {
+    const { entity_type, actor_id, from, to } = req.query;
+    let q = sb.from('re_audit_log')
+      .select('ts,actor_id,actor_email,action,entity_type,entity_id,details')
+      .order('ts', { ascending: false })
+      .limit(10000);
+    if (entity_type) q = q.eq('entity_type', entity_type);
+    if (actor_id)    q = q.eq('actor_id', actor_id);
+    if (from)        q = q.gte('ts', from);
+    if (to)          q = q.lte('ts', to);
+    const { data: rows } = await q;
+
+    const header = ['Data/Hora', 'Actor ID', 'E-mail', 'Ação', 'Entidade', 'Entidade ID', 'Detalhes'];
+    const csvRows = (rows || []).map(r => [
+      new Date(r.ts).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }),
+      r.actor_id   || '',
+      r.actor_email|| '',
+      r.action     || '',
+      r.entity_type|| '',
+      r.entity_id  || '',
+      r.details ? JSON.stringify(r.details) : '',
+    ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(','));
+
+    const csv = [header.join(','), ...csvRows].join('\r\n');
+    const filename = `audit_log_${new Date().toISOString().slice(0,10)}.csv`;
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send('\uFEFF' + csv); // BOM para Excel abrir corretamente
+  } catch (e) {
+    console.error('[AUDIT LOG EXPORT]', e.message);
+    res.status(500).json({ error: 'Erro ao exportar log.' });
   }
 });
 

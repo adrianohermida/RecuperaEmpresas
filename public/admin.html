@@ -612,10 +612,16 @@
           <div class="section-title">Auditoria</div>
           <div class="section-sub">Registro detalhado de ações no sistema</div>
         </div>
-        <button class="btn-ghost" onclick="loadAuditLog()">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/></svg>
-          Atualizar
-        </button>
+        <div style="display:flex;gap:8px;">
+          <button class="btn-ghost" onclick="loadAuditLog()">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/></svg>
+            Atualizar
+          </button>
+          <button class="btn-ghost" onclick="exportAuditLog()" title="Exportar CSV">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Exportar CSV
+          </button>
+        </div>
       </div>
 
       <!-- Filters -->
@@ -2673,6 +2679,29 @@ async function loadAuditLog() {
     wrap.innerHTML = '<div style="padding:20px;color:var(--danger);">Erro ao carregar auditoria.</div>';
     console.error('[AUDIT LOG]', e.message);
   }
+}
+
+function exportAuditLog() {
+  const type = document.getElementById('auditFilterType')?.value || '';
+  const from = document.getElementById('auditFilterFrom')?.value || '';
+  const to   = document.getElementById('auditFilterTo')?.value   || '';
+  const params = new URLSearchParams();
+  if (type) params.set('entity_type', type);
+  if (from) params.set('from', from);
+  if (to)   params.set('to', to);
+  const token = localStorage.getItem('re_admin_token') || localStorage.getItem('re_token') || '';
+  // Use hidden anchor to trigger download with auth header via fetch
+  fetch(`/api/admin/audit-log/export?${params}`, { headers: { Authorization: 'Bearer ' + token } })
+    .then(r => r.blob())
+    .then(blob => {
+      const url = URL.createObjectURL(blob);
+      const a   = document.createElement('a');
+      a.href    = url;
+      a.download = `audit_log_${new Date().toISOString().slice(0,10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    })
+    .catch(() => showToast('Erro ao exportar log.', 'error'));
 }
 
 function toggleAuditDetail(i) {
