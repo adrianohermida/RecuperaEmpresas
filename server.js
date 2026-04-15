@@ -903,6 +903,10 @@ function isSchemaCompatibilityError(message, hints = []) {
   return hints.some((hint) => text.includes(String(hint).toLowerCase()));
 }
 
+function isCompanyMembersSchemaError(message) {
+  return isSchemaCompatibilityError(message, ['re_company_users', 'company_id', 'password_hash', 'invited_at', 'last_login', 'role', 'active']);
+}
+
 async function selectWithColumnFallback(table, options) {
   let columns = [...(options.columns || [])];
   let orderBy = [...(options.orderBy || [])];
@@ -2107,8 +2111,15 @@ app.post('/api/company/members', requireAuth, async (req, res) => {
   if (role && !ROLES.includes(role)) return res.status(400).json({ error: 'Papel inválido.' });
 
   // Check uniqueness
-  const { data: existing } = await sb.from('re_company_users')
+  const { data: existing, error: existingError } = await sb.from('re_company_users')
     .select('id').eq('company_id', companyId).eq('email', email.toLowerCase()).single();
+  if (existingError && !String(existingError.message || '').toLowerCase().includes('multiple') && !String(existingError.message || '').toLowerCase().includes('json object requested')) {
+    if (isCompanyMembersSchemaError(existingError.message)) {
+      console.warn('[COMPANY MEMBERS CREATE] recurso multiusuário indisponível neste schema:', existingError.message);
+      return res.status(503).json({ error: 'Recurso de equipe indisponível neste ambiente no momento.' });
+    }
+    return res.status(500).json({ error: existingError.message });
+  }
   if (existing) return res.status(409).json({ error: 'E-mail já cadastrado nesta empresa.' });
 
   const hash = await bcrypt.hash(password, 10);
@@ -2120,7 +2131,13 @@ app.post('/api/company/members', requireAuth, async (req, res) => {
     password_hash: hash,
   }, { requiredColumns: ['company_id', 'name', 'email', 'role', 'password_hash'] });
 
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) {
+    if (isCompanyMembersSchemaError(error.message)) {
+      console.warn('[COMPANY MEMBERS CREATE] recurso multiusuário indisponível neste schema:', error.message);
+      return res.status(503).json({ error: 'Recurso de equipe indisponível neste ambiente no momento.' });
+    }
+    return res.status(500).json({ error: error.message });
+  }
   res.json({ success: true, member });
 });
 
@@ -2919,7 +2936,7 @@ app.post('/api/support/ticket', requireAuth, async (req, res) => {
     priority: 2, status: 2, tags: ['portal']
   });
   if (result.ok) res.json({ success: true, ticket: result.data });
-  else res.status(500).json({ error: 'Erro ao criar ticket. Tente novamente.' });
+  else res.status(503).json({ error: 'Suporte temporariamente indisponível. Tente novamente mais tarde.' });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════

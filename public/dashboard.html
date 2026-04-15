@@ -1044,6 +1044,11 @@ function toggleNewTicketForm() {
   card.style.display = card.style.display === 'none' ? 'block' : 'none';
 }
 
+async function dashboardReadResponse(res) {
+  if (typeof window.readApiResponse === 'function') return window.readApiResponse(res);
+  return res.json();
+}
+
 async function loadSupport() {
   const el = document.getElementById('ticketList');
   el.innerHTML = '<div style="padding:16px;color:var(--text-muted);font-size:14px;">Carregando...</div>';
@@ -1093,7 +1098,7 @@ async function submitTicket() {
     method: 'POST', headers: authH(),
     body: JSON.stringify({ subject, description: desc })
   });
-  const json = await res.json();
+  const json = await dashboardReadResponse(res);
   if (json.success) {
     showToast('Chamado aberto com sucesso!', 'success');
     document.getElementById('ticketSubject').value = '';
@@ -1653,8 +1658,9 @@ async function loadMembers() {
   if (!el) return;
   el.innerHTML = '<div style="padding:16px;color:var(--text-muted);font-size:14px;">Carregando...</div>';
   const res = await fetch('/api/company/members', { headers: authH() });
-  if (!res.ok) { el.innerHTML = '<div style="padding:16px;color:#ef4444;">Erro ao carregar equipe.</div>'; return; }
-  const { members } = await res.json();
+  const j = await dashboardReadResponse(res);
+  if (!res.ok) { el.innerHTML = `<div style="padding:16px;color:#ef4444;">${j.error || 'Erro ao carregar equipe.'}</div>`; return; }
+  const { members = [] } = j;
   if (!members.length) {
     el.innerHTML = `<div class="empty-state">
       <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
@@ -1710,7 +1716,7 @@ async function addMember() {
     method: 'POST', headers: authH(),
     body: JSON.stringify({ name, email, role, password })
   });
-  const json = await res.json();
+  const json = await dashboardReadResponse(res);
   if (res.ok) {
     showToast(`${name} adicionado com sucesso!`, 'success');
     document.getElementById('memberName').value = '';
@@ -1729,7 +1735,7 @@ async function toggleMemberActive(memberId, active) {
     body: JSON.stringify({ active })
   });
   if (res.ok) { showToast(active ? 'Membro ativado.' : 'Membro desativado.', 'success'); loadMembers(); }
-  else { const j = await res.json(); showToast(j.error || 'Erro.', 'error'); }
+  else { const j = await dashboardReadResponse(res); showToast(j.error || 'Erro.', 'error'); }
 }
 
 async function removeMember(memberId, name) {
@@ -1738,7 +1744,7 @@ async function removeMember(memberId, name) {
     method: 'DELETE', headers: authH()
   });
   if (res.ok) { showToast('Membro removido.', 'success'); loadMembers(); }
-  else { const j = await res.json(); showToast(j.error || 'Erro ao remover.', 'error'); }
+  else { const j = await dashboardReadResponse(res); showToast(j.error || 'Erro ao remover.', 'error'); }
 }
 
 // ── Agenda com créditos ───────────────────────────────────────────────────────
