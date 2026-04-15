@@ -267,13 +267,13 @@
       </div>
 
       <!-- Chapter comment modal -->
-      <div id="commentModal" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:500;align-items:center;justify-content:center;">
-        <div style="background:#fff;border-radius:14px;padding:28px;max-width:480px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.2);">
-          <h3 style="font-size:16px;font-weight:700;margin-bottom:12px;" id="commentModalTitle">Adicionar comentário</h3>
-          <textarea id="commentText" class="portal-input" rows="4" style="resize:vertical;" placeholder="Descreva sua solicitação ou comentário..."></textarea>
-          <div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end;">
-            <button class="btn-ghost" onclick="closeCommentModal()">Cancelar</button>
-            <button class="btn-primary" onclick="submitComment()">Enviar</button>
+      <div id="commentModal" class="admin-modal-overlay admin-modal-overlay-high dashboard-modal-hidden">
+        <div class="admin-modal dashboard-comment-modal">
+          <h3 class="admin-modal-title dashboard-comment-modal-title" id="commentModalTitle">Adicionar comentário</h3>
+          <textarea id="commentText" class="portal-input admin-modal-textarea" rows="4" placeholder="Descreva sua solicitação ou comentário..."></textarea>
+          <div class="admin-modal-actions dashboard-comment-modal-actions">
+            <button class="btn-ghost admin-modal-btn" onclick="closeCommentModal()">Cancelar</button>
+            <button class="btn-primary admin-modal-btn" onclick="submitComment()">Enviar</button>
           </div>
         </div>
       </div>
@@ -344,16 +344,16 @@
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
         </div>
-        <div class="portal-card-body" style="padding:20px;">
-          <div class="form-row" style="margin-bottom:14px;">
+        <div class="portal-card-body dashboard-form-stack">
+          <div class="form-row dashboard-form-row">
             <label class="form-label-sm">Assunto</label>
             <input class="portal-input" id="ticketSubject" placeholder="Descreva brevemente o problema"/>
           </div>
-          <div class="form-row" style="margin-bottom:14px;">
+          <div class="form-row dashboard-form-row">
             <label class="form-label-sm">Descrição</label>
             <textarea class="portal-input" id="ticketDesc" rows="4" placeholder="Forneça detalhes sobre sua solicitação..."></textarea>
           </div>
-          <div style="display:flex;gap:8px;justify-content:flex-end;">
+          <div class="dashboard-form-actions">
             <button class="btn-ghost" onclick="toggleNewTicketForm()">Cancelar</button>
             <button class="btn-primary" onclick="submitTicket()">Enviar chamado</button>
           </div>
@@ -364,7 +364,7 @@
       <div class="portal-card">
         <div class="portal-card-header">
           <span class="portal-card-title">Meus Chamados</span>
-          <button class="btn-ghost" style="font-size:13px;" onclick="loadSupport()">
+          <button class="btn-ghost admin-compact-btn" onclick="loadSupport()">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/></svg>
             Atualizar
           </button>
@@ -386,44 +386,44 @@
           <div class="section-sub">Reserve horários usando seus créditos de consultoria</div>
         </div>
         <!-- Credits badge -->
-        <div style="display:flex;align-items:center;gap:10px;">
-          <div id="creditsBadge" style="background:#1e3a5f;color:#fff;padding:8px 16px;border-radius:24px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:7px;">
+        <div class="dashboard-credits-toolbar">
+          <div id="creditsBadge" class="dashboard-credits-badge">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
             <span id="creditsCount">—</span> crédito(s)
           </div>
-          <button class="btn-primary" onclick="buyCredits()" style="font-size:13px;padding:8px 14px;">
+          <button class="btn-primary admin-compact-btn" onclick="buyCredits()">
             Comprar créditos
           </button>
         </div>
       </div>
 
       <!-- Buy credits info -->
-      <div id="creditsBuyPanel" style="display:none;background:#EFF6FF;border:1px solid #BFDBFE;border-radius:10px;padding:18px;margin-bottom:20px;">
-        <div style="font-weight:700;font-size:14px;color:#1e3a5f;margin-bottom:12px;">Pacotes de créditos</div>
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;">
-          <div onclick="checkoutCredits(1)"  style="cursor:pointer;background:#fff;border:2px solid #BFDBFE;border-radius:8px;padding:12px;text-align:center;transition:border-color .2s;" onmouseover="this.style.borderColor='#2563eb'" onmouseout="this.style.borderColor='#BFDBFE'">
-            <div style="font-size:22px;font-weight:800;color:#1e3a5f;">1</div>
-            <div style="font-size:11px;color:#64748b;margin:2px 0;">crédito</div>
-            <div style="font-size:13px;font-weight:700;color:#2563eb;">R$ 297</div>
-          </div>
-          <div onclick="checkoutCredits(3)"  style="cursor:pointer;background:#fff;border:2px solid #BFDBFE;border-radius:8px;padding:12px;text-align:center;transition:border-color .2s;" onmouseover="this.style.borderColor='#2563eb'" onmouseout="this.style.borderColor='#BFDBFE'">
-            <div style="font-size:22px;font-weight:800;color:#1e3a5f;">3</div>
-            <div style="font-size:11px;color:#64748b;margin:2px 0;">créditos</div>
-            <div style="font-size:13px;font-weight:700;color:#2563eb;">R$ 797</div>
-          </div>
-          <div onclick="checkoutCredits(5)"  style="cursor:pointer;background:#fff;border:2px solid #BFDBFE;border-radius:8px;padding:12px;text-align:center;position:relative;transition:border-color .2s;border-color:#2563eb;" onmouseover="this.style.borderColor='#1e3a5f'" onmouseout="this.style.borderColor='#2563eb'">
-            <div style="position:absolute;top:-8px;left:50%;transform:translateX(-50%);background:#2563eb;color:#fff;font-size:9px;font-weight:700;padding:2px 8px;border-radius:10px;">POPULAR</div>
-            <div style="font-size:22px;font-weight:800;color:#1e3a5f;">5</div>
-            <div style="font-size:11px;color:#64748b;margin:2px 0;">créditos</div>
-            <div style="font-size:13px;font-weight:700;color:#2563eb;">R$ 1.197</div>
-          </div>
-          <div onclick="checkoutCredits(10)" style="cursor:pointer;background:#fff;border:2px solid #BFDBFE;border-radius:8px;padding:12px;text-align:center;transition:border-color .2s;" onmouseover="this.style.borderColor='#2563eb'" onmouseout="this.style.borderColor='#BFDBFE'">
-            <div style="font-size:22px;font-weight:800;color:#1e3a5f;">10</div>
-            <div style="font-size:11px;color:#64748b;margin:2px 0;">créditos</div>
-            <div style="font-size:13px;font-weight:700;color:#2563eb;">R$ 1.970</div>
-          </div>
+      <div id="creditsBuyPanel" class="dashboard-credits-panel" style="display:none;">
+        <div class="dashboard-credits-panel-title">Pacotes de créditos</div>
+        <div class="dashboard-credits-grid">
+          <button type="button" class="dashboard-credit-pack" onclick="checkoutCredits(1)">
+            <div class="dashboard-credit-pack-count">1</div>
+            <div class="dashboard-credit-pack-label">crédito</div>
+            <div class="dashboard-credit-pack-price">R$ 297</div>
+          </button>
+          <button type="button" class="dashboard-credit-pack" onclick="checkoutCredits(3)">
+            <div class="dashboard-credit-pack-count">3</div>
+            <div class="dashboard-credit-pack-label">créditos</div>
+            <div class="dashboard-credit-pack-price">R$ 797</div>
+          </button>
+          <button type="button" class="dashboard-credit-pack dashboard-credit-pack-featured" onclick="checkoutCredits(5)">
+            <div class="dashboard-credit-pack-popular">POPULAR</div>
+            <div class="dashboard-credit-pack-count">5</div>
+            <div class="dashboard-credit-pack-label">créditos</div>
+            <div class="dashboard-credit-pack-price">R$ 1.197</div>
+          </button>
+          <button type="button" class="dashboard-credit-pack" onclick="checkoutCredits(10)">
+            <div class="dashboard-credit-pack-count">10</div>
+            <div class="dashboard-credit-pack-label">créditos</div>
+            <div class="dashboard-credit-pack-price">R$ 1.970</div>
+          </button>
         </div>
-        <button class="btn-ghost" onclick="toggleCreditsPanel()" style="font-size:12px;">Fechar</button>
+        <button class="btn-ghost dashboard-credit-close" onclick="toggleCreditsPanel()">Fechar</button>
       </div>
 
       <!-- Slots list -->
@@ -435,10 +435,10 @@
       </div>
 
       <!-- Credit history -->
-      <div style="margin-top:24px;">
-        <div style="font-size:14px;font-weight:700;color:#1e3a5f;margin-bottom:10px;">Histórico de créditos</div>
+      <div class="dashboard-credits-history">
+        <div class="dashboard-credits-history-title">Histórico de créditos</div>
         <div id="creditsHistory">
-          <div style="padding:12px;color:var(--text-muted);font-size:13px;">Carregando...</div>
+          <div class="dashboard-inline-loading-sm">Carregando...</div>
         </div>
       </div>
     </div>
@@ -452,7 +452,7 @@
         </div>
       </div>
 
-      <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:24px;">
+      <div class="stats-grid dashboard-finance-stats-grid">
         <div class="stat-card green">
           <div class="stat-icon">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
@@ -480,7 +480,7 @@
       <div class="portal-card">
         <div class="portal-card-header">
           <span class="portal-card-title">Boletos e Faturas</span>
-          <button class="btn-primary" style="font-size:13px;padding:7px 14px;" onclick="requestInvoice()">
+          <button class="btn-primary dashboard-inline-btn-sm" onclick="requestInvoice()">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             Solicitar 2ª via
           </button>
@@ -494,9 +494,9 @@
       </div>
 
       <!-- Stripe info banner -->
-      <div class="portal-card" id="stripeNotice" style="display:none;">
-        <div class="portal-card-body" style="padding:20px;">
-          <div style="display:flex;align-items:center;gap:12px;color:var(--text-muted);font-size:13px;">
+      <div class="portal-card dashboard-hidden-card" id="stripeNotice">
+        <div class="portal-card-body dashboard-card-body-default">
+          <div class="dashboard-info-inline-row">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
             Os pagamentos online via cartão de crédito estarão disponíveis em breve.
           </div>
@@ -504,7 +504,7 @@
       </div>
 
       <!-- Internal Invoices (boletos bancários) -->
-      <div class="portal-card" style="margin-top:20px;">
+      <div class="portal-card dashboard-card-spaced-top">
         <div class="portal-card-header">
           <span class="portal-card-title">Boletos Bancários</span>
         </div>
@@ -525,8 +525,8 @@
           <div class="section-sub">Contrate serviços especializados para sua empresa</div>
         </div>
       </div>
-      <div id="marketplaceGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;margin-bottom:24px;">
-        <div style="padding:24px;text-align:center;color:var(--text-muted);font-size:13px;grid-column:1/-1;">Carregando serviços...</div>
+      <div id="marketplaceGrid" class="dashboard-marketplace-grid">
+        <div class="dashboard-grid-empty-state">Carregando serviços...</div>
       </div>
       <div class="portal-card">
         <div class="portal-card-header">
@@ -548,20 +548,20 @@
           <div class="section-title">Documentos</div>
           <div class="section-sub">Envie e acompanhe o status de análise dos seus documentos</div>
         </div>
-        <button class="btn-primary" style="font-size:13px;" onclick="toggleDocUploadForm()">
+        <button class="btn-primary admin-compact-btn" onclick="toggleDocUploadForm()">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           Enviar documento
         </button>
       </div>
 
       <!-- Upload form -->
-      <div class="portal-card" id="docUploadCard" style="display:none;margin-bottom:16px;">
+      <div class="portal-card dashboard-hidden-card dashboard-card-spaced" id="docUploadCard">
         <div class="portal-card-header">
           <span class="portal-card-title">Novo documento</span>
-          <button class="btn-ghost" style="font-size:13px;" onclick="toggleDocUploadForm()">Cancelar</button>
+          <button class="btn-ghost admin-compact-btn" onclick="toggleDocUploadForm()">Cancelar</button>
         </div>
-        <div class="portal-card-body" style="padding:20px;">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+        <div class="portal-card-body dashboard-card-body-default">
+          <div class="dashboard-two-col-grid dashboard-form-row">
             <div>
               <label class="form-label-sm">Tipo de documento</label>
               <select class="portal-select" id="docTypeSelect">
@@ -577,24 +577,24 @@
               </select>
             </div>
             <div>
-              <label class="form-label-sm">Nome / descrição <span style="color:var(--text-muted);font-weight:400;">(opcional)</span></label>
+              <label class="form-label-sm">Nome / descrição <span class="dashboard-muted-inline-note">(opcional)</span></label>
               <input type="text" class="portal-input" id="docNameInput" placeholder="Ex: DRE Jan–Dez 2024"/>
             </div>
           </div>
-          <div id="docDropZone" style="border:2px dashed var(--border);border-radius:10px;padding:28px;text-align:center;cursor:pointer;transition:all .2s;"
+          <div id="docDropZone" class="dashboard-doc-dropzone"
                onclick="document.getElementById('docFileInput').click()"
                ondragover="event.preventDefault();this.style.borderColor='var(--primary)'"
                ondragleave="this.style.borderColor='var(--border)'"
                ondrop="handleDocDrop(event)">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5" style="margin-bottom:8px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-            <div style="font-size:13px;color:var(--text-muted);" id="docDropLabel">Clique ou arraste o arquivo aqui</div>
-            <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">PDF, Word, Excel, imagem — até 30 MB</div>
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5" class="dashboard-doc-dropzone-icon"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            <div class="dashboard-doc-dropzone-label" id="docDropLabel">Clique ou arraste o arquivo aqui</div>
+            <div class="dashboard-doc-dropzone-help">PDF, Word, Excel, imagem — até 30 MB</div>
           </div>
-          <input type="file" id="docFileInput" style="display:none"
+          <input type="file" id="docFileInput" class="dashboard-file-input-hidden"
                  accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.zip,.rar"
                  onchange="handleDocFileSelect(this)"/>
-          <div style="margin-top:12px;text-align:right;">
-            <button class="btn-primary" id="docSubmitBtn" onclick="submitDocument()" disabled style="opacity:.5;">
+          <div class="dashboard-doc-submit-row">
+            <button class="btn-primary" id="docSubmitBtn" onclick="submitDocument()" disabled>
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
               Enviar
             </button>
@@ -620,27 +620,27 @@
           <div class="section-title">Equipe da Empresa</div>
           <div class="section-sub">Gerencie os usuários com acesso ao portal desta empresa.</div>
         </div>
-        <button class="btn-primary" id="addMemberBtn" onclick="toggleMemberForm()" style="font-size:13px;padding:8px 14px;gap:6px;">
+        <button class="btn-primary admin-compact-btn dashboard-inline-flex-btn" id="addMemberBtn" onclick="toggleMemberForm()">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           Adicionar membro
         </button>
       </div>
 
       <!-- Add member form -->
-      <div id="memberForm" style="display:none;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px;padding:20px;margin-bottom:20px;">
-        <div style="font-weight:600;font-size:14px;color:#1e3a5f;margin-bottom:14px;">Novo membro</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div id="memberForm" class="dashboard-member-form dashboard-hidden-panel">
+        <div class="dashboard-member-form-title">Novo membro</div>
+        <div class="dashboard-two-col-grid">
           <div>
-            <label style="font-size:12px;color:#64748b;font-weight:500;display:block;margin-bottom:4px;">Nome completo *</label>
-            <input id="memberName" type="text" placeholder="Nome do usuário" style="width:100%;padding:8px 10px;border:1px solid #CBD5E1;border-radius:6px;font-size:13px;box-sizing:border-box;">
+            <label class="dashboard-field-label">Nome completo *</label>
+            <input id="memberName" type="text" placeholder="Nome do usuário" class="dashboard-field-input">
           </div>
           <div>
-            <label style="font-size:12px;color:#64748b;font-weight:500;display:block;margin-bottom:4px;">E-mail *</label>
-            <input id="memberEmail" type="email" placeholder="email@empresa.com" style="width:100%;padding:8px 10px;border:1px solid #CBD5E1;border-radius:6px;font-size:13px;box-sizing:border-box;">
+            <label class="dashboard-field-label">E-mail *</label>
+            <input id="memberEmail" type="email" placeholder="email@empresa.com" class="dashboard-field-input">
           </div>
           <div>
-            <label style="font-size:12px;color:#64748b;font-weight:500;display:block;margin-bottom:4px;">Perfil de acesso *</label>
-            <select id="memberRole" style="width:100%;padding:8px 10px;border:1px solid #CBD5E1;border-radius:6px;font-size:13px;background:#fff;box-sizing:border-box;">
+            <label class="dashboard-field-label">Perfil de acesso *</label>
+            <select id="memberRole" class="dashboard-field-input dashboard-field-select">
               <option value="operacional">Operacional</option>
               <option value="financeiro">Financeiro</option>
               <option value="contador">Contador</option>
@@ -648,13 +648,13 @@
             </select>
           </div>
           <div>
-            <label style="font-size:12px;color:#64748b;font-weight:500;display:block;margin-bottom:4px;">Senha inicial *</label>
-            <input id="memberPassword" type="password" placeholder="Mínimo 6 caracteres" style="width:100%;padding:8px 10px;border:1px solid #CBD5E1;border-radius:6px;font-size:13px;box-sizing:border-box;">
+            <label class="dashboard-field-label">Senha inicial *</label>
+            <input id="memberPassword" type="password" placeholder="Mínimo 6 caracteres" class="dashboard-field-input">
           </div>
         </div>
-        <div style="margin-top:14px;display:flex;gap:8px;">
-          <button class="btn-primary" onclick="addMember()" style="font-size:13px;padding:8px 16px;">Adicionar</button>
-          <button class="btn-ghost" onclick="toggleMemberForm()" style="font-size:13px;padding:8px 14px;">Cancelar</button>
+        <div class="dashboard-form-actions dashboard-member-form-actions">
+          <button class="btn-primary admin-compact-btn" onclick="addMember()">Adicionar</button>
+          <button class="btn-ghost admin-compact-btn" onclick="toggleMemberForm()">Cancelar</button>
         </div>
       </div>
 
@@ -674,13 +674,13 @@
           <div class="section-title">Formulários</div>
           <div class="section-sub">Diagnósticos, pesquisas e avaliações atribuídos pela sua consultoria</div>
         </div>
-        <button class="btn-ghost" onclick="loadClientForms()" style="font-size:13px;padding:8px 14px;">
+        <button class="btn-ghost admin-compact-btn" onclick="loadClientForms()">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/></svg>
           Atualizar
         </button>
       </div>
-      <div id="fp-forms-list" style="display:flex;flex-direction:column;gap:12px;">
-        <div style="padding:24px;color:#94A3B8;text-align:center;">Carregando...</div>
+      <div id="fp-forms-list" class="dashboard-list-stack-sm">
+        <div class="dashboard-grid-empty-state dashboard-grid-empty-state-plain">Carregando...</div>
       </div>
     </div>
 
@@ -691,13 +691,13 @@
           <div class="section-title">Jornadas</div>
           <div class="section-sub">Seu progresso nas trilhas de formulários atribuídas pela consultoria</div>
         </div>
-        <button class="btn-ghost" onclick="loadClientJourneys()" style="font-size:13px;padding:8px 14px;">
+        <button class="btn-ghost admin-compact-btn" onclick="loadClientJourneys()">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/></svg>
           Atualizar
         </button>
       </div>
-      <div id="client-journeys-list" style="display:flex;flex-direction:column;gap:16px;">
-        <div style="padding:24px;color:#94A3B8;text-align:center;">Carregando...</div>
+      <div id="client-journeys-list" class="dashboard-list-stack-md">
+        <div class="dashboard-grid-empty-state dashboard-grid-empty-state-plain">Carregando...</div>
       </div>
     </div><!-- /sec-jornadas -->
 
@@ -705,24 +705,24 @@
 </div>
 
 <!-- Form Player Modal (fullscreen-style) -->
-<div id="fp-player-modal" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.7);z-index:400;align-items:flex-start;justify-content:center;overflow-y:auto;padding:24px 16px;">
-  <div style="background:#fff;border-radius:16px;width:100%;max-width:700px;box-shadow:0 24px 80px rgba(0,0,0,.25);overflow:hidden;">
+<div id="fp-player-modal" class="dashboard-player-modal-overlay" style="display:none;">
+  <div class="dashboard-player-modal-card">
     <!-- Modal header -->
-    <div style="padding:16px 24px;border-bottom:1px solid #F1F5F9;display:flex;align-items:center;gap:12px;background:#fff;position:sticky;top:0;z-index:10;">
-      <button onclick="fpClosePlayer()" style="background:none;border:none;color:#94A3B8;cursor:pointer;font-size:20px;line-height:1;padding:0;">←</button>
-      <div style="flex:1;min-width:0;">
-        <div id="fp-player-title" style="font-size:15px;font-weight:700;color:#1E293B;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Formulário</div>
-        <div style="display:flex;align-items:center;gap:8px;margin-top:4px;">
-          <div style="flex:1;height:4px;background:#E2E8F0;border-radius:99px;overflow:hidden;">
-            <div id="fp-player-progress" style="height:100%;background:linear-gradient(90deg,#1A56DB,#4B9EFF);border-radius:99px;width:0%;transition:width .4s;"></div>
+    <div class="dashboard-player-modal-header">
+      <button onclick="fpClosePlayer()" class="dashboard-player-modal-close">←</button>
+      <div class="dashboard-player-modal-header-copy">
+        <div id="fp-player-title" class="dashboard-player-modal-title">Formulário</div>
+        <div class="dashboard-player-modal-progress-row">
+          <div class="dashboard-player-modal-progress-track">
+            <div id="fp-player-progress" class="dashboard-player-modal-progress-fill"></div>
           </div>
-          <span id="fp-player-progress-label" style="font-size:11px;color:#94A3B8;white-space:nowrap;flex-shrink:0;">Página 1 de 1</span>
+          <span id="fp-player-progress-label" class="dashboard-player-modal-progress-label">Página 1 de 1</span>
         </div>
       </div>
     </div>
     <!-- Modal body -->
-    <div id="fp-player-content" style="padding:28px 32px 24px;">
-      <div style="padding:40px;text-align:center;color:#94A3B8;">Carregando...</div>
+    <div id="fp-player-content" class="dashboard-player-modal-content">
+      <div class="dashboard-player-modal-loading">Carregando...</div>
     </div>
   </div>
 </div>
@@ -870,7 +870,7 @@ function renderProgress(progress) {
 
   if (completed) {
     badge.textContent = 'Concluído'; badge.className = 'badge badge-green';
-    btnWrap.innerHTML = `<span style="color:var(--success);font-weight:600;font-size:13px;display:flex;align-items:center;gap:6px;">
+    btnWrap.innerHTML = `<span class="dashboard-progress-sent-label">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
       Onboarding enviado
     </span>`;
@@ -948,7 +948,7 @@ function renderPlan(chapters) {
     const checkIcon = done
       ? `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>`
       : ch.id;
-    previewHtml += `<div class="chapter-item" style="margin-bottom:6px;">
+    previewHtml += `<div class="chapter-item dashboard-chapter-preview-item">
       <div class="chapter-num${done?' done':''}">${checkIcon}</div>
       <div class="chapter-title">${ch.title}</div>
       <span class="badge ${st.cls}">${st.label}</span>
@@ -982,8 +982,8 @@ function renderTasks(tasks) {
     html += `<div class="task-item">
       <input type="checkbox" class="task-check" ${done?'checked':''} onchange="toggleTask('${t.id}',this.checked)"/>
       <div>
-        <div class="task-title" style="${done?'text-decoration:line-through;color:var(--text-muted)':''}">${t.title}</div>
-        ${t.description?`<div style="font-size:12px;color:var(--text-muted);margin-top:2px;">${t.description}</div>`:''}
+        <div class="task-title${done?' dashboard-task-title-done':''}">${t.title}</div>
+        ${t.description?`<div class="dashboard-task-description">${t.description}</div>`:''}
       </div>
       ${t.dueDate?`<div class="task-due">${new Date(t.dueDate).toLocaleDateString('pt-BR')}</div>`:''}
       <span class="badge ${done?'badge-green':'badge-amber'}">${done?'Concluída':'Pendente'}</span>
@@ -996,7 +996,7 @@ function renderTasks(tasks) {
   const previewTasks = pending.slice(0,3);
   if (preview) {
     if (!previewTasks.length) {
-      preview.innerHTML = `<div style="color:var(--success);font-weight:600;font-size:14px;display:flex;align-items:center;gap:6px;">
+      preview.innerHTML = `<div class="dashboard-task-empty-success">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
         Sem tarefas pendentes
       </div>`;
@@ -1049,7 +1049,7 @@ async function dashboardReadResponse(res) {
 
 async function loadSupport() {
   const el = document.getElementById('ticketList');
-  el.innerHTML = '<div style="padding:16px;color:var(--text-muted);font-size:14px;">Carregando...</div>';
+  el.innerHTML = '<div class="dashboard-section-loading">Carregando...</div>';
   const res = await fetch('/api/support/tickets', { headers: authH() });
   if (!res.ok) {
     el.innerHTML = '<div class="empty-state"><p>Erro ao carregar chamados.</p></div>';
@@ -1063,24 +1063,24 @@ async function loadSupport() {
     </div>`;
     return;
   }
-  let html = '<div style="overflow-x:auto;">';
-  html += `<table style="width:100%;border-collapse:collapse;font-size:13px;">
+  let html = '<div class="admin-table-wrap">';
+  html += `<table class="admin-simple-table">
     <thead>
-      <tr style="border-bottom:1px solid var(--border);">
-        <th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-weight:600;">#</th>
-        <th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-weight:600;">Assunto</th>
-        <th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-weight:600;">Status</th>
-        <th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-weight:600;">Criado em</th>
+      <tr>
+        <th>#</th>
+        <th>Assunto</th>
+        <th>Status</th>
+        <th>Criado em</th>
       </tr>
     </thead>
     <tbody>`;
   tickets.forEach(t => {
     const st = FD_STATUS[t.status] || { label: 'Desconhecido', cls: 'badge-gray' };
-    html += `<tr style="border-bottom:1px solid var(--border-light, #F1F5F9);">
-      <td style="padding:10px 12px;color:var(--text-muted);">#${t.id}</td>
-      <td style="padding:10px 12px;font-weight:500;">${t.subject || '-'}</td>
-      <td style="padding:10px 12px;"><span class="badge ${st.cls}">${st.label}</span></td>
-      <td style="padding:10px 12px;color:var(--text-muted);">${t.created_at ? new Date(t.created_at).toLocaleDateString('pt-BR') : '-'}</td>
+    html += `<tr>
+      <td class="admin-log-muted">#${t.id}</td>
+      <td class="dashboard-support-subject">${t.subject || '-'}</td>
+      <td><span class="badge ${st.cls}">${st.label}</span></td>
+      <td class="admin-log-muted">${t.created_at ? new Date(t.created_at).toLocaleDateString('pt-BR') : '-'}</td>
     </tr>`;
   });
   html += '</tbody></table></div>';
@@ -1209,7 +1209,7 @@ async function submitAppt() {
 // ── Financeiro ────────────────────────────────────────────────────────────────
 async function loadFinanceiro() {
   const el = document.getElementById('invoiceList');
-  el.innerHTML = '<div style="padding:16px;color:var(--text-muted);font-size:14px;">Carregando...</div>';
+  el.innerHTML = '<div class="dashboard-section-loading">Carregando...</div>';
   const res = await fetch('/api/financial/invoices', { headers: authH() });
   if (!res.ok) { el.innerHTML = '<div class="empty-state"><p>Erro ao carregar faturas.</p></div>'; return; }
   const { invoices = [], stripeConfigured } = await res.json();
@@ -1229,12 +1229,12 @@ async function loadFinanceiro() {
     </div>`;
     return;
   }
-  let html = '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:1px solid var(--border);">';
-  html += '<th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-weight:600;">Descrição</th>';
-  html += '<th style="text-align:right;padding:8px 12px;color:var(--text-muted);font-weight:600;">Valor</th>';
-  html += '<th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-weight:600;">Data</th>';
-  html += '<th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-weight:600;">Status</th>';
-  html += '<th style="padding:8px 12px;"></th>';
+  let html = '<div class="admin-table-wrap"><table class="admin-simple-table"><thead><tr>';
+  html += '<th>Descrição</th>';
+  html += '<th class="admin-invoice-col-amount">Valor</th>';
+  html += '<th>Data</th>';
+  html += '<th>Status</th>';
+  html += '<th></th>';
   html += '</tr></thead><tbody>';
   invoices.forEach(inv => {
     const paid = isPaid(inv);
@@ -1243,14 +1243,15 @@ async function loadFinanceiro() {
     const amtNum  = parseFloat(inv.amount || inv.amountPaid || 0);
     const amtFmt  = window.REShared.formatCurrencyBRL(amtNum);
     const dateFmt = inv.date ? window.REShared.formatDateBR(inv.date) : '-';
-    const pdfBtn  = inv.pdfUrl    ? `<a href="${inv.pdfUrl}" target="_blank" style="color:#1A56DB;font-size:12px;text-decoration:none;white-space:nowrap;">📄 PDF</a>` : '';
-    const linkBtn = inv.hostedUrl ? `<a href="${inv.hostedUrl}" target="_blank" style="color:#1A56DB;font-size:12px;text-decoration:none;white-space:nowrap;">Ver fatura</a>` : '';
-    html += `<tr style="border-bottom:1px solid var(--border-light,#F1F5F9);">
-      <td style="padding:10px 12px;font-weight:500;">${inv.description || 'Pagamento'}</td>
-      <td style="padding:10px 12px;text-align:right;font-weight:600;color:${paid?'#059669':'#1E293B'};">${amtFmt}</td>
-      <td style="padding:10px 12px;color:var(--text-muted);">${dateFmt}</td>
-      <td style="padding:10px 12px;"><span class="badge ${stBadge}">${stLabel}</span></td>
-      <td style="padding:10px 12px;display:flex;gap:8px;">${pdfBtn}${linkBtn}</td>
+    const amountClass = paid ? 'dashboard-finance-amount-paid' : 'dashboard-finance-amount';
+    const pdfBtn  = inv.pdfUrl ? `<a href="${inv.pdfUrl}" target="_blank" class="admin-invoice-action-link">📄 PDF</a>` : '';
+    const linkBtn = inv.hostedUrl ? `<a href="${inv.hostedUrl}" target="_blank" class="admin-invoice-action-link">Ver fatura</a>` : '';
+    html += `<tr>
+      <td class="admin-invoice-description">${inv.description || 'Pagamento'}</td>
+      <td class="${amountClass}">${amtFmt}</td>
+      <td class="admin-log-muted">${dateFmt}</td>
+      <td><span class="badge ${stBadge}">${stLabel}</span></td>
+      <td><div class="admin-invoice-actions">${pdfBtn}${linkBtn}</div></td>
     </tr>`;
   });
   html += '</tbody></table></div>';
@@ -1457,7 +1458,7 @@ async function deleteDocument(docId) {
 async function loadDocuments() {
   const el = document.getElementById('docList');
   if (!el) return;
-  el.innerHTML = '<div style="padding:16px;color:var(--text-muted);font-size:14px;">Carregando...</div>';
+  el.innerHTML = '<div class="dashboard-section-loading">Carregando...</div>';
 
   const res = await fetch('/api/documents', { headers: authH() });
   if (!res.ok) { el.innerHTML = '<div class="empty-state"><p>Erro ao carregar documentos.</p></div>'; return; }
@@ -1481,28 +1482,28 @@ async function loadDocuments() {
     const canDelete = ['pendente','ajuste_solicitado'].includes(doc.status);
     const comments = (doc.comments || []).filter(c => c.from === 'admin');
 
-    return `<div style="display:flex;align-items:flex-start;gap:14px;padding:14px 0;border-bottom:1px solid var(--border);">
-      <div style="background:#F1F5F9;border-radius:8px;padding:10px;flex-shrink:0;">
+    return `<div class="dashboard-doc-item">
+      <div class="dashboard-doc-icon">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
       </div>
-      <div style="flex:1;min-width:0;">
-        <div style="font-weight:600;font-size:13px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${doc.name}</div>
-        <div style="font-size:11px;color:var(--text-muted);">${tipo} &nbsp;·&nbsp; ${date}${size ? ' &nbsp;·&nbsp; ' + size : ''}</div>
-        ${comments.length ? `<div style="margin-top:8px;">
-          ${comments.map(c => `<div style="background:#FFFBEB;border-left:3px solid #FCD34D;padding:6px 10px;border-radius:0 6px 6px 0;font-size:12px;color:#78350F;margin-top:4px;">
+      <div class="dashboard-doc-copy">
+        <div class="dashboard-doc-name">${doc.name}</div>
+        <div class="dashboard-doc-meta">${tipo} &nbsp;·&nbsp; ${date}${size ? ' &nbsp;·&nbsp; ' + size : ''}</div>
+        ${comments.length ? `<div class="dashboard-doc-comments">
+          ${comments.map(c => `<div class="dashboard-doc-comment">
             <strong>Equipe:</strong> ${c.text}
           </div>`).join('')}
         </div>` : ''}
       </div>
-      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;flex-shrink:0;">
+      <div class="dashboard-doc-side">
         <span class="badge ${st.cls}">${st.label}</span>
-        <div style="display:flex;gap:6px;">
+        <div class="dashboard-doc-actions">
           <a href="${(window.RE_API_BASE || '').replace(/\/+$/, '')}/api/documents/${doc.id}/file?token=${getToken()}" target="_blank"
-             style="font-size:11px;color:var(--primary);text-decoration:none;display:flex;align-items:center;gap:3px;">
+             class="dashboard-doc-link">
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             Baixar
           </a>
-          ${canDelete ? `<button onclick="deleteDocument('${doc.id}')" style="font-size:11px;color:var(--error);background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:3px;">
+          ${canDelete ? `<button onclick="deleteDocument('${doc.id}')" class="dashboard-doc-delete">
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
             Remover
           </button>` : ''}
@@ -1586,16 +1587,16 @@ async function initFreshchat(user) {
   if (isImpersonating) {
     const banner = document.createElement('div');
     banner.id = 'impersonateBanner';
-    banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:10000;background:#1e40af;color:#fff;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:12px;padding:10px 16px;';
+    banner.className = 'dashboard-impersonation-banner';
     banner.innerHTML = `
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-      Visualizando portal como <strong style="margin:0 4px;">${user.name || user.email}</strong>
-      <button onclick="exitImpersonation()" style="background:rgba(255,255,255,0.2);border:none;color:#fff;font-size:12px;font-weight:600;padding:4px 12px;border-radius:6px;cursor:pointer;">
+      Visualizando portal como <strong class="dashboard-impersonation-name">${user.name || user.email}</strong>
+      <button onclick="exitImpersonation()" class="dashboard-impersonation-exit">
         Voltar ao painel admin
       </button>`;
     document.body.prepend(banner);
     // Push content down to make room for banner
-    document.querySelector('.header').style.marginTop = '41px';
+    document.querySelector('.header')?.classList.add('dashboard-header-impersonating');
   }
 
   // Set header
@@ -1654,10 +1655,10 @@ const ROLE_COLORS = {
 async function loadMembers() {
   const el = document.getElementById('membersList');
   if (!el) return;
-  el.innerHTML = '<div style="padding:16px;color:var(--text-muted);font-size:14px;">Carregando...</div>';
+  el.innerHTML = '<div class="dashboard-section-loading">Carregando...</div>';
   const res = await fetch('/api/company/members', { headers: authH() });
   const j = await dashboardReadResponse(res);
-  if (!res.ok) { el.innerHTML = `<div style="padding:16px;color:#ef4444;">${j.error || 'Erro ao carregar equipe.'}</div>`; return; }
+  if (!res.ok) { el.innerHTML = `<div class="dashboard-inline-error">${j.error || 'Erro ao carregar equipe.'}</div>`; return; }
   const { members = [] } = j;
   if (!members.length) {
     el.innerHTML = `<div class="empty-state">
@@ -1666,30 +1667,30 @@ async function loadMembers() {
     </div>`;
     return;
   }
-  el.innerHTML = `<div style="display:flex;flex-direction:column;gap:10px;">
+  el.innerHTML = `<div class="dashboard-member-list">
     ${members.map(m => `
-    <div style="background:#fff;border:1px solid #E2E8F0;border-radius:10px;padding:14px 16px;display:flex;align-items:center;gap:14px;">
-      <div style="width:40px;height:40px;border-radius:50%;background:${ROLE_COLORS[m.role]||'#6b7280'}22;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;color:${ROLE_COLORS[m.role]||'#6b7280'}">
+    <div class="dashboard-member-item">
+      <div class="dashboard-member-avatar" style="background:${ROLE_COLORS[m.role]||'#6b7280'}22;color:${ROLE_COLORS[m.role]||'#6b7280'}">
         ${(m.name||'?')[0].toUpperCase()}
       </div>
-      <div style="flex:1;min-width:0;">
-        <div style="font-weight:600;font-size:14px;color:#1e293b;">${m.name}</div>
-        <div style="font-size:12px;color:#64748b;">${m.email}</div>
+      <div class="dashboard-member-copy">
+        <div class="dashboard-member-name">${m.name}</div>
+        <div class="dashboard-member-email">${m.email}</div>
       </div>
-      <span style="background:${ROLE_COLORS[m.role]||'#6b7280'}18;color:${ROLE_COLORS[m.role]||'#6b7280'};font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;">
+      <span class="dashboard-member-role" style="background:${ROLE_COLORS[m.role]||'#6b7280'}18;color:${ROLE_COLORS[m.role]||'#6b7280'};">
         ${ROLE_LABELS[m.role]||m.role}
       </span>
-      <span style="font-size:11px;padding:3px 10px;border-radius:20px;${m.active ? 'background:#dcfce7;color:#16a34a;' : 'background:#fee2e2;color:#dc2626;'}">
+      <span class="dashboard-member-status ${m.active ? 'dashboard-member-status-active' : 'dashboard-member-status-inactive'}">
         ${m.active ? 'Ativo' : 'Inativo'}
       </span>
-      <div style="display:flex;gap:6px;">
+      <div class="dashboard-member-actions">
         <button onclick="toggleMemberActive('${m.id}',${!m.active})" title="${m.active ? 'Desativar' : 'Ativar'}"
-          style="background:none;border:1px solid #E2E8F0;border-radius:6px;padding:5px 8px;cursor:pointer;color:#64748b;font-size:11px;">
+          class="dashboard-member-action">
           ${m.active ? 'Desativar' : 'Ativar'}
         </button>
-        <button onclick="removeMember('${m.id}','${m.name.replace(/'/g,"\\'")}'))"
+        <button onclick="removeMember('${m.id}','${m.name.replace(/'/g,"\\'")}')"
           title="Remover membro"
-          style="background:none;border:1px solid #fecaca;border-radius:6px;padding:5px 8px;cursor:pointer;color:#ef4444;">
+          class="dashboard-member-action dashboard-member-action-danger">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
         </button>
       </div>
@@ -1760,7 +1761,7 @@ async function loadAgendaSlots() {
   const el = document.getElementById('slotsList');
   const histEl = document.getElementById('creditsHistory');
   if (!el) return;
-  el.innerHTML = '<div style="padding:16px;color:var(--text-muted);font-size:14px;">Carregando...</div>';
+  el.innerHTML = '<div class="dashboard-section-loading">Carregando...</div>';
 
   const [slotsRes, histRes] = await Promise.all([
     fetch('/api/agenda/slots', { headers: authH() }),
@@ -1779,50 +1780,49 @@ async function loadAgendaSlots() {
       </div>`;
     } else {
       const bal = credits_balance ?? 0;
-      el.innerHTML = `<div style="display:flex;flex-direction:column;gap:10px;">
+      el.innerHTML = `<div class="agenda-slot-list">
         ${slots.map(s => {
           const past    = new Date(s.starts_at) < new Date();
           const noSlots = !s.available && !s.my_booking;
-          const canBook = s.available && !s.my_booking && bal >= s.credits_cost && !past;
           return `
-          <div style="background:#fff;border:1px solid ${s.my_booking?'#2563eb':'#E2E8F0'};border-radius:10px;padding:14px 18px;${past?'opacity:.6':''}">
-            <div style="display:flex;align-items:center;gap:14px;">
-              <div style="min-width:58px;text-align:center;background:${s.my_booking?'#EFF6FF':'#F8FAFC'};border-radius:8px;padding:8px 4px;">
-                <div style="font-size:20px;font-weight:800;color:#1e3a5f;line-height:1;">${new Date(s.starts_at).getDate()}</div>
-                <div style="font-size:10px;color:#64748b;font-weight:600;">${MONTH_PT[new Date(s.starts_at).getMonth()]}</div>
+          <div class="agenda-slot-card${past ? ' agenda-slot-card-past' : ''}${s.my_booking ? ' dashboard-slot-card-booked' : ''}">
+            <div class="agenda-slot-header">
+              <div class="agenda-slot-date-card${s.my_booking ? ' dashboard-slot-date-card-booked' : ''}">
+                <div class="agenda-slot-day">${new Date(s.starts_at).getDate()}</div>
+                <div class="agenda-slot-month">${MONTH_PT[new Date(s.starts_at).getMonth()]}</div>
               </div>
-              <div style="flex:1;min-width:0;">
-                <div style="font-weight:700;font-size:14px;color:#1e293b;">${s.title}</div>
-                <div style="font-size:12px;color:#64748b;margin-top:2px;">
+              <div class="agenda-slot-main">
+                <div class="agenda-slot-title">${s.title}</div>
+                <div class="agenda-slot-meta">
                   ${fmtSlotTime(s.starts_at)} – ${fmtSlotTime(s.ends_at)} &nbsp;·&nbsp; ${s.duration_min}min
                   &nbsp;·&nbsp; ${s.credits_cost} crédito${s.credits_cost>1?'s':''}
                   ${s.location === 'presencial' ? '&nbsp;·&nbsp; 📍 Presencial' : '&nbsp;·&nbsp; 🔗 Online'}
                 </div>
-                ${s.meeting_link && s.my_booking_detail?.status === 'confirmed' ? `<div style="font-size:11px;margin-top:3px;"><a href="${s.meeting_link}" target="_blank" style="color:#1e3a5f;">🔗 Entrar na reunião</a></div>` : ''}
+                ${s.meeting_link && s.my_booking_detail?.status === 'confirmed' ? `<div class="agenda-slot-link-wrap"><a href="${s.meeting_link}" target="_blank" class="agenda-slot-link">🔗 Entrar na reunião</a></div>` : ''}
               </div>
               ${(() => {
                 const bd = s.my_booking_detail;
                 if (!bd) {
-                  if (noSlots) return '<span style="background:#F1F5F9;color:#94a3b8;font-size:11px;padding:4px 12px;border-radius:20px;">Lotado</span>';
-                  if (past)   return '<span style="background:#F1F5F9;color:#94a3b8;font-size:11px;padding:4px 12px;border-radius:20px;">Encerrado</span>';
-                  if (bal < s.credits_cost) return '<button onclick="buyCredits()" style="background:#FEF3C7;color:#92400e;border:1px solid #FDE68A;border-radius:6px;padding:6px 12px;font-size:11px;cursor:pointer;font-weight:600;">Comprar créditos</button>';
-                  return '<button onclick="bookSlot(\''+s.id+'\','+s.credits_cost+')" style="background:#1e3a5f;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:12px;cursor:pointer;font-weight:600;">Reservar</button>';
+                  if (noSlots) return '<span class="agenda-slot-status agenda-slot-status-full">Lotado</span>';
+                  if (past)   return '<span class="agenda-slot-status agenda-slot-status-past">Encerrado</span>';
+                  if (bal < s.credits_cost) return '<button onclick="buyCredits()" class="agenda-slot-action dashboard-slot-action-buy">Comprar créditos</button>';
+                  return '<button onclick="bookSlot(\''+s.id+'\','+s.credits_cost+')" class="agenda-slot-action dashboard-slot-action-primary">Reservar</button>';
                 }
-                if (bd.status === 'pending') return '<span style="background:#FEF3C7;color:#D97706;font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px;">Aguardando confirmação</span>'
-                  + '<button onclick="cancelBooking(\''+s.id+'\')" style="background:none;border:1px solid #fecaca;color:#ef4444;border-radius:6px;padding:5px 10px;font-size:11px;cursor:pointer;">Cancelar</button>';
-                if (bd.status === 'confirmed') return '<span style="background:#DCFCE7;color:#16A34A;font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px;">✅ Confirmado</span>'
-                  + (!past ? '<button onclick="cancelBooking(\''+s.id+'\')" style="background:none;border:1px solid #fecaca;color:#ef4444;border-radius:6px;padding:5px 10px;font-size:11px;cursor:pointer;">Cancelar</button>' : '');
-                if (bd.status === 'cancelled') return '<span style="background:#FEE2E2;color:#DC2626;font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px;">Cancelado</span>';
-                if (bd.status === 'rescheduled') return '<span style="background:#EDE9FE;color:#7C3AED;font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px;">Remarcado</span>';
+                if (bd.status === 'pending') return '<span class="dashboard-slot-status-pill dashboard-slot-status-pending">Aguardando confirmação</span>'
+                  + '<button onclick="cancelBooking(\''+s.id+'\')" class="agenda-slot-action agenda-slot-action-delete">Cancelar</button>';
+                if (bd.status === 'confirmed') return '<span class="dashboard-slot-status-pill dashboard-slot-status-confirmed">✅ Confirmado</span>'
+                  + (!past ? '<button onclick="cancelBooking(\''+s.id+'\')" class="agenda-slot-action agenda-slot-action-delete">Cancelar</button>' : '');
+                if (bd.status === 'cancelled') return '<span class="dashboard-slot-status-pill dashboard-slot-status-cancelled">Cancelado</span>';
+                if (bd.status === 'rescheduled') return '<span class="dashboard-slot-status-pill dashboard-slot-status-rescheduled">Remarcado</span>';
                 return '';
               })()}
             </div>
             ${s.my_booking_detail?.status === 'cancelled' && s.my_booking_detail?.cancel_reason ? `
-              <div style="margin-top:8px;padding:8px 12px;background:#FEF2F2;border-radius:6px;font-size:12px;color:#DC2626;">
+              <div class="dashboard-slot-note dashboard-slot-note-cancelled">
                 <strong>Cancelado pela consultoria:</strong> ${s.my_booking_detail.cancel_reason}
               </div>` : ''}
             ${s.my_booking_detail?.status === 'rescheduled' && s.my_booking_detail?.reschedule_reason ? `
-              <div style="margin-top:8px;padding:8px 12px;background:#EDE9FE;border-radius:6px;font-size:12px;color:#7C3AED;">
+              <div class="dashboard-slot-note dashboard-slot-note-rescheduled">
                 <strong>Remarcado:</strong> ${s.my_booking_detail.reschedule_reason}
               </div>` : ''}
           </div>`;
@@ -1834,15 +1834,15 @@ async function loadAgendaSlots() {
   if (histRes.ok && histEl) {
     const { transactions } = await histRes.json();
     if (!transactions.length) {
-      histEl.innerHTML = '<div style="font-size:13px;color:var(--text-muted);padding:8px 0;">Nenhuma movimentação ainda.</div>';
+      histEl.innerHTML = '<div class="dashboard-credit-history-empty">Nenhuma movimentação ainda.</div>';
     } else {
-      histEl.innerHTML = `<div style="display:flex;flex-direction:column;gap:6px;">
+      histEl.innerHTML = `<div class="dashboard-credit-history-list">
         ${transactions.slice(0,10).map(t => `
-        <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:#F8FAFC;border-radius:8px;font-size:13px;">
-          <span style="font-weight:700;${t.delta>0?'color:#16a34a':'color:#dc2626'}">${t.delta>0?'+':''}${t.delta}</span>
-          <span style="flex:1;color:#374151;">${t.reason === 'purchase' ? 'Compra de créditos' : t.reason === 'booking' ? 'Sessão reservada' : t.reason === 'refund' ? 'Reembolso de cancelamento' : t.reason}</span>
-          <span style="color:#94a3b8;font-size:11px;">${new Date(t.created_at).toLocaleDateString('pt-BR')}</span>
-          <span style="font-weight:600;color:#1e293b;">${t.balance_after} crédito${t.balance_after!==1?'s':''}</span>
+        <div class="dashboard-credit-history-row">
+          <span class="dashboard-credit-history-delta ${t.delta>0 ? 'dashboard-credit-history-delta-positive' : 'dashboard-credit-history-delta-negative'}">${t.delta>0?'+':''}${t.delta}</span>
+          <span class="dashboard-credit-history-reason">${t.reason === 'purchase' ? 'Compra de créditos' : t.reason === 'booking' ? 'Sessão reservada' : t.reason === 'refund' ? 'Reembolso de cancelamento' : t.reason}</span>
+          <span class="dashboard-credit-history-date">${new Date(t.created_at).toLocaleDateString('pt-BR')}</span>
+          <span class="dashboard-credit-history-balance">${t.balance_after} crédito${t.balance_after!==1?'s':''}</span>
         </div>`).join('')}
       </div>`;
     }
@@ -1991,7 +1991,7 @@ function stopNotifPolling() {
 async function loadInternalInvoices() {
   const el = document.getElementById('internalInvoiceList');
   if (!el) return;
-  el.innerHTML = '<div style="padding:12px;color:var(--text-muted);font-size:13px;">Carregando boletos...</div>';
+  el.innerHTML = '<div class="dashboard-inline-loading-sm">Carregando boletos...</div>';
   try {
     const res = await fetch('/api/financial/internal-invoices', { headers: authH() });
     if (!res.ok) { el.innerHTML = ''; return; }
@@ -2000,7 +2000,7 @@ async function loadInternalInvoices() {
     if (!invoices.length) {
       el.innerHTML = `<div class="empty-state">
         <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-        <p style="font-size:13px;">Nenhum boleto disponível.</p>
+        <p class="dashboard-empty-copy-sm">Nenhum boleto disponível.</p>
       </div>`;
       return;
     }
@@ -2008,12 +2008,12 @@ async function loadInternalInvoices() {
     const statusLabel = { pending:'Em aberto', paid:'Pago', overdue:'Vencido', cancelled:'Cancelado' };
     const statusClass = { pending:'badge-amber', paid:'badge-green', overdue:'badge-red', cancelled:'badge-gray' };
 
-    let html = '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:1px solid var(--border);">';
-    html += '<th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-weight:600;">Descrição</th>';
-    html += '<th style="text-align:right;padding:8px 12px;color:var(--text-muted);font-weight:600;">Valor</th>';
-    html += '<th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-weight:600;">Vencimento</th>';
-    html += '<th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-weight:600;">Status</th>';
-    html += '<th style="padding:8px 12px;"></th>';
+    let html = '<div class="admin-table-wrap"><table class="admin-simple-table"><thead><tr>';
+    html += '<th>Descrição</th>';
+    html += '<th class="admin-invoice-col-amount">Valor</th>';
+    html += '<th>Vencimento</th>';
+    html += '<th>Status</th>';
+    html += '<th></th>';
     html += '</tr></thead><tbody>';
 
     invoices.forEach(inv => {
@@ -2022,14 +2022,13 @@ async function loadInternalInvoices() {
       const sCls = statusClass[inv.status] || 'badge-gray';
       const sLbl = statusLabel[inv.status] || inv.status;
       const isOverdue = inv.status === 'pending' && inv.due_date && new Date(inv.due_date) < new Date();
-      const rowSt = isOverdue ? 'background:#FFF7ED;' : '';
-      html += `<tr style="border-bottom:1px solid var(--border-light,#F1F5F9);${rowSt}">
-        <td style="padding:10px 12px;font-weight:500;">${escHtmlD(inv.description)}</td>
-        <td style="padding:10px 12px;text-align:right;font-weight:600;">${amt}</td>
-        <td style="padding:10px 12px;color:var(--text-muted);">${due}</td>
-        <td style="padding:10px 12px;"><span class="badge ${isOverdue ? 'badge-red' : sCls}">${isOverdue ? 'Vencido' : sLbl}</span></td>
-        <td style="padding:10px 12px;">
-          ${inv.status !== 'cancelled' && inv.status !== 'paid' ? `<a href="/api/financial/internal-invoices/${inv.id}/pdf?token=${encodeURIComponent(localStorage.getItem('re_token')||'')}" target="_blank" style="color:#1A56DB;font-size:12px;text-decoration:none;">📄 Boleto</a>` : ''}
+      html += `<tr${isOverdue ? ' class="admin-invoice-row-overdue"' : ''}>
+        <td class="admin-invoice-description">${escHtmlD(inv.description)}</td>
+        <td class="dashboard-finance-amount">${amt}</td>
+        <td class="admin-log-muted">${due}</td>
+        <td><span class="badge ${isOverdue ? 'badge-red' : sCls}">${isOverdue ? 'Vencido' : sLbl}</span></td>
+        <td>
+          ${inv.status !== 'cancelled' && inv.status !== 'paid' ? `<a href="/api/financial/internal-invoices/${inv.id}/pdf?token=${encodeURIComponent(localStorage.getItem('re_token')||'')}" target="_blank" class="admin-invoice-action-link">📄 Boleto</a>` : ''}
         </td>
       </tr>`;
     });
@@ -2046,7 +2045,7 @@ async function loadMarketplace() {
   const gridEl   = document.getElementById('marketplaceGrid');
   const ordersEl = document.getElementById('myOrdersList');
   if (!gridEl) return;
-  gridEl.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-muted);font-size:13px;grid-column:1/-1;">Carregando serviços...</div>';
+  gridEl.innerHTML = '<div class="dashboard-grid-empty-state">Carregando serviços...</div>';
 
   try {
     const [svcRes, ordRes] = await Promise.all([
@@ -2057,55 +2056,55 @@ async function loadMarketplace() {
     if (svcRes.ok) {
       const { services = [] } = await svcRes.json();
       if (!services.length) {
-        gridEl.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-muted);font-size:13px;grid-column:1/-1;">Nenhum serviço disponível no momento.</div>';
+        gridEl.innerHTML = '<div class="dashboard-grid-empty-state">Nenhum serviço disponível no momento.</div>';
       } else {
         const catLabel = { juridico:'Jurídico', financeiro:'Financeiro', consultoria:'Consultoria', outro:'Outro' };
         gridEl.innerHTML = services.map(s => {
           const price = window.REShared.formatCurrencyBRL((s.price_cents || 0) / 100);
           const feats = Array.isArray(s.features) ? s.features : [];
-          return `<div style="background:#fff;border:1px solid #E2E8F0;border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:10px;">
-            ${s.featured ? '<span style="font-size:10px;font-weight:700;background:#FEF3C7;color:#92400E;padding:2px 8px;border-radius:20px;align-self:flex-start;">⭐ Destaque</span>' : ''}
-            <div style="font-size:11px;color:#6B7280;">${catLabel[s.category] || s.category || ''}</div>
-            <div style="font-size:16px;font-weight:700;color:#1E293B;">${escHtmlD(s.name)}</div>
-            ${s.description ? `<div style="font-size:13px;color:#64748B;flex:1;">${escHtmlD(s.description)}</div>` : ''}
-            ${feats.length ? `<ul style="margin:0;padding-left:16px;font-size:12px;color:#374151;">${feats.map(f => `<li>${escHtmlD(f)}</li>`).join('')}</ul>` : ''}
-            <div style="font-size:22px;font-weight:800;color:#1A56DB;margin-top:4px;">${price}</div>
-            <button onclick="contractService('${s.id}')" style="background:#1A56DB;color:#fff;border:none;border-radius:8px;padding:9px;font-size:13px;font-weight:600;cursor:pointer;">Contratar</button>
+          return `<div class="dashboard-service-card">
+            ${s.featured ? '<span class="dashboard-service-featured">⭐ Destaque</span>' : ''}
+            <div class="dashboard-service-category">${catLabel[s.category] || s.category || ''}</div>
+            <div class="dashboard-service-title">${escHtmlD(s.name)}</div>
+            ${s.description ? `<div class="dashboard-service-description">${escHtmlD(s.description)}</div>` : ''}
+            ${feats.length ? `<ul class="dashboard-service-features">${feats.map(f => `<li>${escHtmlD(f)}</li>`).join('')}</ul>` : ''}
+            <div class="dashboard-service-price">${price}</div>
+            <button onclick="contractService('${s.id}')" class="dashboard-service-cta">Contratar</button>
           </div>`;
         }).join('');
       }
     } else {
-      gridEl.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-muted);font-size:13px;grid-column:1/-1;">Serviços indisponíveis.</div>';
+      gridEl.innerHTML = '<div class="dashboard-grid-empty-state">Serviços indisponíveis.</div>';
     }
 
     if (ordRes.ok && ordersEl) {
       const { orders = [] } = await ordRes.json();
       if (!orders.length) {
-        ordersEl.innerHTML = `<div class="empty-state"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/></svg><p style="font-size:13px;">Nenhum pedido ainda.</p></div>`;
+        ordersEl.innerHTML = `<div class="empty-state"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/></svg><p class="dashboard-empty-copy-sm">Nenhum pedido ainda.</p></div>`;
       } else {
         const stMap = { pending_payment:'Aguardando pagamento', paid:'Pago', in_progress:'Em andamento', delivered:'Entregue', cancelled:'Cancelado' };
-        ordersEl.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:13px;">
-          <thead><tr style="border-bottom:1px solid var(--border);">
-            <th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-weight:600;">Serviço</th>
-            <th style="text-align:right;padding:8px 12px;color:var(--text-muted);font-weight:600;">Valor</th>
-            <th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-weight:600;">Data</th>
-            <th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-weight:600;">Status</th>
+        ordersEl.innerHTML = `<div class="admin-table-wrap"><table class="admin-simple-table">
+          <thead><tr>
+            <th>Serviço</th>
+            <th class="admin-invoice-col-amount">Valor</th>
+            <th>Data</th>
+            <th>Status</th>
           </tr></thead><tbody>
           ${orders.map(o => {
             const amt = ((o.amount_cents||0)/100).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
             const dt  = new Date(o.created_at).toLocaleDateString('pt-BR');
-            return `<tr style="border-bottom:1px solid #F1F5F9;">
-              <td style="padding:10px 12px;font-weight:500;">${escHtmlD(o.re_services?.name || '—')}</td>
-              <td style="padding:10px 12px;text-align:right;font-weight:600;">${amt}</td>
-              <td style="padding:10px 12px;color:var(--text-muted);">${dt}</td>
-              <td style="padding:10px 12px;"><span class="badge badge-gray">${stMap[o.status]||o.status}</span></td>
+            return `<tr>
+              <td class="dashboard-support-subject">${escHtmlD(o.re_services?.name || '—')}</td>
+              <td class="dashboard-finance-amount">${amt}</td>
+              <td class="admin-log-muted">${dt}</td>
+              <td><span class="badge badge-gray">${stMap[o.status]||o.status}</span></td>
             </tr>`;
           }).join('')}
-          </tbody></table>`;
+          </tbody></table></div>`;
       }
     }
   } catch (e) {
-    gridEl.innerHTML = '<div style="grid-column:1/-1;padding:24px;text-align:center;color:var(--text-muted);">Erro ao carregar marketplace.</div>';
+    gridEl.innerHTML = '<div class="dashboard-grid-empty-state">Erro ao carregar marketplace.</div>';
     console.warn('[MARKETPLACE]', e.message);
   }
 }

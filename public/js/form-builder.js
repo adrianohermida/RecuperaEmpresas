@@ -315,11 +315,11 @@ function fbRenderPageTabs() {
   if (!bar) return;
   bar.innerHTML = pages.map((p, i) => `
     <button class="fb-page-tab ${FB.currentPage && FB.currentPage.id === p.id ? 'active' : ''}"
-      onclick="fbSelectPage(${p.id})" style="padding:6px 14px;border-radius:6px;border:1px solid ${FB.currentPage && FB.currentPage.id === p.id ? '#1A56DB' : '#E2E8F0'};background:${FB.currentPage && FB.currentPage.id === p.id ? '#EFF6FF' : '#fff'};color:${FB.currentPage && FB.currentPage.id === p.id ? '#1A56DB' : '#64748B'};font-size:13px;cursor:pointer;font-weight:${FB.currentPage && FB.currentPage.id === p.id ? '700' : '500'};">
+      onclick="fbSelectPage(${p.id})">
       Página ${i+1}${p.title ? ': '+fbEsc(p.title) : ''}
     </button>
   `).join('') + (FB.readOnly ? '' : `
-    <button onclick="fbAddPage()" style="padding:6px 12px;border-radius:6px;border:1px dashed #CBD5E1;background:#F8FAFC;color:#64748B;font-size:13px;cursor:pointer;">
+    <button onclick="fbAddPage()" class="fb-page-tab-add">
       + Página
     </button>
   `);
@@ -361,9 +361,9 @@ function fbRenderCanvas() {
   if (!canvas) return;
 
   if (!FB.currentPage) {
-    canvas.innerHTML = `<div style="padding:40px;text-align:center;color:#94A3B8;">
-      <div style="font-size:32px;margin-bottom:10px;">📄</div>
-      <div style="font-size:14px;">${FB.readOnly ? 'Nenhuma página.' : 'Nenhuma página. Clique em "+ Página" para criar.'}</div>
+    canvas.innerHTML = `<div class="form-builder-canvas-empty">
+      <div class="form-builder-canvas-empty-icon">📄</div>
+      <div class="form-builder-canvas-empty-copy">${FB.readOnly ? 'Nenhuma página.' : 'Nenhuma página. Clique em "+ Página" para criar.'}</div>
     </div>`;
     return;
   }
@@ -371,9 +371,9 @@ function fbRenderCanvas() {
   const questions = (FB.currentPage.questions || []).sort((a,b) => a.order_index - b.order_index);
 
   if (!questions.length) {
-    canvas.innerHTML = `<div style="padding:40px;text-align:center;color:#94A3B8;">
-      <div style="font-size:32px;margin-bottom:10px;">❓</div>
-      <div style="font-size:14px;">${FB.readOnly ? 'Nenhuma questão nesta página.' : 'Nenhuma questão nesta página.<br>Arraste um tipo da paleta ou clique para adicionar.'}</div>
+    canvas.innerHTML = `<div class="form-builder-canvas-empty">
+      <div class="form-builder-canvas-empty-icon">❓</div>
+      <div class="form-builder-canvas-empty-copy">${FB.readOnly ? 'Nenhuma questão nesta página.' : 'Nenhuma questão nesta página.<br>Arraste um tipo da paleta ou clique para adicionar.'}</div>
     </div>`;
     return;
   }
@@ -384,28 +384,27 @@ function fbRenderCanvas() {
     return `
     <div class="fb-question-card ${isActive ? 'fb-q-active' : ''}"
          id="fb-q-${q.id}"
-         onclick="fbSelectQuestion(${q.id})"
-         style="background:#fff;border:2px solid ${isActive ? '#1A56DB' : '#E2E8F0'};border-radius:10px;padding:16px 18px;margin-bottom:8px;cursor:pointer;transition:border-color .15s,box-shadow .15s;${isActive ? 'box-shadow:0 0 0 3px rgba(26,86,219,.1);' : ''}">
-      <div style="display:flex;align-items:center;gap:10px;">
-        <span style="font-size:18px;user-select:none;">${typeInfo.icon}</span>
-        <div style="flex:1;min-width:0;">
-          <div style="display:flex;align-items:center;gap:6px;">
-            <span style="font-size:11px;background:#F1F5F9;color:#64748B;border-radius:4px;padding:1px 6px;font-weight:500;">${typeInfo.label}</span>
-            ${q.required ? '<span style="font-size:11px;background:#FEF2F2;color:#EF4444;border-radius:4px;padding:1px 6px;font-weight:500;">Obrigatório</span>' : ''}
-            ${q.weight ? `<span style="font-size:11px;background:#F0FDF4;color:#16A34A;border-radius:4px;padding:1px 6px;font-weight:500;">Peso: ${q.weight}</span>` : ''}
+         onclick="fbSelectQuestion(${q.id})">
+      <div class="fb-question-card-row">
+        <span class="fb-question-card-icon">${typeInfo.icon}</span>
+        <div class="fb-question-card-copy">
+          <div class="fb-question-card-badges">
+            <span class="fb-question-card-badge">${typeInfo.label}</span>
+            ${q.required ? '<span class="fb-question-card-badge fb-question-card-badge-required">Obrigatório</span>' : ''}
+            ${q.weight ? `<span class="fb-question-card-badge fb-question-card-badge-weight">Peso: ${q.weight}</span>` : ''}
           </div>
-          <div style="font-size:14px;font-weight:600;color:#1E293B;margin-top:4px;">${fbEsc(q.label) || '<em style="color:#94A3B8;">Sem título</em>'}</div>
-          ${q.description ? `<div style="font-size:12px;color:#94A3B8;margin-top:2px;">${fbEsc(q.description)}</div>` : ''}
+          <div class="fb-question-card-title">${fbEsc(q.label) || '<em class="fb-question-card-title-empty">Sem título</em>'}</div>
+          ${q.description ? `<div class="fb-question-card-description">${fbEsc(q.description)}</div>` : ''}
         </div>
-        ${FB.readOnly ? '' : `<div style="display:flex;gap:4px;flex-shrink:0;">
+        ${FB.readOnly ? '' : `<div class="fb-question-card-actions">
           <button onclick="event.stopPropagation();fbMoveQuestion(${q.id},'up')" title="Mover para cima"
-            style="background:none;border:none;cursor:pointer;color:#94A3B8;padding:4px;border-radius:4px;font-size:14px;"
-            ${i === 0 ? 'disabled style="opacity:.3;"' : ''}>↑</button>
+            class="fb-question-card-action-btn"
+            ${i === 0 ? 'disabled' : ''}>↑</button>
           <button onclick="event.stopPropagation();fbMoveQuestion(${q.id},'down')" title="Mover para baixo"
-            style="background:none;border:none;cursor:pointer;color:#94A3B8;padding:4px;border-radius:4px;font-size:14px;"
-            ${i === questions.length-1 ? 'disabled style="opacity:.3;"' : ''}>↓</button>
+            class="fb-question-card-action-btn"
+            ${i === questions.length-1 ? 'disabled' : ''}>↓</button>
           <button onclick="event.stopPropagation();fbDeleteQuestion(${q.id})" title="Excluir"
-            style="background:none;border:none;cursor:pointer;color:#EF4444;padding:4px;border-radius:4px;font-size:14px;">🗑</button>
+            class="fb-question-card-action-btn fb-question-card-action-delete">🗑</button>
         </div>`}
       </div>
       ${fbRenderQuestionPreview(q)}
@@ -415,35 +414,35 @@ function fbRenderCanvas() {
 
 function fbRenderQuestionPreview(q) {
   if (q.type === 'section') return '';
-  if (q.type === 'short_text')  return `<div style="margin-top:10px;"><input disabled placeholder="${fbEsc(q.placeholder || 'Resposta curta...')}" style="width:100%;padding:8px 10px;border:1px solid #E2E8F0;border-radius:6px;font-size:13px;color:#94A3B8;box-sizing:border-box;background:#F8FAFC;"></div>`;
-  if (q.type === 'long_text')   return `<div style="margin-top:10px;"><textarea disabled placeholder="${fbEsc(q.placeholder || 'Resposta longa...')}" rows="2" style="width:100%;padding:8px 10px;border:1px solid #E2E8F0;border-radius:6px;font-size:13px;color:#94A3B8;box-sizing:border-box;background:#F8FAFC;resize:none;"></textarea></div>`;
+  if (q.type === 'short_text')  return `<div class="fb-question-preview-wrap"><input disabled placeholder="${fbEsc(q.placeholder || 'Resposta curta...')}" class="fb-question-preview-input"></div>`;
+  if (q.type === 'long_text')   return `<div class="fb-question-preview-wrap"><textarea disabled placeholder="${fbEsc(q.placeholder || 'Resposta longa...')}" rows="2" class="fb-question-preview-input fb-question-preview-textarea"></textarea></div>`;
   if (q.type === 'number' || q.type === 'currency' || q.type === 'percentage')
-    return `<div style="margin-top:10px;"><input type="number" disabled placeholder="0" style="width:180px;padding:8px 10px;border:1px solid #E2E8F0;border-radius:6px;font-size:13px;color:#94A3B8;background:#F8FAFC;"></div>`;
+    return `<div class="fb-question-preview-wrap"><input type="number" disabled placeholder="0" class="fb-question-preview-input fb-question-preview-input-sm"></div>`;
   if (q.type === 'date')
-    return `<div style="margin-top:10px;"><input type="date" disabled style="padding:8px 10px;border:1px solid #E2E8F0;border-radius:6px;font-size:13px;color:#94A3B8;background:#F8FAFC;"></div>`;
+    return `<div class="fb-question-preview-wrap"><input type="date" disabled class="fb-question-preview-input fb-question-preview-input-auto"></div>`;
   if (q.type === 'single_choice' || q.type === 'multi_choice' || q.type === 'dropdown') {
     const opts = Array.isArray(q.options) ? q.options : [];
-    if (!opts.length) return `<div style="margin-top:8px;font-size:12px;color:#94A3B8;">(Sem opções configuradas)</div>`;
-    return `<div style="margin-top:10px;display:flex;flex-direction:column;gap:6px;">
-      ${opts.slice(0,3).map(o => `<label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#64748B;cursor:default;">
-        <input type="${q.type==='multi_choice'?'checkbox':'radio'}" disabled style="margin:0;"> ${fbEsc(typeof o === 'string' ? o : o.label || o)}
+    if (!opts.length) return `<div class="fb-question-preview-empty">(Sem opções configuradas)</div>`;
+    return `<div class="fb-question-preview-wrap fb-question-preview-options">
+      ${opts.slice(0,3).map(o => `<label class="fb-question-preview-option-row">
+        <input type="${q.type==='multi_choice'?'checkbox':'radio'}" disabled class="fb-question-preview-option-input"> ${fbEsc(typeof o === 'string' ? o : o.label || o)}
       </label>`).join('')}
-      ${opts.length > 3 ? `<span style="font-size:12px;color:#94A3B8;">+ ${opts.length-3} mais opções...</span>` : ''}
+      ${opts.length > 3 ? `<span class="fb-question-preview-empty">+ ${opts.length-3} mais opções...</span>` : ''}
     </div>`;
   }
   if (q.type === 'scale' || q.type === 'nps' || q.type === 'rating') {
     const max = q.type === 'rating' ? 5 : (q.type === 'nps' ? 10 : (q.settings?.max || 10));
-    return `<div style="margin-top:10px;display:flex;gap:4px;flex-wrap:wrap;">
-      ${Array.from({length: Math.min(max,10)}, (_,i) => `<button disabled style="width:32px;height:32px;border:1px solid #E2E8F0;border-radius:6px;background:#F8FAFC;color:#94A3B8;font-size:12px;cursor:default;">${q.type==='rating'?'★':i+(q.type==='nps'?0:1)}</button>`).join('')}
-      ${max > 10 ? `<span style="font-size:12px;color:#94A3B8;line-height:32px;">...</span>` : ''}
+    return `<div class="fb-question-preview-wrap fb-question-preview-scale-row">
+      ${Array.from({length: Math.min(max,10)}, (_,i) => `<button disabled class="fb-question-preview-scale-btn">${q.type==='rating'?'★':i+(q.type==='nps'?0:1)}</button>`).join('')}
+      ${max > 10 ? `<span class="fb-question-preview-scale-more">...</span>` : ''}
     </div>`;
   }
   if (q.type === 'yes_no')
-    return `<div style="margin-top:10px;display:flex;gap:8px;"><button disabled style="padding:8px 20px;border:1px solid #E2E8F0;border-radius:6px;background:#F8FAFC;color:#94A3B8;font-size:13px;">✅ Sim</button><button disabled style="padding:8px 20px;border:1px solid #E2E8F0;border-radius:6px;background:#F8FAFC;color:#94A3B8;font-size:13px;">❌ Não</button></div>`;
+    return `<div class="fb-question-preview-wrap fb-question-preview-binary-row"><button disabled class="fb-question-preview-binary-btn">✅ Sim</button><button disabled class="fb-question-preview-binary-btn">❌ Não</button></div>`;
   if (q.type === 'file_upload')
-    return `<div style="margin-top:10px;padding:16px;border:2px dashed #E2E8F0;border-radius:8px;text-align:center;color:#94A3B8;font-size:13px;">📎 Clique ou arraste o arquivo aqui</div>`;
+    return `<div class="fb-question-preview-wrap"><div class="fb-question-preview-upload">📎 Clique ou arraste o arquivo aqui</div></div>`;
   if (q.type === 'calculated')
-    return `<div style="margin-top:10px;padding:8px 12px;border:1px solid #E2E8F0;border-radius:6px;background:#F8FAFC;font-size:12px;color:#94A3B8;font-family:monospace;">${fbEsc(q.formula || 'Sem fórmula configurada')}</div>`;
+    return `<div class="fb-question-preview-wrap"><div class="fb-question-preview-formula">${fbEsc(q.formula || 'Sem fórmula configurada')}</div></div>`;
   return '';
 }
 
@@ -459,9 +458,9 @@ function fbSelectQuestion(qId) {
 function fbRenderPropertiesEmpty() {
   const panel = document.getElementById('fb-props-panel');
   if (!panel) return;
-  panel.innerHTML = `<div style="padding:24px;text-align:center;color:#94A3B8;">
-    <div style="font-size:28px;margin-bottom:8px;">👈</div>
-    <div style="font-size:13px;">Clique em uma questão para editar suas propriedades</div>
+  panel.innerHTML = `<div class="fb-props-empty">
+    <div class="fb-props-empty-icon">👈</div>
+    <div class="fb-props-empty-copy">Clique em uma questão para editar suas propriedades</div>
   </div>`;
 }
 
