@@ -464,6 +464,73 @@ async function updateFreshdeskTicket(ticketId, updates) {
   await freshdeskRequest('PUT', `tickets/${ticketId}`, updates);
 }
 
+// ─── Freshsales CRM ──────────────────────────────────────────────────────────
+function freshsalesRequest(method, endpoint, body) {
+  return new Promise((resolve) => {
+    if (!FRESHSALES_KEY) return resolve({ ok: false, data: {} });
+    const bodyStr = body ? JSON.stringify(body) : '';
+    const opts = {
+      hostname: FRESHSALES_HOST,
+      path: `/crm/sales/api/${endpoint}`,
+      method,
+      headers: {
+        'Authorization': `Token token=${FRESHSALES_KEY}`,
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(bodyStr),
+      },
+    };
+    const req = https.request(opts, r => {
+      let data = '';
+      r.on('data', c => data += c);
+      r.on('end', () => {
+        try { resolve({ ok: r.statusCode < 300, status: r.statusCode, data: JSON.parse(data) }); }
+        catch { resolve({ ok: r.statusCode < 300, data: {} }); }
+      });
+    });
+    req.on('error', () => resolve({ ok: false, data: {} }));
+    if (bodyStr) req.write(bodyStr);
+    req.end();
+  });
+}
+
+async function syncFreshsalesContact(email, name, company, phone, extra = {}) {
+  if (!FRESHSALES_KEY) return null;
+  const search = await freshsalesRequest('GET',
+    `contacts/search?q=${encodeURIComponent(email)}&include=owner`, null);
+  const existing = search.ok && search.data?.contacts?.[0];
+
+  const [firstName, ...rest] = (name || email).split(' ');
+  const payload = {
+    contact: {
+      first_name:   firstName,
+      last_name:    rest.join(' ') || '',
+      email,
+      work_number:  phone || undefined,
+      job_title:    extra.job_title || undefined,
+      company_name: company || undefined,
+    },
+  };
+
+  if (existing) {
+    const upd = await freshsalesRequest('PUT', `contacts/${existing.id}`, payload);
+    return upd.ok ? (upd.data?.contact?.id || existing.id) : existing.id;
+  }
+  const created = await freshsalesRequest('POST', 'contacts', payload);
+  return created.ok ? created.data?.contact?.id : null;
+}
+
+async function createFreshsalesDeal(contactId, name, amount) {
+  if (!FRESHSALES_KEY || !contactId) return null;
+  const result = await freshsalesRequest('POST', 'deals', {
+    deal: {
+      name,
+      amount: amount || 0,
+      contacts_list: [{ id: contactId }],
+    },
+  });
+  return result.ok ? result.data?.deal?.id : null;
+}
+
 // ─── Resend email ─────────────────────────────────────────────────────────────
 async function sendMail(to, subject, html, attachments = []) {
   return new Promise((resolve) => {
@@ -829,16 +896,18 @@ app.post('/api/auth/register', async (req, res) => {
     const authUser = authData.user;
     const profile  = await upsertProfileFromAuth(authUser, { name, company: company || '' });
 
-    // Freshdesk contact + ticket (fire and forget)
+    // Freshdesk contact + ticket + Freshsales CRM (fire and forget)
     Promise.all([
       createFreshdeskContact(email, name),
-      createFreshdeskTicket(email, name, company)
-    ]).then(async ([contactId, ticketId]) => {
-      if (contactId || ticketId) {
-        await sb.from('re_users').update({
-          freshdesk_contact_id: contactId || null,
-          freshdesk_ticket_id:  ticketId  || null,
-        }).eq('id', profile.id);
+      createFreshdeskTicket(email, name, company),
+      syncFreshsalesContact(email, name, company, null),
+    ]).then(async ([contactId, ticketId, fsContactId]) => {
+      const updates = {};
+      if (contactId)   updates.freshdesk_contact_id  = contactId;
+      if (ticketId)    updates.freshdesk_ticket_id   = ticketId;
+      if (fsContactId) updates.freshsales_contact_id = fsContactId;
+      if (Object.keys(updates).length) {
+        await sb.from('re_users').update(updates).eq('id', profile.id);
       }
     }).catch(() => {});
 
@@ -1317,6 +1386,23 @@ app.post('/api/submit', requireAuth, upload.fields(fileFields), async (req, res)
         `<h3>Onboarding concluído em ${ts}</h3><p>Todos os dados foram enviados. Relatório completo segue por e-mail.</p>${fullHtml}`
       ).catch(() => {});
       await updateFreshdeskTicket(ticketId, { status: 4 }).catch(() => {});
+    }
+
+    // Freshsales CRM: update contact + create deal (fire and forget)
+    if (FRESHSALES_KEY) {
+      const fin = allData.financeiro || {};
+      const faturamento = parseFloat(String(fin.faturamento12meses || '0').replace(/\D/g, '')) / 100 || 0;
+      const phone = empresa.telefone || allData.responsavel?.telefone || null;
+      syncFreshsalesContact(user.email, user.name || empresa.razaoSocial, empresa.razaoSocial, phone, {
+        job_title: allData.responsavel?.cargo || undefined,
+      }).then(async (fsContactId) => {
+        const storedId = user.freshsales_contact_id || fsContactId;
+        const dealName = `Recuperação — ${empresa.razaoSocial || user.company || user.name}`;
+        if (storedId) await createFreshsalesDeal(storedId, dealName, faturamento).catch(() => {});
+        if (fsContactId && !user.freshsales_contact_id) {
+          await sb.from('re_users').update({ freshsales_contact_id: fsContactId }).eq('id', user.id);
+        }
+      }).catch(() => {});
     }
 
     for (const fileList of Object.values(files))
@@ -2072,6 +2158,31 @@ app.post('/api/agenda/book/:slotId', requireAuth, async (req, res) => {
     }).then(id => { if (id) _calendarEventIds.set(slotId, id); }).catch(() => {});
   }
 
+  // Confirmation email (fire and forget)
+  const startsAtFmt = new Date(slot.starts_at).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+  sendMail(req.user.email, 'Agendamento confirmado — Recupera Empresas', emailWrapper(
+    'Agendamento confirmado',
+    `<p>Olá, <b>${req.user.name || req.user.email}</b>!</p>
+     <p>Seu agendamento foi confirmado com sucesso:</p>
+     <table style="width:100%;border-collapse:collapse;font-size:14px;margin:16px 0;">
+       <tr><td style="padding:6px 0;color:#64748B;width:40%;">Sessão</td>
+           <td style="padding:6px 0;font-weight:600;">${slot.title || 'Consultoria'}</td></tr>
+       <tr><td style="padding:6px 0;color:#64748B;">Data e hora</td>
+           <td style="padding:6px 0;font-weight:600;">${startsAtFmt}</td></tr>
+       <tr><td style="padding:6px 0;color:#64748B;">Créditos utilizados</td>
+           <td style="padding:6px 0;font-weight:600;">${slot.credits_cost}</td></tr>
+       <tr><td style="padding:6px 0;color:#64748B;">Saldo restante</td>
+           <td style="padding:6px 0;font-weight:600;">${newBal} crédito${newBal !== 1 ? 's' : ''}</td></tr>
+     </table>
+     <p style="font-size:13px;color:#64748B;">Você receberá um lembrete 24h antes da sessão.</p>`
+  )).catch(() => {});
+
+  sendMail(EMAIL_TO, `[Agendamento] ${req.user.name || req.user.email} — ${startsAtFmt}`, emailWrapper(
+    'Novo agendamento',
+    `<p><b>${req.user.name || req.user.email}</b> (${req.user.company || '—'}) agendou uma sessão.</p>
+     <p><b>Sessão:</b> ${slot.title || 'Consultoria'}<br><b>Data:</b> ${startsAtFmt}</p>`
+  )).catch(() => {});
+
   res.json({ success: true, booking, credits_balance: newBal });
 });
 
@@ -2179,6 +2290,43 @@ app.post('/api/stripe/webhook', async (req, res) => {
         console.log(`[CREDITS] +${delta} créditos para user ${user_id}`);
       }
     }
+
+    if (event.type === 'invoice.paid') {
+      const inv = event.data.object;
+      console.log(`[STRIPE] invoice.paid: ${inv.id} customer=${inv.customer} amount=${inv.amount_paid}`);
+      if (inv.customer) {
+        const { data: user } = await sb.from('re_users')
+          .select('email,name,company').eq('stripe_customer_id', inv.customer).single();
+        if (user) {
+          sendMail(user.email, 'Pagamento confirmado — Recupera Empresas', emailWrapper(
+            'Pagamento recebido',
+            `<p>Olá, <b>${user.name || user.company || user.email}</b>!</p>
+             <p>Confirmamos o recebimento do seu pagamento referente à fatura
+                <b>${inv.number || inv.id}</b>
+                no valor de <b>R$ ${(inv.amount_paid / 100).toFixed(2).replace('.', ',')}</b>.</p>
+             <p>Obrigado pela confiança.</p>`
+          )).catch(() => {});
+        }
+      }
+    }
+
+    if (event.type === 'invoice.payment_failed') {
+      const inv = event.data.object;
+      console.warn(`[STRIPE] invoice.payment_failed: ${inv.id} customer=${inv.customer}`);
+      if (inv.customer && inv.hosted_invoice_url) {
+        const { data: user } = await sb.from('re_users')
+          .select('email,name,company').eq('stripe_customer_id', inv.customer).single();
+        if (user) {
+          sendMail(user.email, 'Falha no pagamento — Recupera Empresas', emailWrapper(
+            'Falha no pagamento',
+            `<p>Olá, <b>${user.name || user.company || user.email}</b>!</p>
+             <p>Não foi possível processar o pagamento da fatura <b>${inv.number || inv.id}</b>.</p>
+             <p><a href="${inv.hosted_invoice_url}" style="color:#2563EB;">Clique aqui para regularizar o pagamento.</a></p>`
+          )).catch(() => {});
+        }
+      }
+    }
+
     res.json({ received: true });
   }
 );
@@ -4000,6 +4148,116 @@ app.get('/api/admin/audit-log', requireAdmin, async (req, res) => {
     console.error('[AUDIT LOG GET]', e.message);
     res.json({ entries: [] });
   }
+});
+
+// ─── Booking reminders cron (call daily, e.g. via Render cron job) ───────────
+app.post('/api/cron/booking-reminders', async (req, res) => {
+  const secret = req.headers['x-cron-secret'] || req.body?.secret;
+  if (secret !== (process.env.CRON_SECRET || JWT_SECRET)) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+
+  // Find confirmed bookings starting in the next 23–25 hours, reminder not yet sent
+  const from = new Date(Date.now() + 23 * 60 * 60 * 1000).toISOString();
+  const to   = new Date(Date.now() + 25 * 60 * 60 * 1000).toISOString();
+
+  const { data: slots } = await sb.from('re_agenda_slots')
+    .select('id,title,starts_at')
+    .gte('starts_at', from)
+    .lte('starts_at', to);
+
+  if (!slots?.length) return res.json({ sent: 0 });
+
+  const slotIds = slots.map(s => s.id);
+  const { data: bookings } = await sb.from('re_bookings')
+    .select('id,user_id,slot_id,reminder_sent')
+    .in('slot_id', slotIds)
+    .eq('status', 'confirmed')
+    .neq('reminder_sent', true);
+
+  if (!bookings?.length) return res.json({ sent: 0 });
+
+  const slotMap = Object.fromEntries(slots.map(s => [s.id, s]));
+  let sent = 0;
+
+  for (const booking of bookings) {
+    const slot = slotMap[booking.slot_id];
+    if (!slot) continue;
+    const user = await findUserById(booking.user_id);
+    if (!user?.email) continue;
+
+    const startsAtFmt = new Date(slot.starts_at).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+    await sendMail(user.email, 'Lembrete: sessão amanhã — Recupera Empresas', emailWrapper(
+      'Lembrete de sessão',
+      `<p>Olá, <b>${user.name || user.email}</b>!</p>
+       <p>Lembrete: você tem uma sessão agendada para <b>amanhã</b>:</p>
+       <table style="width:100%;border-collapse:collapse;font-size:14px;margin:16px 0;">
+         <tr><td style="padding:6px 0;color:#64748B;width:40%;">Sessão</td>
+             <td style="padding:6px 0;font-weight:600;">${slot.title || 'Consultoria'}</td></tr>
+         <tr><td style="padding:6px 0;color:#64748B;">Data e hora</td>
+             <td style="padding:6px 0;font-weight:600;">${startsAtFmt}</td></tr>
+       </table>
+       <p style="font-size:13px;color:#64748B;">Em caso de imprevistos, acesse o portal para cancelar com antecedência.</p>`
+    )).catch(() => {});
+
+    await sb.from('re_bookings').update({ reminder_sent: true }).eq('id', booking.id);
+    sent++;
+  }
+
+  console.log(`[CRON] booking-reminders: ${sent} enviados`);
+  res.json({ sent });
+});
+
+// ─── Invoice overdue cron (mark overdue + notify) ─────────────────────────────
+app.post('/api/cron/invoice-overdue', async (req, res) => {
+  const secret = req.headers['x-cron-secret'] || req.body?.secret;
+  if (secret !== (process.env.CRON_SECRET || JWT_SECRET)) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+
+  const today = new Date().toISOString().split('T')[0];
+
+  // Mark past-due pending invoices as overdue
+  const { data: overdueInvs } = await sb.from('re_invoices')
+    .select('id,user_id,description,amount_cents,due_date')
+    .eq('status', 'pending')
+    .lt('due_date', today);
+
+  let marked = 0;
+  for (const inv of overdueInvs || []) {
+    await sb.from('re_invoices').update({ status: 'overdue' }).eq('id', inv.id);
+    const user = await findUserById(inv.user_id);
+    if (user?.email) {
+      const dueFmt = new Date(inv.due_date + 'T12:00:00').toLocaleDateString('pt-BR');
+      const valor  = 'R$ ' + (inv.amount_cents / 100).toFixed(2).replace('.', ',');
+      sendMail(user.email, 'Fatura vencida — Recupera Empresas', emailWrapper(
+        'Fatura em atraso',
+        `<p>Olá, <b>${user.name || user.email}</b>!</p>
+         <p>Sua fatura está em atraso:</p>
+         <table style="width:100%;border-collapse:collapse;font-size:14px;margin:16px 0;">
+           <tr><td style="padding:6px 0;color:#64748B;width:40%;">Descrição</td>
+               <td style="padding:6px 0;font-weight:600;">${inv.description}</td></tr>
+           <tr><td style="padding:6px 0;color:#64748B;">Valor</td>
+               <td style="padding:6px 0;font-weight:600;color:#DC2626;">${valor}</td></tr>
+           <tr><td style="padding:6px 0;color:#64748B;">Vencimento</td>
+               <td style="padding:6px 0;font-weight:600;">${dueFmt}</td></tr>
+         </table>
+         <p>Entre em contato com nossa equipe para regularizar.</p>`
+      )).catch(() => {});
+    }
+    marked++;
+  }
+
+  // Also notify admin summary
+  if (marked > 0) {
+    sendMail(EMAIL_TO, `[Financeiro] ${marked} fatura(s) vencida(s) hoje`, emailWrapper(
+      'Faturas vencidas',
+      `<p>${marked} fatura(s) venceu/venceram hoje (${today}) e foram marcadas como em atraso.</p>`
+    )).catch(() => {});
+  }
+
+  console.log(`[CRON] invoice-overdue: ${marked} marcadas`);
+  res.json({ marked });
 });
 
 // ─── Health check (used by Render.com and uptime monitors) ───────────────────
