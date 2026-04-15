@@ -9,4 +9,4 @@
  *   Set the secret in: GitHub repo → Settings → Secrets → Actions
  *   Value: https://recuperaempresas.onrender.com
  */
-window.RE_API_BASE = '';
+window.RE_API_BASE = 'https://recuperaempresas.onrender.com';
