@@ -455,97 +455,10 @@ async function saveFormConfig() {
 // ── Admin Invoices (Cobranças Internas) ───────────────────────────────────────
 // ── Admin Marketplace ─────────────────────────────────────────────────────────
 // ── Audit Log ─────────────────────────────────────────────────────────────────
-async function loadAuditLog() {
-  const wrap = document.getElementById('auditLogTableWrap');
-  if (!wrap) return;
-  wrap.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:13px;">Carregando...</div>';
-
-  const type = document.getElementById('auditFilterType')?.value || '';
-  const from = document.getElementById('auditFilterFrom')?.value || '';
-  const to   = document.getElementById('auditFilterTo')?.value   || '';
-  const params = new URLSearchParams({ limit: '100' });
-  if (type) params.set('entity_type', type);
-  if (from) params.set('from', from);
-  if (to)   params.set('to', to);
-
-  try {
-    const res = await fetch(`/api/admin/audit-log?${params}`, { headers: authH() });
-    if (!res.ok) { wrap.innerHTML = '<div style="padding:20px;color:var(--danger);">Erro ao carregar.</div>'; return; }
-    const { entries = [] } = await res.json();
-
-    if (!entries.length) {
-      wrap.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:13px;">Nenhum registro encontrado.</div>';
-      return;
-    }
-
-    const actionIcon = { create:'➕', update:'✏️', delete:'🗑️', cancel:'❌', status_change:'🔄', payment:'💰' };
-    wrap.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:13px;">
-      <thead><tr style="border-bottom:1px solid var(--border);">
-        <th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-weight:600;">Data/Hora</th>
-        <th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-weight:600;">Ator</th>
-        <th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-weight:600;">Entidade</th>
-        <th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-weight:600;">Ação</th>
-        <th style="padding:8px 12px;"></th>
-      </tr></thead>
-      <tbody>${entries.map((e,i) => {
-        const ts = new Date(e.ts).toLocaleString('pt-BR');
-        const hasDiff = e.before_data || e.after_data;
-        return `<tr style="border-bottom:1px solid #F1F5F9;">
-          <td style="padding:9px 12px;color:var(--text-muted);white-space:nowrap;font-size:12px;">${ts}</td>
-          <td style="padding:9px 12px;">
-            <div style="font-weight:600;font-size:12px;">${escHtml(e.actor_email||'—')}</div>
-            <div style="font-size:10px;color:var(--text-muted);">${escHtml(e.actor_role||'')}</div>
-          </td>
-          <td style="padding:9px 12px;">
-            <span class="badge badge-gray">${escHtml(e.entity_type)}</span>
-          </td>
-          <td style="padding:9px 12px;">
-            <span>${actionIcon[e.action]||'•'} ${escHtml(e.action)}</span>
-          </td>
-          <td style="padding:9px 12px;">
-            ${hasDiff ? `<button onclick="toggleAuditDetail(${i})" style="border:1px solid var(--border);border-radius:6px;padding:3px 8px;font-size:11px;background:none;cursor:pointer;">Detalhes</button>
-            <div id="auditDetail${i}" style="display:none;margin-top:8px;font-size:11px;font-family:monospace;background:#F8FAFC;border:1px solid var(--border);border-radius:6px;padding:8px;max-width:340px;word-break:break-all;white-space:pre-wrap;">${hasDiff?escHtml(JSON.stringify({before:e.before_data,after:e.after_data},null,2)):''}
-            </div>` : '—'}
-          </td>
-        </tr>`;
-      }).join('')}</tbody>
-    </table>`;
-  } catch (e) {
-    wrap.innerHTML = '<div style="padding:20px;color:var(--danger);">Erro ao carregar auditoria.</div>';
-    console.error('[AUDIT LOG]', e.message);
-  }
-}
-
-function exportAuditLog() {
-  const type = document.getElementById('auditFilterType')?.value || '';
-  const from = document.getElementById('auditFilterFrom')?.value || '';
-  const to   = document.getElementById('auditFilterTo')?.value   || '';
-  const params = new URLSearchParams();
-  if (type) params.set('entity_type', type);
-  if (from) params.set('from', from);
-  if (to)   params.set('to', to);
-  const token = localStorage.getItem('re_admin_token') || localStorage.getItem('re_token') || '';
-  // Use hidden anchor to trigger download with auth header via fetch
-  fetch(`/api/admin/audit-log/export?${params}`, { headers: { Authorization: 'Bearer ' + token } })
-    .then(r => r.blob())
-    .then(blob => {
-      const url = URL.createObjectURL(blob);
-      const a   = document.createElement('a');
-      a.href    = url;
-      a.download = `audit_log_${new Date().toISOString().slice(0,10)}.csv`;
-      a.click();
-      URL.revokeObjectURL(url);
-    })
-    .catch(() => showToast('Erro ao exportar log.', 'error'));
-}
-
-function toggleAuditDetail(i) {
-  const el = document.getElementById('auditDetail'+i);
-  if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
-}
 </script>
 
 <script src="./js/admin-agenda.js?v=20260416k"></script>
+<script src="./js/admin-audit-log.js?v=20260416p"></script>
 <script src="./js/admin-finance.js?v=20260416l"></script>
 <script src="./js/admin-notifications.js?v=20260416m"></script>
 <script src="./js/admin-invoices.js?v=20260416n"></script>
