@@ -93,9 +93,9 @@
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
         Financeiro
       </button>
-      <button class="sidebar-link" onclick="showSection('formbuilder',this)">
+      <button class="sidebar-link" onclick="showSection('formularios',this)">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
-        Formulário
+        Formulários
       </button>
       <button class="sidebar-link" onclick="showSection('logs',this)">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
@@ -284,40 +284,227 @@
       </div>
     </div>
 
-    <!-- FORM BUILDER -->
-    <div id="sec-formbuilder" class="tab-content">
-      <div class="section-header">
-        <div>
-          <div class="section-title">Construtor de Formulário</div>
-          <div class="section-sub">Configure as etapas e campos do onboarding dos clientes</div>
-        </div>
-        <button class="btn-primary" onclick="saveFormConfig()" style="font-size:13px;padding:8px 16px;">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13"/><polyline points="7 3 7 8 15 8"/></svg>
-          Salvar configuração
-        </button>
-      </div>
+    <!-- FORMULÁRIOS (Professional Form Builder) -->
+    <div id="sec-formularios" class="tab-content">
 
-      <!-- Welcome message -->
-      <div class="portal-card" style="margin-bottom:20px;">
-        <div class="portal-card-header">
-          <span class="portal-card-title">Mensagem de boas-vindas</span>
+      <!-- ── VIEW: LIST ─────────────────────────────────────────────────── -->
+      <div id="fb-view-list">
+        <div class="section-header">
+          <div>
+            <div class="section-title">Formulários</div>
+            <div class="section-sub">Crie diagnósticos, pesquisas e avaliações profissionais</div>
+          </div>
+          <button class="btn-primary" onclick="fbOpenNewFormModal()" style="font-size:13px;padding:8px 16px;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Novo Formulário
+          </button>
         </div>
-        <div class="portal-card-body" style="padding:16px 20px;">
-          <textarea id="fbWelcomeMsg" class="portal-input" rows="3"
-            placeholder="Mensagem exibida ao cliente no início do formulário de onboarding..."
-            style="resize:vertical;font-size:13px;"></textarea>
+        <div id="fb-forms-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;">
+          <div style="padding:24px;color:#94A3B8;text-align:center;">Carregando...</div>
         </div>
       </div>
 
-      <!-- Steps list -->
-      <div class="portal-card">
-        <div class="portal-card-header">
-          <span class="portal-card-title">Etapas do formulário</span>
-          <span style="font-size:12px;color:var(--text-muted);">As etapas 1 (LGPD) e 14 (Confirmação) são sempre obrigatórias.</span>
+      <!-- ── VIEW: BUILDER ──────────────────────────────────────────────── -->
+      <div id="fb-view-builder" style="display:none;">
+        <!-- Builder header -->
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
+          <button class="btn-ghost" onclick="fbLoadFormsList()" style="font-size:13px;padding:6px 12px;">
+            ← Todos os formulários
+          </button>
+          <h1 id="fb-builder-title" style="font-size:18px;font-weight:700;color:#1E293B;margin:0;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">—</h1>
+          <button class="btn-ghost" onclick="fbToggleSettings()" style="font-size:13px;padding:6px 12px;">
+            ⚙️ Configurações
+          </button>
+          <button class="btn-ghost" onclick="fbOpenAssignModal()" style="font-size:13px;padding:6px 12px;">
+            👥 Atribuir clientes
+          </button>
         </div>
-        <div id="fbStepsList" style="padding:4px 0;">
-          <div style="padding:20px;color:var(--text-muted);font-size:14px;">Carregando...</div>
+
+        <!-- Settings panel (collapsible) -->
+        <div id="fb-settings-panel" style="display:none;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px;padding:16px 20px;margin-bottom:16px;">
+          <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:12px;align-items:end;">
+            <div>
+              <label style="font-size:12px;color:#64748B;font-weight:500;display:block;margin-bottom:4px;">Título</label>
+              <input id="fb-settings-title" class="portal-input" placeholder="Título do formulário">
+            </div>
+            <div>
+              <label style="font-size:12px;color:#64748B;font-weight:500;display:block;margin-bottom:4px;">Status</label>
+              <select id="fb-settings-status" class="portal-input">
+                <option value="draft">Rascunho</option>
+                <option value="active">Publicado</option>
+                <option value="inactive">Arquivado</option>
+              </select>
+            </div>
+            <button class="btn-primary" onclick="fbSaveFormSettings()" style="font-size:13px;padding:8px 14px;">Salvar</button>
+          </div>
+          <div style="margin-top:10px;">
+            <label style="font-size:12px;color:#64748B;font-weight:500;display:block;margin-bottom:4px;">Descrição</label>
+            <input id="fb-settings-desc" class="portal-input" placeholder="Descrição (opcional)">
+          </div>
         </div>
+
+        <!-- Page tabs -->
+        <div id="fb-page-tabs" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;"></div>
+
+        <!-- 3-column layout -->
+        <div style="display:grid;grid-template-columns:220px 1fr 280px;gap:12px;min-height:500px;">
+
+          <!-- Left: Question palette -->
+          <div style="background:#fff;border:1px solid #E2E8F0;border-radius:10px;overflow:hidden;">
+            <div style="padding:10px 12px;background:#F8FAFC;border-bottom:1px solid #E2E8F0;font-size:11px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:.5px;">
+              Tipos de questão
+            </div>
+            <div id="fb-palette" style="padding:8px;display:flex;flex-direction:column;gap:2px;overflow-y:auto;max-height:580px;">
+              <!-- filled by fbRenderPalette() -->
+            </div>
+          </div>
+
+          <!-- Center: Canvas -->
+          <div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px;padding:16px;overflow-y:auto;max-height:600px;" id="fb-canvas">
+            <div style="padding:40px;text-align:center;color:#94A3B8;">
+              <div style="font-size:32px;margin-bottom:10px;">📋</div>
+              <div style="font-size:14px;">Clique em um tipo de questão para adicionar</div>
+            </div>
+          </div>
+
+          <!-- Right: Properties panel -->
+          <div style="background:#fff;border:1px solid #E2E8F0;border-radius:10px;overflow:hidden;">
+            <div style="padding:10px 12px;background:#F8FAFC;border-bottom:1px solid #E2E8F0;font-size:11px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:.5px;">
+              Propriedades
+            </div>
+            <div id="fb-props-panel" style="overflow-y:auto;max-height:560px;">
+              <div style="padding:24px;text-align:center;color:#94A3B8;">
+                <div style="font-size:28px;margin-bottom:8px;">👈</div>
+                <div style="font-size:13px;">Clique em uma questão para editar</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── VIEW: RESPONSES ────────────────────────────────────────────── -->
+      <div id="fb-view-responses" style="display:none;">
+        <div class="section-header">
+          <div>
+            <div class="section-title" id="fb-resp-title">Respostas</div>
+            <div class="section-sub">Visualize e exporte as respostas dos clientes</div>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button class="btn-ghost" onclick="fbExportResponsesCSV()" style="font-size:13px;padding:8px 14px;">
+              📥 Exportar CSV
+            </button>
+            <button class="btn-ghost" onclick="fbLoadFormsList()" style="font-size:13px;padding:8px 14px;">
+              ← Voltar
+            </button>
+          </div>
+        </div>
+        <div class="portal-card">
+          <div style="overflow-x:auto;" id="fb-resp-list">
+            <div style="padding:24px;color:#94A3B8;text-align:center;">Carregando...</div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /sec-formularios -->
+
+    <!-- ── MODAL: New Form ────────────────────────────────────────────────── -->
+    <div id="fb-modal-new" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;align-items:center;justify-content:center;">
+      <div style="background:#fff;border-radius:14px;padding:28px;width:100%;max-width:480px;box-shadow:0 20px 60px rgba(0,0,0,.2);">
+        <div style="font-size:18px;font-weight:700;color:#1E293B;margin-bottom:20px;">Novo Formulário</div>
+        <div style="display:flex;flex-direction:column;gap:14px;">
+          <div>
+            <label style="font-size:12px;color:#64748B;font-weight:500;display:block;margin-bottom:4px;">Título *</label>
+            <input id="fb-new-title" class="portal-input" placeholder="Ex: Diagnóstico Financeiro">
+          </div>
+          <div>
+            <label style="font-size:12px;color:#64748B;font-weight:500;display:block;margin-bottom:4px;">Tipo</label>
+            <select id="fb-new-type" class="portal-input">
+              <option value="diagnostico">Diagnóstico</option>
+              <option value="pesquisa">Pesquisa</option>
+              <option value="avaliacao">Avaliação</option>
+              <option value="onboarding">Onboarding</option>
+              <option value="outro">Outro</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:12px;color:#64748B;font-weight:500;display:block;margin-bottom:4px;">Descrição</label>
+            <textarea id="fb-new-desc" class="portal-input" rows="2" placeholder="Descreva o objetivo deste formulário..."></textarea>
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;">
+          <button class="btn-ghost" onclick="fbCloseNewModal()">Cancelar</button>
+          <button class="btn-primary" onclick="fbSubmitNewForm()">Criar formulário →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── MODAL: Logic Editor ────────────────────────────────────────────── -->
+    <div id="fb-logic-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;align-items:center;justify-content:center;">
+      <div style="background:#fff;border-radius:14px;padding:24px;width:100%;max-width:560px;box-shadow:0 20px 60px rgba(0,0,0,.2);max-height:80vh;overflow-y:auto;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+          <div style="font-size:16px;font-weight:700;color:#1E293B;">🔀 Lógica Condicional</div>
+          <button onclick="fbCloseLogicModal()" style="background:none;border:none;color:#94A3B8;font-size:20px;cursor:pointer;line-height:1;">×</button>
+        </div>
+        <div id="fb-logic-rules" style="margin-bottom:16px;"></div>
+        <div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;padding:14px;">
+          <div style="font-size:12px;font-weight:700;color:#64748B;margin-bottom:10px;text-transform:uppercase;">Nova Regra</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px;">
+            <div>
+              <label style="font-size:11px;color:#64748B;display:block;margin-bottom:3px;">Operador</label>
+              <select id="fb-logic-op" class="portal-input" style="font-size:12px;padding:6px;">
+                <option value="equals">É igual a</option>
+                <option value="not_equals">Diferente de</option>
+                <option value="contains">Contém</option>
+                <option value="greater_than">Maior que</option>
+                <option value="less_than">Menor que</option>
+                <option value="is_answered">Foi respondida</option>
+                <option value="is_empty">Não foi respondida</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:11px;color:#64748B;display:block;margin-bottom:3px;">Valor</label>
+              <input id="fb-logic-val" class="portal-input" style="font-size:12px;padding:6px;" placeholder="Ex: Sim">
+            </div>
+            <div>
+              <label style="font-size:11px;color:#64748B;display:block;margin-bottom:3px;">Ação</label>
+              <select id="fb-logic-action" class="portal-input" style="font-size:12px;padding:6px;">
+                <option value="skip_to_page">Ir para página</option>
+                <option value="hide_question">Ocultar questão</option>
+              </select>
+            </div>
+          </div>
+          <div style="margin-bottom:10px;">
+            <label style="font-size:11px;color:#64748B;display:block;margin-bottom:3px;">Página de destino (ID)</label>
+            <input id="fb-logic-target-page" type="number" class="portal-input" style="font-size:12px;padding:6px;max-width:160px;" placeholder="ID da página">
+          </div>
+          <button class="btn-primary" onclick="fbAddLogicRule()" style="font-size:12px;padding:7px 14px;">+ Adicionar regra</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── MODAL: Assign Clients ──────────────────────────────────────────── -->
+    <div id="fb-assign-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;align-items:center;justify-content:center;">
+      <div style="background:#fff;border-radius:14px;padding:24px;width:100%;max-width:480px;box-shadow:0 20px 60px rgba(0,0,0,.2);max-height:80vh;overflow-y:auto;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+          <div style="font-size:16px;font-weight:700;color:#1E293B;">👥 Atribuir Clientes</div>
+          <button onclick="fbCloseAssignModal()" style="background:none;border:none;color:#94A3B8;font-size:20px;cursor:pointer;line-height:1;">×</button>
+        </div>
+        <div id="fb-assign-list" style="margin-bottom:14px;max-height:200px;overflow-y:auto;"></div>
+        <div style="display:flex;gap:8px;">
+          <input id="fb-assign-email" class="portal-input" placeholder="Email do cliente" style="flex:1;">
+          <button class="btn-primary" onclick="fbAssignClient()" style="font-size:13px;padding:8px 14px;">Atribuir</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── MODAL: Response detail ─────────────────────────────────────────── -->
+    <div id="fb-resp-detail-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;align-items:center;justify-content:center;">
+      <div style="background:#fff;border-radius:14px;padding:24px;width:100%;max-width:600px;box-shadow:0 20px 60px rgba(0,0,0,.2);max-height:88vh;overflow-y:auto;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+          <div style="font-size:16px;font-weight:700;color:#1E293B;">📊 Detalhes da Resposta</div>
+          <button onclick="fbCloseRespDetailModal()" style="background:none;border:none;color:#94A3B8;font-size:20px;cursor:pointer;line-height:1;">×</button>
+        </div>
+        <div id="fb-resp-detail-body"></div>
       </div>
     </div>
 
@@ -543,7 +730,7 @@ function showSection(name, el) {
   if (name === 'logs')             loadLogs();
   if (name === 'agenda')           loadAdminAgenda();
   if (name === 'financeiro')       loadAdminFinanceiro();
-  if (name === 'formbuilder')      loadFormBuilder();
+  if (name === 'formularios')      loadFormBuilder();
   if (name === 'adminInvoices')    loadAdminInvoices();
   if (name === 'adminMarketplace') loadAdminMarketplace();
   if (name === 'auditlog')         loadAuditLog();
@@ -2493,6 +2680,19 @@ function toggleAuditDetail(i) {
   if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
 }
 </script>
+
+<!-- Form Builder styles -->
+<style>
+  .fb-prop-group { margin-bottom:10px; }
+  .fb-prop-label { display:block;font-size:11px;color:#64748B;font-weight:600;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px; }
+  .fb-prop-input { width:100%;padding:7px 10px;border:1px solid #E2E8F0;border-radius:6px;font-size:13px;box-sizing:border-box;color:#1E293B; }
+  .fb-prop-input:focus { border-color:#1A56DB;outline:none;box-shadow:0 0 0 2px rgba(26,86,219,.1); }
+  .fb-palette-btn { display:flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid transparent;border-radius:7px;background:none;cursor:pointer;font-size:12px;color:#374151;width:100%;text-align:left;transition:all .12s; }
+  .fb-palette-btn:hover { background:#EFF6FF;border-color:#BFDBFE;color:#1A56DB; }
+</style>
+
+<!-- Form Builder JS -->
+<script src="./js/form-builder.js?v=20260415"></script>
 
 <!-- Freshchat: pré-configura token ANTES do CDN para auto-init funcionar -->
 <script>

@@ -2813,7 +2813,689 @@ app.put('/api/admin/form-config', requireAdmin, (req, res) => {
   }
 });
 
-// ─── Notifications ───────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+// FORM BUILDER — Full API
+// ══════════════════════════════════════════════════════════════════════════════
+
+// ── Helper: load full form (pages + questions + logic) ────────────────────────
+async function loadFullForm(formId) {
+  const { data: form }  = await sb.from('re_forms').select('*').eq('id', formId).single();
+  if (!form) return null;
+  const { data: pages } = await sb.from('re_form_pages')
+    .select('*').eq('form_id', formId).order('order_index');
+  const { data: qs }    = await sb.from('re_form_questions')
+    .select('*').eq('form_id', formId).order('order_index');
+  const { data: logic } = await sb.from('re_form_logic')
+    .select('*').eq('form_id', formId);
+
+  // Nest questions into their pages (makes it easy for front-end consumers)
+  const allPages = (pages || []).map(p => ({
+    ...p,
+    questions: (qs || []).filter(q => q.page_id === p.id).sort((a,b) => a.order_index - b.order_index),
+  }));
+
+  return { ...form, pages: allPages, logic: logic || [] };
+}
+
+// ── Admin: List forms ─────────────────────────────────────────────────────────
+app.get('/api/admin/forms', requireAdmin, async (req, res) => {
+  try {
+    const { type, status } = req.query;
+    let q = sb.from('re_forms').select('*').order('created_at', { ascending: false });
+    if (type)   q = q.eq('type', type);
+    if (status) q = q.eq('status', status);
+    const { data: forms } = await q;
+    // Attach response counts
+    const ids = (forms || []).map(f => f.id);
+    let counts = {};
+    if (ids.length) {
+      const { data: resp } = await sb.from('re_form_responses')
+        .select('form_id').in('form_id', ids).eq('status', 'completed');
+      (resp || []).forEach(r => { counts[r.form_id] = (counts[r.form_id] || 0) + 1; });
+    }
+    res.json({ forms: (forms || []).map(f => ({ ...f, response_count: counts[f.id] || 0 })) });
+  } catch (e) { console.error('[FORMS LIST]', e.message); res.json({ forms: [] }); }
+});
+
+// ── Admin: Create form ────────────────────────────────────────────────────────
+app.post('/api/admin/forms', requireAdmin, async (req, res) => {
+  try {
+    const { title, description, type, settings, linked_plan_chapter } = req.body;
+    if (!title) return res.status(400).json({ error: 'Título é obrigatório.' });
+    const { data: form, error } = await sb.from('re_forms').insert({
+      title, description: description || null, type: type || 'custom',
+      settings: settings || { scoring_enabled: false, show_progress: true, allow_resume: true },
+      linked_plan_chapter: linked_plan_chapter || null,
+      created_by: req.user.id, status: 'draft',
+    }).select().single();
+    if (error) return res.status(500).json({ error: error.message });
+    // Auto-create first page
+    await sb.from('re_form_pages').insert({ form_id: form.id, title: 'Página 1', order_index: 0 });
+    auditLog({ actorId: req.user.id, actorEmail: req.user.email, actorRole: 'admin',
+      entityType: 'form', entityId: form.id, action: 'create', after: { title, type } }).catch(() => {});
+    res.json({ success: true, form });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Admin: Get full form ──────────────────────────────────────────────────────
+app.get('/api/admin/forms/:id', requireAdmin, async (req, res) => {
+  try {
+    const form = await loadFullForm(req.params.id);
+    if (!form) return res.status(404).json({ error: 'Formulário não encontrado.' });
+    res.json({ form });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Admin: Update form metadata ───────────────────────────────────────────────
+app.put('/api/admin/forms/:id', requireAdmin, async (req, res) => {
+  try {
+    const { title, description, type, status, settings, linked_plan_chapter } = req.body;
+    const updates = { updated_at: new Date().toISOString() };
+    if (title  !== undefined) updates.title  = title;
+    if (description !== undefined) updates.description = description;
+    if (type   !== undefined) updates.type   = type;
+    if (status !== undefined) updates.status = status;
+    if (settings !== undefined) updates.settings = settings;
+    if (linked_plan_chapter !== undefined) updates.linked_plan_chapter = linked_plan_chapter;
+    const { data: form, error } = await sb.from('re_forms').update(updates).eq('id', req.params.id).select().single();
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ success: true, form });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Admin: Delete form ────────────────────────────────────────────────────────
+app.delete('/api/admin/forms/:id', requireAdmin, async (req, res) => {
+  try {
+    await sb.from('re_forms').delete().eq('id', req.params.id);
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Admin: Duplicate form ─────────────────────────────────────────────────────
+app.post('/api/admin/forms/:id/duplicate', requireAdmin, async (req, res) => {
+  try {
+    const src = await loadFullForm(req.params.id);
+    if (!src) return res.status(404).json({ error: 'Formulário não encontrado.' });
+
+    const { data: newForm } = await sb.from('re_forms').insert({
+      title: src.title + ' (cópia)', description: src.description,
+      type: src.type, settings: src.settings, status: 'draft',
+      linked_plan_chapter: src.linked_plan_chapter,
+      created_by: req.user.id, template_id: src.id, version: 1,
+    }).select().single();
+
+    const pageIdMap = {};
+    for (const p of src.pages) {
+      const { data: np } = await sb.from('re_form_pages').insert({
+        form_id: newForm.id, title: p.title, description: p.description, order_index: p.order_index,
+      }).select().single();
+      pageIdMap[p.id] = np.id;
+    }
+
+    const qIdMap = {};
+    for (const q of src.questions) {
+      const { data: nq } = await sb.from('re_form_questions').insert({
+        form_id: newForm.id, page_id: pageIdMap[q.page_id] || null,
+        order_index: q.order_index, type: q.type, label: q.label,
+        description: q.description, placeholder: q.placeholder,
+        required: q.required, options: q.options, settings: q.settings,
+        weight: q.weight, score_map: q.score_map, formula: q.formula,
+      }).select().single();
+      qIdMap[q.id] = nq.id;
+    }
+
+    for (const l of src.logic) {
+      await sb.from('re_form_logic').insert({
+        form_id: newForm.id,
+        source_question_id: qIdMap[l.source_question_id] || null,
+        operator: l.operator, condition_value: l.condition_value, action: l.action,
+        target_question_id: l.target_question_id ? qIdMap[l.target_question_id] : null,
+        target_page_id: l.target_page_id ? pageIdMap[l.target_page_id] : null,
+      });
+    }
+
+    res.json({ success: true, form: newForm });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Admin: Assign form to client(s) ──────────────────────────────────────────
+app.post('/api/admin/forms/:id/assign', requireAdmin, async (req, res) => {
+  try {
+    const { user_ids } = req.body;
+    if (!Array.isArray(user_ids) || !user_ids.length)
+      return res.status(400).json({ error: 'user_ids é obrigatório.' });
+    const rows = user_ids.map(uid => ({ form_id: req.params.id, user_id: uid, assigned_by: req.user.id }));
+    await sb.from('re_form_assignments').upsert(rows, { onConflict: 'form_id,user_id' });
+    // Notify clients
+    for (const uid of user_ids) {
+      const { data: form } = await sb.from('re_forms').select('title').eq('id', req.params.id).single();
+      pushNotification(uid, 'task', 'Novo formulário disponível',
+        form?.title || 'Formulário', 'form', req.params.id).catch(() => {});
+    }
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Admin: Get form assignments ───────────────────────────────────────────────
+app.get('/api/admin/forms/:id/assignments', requireAdmin, async (req, res) => {
+  try {
+    const { data } = await sb.from('re_form_assignments')
+      .select('*,re_users!re_form_assignments_user_id_fkey(name,email,company)')
+      .eq('form_id', req.params.id);
+    res.json({ assignments: data || [] });
+  } catch (e) { res.json({ assignments: [] }); }
+});
+
+// ── Admin: Remove assignment ──────────────────────────────────────────────────
+app.delete('/api/admin/forms/:id/assignments/:uid', requireAdmin, async (req, res) => {
+  try {
+    await sb.from('re_form_assignments').delete().eq('form_id', req.params.id).eq('user_id', req.params.uid);
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Admin: Pages CRUD ─────────────────────────────────────────────────────────
+app.post('/api/admin/forms/:id/pages', requireAdmin, async (req, res) => {
+  try {
+    const { title, description } = req.body;
+    const { data: last } = await sb.from('re_form_pages')
+      .select('order_index').eq('form_id', req.params.id).order('order_index', { ascending: false }).limit(1).single();
+    const { data: page } = await sb.from('re_form_pages').insert({
+      form_id: req.params.id, title: title || 'Nova Página',
+      description: description || null, order_index: (last?.order_index ?? -1) + 1,
+    }).select().single();
+    res.json({ success: true, page });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.put('/api/admin/forms/:id/pages/:pageId', requireAdmin, async (req, res) => {
+  try {
+    const { title, description, order_index } = req.body;
+    const upd = {};
+    if (title !== undefined)       upd.title       = title;
+    if (description !== undefined) upd.description = description;
+    if (order_index !== undefined) upd.order_index = order_index;
+    const { data: page } = await sb.from('re_form_pages').update(upd).eq('id', req.params.pageId).select().single();
+    res.json({ success: true, page });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete('/api/admin/forms/:id/pages/:pageId', requireAdmin, async (req, res) => {
+  try {
+    await sb.from('re_form_questions').delete().eq('page_id', req.params.pageId);
+    await sb.from('re_form_pages').delete().eq('id', req.params.pageId);
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Admin: Questions CRUD ─────────────────────────────────────────────────────
+app.post('/api/admin/forms/:id/questions', requireAdmin, async (req, res) => {
+  try {
+    const { page_id, type, label, description, placeholder, required,
+            options, settings, weight, score_map, formula } = req.body;
+    if (!page_id || !type) return res.status(400).json({ error: 'page_id e type são obrigatórios.' });
+    const { data: last } = await sb.from('re_form_questions')
+      .select('order_index').eq('page_id', page_id).order('order_index', { ascending: false }).limit(1).single();
+    const { data: q, error } = await sb.from('re_form_questions').insert({
+      form_id: req.params.id, page_id, type,
+      label: label || 'Nova Pergunta',
+      description: description || null,
+      placeholder: placeholder || null,
+      required: required || false,
+      options: options || null,
+      settings: settings || null,
+      weight: weight ?? 1,
+      score_map: score_map || null,
+      formula: formula || null,
+      order_index: (last?.order_index ?? -1) + 1,
+    }).select().single();
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ success: true, question: q });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.put('/api/admin/forms/:id/questions/:qId', requireAdmin, async (req, res) => {
+  try {
+    const allowed = ['label','description','placeholder','required','options','settings',
+                     'weight','score_map','formula','type','order_index','page_id'];
+    const upd = {};
+    allowed.forEach(k => { if (req.body[k] !== undefined) upd[k] = req.body[k]; });
+    const { data: q, error } = await sb.from('re_form_questions').update(upd).eq('id', req.params.qId).select().single();
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ success: true, question: q });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete('/api/admin/forms/:id/questions/:qId', requireAdmin, async (req, res) => {
+  try {
+    await sb.from('re_form_logic')
+      .delete().or(`source_question_id.eq.${req.params.qId},target_question_id.eq.${req.params.qId}`);
+    await sb.from('re_form_questions').delete().eq('id', req.params.qId);
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Reorder questions within a page
+app.post('/api/admin/forms/:id/questions/reorder', requireAdmin, async (req, res) => {
+  try {
+    // req.body.order = [{id, order_index}]
+    const { order } = req.body;
+    for (const item of (order || [])) {
+      await sb.from('re_form_questions').update({ order_index: item.order_index }).eq('id', item.id);
+    }
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Admin: List logic rules for a form ───────────────────────────────────────
+app.get('/api/admin/forms/:id/logic', requireAdmin, async (req, res) => {
+  try {
+    let q = sb.from('re_form_logic').select('*').eq('form_id', req.params.id);
+    if (req.query.question_id) q = q.eq('source_question_id', req.query.question_id);
+    const { data: rules } = await q.order('id');
+    res.json({ rules: rules || [] });
+  } catch (e) { res.json({ rules: [] }); }
+});
+
+// ── Admin: Logic CRUD ─────────────────────────────────────────────────────────
+app.post('/api/admin/forms/:id/logic', requireAdmin, async (req, res) => {
+  try {
+    const { source_question_id, operator, condition_value, action,
+            target_question_id, target_page_id } = req.body;
+    if (!source_question_id || !action)
+      return res.status(400).json({ error: 'source_question_id e action são obrigatórios.' });
+    const { data: rule } = await sb.from('re_form_logic').insert({
+      form_id: req.params.id, source_question_id, operator: operator || 'equals',
+      condition_value: condition_value ?? null, action,
+      target_question_id: target_question_id || null,
+      target_page_id:     target_page_id     || null,
+    }).select().single();
+    res.json({ success: true, rule });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete('/api/admin/forms/:id/logic/:ruleId', requireAdmin, async (req, res) => {
+  try {
+    await sb.from('re_form_logic').delete().eq('id', req.params.ruleId).eq('form_id', req.params.id);
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Admin: Responses ──────────────────────────────────────────────────────────
+app.get('/api/admin/forms/:id/responses', requireAdmin, async (req, res) => {
+  try {
+    const { status } = req.query;
+    let q = sb.from('re_form_responses')
+      .select('*,re_users!re_form_responses_user_id_fkey(name,email,company)')
+      .eq('form_id', req.params.id)
+      .order('started_at', { ascending: false });
+    if (status) q = q.eq('status', status);
+    const { data: responses } = await q;
+    res.json({ responses: responses || [] });
+  } catch (e) { res.json({ responses: [] }); }
+});
+
+app.get('/api/admin/forms/:id/responses/:responseId', requireAdmin, async (req, res) => {
+  try {
+    const { data: response } = await sb.from('re_form_responses')
+      .select('*,re_users!re_form_responses_user_id_fkey(name,email,company)')
+      .eq('id', req.params.responseId).single();
+    if (!response) return res.status(404).json({ error: 'Resposta não encontrada.' });
+    const { data: answers } = await sb.from('re_form_answers')
+      .select('*,re_form_questions(label,type)')
+      .eq('response_id', req.params.responseId);
+    res.json({ response, answers: answers || [] });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Admin: Assign form by email (looks up user first) ────────────────────────
+app.post('/api/admin/forms/:id/assign-email', requireAdmin, async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: 'Email obrigatório.' });
+    const { data: user } = await sb.from('re_users').select('id,name,email').eq('email', email).single();
+    if (!user) return res.status(404).json({ error: 'Cliente não encontrado com este email.' });
+    await sb.from('re_form_assignments').upsert(
+      { form_id: req.params.id, user_id: user.id, assigned_by: req.user.id },
+      { onConflict: 'form_id,user_id' }
+    );
+    const { data: form } = await sb.from('re_forms').select('title').eq('id', req.params.id).single();
+    pushNotification(user.id, 'task', 'Novo formulário disponível',
+      form?.title || 'Formulário', 'form', req.params.id).catch(() => {});
+    res.json({ success: true, user });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Client: List available forms ──────────────────────────────────────────────
+app.get('/api/forms', requireAuth, async (req, res) => {
+  try {
+    const uid = req.user.id;
+    // Get forms assigned to this user
+    const { data: assignments } = await sb.from('re_form_assignments')
+      .select('form_id').eq('user_id', uid);
+    const formIds = (assignments || []).map(a => a.form_id);
+
+    let forms = [];
+    if (formIds.length) {
+      const { data } = await sb.from('re_forms')
+        .select('id,title,description,type,settings')
+        .in('id', formIds).eq('status', 'active');
+      forms = data || [];
+    }
+
+    // Attach response status for each form
+    const withStatus = await Promise.all(forms.map(async f => {
+      const { data: resp } = await sb.from('re_form_responses')
+        .select('id,status,completed_at,score_pct')
+        .eq('form_id', f.id).eq('user_id', uid)
+        .order('started_at', { ascending: false }).limit(1);
+      const latest = resp?.[0] || null;
+      return { ...f, my_status: latest?.status || 'not_started',
+               my_response_id: latest?.id || null,
+               completed_at: latest?.completed_at || null,
+               score_pct: latest?.score_pct || null };
+    }));
+
+    res.json({ forms: withStatus });
+  } catch (e) { res.json({ forms: [] }); }
+});
+
+// ── Client: Get form for rendering (public structure) ─────────────────────────
+app.get('/api/forms/:id', requireAuth, async (req, res) => {
+  try {
+    // Check assignment
+    const { data: asgn } = await sb.from('re_form_assignments')
+      .select('id').eq('form_id', req.params.id).eq('user_id', req.user.id).single();
+    if (!asgn) return res.status(403).json({ error: 'Sem acesso a este formulário.' });
+
+    const form = await loadFullForm(req.params.id);
+    if (!form || form.status === 'inactive') return res.status(404).json({ error: 'Formulário não disponível.' });
+    res.json({ form });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Client: Start or resume a response ───────────────────────────────────────
+app.post('/api/forms/:id/responses', requireAuth, async (req, res) => {
+  try {
+    const formId = req.params.id;
+    // Resume existing in-progress response if any
+    const { data: existing } = await sb.from('re_form_responses')
+      .select('*').eq('form_id', formId).eq('user_id', req.user.id)
+      .eq('status', 'in_progress').order('started_at', { ascending: false }).limit(1).single();
+    if (existing) return res.json({ response: existing, resumed: true });
+
+    // Get first page
+    const { data: firstPage } = await sb.from('re_form_pages')
+      .select('id').eq('form_id', formId).order('order_index').limit(1).single();
+
+    const { data: response } = await sb.from('re_form_responses').insert({
+      form_id: formId, user_id: req.user.id, status: 'in_progress',
+      current_page_id: firstPage?.id || null,
+    }).select().single();
+
+    res.json({ response, resumed: false });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Client: Save answers (auto-save) ─────────────────────────────────────────
+app.put('/api/forms/:id/responses/:responseId', requireAuth, async (req, res) => {
+  try {
+    const { answers, current_page_id } = req.body;
+    // Verify ownership
+    const { data: resp } = await sb.from('re_form_responses')
+      .select('id,user_id').eq('id', req.params.responseId).single();
+    if (!resp || resp.user_id !== req.user.id)
+      return res.status(403).json({ error: 'Sem permissão.' });
+
+    if (current_page_id) {
+      await sb.from('re_form_responses').update({ current_page_id }).eq('id', req.params.responseId);
+    }
+
+    if (Array.isArray(answers)) {
+      for (const ans of answers) {
+        await sb.from('re_form_answers').upsert({
+          response_id: req.params.responseId,
+          question_id: ans.question_id,
+          value:       ans.value       ?? null,
+          value_json:  ans.value_json  ?? null,
+          file_path:   ans.file_path   ?? null,
+          updated_at:  new Date().toISOString(),
+        }, { onConflict: 'response_id,question_id' });
+      }
+    }
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Client: Complete form response ────────────────────────────────────────────
+app.post('/api/forms/:id/responses/:responseId/complete', requireAuth, async (req, res) => {
+  try {
+    const { score_total, score_max, score_pct, score_classification, score_details,
+            calculation_results, auto_report } = req.body;
+
+    const { data: resp } = await sb.from('re_form_responses')
+      .select('user_id').eq('id', req.params.responseId).single();
+    if (!resp || resp.user_id !== req.user.id)
+      return res.status(403).json({ error: 'Sem permissão.' });
+
+    await sb.from('re_form_responses').update({
+      status: 'completed',
+      completed_at: new Date().toISOString(),
+      score_total:          score_total          ?? null,
+      score_max:            score_max            ?? null,
+      score_pct:            score_pct            ?? null,
+      score_classification: score_classification ?? null,
+      score_details:        score_details        ?? null,
+      calculation_results:  calculation_results  ?? null,
+      auto_report:          auto_report          ?? null,
+    }).eq('id', req.params.responseId);
+
+    // Notify admin(s)
+    const { data: form } = await sb.from('re_forms').select('title').eq('id', req.params.id).single();
+    const { data: admins } = await sb.from('re_users').select('id').eq('is_admin', true).limit(10);
+    for (const adm of (admins || [])) {
+      pushNotification(adm.id, 'task', 'Formulário concluído',
+        `${form?.title || 'Formulário'} — resposta de ${req.user.name || req.user.email}`,
+        'form_response', req.params.responseId).catch(() => {});
+    }
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// FORM PLAYER — Simplified Client Routes (/api/my-forms/*)
+// ══════════════════════════════════════════════════════════════════════════════
+
+// ── GET /api/my-forms — list assigned forms with status ───────────────────────
+app.get('/api/my-forms', requireAuth, async (req, res) => {
+  try {
+    const uid = req.user.id;
+    const { data: assignments } = await sb.from('re_form_assignments').select('form_id').eq('user_id', uid);
+    const formIds = (assignments || []).map(a => a.form_id);
+    if (!formIds.length) return res.json([]);
+
+    const { data: forms } = await sb.from('re_forms')
+      .select('id,title,description,type,status')
+      .in('id', formIds).in('status', ['active','publicado']);
+
+    const withStatus = await Promise.all((forms || []).map(async f => {
+      const { data: resp } = await sb.from('re_form_responses')
+        .select('id,status,score_pct,score_classification,current_page_id,updated_at')
+        .eq('form_id', f.id).eq('user_id', uid)
+        .order('updated_at', { ascending: false }).limit(1);
+      const r = resp?.[0] || null;
+      const STATUS_MAP = { in_progress:'em_andamento', completed:'concluido' };
+      return {
+        ...f,
+        response_status:   r ? (STATUS_MAP[r.status] || r.status) : 'nao_iniciado',
+        response_id:       r?.id || null,
+        response_progress: null, // not tracked per-question for now
+        score_pct:         r?.score_pct || null,
+        score_classification: r?.score_classification || null,
+      };
+    }));
+    res.json(withStatus);
+  } catch (e) { res.json([]); }
+});
+
+// ── GET /api/my-forms/:id — form structure + existing response ────────────────
+app.get('/api/my-forms/:id', requireAuth, async (req, res) => {
+  try {
+    const uid    = req.user.id;
+    const formId = req.params.id;
+    // Check assignment
+    const { data: asgn } = await sb.from('re_form_assignments')
+      .select('id').eq('form_id', formId).eq('user_id', uid).single();
+    if (!asgn) return res.status(403).json({ error: 'Sem acesso a este formulário.' });
+
+    const form = await loadFullForm(formId);
+    if (!form) return res.status(404).json({ error: 'Formulário não encontrado.' });
+
+    // Get existing in-progress or completed response
+    const { data: existing } = await sb.from('re_form_responses')
+      .select('id,status,current_page_id,score_pct,score_total,score_max,score_classification,auto_report')
+      .eq('form_id', formId).eq('user_id', uid)
+      .order('updated_at', { ascending: false }).limit(1).single();
+
+    let existingWithAnswers = null;
+    if (existing) {
+      const { data: answers } = await sb.from('re_form_answers')
+        .select('question_id,value,value_json').eq('response_id', existing.id);
+      existingWithAnswers = { ...existing, answers: answers || [] };
+    }
+
+    res.json({ ...form, existing_response: existingWithAnswers });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── POST /api/my-forms/:id/response — upsert response + save all answers ─────
+app.post('/api/my-forms/:id/response', requireAuth, async (req, res) => {
+  try {
+    const uid    = req.user.id;
+    const formId = req.params.id;
+    const { answers, current_page_id, status } = req.body;
+
+    // Check assignment
+    const { data: asgn } = await sb.from('re_form_assignments')
+      .select('id').eq('form_id', formId).eq('user_id', uid).single();
+    if (!asgn) return res.status(403).json({ error: 'Sem acesso.' });
+
+    // Get or create response
+    let { data: resp } = await sb.from('re_form_responses')
+      .select('id,status').eq('form_id', formId).eq('user_id', uid)
+      .not('status', 'eq', 'completed')
+      .order('updated_at', { ascending: false }).limit(1).single();
+
+    const isCompleting = status === 'concluido';
+    const dbStatus     = isCompleting ? 'completed' : 'in_progress';
+
+    if (!resp) {
+      const { data: newResp } = await sb.from('re_form_responses').insert({
+        form_id: formId, user_id: uid, status: dbStatus,
+        current_page_id: current_page_id || null,
+        updated_at: new Date().toISOString(),
+      }).select('id,status').single();
+      resp = newResp;
+    } else {
+      const upd = { status: dbStatus, updated_at: new Date().toISOString() };
+      if (current_page_id) upd.current_page_id = current_page_id;
+      if (isCompleting)    upd.completed_at     = new Date().toISOString();
+      await sb.from('re_form_responses').update(upd).eq('id', resp.id);
+    }
+
+    const responseId = resp.id;
+
+    // Save answers (answers is a {questionId: value} object)
+    if (answers && typeof answers === 'object') {
+      for (const [qId, val] of Object.entries(answers)) {
+        const isArr     = Array.isArray(val);
+        const isComplex = isArr || (typeof val === 'object' && val !== null);
+        await sb.from('re_form_answers').upsert({
+          response_id: responseId,
+          question_id: parseInt(qId),
+          value:       isComplex ? null : (val == null ? null : String(val)),
+          value_json:  isComplex ? val  : null,
+          updated_at:  new Date().toISOString(),
+        }, { onConflict: 'response_id,question_id' });
+      }
+    }
+
+    // If completing, calculate scoring
+    let scoreData = {};
+    if (isCompleting) {
+      const { data: questions } = await sb.from('re_form_questions')
+        .select('id,weight,score_map,type').eq('form_id', formId);
+
+      let totalScore = 0, maxScore = 0;
+      const scoreDetails = {};
+      for (const q of (questions || [])) {
+        if (!q.weight) continue;
+        maxScore += q.weight;
+        const ansKey  = String(q.id);
+        const ansVal  = answers?.[ansKey];
+        const scoreMap = q.score_map || {};
+        let pts = 0;
+        if (ansVal != null && scoreMap[String(ansVal)] !== undefined) {
+          pts = parseFloat(scoreMap[String(ansVal)]) || 0;
+        } else if (typeof ansVal === 'number') {
+          pts = ansVal * (q.weight / 10); // default scale scoring
+        }
+        totalScore += pts;
+        scoreDetails[q.id] = pts;
+      }
+      const pct = maxScore > 0 ? (totalScore / maxScore) * 100 : null;
+      const classification = pct == null ? null
+        : pct >= 70 ? 'saudavel'
+        : pct >= 40 ? 'risco_moderado'
+        : 'risco_alto';
+
+      // Generate auto-report
+      const { data: form } = await sb.from('re_forms').select('title,type').eq('id', formId).single();
+      let autoReport = null;
+      if (pct != null) {
+        autoReport = `Relatório de ${form?.title || 'Diagnóstico'}\n\nPontuação: ${Math.round(pct)}% (${totalScore.toFixed(1)}/${maxScore} pontos)\n`;
+        autoReport += classification === 'saudavel'      ? 'Situação: SAUDÁVEL — A empresa apresenta boa saúde financeira e operacional.\n'
+                    : classification === 'risco_moderado' ? 'Situação: RISCO MODERADO — Há pontos de atenção que merecem acompanhamento.\n'
+                    : 'Situação: RISCO ALTO — A empresa necessita de intervenção imediata.\n';
+        autoReport += `\nEste relatório foi gerado automaticamente com base nas respostas fornecidas em ${new Date().toLocaleDateString('pt-BR')}.`;
+      }
+
+      await sb.from('re_form_responses').update({
+        score_total:          totalScore,
+        score_max:            maxScore,
+        score_pct:            pct,
+        score_classification: classification,
+        score_details:        scoreDetails,
+        auto_report:          autoReport,
+      }).eq('id', responseId);
+
+      scoreData = { score_total: totalScore, score_max: maxScore, score_pct: pct, score_classification: classification, auto_report: autoReport };
+
+      // Notify admins
+      const { data: admins } = await sb.from('re_users').select('id').eq('is_admin', true).limit(10);
+      for (const adm of (admins || [])) {
+        pushNotification(adm.id, 'task', 'Formulário concluído',
+          `${form?.title || 'Formulário'} — resposta de ${req.user.name || req.user.email}`,
+          'form_response', responseId).catch(() => {});
+      }
+    }
+
+    res.json({ response_id: responseId, ...scoreData });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Client: Get own responses ─────────────────────────────────────────────────
+app.get('/api/my-form-responses', requireAuth, async (req, res) => {
+  try {
+    const { data } = await sb.from('re_form_responses')
+      .select('*,re_forms(title,type)')
+      .eq('user_id', req.user.id)
+      .order('started_at', { ascending: false });
+    res.json({ responses: data || [] });
+  } catch (e) { res.json({ responses: [] }); }
+});
+
+// ── Notifications ───────────────────────────────────────────────────────────
 app.get('/api/notifications', requireAuth, async (req, res) => {
   try {
     const uid   = req.user.id;
