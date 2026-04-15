@@ -3996,14 +3996,42 @@ app.get('/api/my-journeys', requireAuth, async (req, res) => {
       .select('*,re_journeys(id,name,description,status)')
       .eq('user_id', uid).in('status', ['active','completed']);
 
+    // Check if user has completed the main onboarding (for auto-completing form steps)
+    const { data: onboarding } = await sb.from('re_onboarding')
+      .select('status').eq('user_id', uid).single();
+    const onboardingDone = onboarding?.status === 'completed';
+
     const result = await Promise.all((assignments || []).map(async asn => {
       const { data: steps } = await sb.from('re_journey_steps')
-        .select('id,title,description,order_index,is_optional,form_id,re_forms(id,title)')
+        .select('id,title,description,order_index,is_optional,form_id,re_forms(id,title,is_system,system_key)')
         .eq('journey_id', asn.journey_id).order('order_index');
 
       const { data: completions } = await sb.from('re_journey_step_completions')
         .select('step_id,completed_at').eq('assignment_id', asn.id);
       const doneSet = new Set((completions || []).map(c => c.step_id));
+
+      // Auto-complete onboarding form steps for clients who already finished onboarding
+      if (onboardingDone) {
+        for (const step of (steps || [])) {
+          if (step.re_forms?.system_key === 'onboarding_14steps' && !doneSet.has(step.id)) {
+            await sb.from('re_journey_step_completions').upsert({
+              assignment_id: asn.id,
+              step_id:       step.id,
+              completed_at:  new Date().toISOString(),
+              notes:         'Completado automaticamente via onboarding do portal',
+            }, { onConflict: 'assignment_id,step_id' }).catch(e => console.warn('[auto-complete step]', e?.message));
+            doneSet.add(step.id);
+            // Advance pointer past this step
+            if (asn.current_step_index === step.order_index) {
+              const nextIdx = step.order_index + 1;
+              await sb.from('re_journey_assignments')
+                .update({ current_step_index: nextIdx }).eq('id', asn.id)
+                .catch(e => console.warn('[auto-advance journey]', e?.message));
+              asn.current_step_index = nextIdx;
+            }
+          }
+        }
+      }
 
       return {
         assignment_id:       asn.id,

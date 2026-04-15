@@ -37,6 +37,7 @@ const FB = {
   selectedQ:     null,     // selected question id
   responses:     [],
   selectedResp:  null,
+  readOnly:      false,    // true for system forms (view-only)
 };
 
 /* ──────────────────────────────────────────────────────────────────────────────
@@ -114,7 +115,8 @@ async function fbLoadFormsList() {
     const statusBadge = `<span class="badge ${STATUS_CLS[f.status] || 'badge-gray'}">${STATUS_LBL[f.status] || f.status}</span>`;
     const systemBadge = isSystem ? `<span class="badge badge-gray" style="background:#EFF6FF;color:#1A56DB;border:1px solid #BFDBFE;">Sistema</span>` : '';
     const actionBtns = isSystem
-      ? `<button class="btn-ghost" style="font-size:12px;padding:6px 12px;" onclick="fbOpenResponses('${fid}','${fbEsc(f.title)}')">📊 Respostas</button>
+      ? `<button class="btn-primary" style="font-size:12px;padding:6px 12px;" onclick="fbOpenBuilder('${fid}',true)">👁️ Ver Perguntas</button>
+         <button class="btn-ghost" style="font-size:12px;padding:6px 12px;" onclick="fbOpenResponses('${fid}','${fbEsc(f.title)}')">📊 Respostas</button>
          <button class="btn-ghost" style="font-size:12px;padding:6px 12px;" onclick="fbOpenStatsPanel('${fid}')">📈 Estatísticas</button>`
       : `<button class="btn-primary" style="font-size:12px;padding:6px 12px;" onclick="fbOpenBuilder('${fid}')">✏️ Editar</button>
          <button class="btn-ghost" style="font-size:12px;padding:6px 12px;" onclick="fbOpenResponses('${fid}','${fbEsc(f.title)}')">📊 Respostas</button>
@@ -264,10 +266,15 @@ async function fbSubmitNewForm() {
 /* ══════════════════════════════════════════════════════════════════════════════
    VIEW 2 — BUILDER CANVAS
 ══════════════════════════════════════════════════════════════════════════════*/
-async function fbOpenBuilder(formId) {
+async function fbOpenBuilder(formId, readOnly = false) {
   FB.currentFormId = formId;
   FB.selectedQ = null;
+  FB.readOnly = readOnly;
   fbShowView('builder');
+
+  // Show/hide read-only banner
+  const banner = document.getElementById('fb-readonly-banner');
+  if (banner) banner.style.display = readOnly ? '' : 'none';
 
   const titleEl = document.getElementById('fb-builder-title');
   if (titleEl) titleEl.textContent = 'Carregando...';
@@ -299,11 +306,11 @@ function fbRenderPageTabs() {
       onclick="fbSelectPage(${p.id})" style="padding:6px 14px;border-radius:6px;border:1px solid ${FB.currentPage && FB.currentPage.id === p.id ? '#1A56DB' : '#E2E8F0'};background:${FB.currentPage && FB.currentPage.id === p.id ? '#EFF6FF' : '#fff'};color:${FB.currentPage && FB.currentPage.id === p.id ? '#1A56DB' : '#64748B'};font-size:13px;cursor:pointer;font-weight:${FB.currentPage && FB.currentPage.id === p.id ? '700' : '500'};">
       Página ${i+1}${p.title ? ': '+fbEsc(p.title) : ''}
     </button>
-  `).join('') + `
+  `).join('') + (FB.readOnly ? '' : `
     <button onclick="fbAddPage()" style="padding:6px 12px;border-radius:6px;border:1px dashed #CBD5E1;background:#F8FAFC;color:#64748B;font-size:13px;cursor:pointer;">
       + Página
     </button>
-  `;
+  `);
 }
 
 function fbSelectPage(pageId) {
@@ -344,7 +351,7 @@ function fbRenderCanvas() {
   if (!FB.currentPage) {
     canvas.innerHTML = `<div style="padding:40px;text-align:center;color:#94A3B8;">
       <div style="font-size:32px;margin-bottom:10px;">📄</div>
-      <div style="font-size:14px;">Nenhuma página. Clique em "+ Página" para criar.</div>
+      <div style="font-size:14px;">${FB.readOnly ? 'Nenhuma página.' : 'Nenhuma página. Clique em "+ Página" para criar.'}</div>
     </div>`;
     return;
   }
@@ -354,7 +361,7 @@ function fbRenderCanvas() {
   if (!questions.length) {
     canvas.innerHTML = `<div style="padding:40px;text-align:center;color:#94A3B8;">
       <div style="font-size:32px;margin-bottom:10px;">❓</div>
-      <div style="font-size:14px;">Nenhuma questão nesta página.<br>Arraste um tipo da paleta ou clique para adicionar.</div>
+      <div style="font-size:14px;">${FB.readOnly ? 'Nenhuma questão nesta página.' : 'Nenhuma questão nesta página.<br>Arraste um tipo da paleta ou clique para adicionar.'}</div>
     </div>`;
     return;
   }
@@ -378,7 +385,7 @@ function fbRenderCanvas() {
           <div style="font-size:14px;font-weight:600;color:#1E293B;margin-top:4px;">${fbEsc(q.label) || '<em style="color:#94A3B8;">Sem título</em>'}</div>
           ${q.description ? `<div style="font-size:12px;color:#94A3B8;margin-top:2px;">${fbEsc(q.description)}</div>` : ''}
         </div>
-        <div style="display:flex;gap:4px;flex-shrink:0;">
+        ${FB.readOnly ? '' : `<div style="display:flex;gap:4px;flex-shrink:0;">
           <button onclick="event.stopPropagation();fbMoveQuestion(${q.id},'up')" title="Mover para cima"
             style="background:none;border:none;cursor:pointer;color:#94A3B8;padding:4px;border-radius:4px;font-size:14px;"
             ${i === 0 ? 'disabled style="opacity:.3;"' : ''}>↑</button>
@@ -387,7 +394,7 @@ function fbRenderCanvas() {
             ${i === questions.length-1 ? 'disabled style="opacity:.3;"' : ''}>↓</button>
           <button onclick="event.stopPropagation();fbDeleteQuestion(${q.id})" title="Excluir"
             style="background:none;border:none;cursor:pointer;color:#EF4444;padding:4px;border-radius:4px;font-size:14px;">🗑</button>
-        </div>
+        </div>`}
       </div>
       ${fbRenderQuestionPreview(q)}
     </div>`;
@@ -458,6 +465,7 @@ function fbRenderPropertiesPanel(qId) {
 
   panel.innerHTML = `
   <div style="padding:16px;">
+    ${FB.readOnly ? '<div style="background:#FFF7ED;color:#92400E;border:1px solid #FCD34D;border-radius:6px;padding:6px 10px;font-size:11px;font-weight:600;margin-bottom:12px;">🔒 Somente leitura</div>' : ''}
     <div style="font-size:12px;background:#EFF6FF;color:#1A56DB;border-radius:6px;padding:4px 10px;display:inline-block;margin-bottom:12px;font-weight:600;">
       ${typeInfo.icon} ${typeInfo.label}
     </div>
@@ -501,7 +509,7 @@ function fbRenderPropertiesPanel(qId) {
     </div>
 
     <!-- Buttons -->
-    <div style="display:flex;flex-direction:column;gap:6px;margin-top:8px;">
+    ${FB.readOnly ? '' : `<div style="display:flex;flex-direction:column;gap:6px;margin-top:8px;">
       <button class="btn-primary" onclick="fbSaveQuestion(${q.id})" style="font-size:13px;padding:8px;">
         💾 Salvar questão
       </button>
@@ -509,7 +517,7 @@ function fbRenderPropertiesPanel(qId) {
       <button class="btn-ghost" onclick="fbOpenLogicEditor(${q.id})" style="font-size:13px;padding:8px;">
         🔀 Editar lógica condicional
       </button>` : ''}
-    </div>
+    </div>`}
   </div>`;
 }
 
@@ -595,11 +603,13 @@ async function fbAddQuestion(type) {
 ──────────────────────────────────────────────────────────────────────────────*/
 let _fbSaveTimer = null;
 function fbSavePropDebounced(qId) {
+  if (FB.readOnly) return;
   clearTimeout(_fbSaveTimer);
   _fbSaveTimer = setTimeout(() => fbSaveQuestion(qId), 1200);
 }
 
 async function fbSaveQuestion(qId) {
+  if (FB.readOnly) return;
   clearTimeout(_fbSaveTimer);
   const q = (FB.currentPage?.questions || []).find(x => x.id === qId);
   if (!q) return;

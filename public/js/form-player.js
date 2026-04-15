@@ -760,7 +760,9 @@ async function loadClientJourneys() {
           </div>
           ${s.re_forms ? `<div style="font-size:11px;color:#6366F1;margin-top:2px;">📋 ${fpEsc(s.re_forms.title)}</div>` : ''}
           ${i === j.current_step_index && !s.completed && s.re_forms
-            ? `<button class="btn-primary" style="font-size:11px;padding:4px 12px;margin-top:6px;" onclick="fpOpenPlayer('${s.re_forms.id}')">Responder formulário →</button>`
+            ? (s.re_forms.system_key === 'onboarding_14steps'
+                ? `<button class="btn-primary" style="font-size:11px;padding:4px 12px;margin-top:6px;" onclick="showSection('onboarding',document.getElementById('onboardSideLink'))">Ir para Onboarding →</button>`
+                : `<button class="btn-primary" style="font-size:11px;padding:4px 12px;margin-top:6px;" onclick="fpOpenPlayer('${s.re_forms.id}')">Responder formulário →</button>`)
             : ''}
         </div>
       </div>
