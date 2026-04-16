@@ -339,6 +339,7 @@
             </div>
           </div>`).join('')}
       </div>` : `<p style="font-size:13px;color:#9ca3af">Nenhum contrato cadastrado.</p>`}`;
+    }
 
     body.innerHTML = html;
   }
