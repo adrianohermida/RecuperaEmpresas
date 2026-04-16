@@ -741,6 +741,32 @@ function fbCloseTransientModals(exceptId) {
   });
 }
 
+function fbBindTransientModalBehavior() {
+  ['fb-modal-new', 'fb-logic-modal', 'fb-assign-modal', 'fb-resp-detail-modal'].forEach(id => {
+    const modal = document.getElementById(id);
+    if (!modal || modal.dataset.boundBackdrop === '1') return;
+
+    modal.dataset.boundBackdrop = '1';
+    modal.addEventListener('click', event => {
+      if (event.target !== modal) return;
+      modal.classList.add('ui-hidden');
+    });
+  });
+
+  if (document.body.dataset.fbEscBound === '1') return;
+  document.body.dataset.fbEscBound = '1';
+
+  document.addEventListener('keydown', event => {
+    if (event.key !== 'Escape') return;
+
+    const openModal = ['fb-resp-detail-modal', 'fb-logic-modal', 'fb-assign-modal', 'fb-modal-new']
+      .map(id => document.getElementById(id))
+      .find(modal => modal && !modal.classList.contains('ui-hidden'));
+
+    if (openModal) openModal.classList.add('ui-hidden');
+  });
+}
+
 async function fbOpenLogicEditor(qId) {
   _logicSourceQId = qId;
   const modal = document.getElementById('fb-logic-modal');
