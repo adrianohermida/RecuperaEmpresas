@@ -30,16 +30,10 @@ const adminSystemRoutes = require('./routes/admin-system');
 
 const {
   PORT,
-  ADMIN_EMAILS,
   SUPABASE_URL,
-  SUPABASE_SERVICE_KEY,
   SUPABASE_ANON_KEY,
-  AUTH_EMAIL_REDIRECTS,
-  sb,
 } = require('./lib/config');
-const {
-  findUserByEmail,
-} = require('./lib/db');
+const { seedAdminAccounts } = require('./lib/startup');
 
 // ─── Express ──────────────────────────────────────────────────────────────────
 const app = express();
@@ -184,69 +178,6 @@ app.get(['/api/health', '/healthz'], (req, res) => {
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'login.html'));
 });
-
-// ─── Startup: seed admin accounts ────────────────────────────────────────────
-async function seedAdminAccounts() {
-  if (!SUPABASE_SERVICE_KEY) {
-    console.warn('[SEED] Pulando seed — VITE_SUPABASE_SERVICE_ROLE não definido.');
-    return;
-  }
-  const defaultPwd = process.env.ADMIN_DEFAULT_PASSWORD || 'RecuperaAdmin@2025';
-
-  for (const email of ADMIN_EMAILS) {
-    try {
-      // Check if Supabase Auth account already exists
-      const { data: listData } = await sb.auth.admin.listUsers({ perPage: 1000 });
-      const authUsers   = listData?.users || [];
-      let   authUser    = authUsers.find(u => u.email?.toLowerCase() === email.toLowerCase());
-
-      if (!authUser) {
-        // Use the native Supabase invite flow so the configured "Invite user"
-        // email template is used instead of bypassing auth emails with a
-        // pre-confirmed account and shared default password.
-        const { data: invited, error: inviteErr } = await sb.auth.admin.inviteUserByEmail(email, {
-          redirectTo: AUTH_EMAIL_REDIRECTS.inviteUser,
-          data: { name: email.split('@')[0], company: 'Recupera Empresas' },
-        });
-        if (inviteErr) {
-          console.warn(`[SEED] Erro Supabase Auth ao convidar ${email}:`, inviteErr.message);
-          continue;
-        }
-        authUser = invited.user;
-        console.log(`[SEED] Convite Supabase enviado: ${email}`);
-      }
-
-      // Ensure re_users profile exists and is marked as admin
-      if (!authUser?.id) continue;
-      const existing = await findUserByEmail(email);
-      if (!existing) {
-        await sb.from('re_users').insert({
-          id:       authUser.id,
-          name:     authUser.user_metadata?.name || email.split('@')[0],
-          email,
-          company:  'Recupera Empresas',
-          is_admin: true,
-        });
-        console.log(`[SEED] Perfil admin criado: ${email}`);
-      } else {
-        const updates = {};
-        if (existing.id !== authUser.id) updates.id = authUser.id;
-        if (!existing.is_admin)          updates.is_admin = true;
-        if (Object.keys(updates).length) {
-          if (updates.id) {
-            try { await sb.from('re_users').insert({ ...existing, ...updates }); } catch {}
-            try { await sb.from('re_users').delete().eq('id', existing.id); } catch {}
-          } else {
-            await sb.from('re_users').update(updates).eq('id', existing.id);
-          }
-          console.log(`[SEED] Perfil admin sincronizado: ${email}`);
-        }
-      }
-    } catch (err) {
-      console.warn(`[SEED] Erro ao processar ${email}:`, err.message);
-    }
-  }
-}
 
 app.listen(PORT, async () => {
   console.log(`\n  Recupera Empresas — Portal http://localhost:${PORT}`);
