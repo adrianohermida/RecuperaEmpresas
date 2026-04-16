@@ -6,7 +6,7 @@ const path = require('path');
 const rootDir = path.resolve(__dirname, '..');
 const publicDir = path.join(rootDir, 'public');
 
-const MIRROR_PATHS = [
+const TOP_LEVEL_FILES = [
   'admin.html',
   'dashboard.html',
   'forgot-password.html',
@@ -16,34 +16,56 @@ const MIRROR_PATHS = [
   'register.html',
   'reset-password.html',
   'favicon.svg',
-  'css/auth.css',
-  'css/portal.css',
-  'css/style.css',
-  'js/admin-agenda.js',
-  'js/admin-audit-log.js',
-  'js/admin-bootstrap.js',
-  'js/admin-client-actions.js',
-  'js/admin-finance.js',
-  'js/admin-form-builder.js',
-  'js/admin-init.js',
-  'js/admin-invoices.js',
-  'js/admin-journeys.js',
-  'js/admin-marketplace.js',
-  'js/admin-notifications.js',
-  'js/admin-shell-core.js',
-  'js/api-base.js',
-  'js/admin-client-drawer.js',
-  'js/admin-client-drawer-tabs-primary.js',
-  'js/admin-client-drawer-tabs-secondary.js',
-  'js/admin-client-drawer-tabs-tertiary.js',
-  'js/admin-client-drawer-data.js',
-  'js/app.js',
-  'js/config.js',
-  'js/shared-utils.js',
+];
+
+const MIRROR_DIRECTORIES = ['css', 'js'];
+
+const DERIVED_MIRRORS = [
+  { source: 'login.html', target: '404.html' },
 ];
 
 function ensureDir(dirPath) {
   fs.mkdirSync(dirPath, { recursive: true });
+}
+
+function listFilesRecursively(dirPath, relativePrefix = '') {
+  const entries = fs.readdirSync(dirPath, { withFileTypes: true });
+  const files = [];
+
+  for (const entry of entries) {
+    const relativePath = path.posix.join(relativePrefix, entry.name);
+    const absolutePath = path.join(dirPath, entry.name);
+
+    if (entry.isDirectory()) {
+      files.push(...listFilesRecursively(absolutePath, relativePath));
+      continue;
+    }
+
+    files.push(relativePath);
+  }
+
+  return files;
+}
+
+function getMirrorEntries() {
+  const entries = TOP_LEVEL_FILES.map((relativePath) => ({
+    source: relativePath,
+    target: relativePath,
+  }));
+
+  for (const dirName of MIRROR_DIRECTORIES) {
+    const sourceDir = path.join(publicDir, dirName);
+    if (!fs.existsSync(sourceDir)) {
+      continue;
+    }
+
+    for (const relativePath of listFilesRecursively(sourceDir, dirName)) {
+      entries.push({ source: relativePath, target: relativePath });
+    }
+  }
+
+  entries.push(...DERIVED_MIRRORS);
+  return entries;
 }
 
 function syncRootMirrors(options = {}) {
@@ -53,19 +75,19 @@ function syncRootMirrors(options = {}) {
     throw new Error('public/ não encontrado para sincronizar espelhos da raiz.');
   }
 
-  for (const relativePath of MIRROR_PATHS) {
-    const sourcePath = path.join(publicDir, relativePath);
-    const targetPath = path.join(rootDir, relativePath);
+  for (const entry of getMirrorEntries()) {
+    const sourcePath = path.join(publicDir, entry.source);
+    const targetPath = path.join(rootDir, entry.target);
 
     if (!fs.existsSync(sourcePath)) {
-      throw new Error(`Arquivo de origem ausente em public/: ${relativePath}`);
+      throw new Error(`Arquivo de origem ausente em public/: ${entry.source}`);
     }
 
     ensureDir(path.dirname(targetPath));
     fs.copyFileSync(sourcePath, targetPath);
 
     if (!silent) {
-      console.log(`Espelho atualizado: ${relativePath}`);
+      console.log(`Espelho atualizado: ${entry.target}`);
     }
   }
 }
@@ -75,6 +97,6 @@ if (require.main === module) {
 }
 
 module.exports = {
-  MIRROR_PATHS,
+  getMirrorEntries,
   syncRootMirrors,
 };
