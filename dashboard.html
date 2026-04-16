@@ -1120,7 +1120,7 @@ function toggleApptForm() {
 
 async function loadAppointments() {
   const el = document.getElementById('apptList');
-  el.innerHTML = '<div style="padding:16px;color:var(--text-muted);font-size:14px;">Carregando...</div>';
+  el.innerHTML = '<div class="dashboard-appt-loading">Carregando...</div>';
   const res = await fetch('/api/appointments', { headers: authH() });
   if (!res.ok) {
     el.innerHTML = '<div class="empty-state"><p>Erro ao carregar agenda.</p></div>';
@@ -1144,7 +1144,7 @@ async function loadAppointments() {
 
   let html = '';
   if (upcoming.length) {
-    html += '<div style="margin-bottom:20px;">';
+    html += '<div class="dashboard-appt-group">';
     upcoming.forEach(a => {
       const st = a.status === 'confirmado' ? { label:'Confirmada', cls:'badge-green' }
                : a.status === 'cancelado'  ? { label:'Cancelada',  cls:'badge-red'  }
@@ -1154,7 +1154,7 @@ async function loadAppointments() {
     html += '</div>';
   }
   if (past.length) {
-    html += `<div style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;">Histórico</div>`;
+    html += '<div class="dashboard-appt-history-title">Histórico</div>';
     past.slice(0,5).forEach(a => {
       const st = a.status === 'confirmado' ? { label:'Realizada', cls:'badge-green' }
                : a.status === 'cancelado'  ? { label:'Cancelada', cls:'badge-red'  }
@@ -1167,15 +1167,15 @@ async function loadAppointments() {
 
 function apptCard(a, st, muted=false) {
   const dateStr = new Date(a.date + 'T12:00:00').toLocaleDateString('pt-BR', { weekday:'long', day:'numeric', month:'long' });
-  return `<div style="display:flex;align-items:flex-start;gap:14px;padding:14px 0;border-bottom:1px solid var(--border);">
-    <div style="background:var(--bg-alt,#F8FAFC);border-radius:10px;padding:10px 14px;text-align:center;min-width:54px;opacity:${muted?'0.6':'1'}">
-      <div style="font-size:20px;font-weight:700;line-height:1;color:var(--primary);">${new Date(a.date+'T12:00:00').getDate()}</div>
-      <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;">${new Date(a.date+'T12:00:00').toLocaleDateString('pt-BR',{month:'short'})}</div>
+  return `<div class="dashboard-appt-card">
+    <div class="dashboard-appt-date ${muted ? 'dashboard-appt-date-muted' : ''}">
+      <div class="dashboard-appt-day">${new Date(a.date+'T12:00:00').getDate()}</div>
+      <div class="dashboard-appt-month">${new Date(a.date+'T12:00:00').toLocaleDateString('pt-BR',{month:'short'})}</div>
     </div>
-    <div style="flex:1;">
-      <div style="font-weight:600;font-size:14px;margin-bottom:2px;">${APPT_TYPES[a.type]||a.type}</div>
-      <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px;">${dateStr}${a.time?' às '+a.time:''}</div>
-      ${a.notes?`<div style="font-size:12px;color:var(--text-muted);font-style:italic;">${a.notes}</div>`:''}
+    <div class="dashboard-appt-copy">
+      <div class="dashboard-appt-title">${APPT_TYPES[a.type]||a.type}</div>
+      <div class="dashboard-appt-meta">${dateStr}${a.time?' às '+a.time:''}</div>
+      ${a.notes?`<div class="dashboard-appt-notes">${a.notes}</div>`:''}
     </div>
     <span class="badge ${st.cls}">${st.label}</span>
   </div>`;
@@ -1647,9 +1647,11 @@ const ROLE_LABELS = {
   financeiro: 'Financeiro', contador: 'Contador',
   operacional: 'Operacional', visualizador: 'Visualizador'
 };
-const ROLE_COLORS = {
-  financeiro: '#2563eb', contador: '#7c3aed',
-  operacional: '#059669', visualizador: '#6b7280'
+const ROLE_CLASSES = {
+  financeiro: 'dashboard-member-role-financeiro',
+  contador: 'dashboard-member-role-contador',
+  operacional: 'dashboard-member-role-operacional',
+  visualizador: 'dashboard-member-role-visualizador'
 };
 
 async function loadMembers() {
@@ -1670,14 +1672,14 @@ async function loadMembers() {
   el.innerHTML = `<div class="dashboard-member-list">
     ${members.map(m => `
     <div class="dashboard-member-item">
-      <div class="dashboard-member-avatar" style="background:${ROLE_COLORS[m.role]||'#6b7280'}22;color:${ROLE_COLORS[m.role]||'#6b7280'}">
+      <div class="dashboard-member-avatar ${ROLE_CLASSES[m.role] || 'dashboard-member-role-visualizador'}">
         ${(m.name||'?')[0].toUpperCase()}
       </div>
       <div class="dashboard-member-copy">
         <div class="dashboard-member-name">${m.name}</div>
         <div class="dashboard-member-email">${m.email}</div>
       </div>
-      <span class="dashboard-member-role" style="background:${ROLE_COLORS[m.role]||'#6b7280'}18;color:${ROLE_COLORS[m.role]||'#6b7280'};">
+      <span class="dashboard-member-role ${ROLE_CLASSES[m.role] || 'dashboard-member-role-visualizador'}">
         ${ROLE_LABELS[m.role]||m.role}
       </span>
       <span class="dashboard-member-status ${m.active ? 'dashboard-member-status-active' : 'dashboard-member-status-inactive'}">

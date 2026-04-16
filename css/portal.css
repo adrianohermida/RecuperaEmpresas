@@ -2316,6 +2316,68 @@ body {
   font-weight: 600;
   cursor: pointer;
 }
+.dashboard-appt-loading {
+  padding: 16px;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+.dashboard-appt-group {
+  margin-bottom: 20px;
+}
+.dashboard-appt-history-title {
+  margin-bottom: 10px;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+.dashboard-appt-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border);
+}
+.dashboard-appt-date {
+  min-width: 54px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: var(--bg-alt, #F8FAFC);
+  text-align: center;
+}
+.dashboard-appt-date-muted {
+  opacity: .6;
+}
+.dashboard-appt-day {
+  color: var(--primary);
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1;
+}
+.dashboard-appt-month {
+  color: var(--text-muted);
+  font-size: 11px;
+  text-transform: uppercase;
+}
+.dashboard-appt-copy {
+  flex: 1;
+}
+.dashboard-appt-title {
+  margin-bottom: 2px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.dashboard-appt-meta {
+  margin-bottom: 6px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+.dashboard-appt-notes {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-style: italic;
+}
 .dashboard-doc-item {
   display: flex;
   align-items: flex-start;
@@ -2412,6 +2474,22 @@ body {
   border-radius: 50%;
   font-size: 16px;
   font-weight: 700;
+}
+.dashboard-member-role-financeiro {
+  background: #DBEAFE;
+  color: #2563EB;
+}
+.dashboard-member-role-contador {
+  background: #EDE9FE;
+  color: #7C3AED;
+}
+.dashboard-member-role-operacional {
+  background: #D1FAE5;
+  color: #059669;
+}
+.dashboard-member-role-visualizador {
+  background: #E5E7EB;
+  color: #6B7280;
 }
 .dashboard-member-copy {
   flex: 1;
@@ -2786,6 +2864,10 @@ body {
     width: 100%;
     align-items: flex-start;
     justify-content: flex-start;
+  }
+
+  .dashboard-appt-card {
+    flex-wrap: wrap;
   }
 
   .dashboard-credit-history-row {
