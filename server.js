@@ -3,14 +3,7 @@ require('dotenv').config();
 
 const express      = require('express');
 const cookieParser = require('cookie-parser');
-const multer       = require('multer');
-const crypto       = require('crypto');
 const path         = require('path');
-const fs           = require('fs');
-const https        = require('https');
-const { createClient } = require('@supabase/supabase-js');
-const XLSX    = require('xlsx');
-const PDFDoc  = require('pdfkit');
 const rateLimit = require('express-rate-limit');
 const authRoutes = require('./routes/auth');
 const onboardingRoutes = require('./routes/onboarding');
@@ -36,48 +29,23 @@ const { adjustCredits } = agendaRoutes;
 
 const {
   PORT,
-  JWT_SECRET,
-  BASE_URL,
-  RESEND_KEY,
-  EMAIL_FROM,
-  EMAIL_TO,
   STRIPE_SECRET_KEY,
-  STRIPE_PUBLIC_KEY,
-  STRIPE_ACCOUNT_ID,
   STRIPE_WEBHOOK_SECRET,
   ADMIN_EMAILS,
-  GOOGLE_CLIENT_EMAIL,
-  GOOGLE_PRIVATE_KEY,
-  GOOGLE_CALENDAR_ID,
-  GOOGLE_CALENDAR_TZ,
   SUPABASE_URL,
   SUPABASE_SERVICE_KEY,
   SUPABASE_ANON_KEY,
-  SUPABASE_KEY,
   AUTH_EMAIL_REDIRECTS,
-  UPLOADS_DIR,
   sb,
-  sbAnon,
 } = require('./lib/config');
-const { signToken, verifyToken, requireAuth, requireAdmin } = require('./lib/auth');
+const { requireAdmin } = require('./lib/auth');
 const {
   findUserByEmail,
-  findUserById,
-  saveUser,
-  readOnboarding,
-  saveOnboarding,
 } = require('./lib/db');
-const { logAccess, auditLog, pushNotification } = require('./lib/logging');
 const {
   sendMail,
-  STEP_TITLES,
-  EMAIL_STYLE,
   emailStyle,
-  emailFactRow,
-  emailFactTable,
   emailWrapper,
-  buildClientStepConfirmHtml,
-  buildStepHtml,
 } = require('./lib/email');
 
 // ─── Express ──────────────────────────────────────────────────────────────────
@@ -182,37 +150,6 @@ app.use((req, res, next) => {
 });
 
 app.use(express.static(path.join(__dirname, 'public')));
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, UPLOADS_DIR),
-  filename:    (req, file, cb) => {
-    const safe = file.originalname.replace(/[^a-zA-Z0-9._-]/g,'_');
-    cb(null, `${Date.now()}_${safe}`);
-  }
-});
-const upload = multer({
-  storage, limits: { fileSize: 20*1024*1024 },
-  fileFilter: (req, file, cb) => {
-    const ext = path.extname(file.originalname).slice(1).toLowerCase();
-    if (/^(pdf|doc|docx|xls|xlsx|jpg|jpeg|png|zip|rar)$/.test(ext)) cb(null, true);
-    else cb(new Error('Tipo de arquivo não permitido'));
-  }
-});
-
-// Helper: safe public user object
-function safeUser(u) {
-  return {
-    id:              u.id,
-    name:            u.name || u.full_name || '',
-    email:           u.email,
-    company:         u.company || '',
-    isAdmin:         u.is_admin || ADMIN_EMAILS.includes((u.email||'').toLowerCase()),
-    credits_balance: u.credits_balance ?? 0,
-    freshdeskTicketId:  u.freshdesk_ticket_id  || null,
-    freshdeskContactId: u.freshdesk_contact_id || null,
-    createdAt: u.created_at,
-  };
-}
 
 app.use(authRoutes);
 app.use(onboardingRoutes);
