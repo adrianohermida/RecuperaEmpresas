@@ -842,6 +842,14 @@
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
         Ver como cliente
       </button>
+      <button class="btn-ghost drawer-action-btn" onclick="adminEditClient(_currentClientId)" title="Editar dados do cliente (LGPD)">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        Editar
+      </button>
+      <button class="btn-ghost drawer-action-btn" onclick="adminDeleteClient(_currentClientId)" title="Excluir conta do cliente" style="color:#dc2626">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+        Excluir
+      </button>
       <button class="drawer-close" onclick="closeDrawer()" aria-label="Fechar">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
@@ -855,6 +863,10 @@
     <button class="drawer-tab" onclick="switchDrawerTab('agenda',this)">Agenda</button>
     <button class="drawer-tab" onclick="switchDrawerTab('docs',this)">Documentos</button>
     <button class="drawer-tab" onclick="switchDrawerTab('equipe',this)">Equipe</button>
+    <button class="drawer-tab" onclick="switchDrawerTab('organograma',this)">Organograma</button>
+    <button class="drawer-tab" onclick="switchDrawerTab('credores',this)">Credores</button>
+    <button class="drawer-tab" onclick="switchDrawerTab('fornecedores',this)">Fornecedores</button>
+    <button class="drawer-tab" onclick="switchDrawerTab('funcionarios',this)">Funcionários</button>
     <button class="drawer-tab" onclick="switchDrawerTab('financeiro_client',this)">Financeiro</button>
     <button class="drawer-tab" onclick="switchDrawerTab('data',this)">Dados</button>
   </div>
@@ -869,6 +881,7 @@
 <script src="./js/admin-audit-log.js?v=20260416p"></script>
 <script src="./js/admin-bootstrap.js?v=20260416r"></script>
 <script src="./js/admin-client-actions.js?v=20260416t"></script>
+<script src="./js/admin-client-actions-extended.js?v=20260416a"></script>
 <script src="./js/admin-finance.js?v=20260416l"></script>
 <script src="./js/admin-form-builder.js?v=20260416q"></script>
 <script src="./js/admin-notifications.js?v=20260416m"></script>

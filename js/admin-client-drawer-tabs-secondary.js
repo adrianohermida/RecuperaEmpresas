@@ -164,90 +164,155 @@
     body.innerHTML = html;
   }
 
+  const DOC_TYPE_LABELS = {
+    dre:'DRE', balanco:'Balanço', fluxo_caixa:'Fluxo de Caixa',
+    contrato_social:'Contrato Social', procuracao:'Procuração',
+    certidao:'Certidão', extrato:'Extrato', nota_fiscal:'NF', outros:'Outros',
+  };
+  const DOC_STATUS_MAP = {
+    pendente:          { label:'Pendente',          cls:'badge-gray'  },
+    em_analise:        { label:'Em análise',        cls:'badge-blue'  },
+    aprovado:          { label:'Aprovado',          cls:'badge-green' },
+    reprovado:         { label:'Reprovado',         cls:'badge-red'   },
+    ajuste_solicitado: { label:'Ajuste solicitado', cls:'badge-amber' },
+  };
+  const REQ_STATUS = {
+    pending:   { label:'Aguardando envio', cls:'badge-amber' },
+    uploaded:  { label:'Enviado — revisar', cls:'badge-blue' },
+    approved:  { label:'Aprovado',         cls:'badge-green' },
+    rejected:  { label:'Rejeitado',        cls:'badge-red'  },
+    cancelled: { label:'Cancelado',        cls:'badge-gray' },
+  };
+  const ENTITY_LABELS = {
+    company:'Empresa', member:'Membro', creditor:'Credor',
+    supplier:'Fornecedor', contract:'Contrato', employee:'Funcionário',
+  };
+
   async function renderDocs(context) {
     const { body, currentClientId } = context;
-    body.innerHTML = secondaryLoading('Carregando...');
+    body.innerHTML = secondaryLoading('Carregando documentos...');
 
-    const route = `/api/admin/client/${currentClientId}/documents`;
-    const response = await fetch(route, { headers: authH() });
-    const payload = await readDrawerResponse('Documentos', route, response, ['documents'], 'Deveria retornar documents com name, status, createdAt e comentários quando existirem.');
-    if (!response.ok) {
-      body.innerHTML = `<div class="empty-state"><p>${escHtml(payload.error || 'Erro ao carregar documentos.')}</p></div>`;
-      return;
+    const [docsRes, reqsRes] = await Promise.all([
+      fetch(`/api/admin/client/${currentClientId}/documents`, { headers: authH() }),
+      fetch(`/api/admin/client/${currentClientId}/document-requests`, { headers: authH() }),
+    ]);
+    const { documents = [] } = docsRes.ok ? await docsRes.json() : {};
+    const { requests = [] } = reqsRes.ok ? await reqsRes.json() : {};
+
+    const pending  = requests.filter(r => r.status === 'pending');
+    const uploaded = requests.filter(r => r.status === 'uploaded');
+    const resolved = requests.filter(r => ['approved','rejected','cancelled'].includes(r.status));
+
+    function reqCard(r) {
+      const st = REQ_STATUS[r.status] || REQ_STATUS.pending;
+      const deadline = r.deadline ? `<span style="font-size:11px;color:#9ca3af"> · Prazo: ${new Date(r.deadline+'T12:00:00').toLocaleDateString('pt-BR')}</span>` : '';
+      const entity = (r.entity_type !== 'company' && r.entity_label)
+        ? `<span style="font-size:11px;color:#6366f1;margin-left:4px">${ENTITY_LABELS[r.entity_type]}: ${escHtml(r.entity_label)}</span>` : '';
+      const docLink = r.fulfilled_doc_id
+        ? `<a href="/api/documents/${r.fulfilled_doc_id}/file?token=${getToken()}" target="_blank" class="cds-doc-link" style="font-size:12px">Ver arquivo enviado</a>` : '';
+      const actions = r.status === 'uploaded'
+        ? `<div style="display:flex;gap:6px;margin-top:8px">
+            <button class="btn btn-xs btn-outline" onclick="adminApproveDocReq('${currentClientId}','${r.id}')">Aprovar</button>
+            <button class="btn btn-xs btn-outline btn-danger" onclick="adminRejectDocReq('${currentClientId}','${r.id}')">Rejeitar</button>
+           </div>` : '';
+      const cancel = (r.status === 'pending')
+        ? `<button class="btn btn-xs btn-outline btn-danger" onclick="adminCancelDocReq('${currentClientId}','${r.id}')" style="margin-top:6px">Cancelar</button>` : '';
+      return `<div style="border:1px solid #e5e7eb;border-radius:8px;padding:10px 12px;margin-bottom:8px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start">
+          <div style="flex:1">
+            <div style="font-weight:600;font-size:13px">${escHtml(r.name)}</div>
+            <div style="font-size:11px;color:#6b7280">${DOC_TYPE_LABELS[r.doc_type] || r.doc_type}${entity}${deadline}</div>
+            ${r.description ? `<div style="font-size:12px;color:#6b7280;margin-top:2px">${escHtml(r.description)}</div>` : ''}
+          </div>
+          <span class="badge ${st.cls}" style="margin-left:8px;flex-shrink:0">${st.label}</span>
+        </div>
+        ${docLink}${actions}${cancel}
+      </div>`;
     }
 
-    const { documents } = payload;
-    const docStatusMap = {
-      pendente: { label:'Pendente', cls:'badge-gray' },
-      em_analise: { label:'Em análise', cls:'badge-blue' },
-      aprovado: { label:'Aprovado', cls:'badge-green' },
-      reprovado: { label:'Reprovado', cls:'badge-red' },
-      ajuste_solicitado: { label:'Ajuste solicitado', cls:'badge-amber' },
-    };
-    const docTypeMap = {
-      dre:'DRE', balanco:'Balanço', fluxo_caixa:'Fluxo de Caixa',
-      contrato_social:'Contrato Social', procuracao:'Procuração',
-      certidao:'Certidão', extrato:'Extrato', nota_fiscal:'NF', outros:'Outros',
-    };
+    let html = `
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <div style="font-weight:700;font-size:14px">Solicitações de documentos</div>
+        <button class="btn btn-sm btn-primary" onclick="adminRequestDoc('${currentClientId}')">+ Solicitar documento</button>
+      </div>`;
+
+    if (!requests.length) {
+      html += `<p style="font-size:13px;color:#9ca3af;margin-bottom:16px">Nenhuma solicitação criada.</p>`;
+    } else {
+      if (pending.length) {
+        html += `<div style="font-size:12px;font-weight:600;color:#d97706;margin-bottom:6px">Aguardando envio (${pending.length})</div>`;
+        html += pending.map(reqCard).join('');
+      }
+      if (uploaded.length) {
+        html += `<div style="font-size:12px;font-weight:600;color:#1d4ed8;margin-top:10px;margin-bottom:6px">Enviados — aguardando revisão (${uploaded.length})</div>`;
+        html += uploaded.map(reqCard).join('');
+      }
+      if (resolved.length) {
+        html += `<details style="margin-top:10px"><summary style="cursor:pointer;font-size:12px;color:#6b7280;font-weight:600">Histórico (${resolved.length})</summary>
+          <div style="margin-top:8px">${resolved.map(reqCard).join('')}</div></details>`;
+      }
+    }
+
+    html += `<div style="border-top:1px solid #e5e7eb;margin:20px 0 12px;padding-top:12px;font-weight:700;font-size:14px">
+      Documentos enviados (${documents.length})
+    </div>`;
 
     if (!documents.length) {
-      body.innerHTML = `<div class="empty-state">
+      html += `<div class="empty-state">
         <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
         <p>Cliente ainda não enviou documentos.</p>
       </div>`;
-      return;
-    }
-
-    body.innerHTML = `
-      <div class="cds-docs-summary">
-        ${documents.length} documento(s) — clique no status para alterar
-      </div>
-      ${documents.map(documentItem => {
-        const status = docStatusMap[documentItem.status] || docStatusMap.pendente;
-        const typeLabel = docTypeMap[documentItem.docType] || documentItem.docType;
-        const createdAt = new Date(documentItem.createdAt).toLocaleDateString('pt-BR');
-        const comments = documentItem.comments || [];
+    } else {
+      html += documents.map(doc => {
+        const status = DOC_STATUS_MAP[doc.status] || DOC_STATUS_MAP.pendente;
+        const typeLabel = DOC_TYPE_LABELS[doc.docType] || doc.docType;
+        const createdAt = new Date(doc.createdAt).toLocaleDateString('pt-BR');
+        const comments = doc.comments || [];
+        // Find linked request
+        const linkedReq = requests.find(r => r.fulfilled_doc_id === doc.id);
         return `<div class="cds-doc-card">
           <div class="cds-doc-header">
             <div class="cds-doc-copy">
-              <div class="cds-doc-name">${documentItem.name}</div>
-              <div class="cds-doc-meta">${typeLabel} · ${createdAt}</div>
+              <div class="cds-doc-name">${escHtml(doc.name)}</div>
+              <div class="cds-doc-meta">${typeLabel} · ${createdAt}${linkedReq ? ` · <span style="color:#6366f1">Ref: ${escHtml(linkedReq.name)}</span>` : ''}</div>
             </div>
             <span class="badge ${status.cls}">${status.label}</span>
           </div>
-
           <div class="cds-doc-controls">
             <div>
               <label class="form-label-sm cds-doc-label">Alterar status</label>
-              <select class="portal-select cds-doc-select" id="docSt_${documentItem.id}">
-                ${Object.entries(docStatusMap).map(([value, config]) => `<option value="${value}"${documentItem.status === value ? ' selected' : ''}>${config.label}</option>`).join('')}
+              <select class="portal-select cds-doc-select" id="docSt_${doc.id}">
+                ${Object.entries(DOC_STATUS_MAP).map(([value, config]) =>
+                  `<option value="${value}"${doc.status === value ? ' selected' : ''}>${config.label}</option>`
+                ).join('')}
               </select>
             </div>
-            <button class="btn-sm btn-sm-approve" onclick="updateDocStatus('${documentItem.id}')">Salvar</button>
+            <button class="btn-sm btn-sm-approve" onclick="updateDocStatus('${doc.id}')">Salvar</button>
           </div>
           <div class="cds-doc-comment-wrap">
-            <input type="text" class="portal-input cds-doc-comment-input" id="docCmt_${documentItem.id}" placeholder="Comentário para o cliente (opcional)"/>
+            <input type="text" class="portal-input cds-doc-comment-input" id="docCmt_${doc.id}" placeholder="Comentário para o cliente (opcional)"/>
           </div>
-
           <div class="cds-doc-link-row">
-            <a href="${(window.RE_API_BASE || '').replace(/\/+$/, '')}/api/documents/${documentItem.id}/file?token=${getToken()}" target="_blank"
-               class="cds-doc-link">
+            <a href="${(window.RE_API_BASE||'').replace(/\/+$/,'')}/api/documents/${doc.id}/file?token=${getToken()}"
+               target="_blank" class="cds-doc-link">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
               Visualizar / baixar
             </a>
           </div>
-
           ${comments.length ? `<div class="cds-doc-comments">
-            ${comments.map(comment => `<div class="cds-doc-comment-item">
+            ${comments.map(c => `<div class="cds-doc-comment-item">
               <div class="cds-doc-comment-head">
-                <strong>${comment.from === 'admin' ? 'Equipe' : 'Cliente'}</strong>
-                <span class="cds-doc-comment-date">${new Date(comment.ts).toLocaleDateString('pt-BR')}</span>
+                <strong>${c.from === 'admin' ? 'Equipe' : 'Cliente'}</strong>
+                <span class="cds-doc-comment-date">${new Date(c.ts).toLocaleDateString('pt-BR')}</span>
               </div>
-              <div>${comment.text}</div>
+              <div>${escHtml(c.text)}</div>
             </div>`).join('')}
           </div>` : ''}
         </div>`;
-      }).join('')}`;
+      }).join('');
+    }
+
+    body.innerHTML = html;
   }
 
   window.REAdminDrawerSecondaryTabs = {
