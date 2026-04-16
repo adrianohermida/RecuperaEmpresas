@@ -3311,20 +3311,29 @@ body {
 .dashboard-player-modal-overlay {
   position: fixed;
   inset: 0;
-  z-index: 400;
+  z-index: 10001;
   display: none;
-  align-items: flex-start;
+  align-items: stretch;
   justify-content: center;
   overflow-y: auto;
-  padding: 24px 16px;
-  background: rgba(15,23,42,.7);
+  overscroll-behavior: contain;
+  padding: 16px;
+  background: rgba(2,6,23,.82);
+  backdrop-filter: blur(6px);
 }
 .dashboard-player-modal-open {
   display: flex;
 }
+.dashboard-modal-active {
+  overflow: hidden;
+}
 .dashboard-player-modal-card {
   width: 100%;
-  max-width: 700px;
+  max-width: 760px;
+  min-height: calc(100dvh - 32px);
+  max-height: calc(100dvh - 32px);
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
   border-radius: 16px;
   background: #fff;
@@ -3390,6 +3399,9 @@ body {
 }
 .dashboard-player-modal-content {
   padding: 28px 32px 24px;
+  flex: 1;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 .dashboard-player-modal-loading {
   padding: 40px;
@@ -4911,6 +4923,16 @@ body {
   .dashboard-player-modal-content {
     padding-left: 18px;
     padding-right: 18px;
+  }
+
+  .dashboard-player-modal-overlay {
+    padding: 0;
+  }
+
+  .dashboard-player-modal-card {
+    min-height: 100dvh;
+    max-height: 100dvh;
+    border-radius: 0;
   }
 }
 

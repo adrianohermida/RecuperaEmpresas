@@ -11,7 +11,12 @@
 /* ──────────────────────────────────────────────────────────────────────────────
    Helpers
 ──────────────────────────────────────────────────────────────────────────────*/
-function fpToken() { return localStorage.getItem('re_token'); }
+function fpToken() {
+  if (window.REShared && typeof window.REShared.getStoredToken === 'function') {
+    return window.REShared.getStoredToken({ allowImpersonation: true });
+  }
+  return localStorage.getItem('re_token') || sessionStorage.getItem('re_impersonate_token');
+}
 function fpAuthH() { return { 'Content-Type':'application/json', 'Authorization':'Bearer '+fpToken() }; }
 
 function fpEsc(s) {
@@ -37,7 +42,40 @@ const FP = {
   answers:       {},    // { questionId: value }
   saving:        false,
   autoSaveTimer: null,
+  lastFocusEl:   null,
 };
+
+function fpSetModalOpen(open) {
+  const modal = document.getElementById('fp-player-modal');
+  if (!modal) return;
+
+  modal.classList.toggle('dashboard-player-modal-open', open);
+  document.body.classList.toggle('dashboard-modal-active', open);
+
+  if (open) {
+    FP.lastFocusEl = document.activeElement;
+    const closeBtn = modal.querySelector('.dashboard-player-modal-close');
+    if (closeBtn) closeBtn.focus();
+    return;
+  }
+
+  if (FP.lastFocusEl && typeof FP.lastFocusEl.focus === 'function') {
+    FP.lastFocusEl.focus();
+  }
+  FP.lastFocusEl = null;
+}
+
+function fpHandleModalBackdrop(event) {
+  if (event.target && event.target.id === 'fp-player-modal') {
+    fpClosePlayer();
+  }
+}
+
+function fpHandleModalKeydown(event) {
+  if (event.key === 'Escape') {
+    fpClosePlayer();
+  }
+}
 
 function fpApplyPercentClass(element, value) {
   if (!window.REShared || typeof window.REShared.applyPercentClass !== 'function') return;
@@ -124,7 +162,7 @@ async function fpPlayForm(formId) {
   // Open modal early, show loading
   const modal = document.getElementById('fp-player-modal');
   if (!modal) { fpToast('Player não disponível.','error'); return; }
-  modal.classList.add('dashboard-player-modal-open');
+  fpSetModalOpen(true);
 
   const content = document.getElementById('fp-player-content');
   if (content) content.innerHTML = `<div class="fp-modal-state fp-modal-state-muted">
@@ -165,8 +203,7 @@ async function fpPlayForm(formId) {
 }
 
 function fpClosePlayer() {
-  const modal = document.getElementById('fp-player-modal');
-  if (modal) modal.classList.remove('dashboard-player-modal-open');
+  fpSetModalOpen(false);
   clearTimeout(FP.autoSaveTimer);
   // Refresh forms list
   loadClientForms();
@@ -525,3 +562,10 @@ function fpJourneyStepTitleClass(step, isCurrent) {
   if (isCurrent) return 'fp-journey-step-title-current';
   return 'fp-journey-step-title-pending';
 }
+
+document.addEventListener('DOMContentLoaded', function () {
+  const modal = document.getElementById('fp-player-modal');
+  if (!modal) return;
+  modal.addEventListener('click', fpHandleModalBackdrop);
+  document.addEventListener('keydown', fpHandleModalKeydown);
+});
