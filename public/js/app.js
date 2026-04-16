@@ -153,9 +153,9 @@ function updateNavButtons(step) {
   const isLast  = ACTIVE_STEP_IDS.indexOf(step) === ACTIVE_STEP_IDS.length - 1;
   back.style.visibility = isFirst ? 'hidden' : 'visible';
   if (isLast) {
-    next.style.display = 'none';
+    next.classList.add('ui-hidden');
   } else {
-    next.style.display = '';
+    next.classList.remove('ui-hidden');
     next.innerHTML = 'Próximo <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>';
   }
 }
@@ -206,7 +206,7 @@ function field(id, label, input, required = true, hint = '') {
   return `<div class="field" id="wrap_${id}">
     <label for="${id}">${label}${req}</label>
     ${input}
-    ${hint ? `<span class="field-hint" style="font-size:12px;color:var(--text-muted);">${hint}</span>` : ''}
+    ${hint ? `<span class="field-hint app-field-hint">${hint}</span>` : ''}
     <span class="field-error" id="err_${id}"></span>
   </div>`;
 }
@@ -320,7 +320,7 @@ function renderStep2(main) {
       ${field('nomeFantasia','Nome Fantasia', textInput('nomeFantasia','Nome comercial'), false)}
       ${field('cnpj','CNPJ', textInput('cnpj','00.000.000/0001-00','cnpj'))}
       ${field('endereco','Endereço Completo', textInput('endereco','Rua, número, bairro, complemento'),'true')}
-      <div class="field form-grid form-grid-3" style="gap:12px;">
+      <div class="field form-grid form-grid-3 app-form-grid-gap-md">
         <div class="field" id="wrap_cidade">
           <label for="cidade">Cidade<span class="req">*</span></label>
           <input type="text" id="cidade" name="cidade" placeholder="Cidade"/>
@@ -356,7 +356,7 @@ function renderStep3(main) {
 
   main.innerHTML = card(`
     ${stepHeader(3,'Dados dos sócios e representantes legais.')}
-    <div class="field" style="margin-bottom:20px;">
+    <div class="field app-field-spaced-lg">
       <label>Quantos sócios/representantes legais?<span class="req">*</span></label>
       <div class="num-select">
         ${[1,2,3,4,5].map(n => `
@@ -365,7 +365,7 @@ function renderStep3(main) {
       </div>
     </div>
     <div id="sociosList">${sociosHtml}</div>
-    ${num >= 6 ? '<p class="step-desc" style="margin-top:8px;">Para mais de 5 sócios, adicione os restantes manualmente:</p><button class="btn-add" onclick="addSocio()">+ Adicionar sócio</button>' : ''}
+    ${num >= 6 ? '<p class="step-desc app-step-desc-spaced">Para mais de 5 sócios, adicione os restantes manualmente:</p><button class="btn-add" onclick="addSocio()">+ Adicionar sócio</button>' : ''}
   `);
 
   for (let i = 0; i < num; i++) fillSocioFields(i);
@@ -500,7 +500,7 @@ function renderStep5(main) {
     <div class="form-grid">
       ${field('totalFunc','Total de Funcionários (CLT + terceirizados)',
         '<input type="number" id="totalFunc" name="totalFunc" min="0" placeholder="0"/>')}
-      <div class="field form-grid form-grid-3" style="gap:12px;">
+      <div class="field form-grid form-grid-3 app-form-grid-gap-md">
         <div class="field">
           <label for="fAdm">Administrativo</label>
           <input type="number" id="fAdm" min="0" placeholder="0"/>
@@ -529,7 +529,7 @@ function renderStep5(main) {
         ${radioGroup('demissoesRecentes',[['sim','Sim'],['nao','Não']],'funcionarios','showDetalheDemissoes()')}
         <span class="field-error" id="err_demissoesRecentes"></span>
       </div>
-      <div class="field field-full" id="detalheDemissoesWrap" style="${d.demissoesRecentes==='sim'?'':'display:none'}">
+      <div class="field field-full ${d.demissoesRecentes==='sim' ? '' : 'ui-hidden'}" id="detalheDemissoesWrap">
         <label for="detalheDemissoes">Detalhe as demissões<span class="req">*</span></label>
         <textarea id="detalheDemissoes" placeholder="Quantos, quando, motivo..."></textarea>
       </div>
@@ -541,7 +541,7 @@ function renderStep5(main) {
 
 function showDetalheDemissoes() {
   const wrap = el('detalheDemissoesWrap');
-  if (wrap) wrap.style.display = state.data.funcionarios.demissoesRecentes === 'sim' ? '' : 'none';
+  if (wrap) wrap.classList.toggle('ui-hidden', state.data.funcionarios.demissoesRecentes !== 'sim');
 }
 
 // ─── Step 6: Ativos ───────────────────────────────────────────────────────────
@@ -555,7 +555,7 @@ function renderStep6(main) {
         ${radioGroup('possuiAtivos',[['sim','Sim'],['nao','Não']],'ativos','toggleAtivosDetails()')}
         <span class="field-error" id="err_possuiAtivos"></span>
       </div>
-      <div id="ativosDetailsWrap" style="${d.possuiAtivos==='sim'?'':'display:none'}">
+      <div id="ativosDetailsWrap" class="${d.possuiAtivos==='sim' ? '' : 'ui-hidden'}">
         <div class="form-grid">
           <div class="field field-full">
             <label for="descricaoAtivos">Descreva os principais ativos<span class="req">*</span></label>
@@ -577,7 +577,7 @@ function renderStep6(main) {
             ${radioGroup('ativosOciosos',[['sim','Sim'],['nao','Não']],'ativos','toggleAtivosOciosos()')}
             <span class="field-error" id="err_ativosOciosos"></span>
           </div>
-          <div class="field field-full" id="ativosOciososWrap" style="${d.ativosOciosos==='sim'?'':'display:none'}">
+          <div class="field field-full ${d.ativosOciosos==='sim' ? '' : 'ui-hidden'}" id="ativosOciososWrap">
             <label for="descricaoAtivosOciosos">Descreva os ativos ociosos</label>
             <textarea id="descricaoAtivosOciosos" placeholder="Quais ativos estão parados e por quê..."></textarea>
           </div>
@@ -590,11 +590,11 @@ function renderStep6(main) {
 
 function toggleAtivosDetails() {
   const w = el('ativosDetailsWrap');
-  if (w) w.style.display = state.data.ativos.possuiAtivos === 'sim' ? '' : 'none';
+  if (w) w.classList.toggle('ui-hidden', state.data.ativos.possuiAtivos !== 'sim');
 }
 function toggleAtivosOciosos() {
   const w = el('ativosOciososWrap');
-  if (w) w.style.display = state.data.ativos.ativosOciosos === 'sim' ? '' : 'none';
+  if (w) w.classList.toggle('ui-hidden', state.data.ativos.ativosOciosos !== 'sim');
 }
 
 // ─── Step 7: Financeiro ───────────────────────────────────────────────────────
@@ -618,7 +618,7 @@ function renderStep7(main) {
         ${radioGroup('possuiControleFinanceiro',[['sim','Sim'],['nao','Não'],['parcial','Parcialmente']],'financeiro','toggleSistemaControle()')}
         <span class="field-error" id="err_possuiControleFinanceiro"></span>
       </div>
-      <div class="field" id="sistemaControleWrap" style="${d.possuiControleFinanceiro==='sim'||d.possuiControleFinanceiro==='parcial'?'':'display:none'}">
+      <div class="field ${d.possuiControleFinanceiro==='sim'||d.possuiControleFinanceiro==='parcial' ? '' : 'ui-hidden'}" id="sistemaControleWrap">
         <label for="sistemaControle">Qual sistema ou método utiliza?</label>
         <input type="text" id="sistemaControle" placeholder="Ex: Excel, Conta Azul, Omie, planilha..."/>
       </div>
@@ -630,7 +630,7 @@ function renderStep7(main) {
 function toggleSistemaControle() {
   const w = el('sistemaControleWrap');
   const v = state.data.financeiro.possuiControleFinanceiro;
-  if (w) w.style.display = (v === 'sim' || v === 'parcial') ? '' : 'none';
+  if (w) w.classList.toggle('ui-hidden', !(v === 'sim' || v === 'parcial'));
 }
 
 // ─── Step 8: Dívidas ──────────────────────────────────────────────────────────
@@ -710,7 +710,7 @@ function buildDividaSection(i) {
         </div>
         <span class="field-error" id="err_d${i}_estaJudicializada"></span>
       </div>
-      <div class="field field-full" id="d${i}_processoWrap" style="display:none">
+      <div class="field field-full ui-hidden" id="d${i}_processoWrap">
         <label>Número do Processo <span class="opt">(opcional)</span></label>
         <input type="text" id="d${i}_numeroProcesso" placeholder="0000000-00.0000.0.00.0000"/>
       </div>
@@ -746,7 +746,7 @@ function fillDividaFields(i) {
   });
   if (d.estaJudicializada === 'sim') {
     const w = el(`d${i}_processoWrap`);
-    if (w) w.style.display = '';
+    if (w) w.classList.remove('ui-hidden');
   }
 }
 
@@ -760,7 +760,7 @@ function setDividaRadio(i, field, value, el) {
 
 function toggleProcesso(i) {
   const w = el(`d${i}_processoWrap`);
-  if (w) w.style.display = state.data.dividas[i]?.estaJudicializada === 'sim' ? '' : 'none';
+  if (w) w.classList.toggle('ui-hidden', state.data.dividas[i]?.estaJudicializada !== 'sim');
 }
 
 function addDivida() {
@@ -816,7 +816,7 @@ function renderStep9(main) {
         ${radioGroup('tentouReestruturacao',[['sim','Sim'],['nao','Não']],'crise','toggleReestruturacao()')}
         <span class="field-error" id="err_tentouReestruturacao"></span>
       </div>
-      <div class="field field-full" id="reestruturacaoWrap" style="${d.tentouReestruturacao==='sim'?'':'display:none'}">
+      <div class="field field-full ${d.tentouReestruturacao==='sim' ? '' : 'ui-hidden'}" id="reestruturacaoWrap">
         <label for="descricaoReestruturacao">Descreva a reestruturação tentada<span class="req">*</span></label>
         <textarea id="descricaoReestruturacao" placeholder="O que foi feito, quando, resultados obtidos..."></textarea>
       </div>
@@ -826,7 +826,7 @@ function renderStep9(main) {
 }
 function toggleReestruturacao() {
   const w = el('reestruturacaoWrap');
-  if (w) w.style.display = state.data.crise.tentouReestruturacao === 'sim' ? '' : 'none';
+  if (w) w.classList.toggle('ui-hidden', state.data.crise.tentouReestruturacao !== 'sim');
 }
 
 // ─── Step 10: Diagnóstico Estratégico ─────────────────────────────────────────
@@ -857,7 +857,7 @@ function renderStep10(main) {
         <label>Existe alguma unidade, produto ou área lucrativa?<span class="req">*</span></label>
         ${radioGroup('existeUnidadeLucrativa',[['sim','Sim'],['nao','Não'],['talvez','Incerto']],'diagnostico','toggleUnidadeLucrativa()')}
       </div>
-      <div class="field field-full" id="unidadeLucrativaWrap" style="${d.existeUnidadeLucrativa==='sim'?'':'display:none'}">
+      <div class="field field-full ${d.existeUnidadeLucrativa==='sim' ? '' : 'ui-hidden'}" id="unidadeLucrativaWrap">
         <label for="descricaoUnidade">Descreva qual área/produto ainda é lucrativo</label>
         <textarea id="descricaoUnidade" placeholder="Nome, faturamento aproximado, margem..."></textarea>
       </div>
@@ -869,7 +869,7 @@ function renderStep10(main) {
 }
 function toggleUnidadeLucrativa() {
   const w = el('unidadeLucrativaWrap');
-  if (w) w.style.display = state.data.diagnostico.existeUnidadeLucrativa === 'sim' ? '' : 'none';
+  if (w) w.classList.toggle('ui-hidden', state.data.diagnostico.existeUnidadeLucrativa !== 'sim');
 }
 
 // ─── Step 11: Mercado e Operação ──────────────────────────────────────────────
@@ -900,7 +900,7 @@ function renderStep11(main) {
         ${radioGroup('potencialCrescimento',[['sim','Sim'],['nao','Não'],['talvez','Depende de condições']],'mercado','togglePotencial()')}
         <span class="field-error" id="err_potencialCrescimento"></span>
       </div>
-      <div class="field field-full" id="potencialWrap" style="${d.potencialCrescimento==='sim'||d.potencialCrescimento==='talvez'?'':'display:none'}">
+      <div class="field field-full ${d.potencialCrescimento==='sim'||d.potencialCrescimento==='talvez' ? '' : 'ui-hidden'}" id="potencialWrap">
         <label for="descricaoPotencial">Descreva o potencial de crescimento</label>
         <textarea id="descricaoPotencial" placeholder="Mercados não atendidos, novos produtos, expansão geográfica..."></textarea>
       </div>
@@ -911,7 +911,7 @@ function renderStep11(main) {
 function togglePotencial() {
   const w = el('potencialWrap');
   const v = state.data.mercado.potencialCrescimento;
-  if (w) w.style.display = (v === 'sim' || v === 'talvez') ? '' : 'none';
+  if (w) w.classList.toggle('ui-hidden', !(v === 'sim' || v === 'talvez'));
 }
 
 // ─── Step 12: Expectativas e Estratégia ──────────────────────────────────────
@@ -1026,7 +1026,7 @@ function renderFileList(name) {
         <polyline points="14 2 14 8 20 8"/>
       </svg>
       <span class="file-item-name">${f.name}</span>
-      <span style="font-size:11px;color:var(--text-muted);flex-shrink:0;">${(f.size/1024/1024).toFixed(1)} MB</span>
+      <span class="app-file-size">${(f.size/1024/1024).toFixed(1)} MB</span>
       <button class="file-remove" onclick="removeFile('${name}',${i})" title="Remover">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
@@ -1058,8 +1058,8 @@ function renderStep14(main) {
       <span><strong>Sou o responsável pelo projeto</strong> — usar meus dados de cadastro</span>
     </label>
 
-    <div id="respFields" style="${souResp?'display:none':''}">
-      <div class="form-grid form-grid-2" style="margin-top:16px;">
+    <div id="respFields" class="${souResp ? 'ui-hidden' : ''}">
+      <div class="form-grid form-grid-2 app-form-grid-top-md">
         <div class="field" id="wrap_rNome">
           <label for="rNome">Nome Completo<span class="req">*</span></label>
           <input type="text" id="rNome" placeholder="Nome do responsável"/>
@@ -1139,11 +1139,11 @@ function toggleSouResponsavel() {
     state.data.responsavel.nome  = user.name  || '';
     state.data.responsavel.email = user.email || '';
     lbl.classList.add('checked');
-    if (fields) fields.style.display = 'none';
+    if (fields) fields.classList.add('ui-hidden');
   } else {
     // Switching OFF: show manual fields
     lbl.classList.remove('checked');
-    if (fields) fields.style.display = '';
+    if (fields) fields.classList.remove('ui-hidden');
     // Re-wire inputs after show
     const fieldMap = { rNome:'nome', rCargo:'cargo', rEmail:'email', rTel:'telefone' };
     Object.entries(fieldMap).forEach(([id, key]) => {
@@ -1478,8 +1478,8 @@ async function submitForm() {
 }
 
 function showSuccessScreen() {
-  el('progressWrapper').style.display = 'none';
-  el('navBar').style.display = 'none';
+  el('progressWrapper').classList.add('ui-hidden');
+  el('navBar').classList.add('ui-hidden');
   el('mainContent').innerHTML = card(`
     <div class="success-screen">
       <div class="success-icon">
@@ -1498,8 +1498,8 @@ function showSuccessScreen() {
         Nossa equipe iniciará a análise e elaboração do Business Plan. Em até 2 dias úteis
         você receberá um contato para alinhamento das próximas etapas.
       </div>
-      <p style="margin-top:24px;">
-        <a href="./dashboard.html" style="display:inline-flex;align-items:center;gap:8px;background:#1A56DB;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px;">
+      <p class="success-screen-link-wrap">
+        <a href="./dashboard.html" class="success-screen-link">
           Acessar o Portal
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
         </a>

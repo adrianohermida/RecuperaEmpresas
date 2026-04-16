@@ -1500,6 +1500,158 @@ body {
   .form-builder-settings-save,
   .form-builder-mini-btn {
     width: 100%;
+  .fb-config-shell {
+    border-top: 1px solid var(--border);
+  }
+
+  .fb-config-row {
+    display: grid;
+    grid-template-columns: 36px 1fr 1fr auto auto;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border-light, #F1F5F9);
+  }
+
+  .fb-config-row-locked {
+    background: #FAFBFF;
+  }
+
+  .fb-config-toggle-cell,
+  .fb-config-title-row,
+  .fb-config-required {
+    display: flex;
+    align-items: center;
+  }
+
+  .fb-config-toggle-cell {
+    justify-content: center;
+  }
+
+  .fb-config-lock-icon {
+    font-size: 17px;
+  }
+
+  .fb-config-toggle {
+    position: relative;
+    display: inline-block;
+    width: 36px;
+    height: 20px;
+    cursor: pointer;
+  }
+
+  .fb-config-toggle-input {
+    width: 0;
+    height: 0;
+    opacity: 0;
+  }
+
+  .fb-config-toggle-track {
+    position: absolute;
+    inset: 0;
+    border-radius: 20px;
+    background: #cbd5e1;
+    transition: background .2s;
+  }
+
+  .fb-config-toggle-track-active {
+    background: #2563eb;
+  }
+
+  .fb-config-toggle-thumb {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #fff;
+    transition: left .2s;
+    box-shadow: 0 1px 3px rgba(0,0,0,.2);
+  }
+
+  .fb-config-toggle-thumb-active {
+    left: 18px;
+  }
+
+  .fb-config-copy-disabled {
+    opacity: .45;
+  }
+
+  .fb-config-step-meta {
+    margin-bottom: 2px;
+    color: var(--text-muted);
+    font-size: 12px;
+  }
+
+  .fb-config-title-row {
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .fb-config-title-input,
+  .fb-config-desc-input {
+    border: 1px solid transparent;
+    border-radius: 4px;
+    background: transparent;
+    outline: none;
+  }
+
+  .fb-config-title-input:focus,
+  .fb-config-desc-input:focus {
+    border-color: var(--primary);
+    background: #fff;
+  }
+
+  .fb-config-title-input {
+    width: 200px;
+    padding: 2px 6px;
+    color: var(--dark);
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .fb-config-title-input-readonly {
+    cursor: default;
+  }
+
+  .fb-config-desc-input {
+    box-sizing: border-box;
+    width: 100%;
+    padding: 4px 8px;
+    color: var(--text-muted);
+    font-size: 12px;
+  }
+
+  .fb-config-required {
+    gap: 6px;
+    white-space: nowrap;
+  }
+
+  .fb-config-required-input {
+    width: 14px;
+    height: 14px;
+    cursor: pointer;
+    accent-color: var(--primary);
+  }
+
+  .fb-config-required-label {
+    cursor: pointer;
+    color: var(--text-muted);
+    font-size: 12px;
+  }
+
+  .fb-config-badge-sm {
+    font-size: 10px;
+  }
+
+  .fb-config-updated {
+    padding: 10px 20px;
+    color: var(--text-muted);
+    font-size: 11px;
+  }
+
   }
 
   .form-builder-stats-header {
@@ -3719,6 +3871,54 @@ body {
 
 .ui-hidden {
   display: none !important;
+}
+
+.app-field-hint {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.app-form-grid-gap-md {
+  gap: 12px;
+}
+
+.app-field-spaced-lg {
+  margin-bottom: 20px;
+}
+
+.app-step-desc-spaced {
+  margin-top: 8px;
+}
+
+.app-file-size {
+  flex-shrink: 0;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.app-form-grid-top-md {
+  margin-top: 16px;
+}
+
+.success-screen-link-wrap {
+  margin-top: 24px;
+}
+
+.success-screen-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 8px;
+  background: #1A56DB;
+  color: #fff;
+  padding: 12px 24px;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.success-screen-link:hover {
+  opacity: 0.92;
 }
 
 /* ── Chapter cards (business plan) ──────────────────────────────────────────── */
