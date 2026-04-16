@@ -4502,6 +4502,46 @@ body {
 .exec-kpi-lbl { font-size: 11px; opacity: .75; margin-top: 3px; }
 .exec-kpi-sub { font-size: 12px; font-weight: 700; margin-top: 2px; }
 .exec-divider { border-left: 1px solid rgba(255,255,255,.25); }
+.acdd-badge-sm { font-size: 11px; }
+.acdd-kpi-divider { padding-left: 20px; }
+.acdd-empty-state { padding: 24px 0; }
+.acdd-empty-copy {
+  padding: 12px 0;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.acdd-emphasis-cell {
+  font-weight: 700;
+}
+
+.acdd-result-cell {
+  font-weight: 600;
+}
+
+.acdd-tone-positive {
+  color: var(--success);
+}
+
+.acdd-tone-warning {
+  color: #F59E0B;
+}
+
+.acdd-tone-alert {
+  color: #EF4444;
+}
+
+.acdd-tone-danger {
+  color: var(--error);
+}
+
+.acdd-tone-complete {
+  color: #34D399;
+}
+
+.acdd-tone-progress {
+  color: #93C5FD;
+}
 
 .data-tab-bar { display: flex; gap: 3px; flex-wrap: wrap; margin-bottom: 14px; }
 .data-tab-btn {
@@ -4526,6 +4566,12 @@ body {
 .debt-table th { background: #F8FAFC; border-bottom: 2px solid var(--border); padding: 7px 8px; text-align: left; font-weight: 600; color: var(--text-muted); font-size: 11px; text-transform: uppercase; }
 .debt-table td { padding: 8px; border-bottom: 1px solid #F1F5F9; }
 .debt-table tr:last-child td { border-bottom: none; }
+.acdd-debt-creditor { font-weight: 500; }
+.acdd-debt-balance {
+  color: var(--error);
+  font-weight: 600;
+}
+.acdd-debt-wrap { overflow-x: auto; }
 
 .insights-box {
   background: #FFFBEB; border: 1px solid #FCD34D; border-radius: 10px;

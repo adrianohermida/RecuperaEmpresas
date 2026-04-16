@@ -142,6 +142,23 @@
     </div>`;
   }
 
+  function execMarginToneClass(value) {
+    if (value > 20) return 'acdd-tone-positive';
+    if (value > 0) return 'acdd-tone-warning';
+    return 'acdd-tone-danger';
+  }
+
+  function execScoreToneClass(score) {
+    if (score >= 70) return 'acdd-tone-positive';
+    if (score >= 50) return 'acdd-tone-warning';
+    if (score >= 30) return 'acdd-tone-alert';
+    return 'acdd-tone-danger';
+  }
+
+  function execOnboardingToneClass(completed) {
+    return completed ? 'acdd-tone-complete' : 'acdd-tone-progress';
+  }
+
   function switchDataTab(idx, el) {
     document.querySelectorAll('.data-tab-btn').forEach(button => button.classList.remove('active'));
     if (el) el.classList.add('active');
@@ -209,12 +226,12 @@
       const cst = parseCurrencyVal(fin.custosFixosMensais) + parseCurrencyVal(fin.custosVariaveis);
       if (rec > 0 && cst > 0) {
         const margin = ((rec - cst) / rec * 100).toFixed(1);
-        const marginColor = parseFloat(margin) > 20 ? 'var(--success)' : parseFloat(margin) > 0 ? '#F59E0B' : 'var(--error)';
+        const marginToneClass = execMarginToneClass(parseFloat(margin));
         html += `<div class="exec-section">
           <div class="exec-section-title">Indicadores calculados</div>
           <table class="exec-table">
-            <tr><td>Margem de contribuição estimada</td><td style="color:${marginColor};font-weight:700;">${margin}%</td></tr>
-            <tr><td>Resultado mensal estimado</td><td style="color:${marginColor};font-weight:600;">${fmtCur(rec - cst)}</td></tr>
+            <tr><td>Margem de contribuição estimada</td><td class="acdd-emphasis-cell ${marginToneClass}">${margin}%</td></tr>
+            <tr><td>Resultado mensal estimado</td><td class="acdd-result-cell ${marginToneClass}">${fmtCur(rec - cst)}</td></tr>
           </table>
         </div>`;
       }
@@ -222,7 +239,7 @@
 
     if (tab === 'dividas') {
       if (!dividas.length) {
-        html = '<div class="empty-state" style="padding:24px 0;"><p>Nenhuma dívida cadastrada.</p></div>';
+        html = '<div class="empty-state acdd-empty-state"><p>Nenhuma dívida cadastrada.</p></div>';
       } else {
         const total = dividas.reduce((sum, debt) => sum + parseCurrencyVal(debt.saldoAtual || debt.valorOriginal), 0);
         const judicializadas = dividas.filter(debt => debt.estaJudicializada === 'sim').length;
@@ -230,23 +247,23 @@
           <div class="exec-section-title">Resumo</div>
           <table class="exec-table">
             <tr><td>Total de credores</td><td><strong>${dividas.length}</strong></td></tr>
-            <tr><td>Total estimado de dívidas</td><td style="font-weight:700;color:var(--error);">R$ ${total.toLocaleString('pt-BR',{minimumFractionDigits:2})}</td></tr>
+            <tr><td>Total estimado de dívidas</td><td class="acdd-emphasis-cell acdd-tone-danger">R$ ${total.toLocaleString('pt-BR',{minimumFractionDigits:2})}</td></tr>
             <tr><td>Dívidas judicializadas</td><td>${judicializadas > 0 ? `<span class="badge badge-red">${judicializadas}</span>` : '<span class="badge badge-green">Nenhuma</span>'}</td></tr>
           </table>
         </div>`;
         html += `<div class="exec-section">
           <div class="exec-section-title">Detalhamento</div>
-          <div style="overflow-x:auto;">
+          <div class="admin-table-wrap acdd-debt-wrap">
             <table class="debt-table">
               <thead><tr>
                 <th>Credor</th><th>Tipo</th><th>Valor original</th><th>Saldo atual</th><th>Garantia</th><th>Judicial</th>
               </tr></thead>
               <tbody>
                 ${dividas.map(debt => `<tr>
-                  <td style="font-weight:500;">${debt.nomeCredor||'—'}</td>
+                  <td class="acdd-debt-creditor">${debt.nomeCredor||'—'}</td>
                   <td>${TIPO_LABELS[debt.tipoDivida]||debt.tipoDivida||'—'}</td>
                   <td>${fmtCur(debt.valorOriginal)||'—'}</td>
-                  <td style="font-weight:600;color:var(--error);">${fmtCur(debt.saldoAtual)||'—'}</td>
+                  <td class="acdd-debt-balance">${fmtCur(debt.saldoAtual)||'—'}</td>
                   <td>${debt.possuiGarantia==='sim'?'<span class="badge badge-amber">Sim</span>':'<span class="badge badge-gray">Não</span>'}</td>
                   <td>${debt.estaJudicializada==='sim'?'<span class="badge badge-red">Sim</span>':'<span class="badge badge-green">Não</span>'}</td>
                 </tr>`).join('')}
@@ -320,7 +337,7 @@
     if (tab === 'socios') {
       const socios = Array.isArray(d.socios) ? d.socios : [];
       if (!socios.length) {
-        html = '<div class="empty-state" style="padding:24px 0;"><p>Nenhum sócio cadastrado.</p></div>';
+        html = '<div class="empty-state acdd-empty-state"><p>Nenhum sócio cadastrado.</p></div>';
       } else {
         socios.forEach((socio, index) => {
           html += execSectionHtml(`Sócio ${index + 1}`, [
@@ -337,7 +354,7 @@
       }
     }
 
-    content.innerHTML = html || '<p style="color:var(--text-muted);font-size:13px;padding:12px 0;">Dados não preenchidos nesta seção.</p>';
+    content.innerHTML = html || '<p class="acdd-empty-copy">Dados não preenchidos nesta seção.</p>';
   }
 
   function renderDataTab(context) {
@@ -346,29 +363,30 @@
     const score = calcRecoveryScore(data, onboarding);
     const insights = calcInsights(data);
     const suggestions = calcSuggestions(data, score);
-    const scoreColor = score >= 70 ? '#059669' : score >= 50 ? '#F59E0B' : score >= 30 ? '#EF4444' : '#DC2626';
+    const scoreToneClass = execScoreToneClass(score);
     const scoreLabel = score >= 70 ? 'Bom' : score >= 50 ? 'Moderado' : score >= 30 ? 'Atenção' : 'Crítico';
     const pct = onboarding.completed ? 100 : Math.round(((onboarding.step || 1) - 1) / 14 * 100);
     const empresa = data.empresa || {};
     const statusCls = score >= 70 ? 'badge-green' : score >= 50 ? 'badge-amber' : 'badge-red';
     const statusLabel = score >= 70 ? 'Estável' : score >= 50 ? 'Atenção' : 'Crítico';
+    const onboardingToneClass = execOnboardingToneClass(onboarding.completed);
 
     body.innerHTML = `
       <div class="exec-header">
         <div class="exec-company">${empresa.razaoSocial || user.company || '—'}</div>
-        <div class="exec-cnpj">CNPJ: ${empresa.cnpj || '—'} &nbsp;·&nbsp; <span class="badge ${statusCls}" style="font-size:11px;">${statusLabel}</span></div>
+        <div class="exec-cnpj">CNPJ: ${empresa.cnpj || '—'} &nbsp;·&nbsp; <span class="badge ${statusCls} acdd-badge-sm">${statusLabel}</span></div>
         <div class="exec-kpis">
           <div class="exec-kpi">
-            <div class="exec-kpi-val" style="color:${scoreColor};">${score}%</div>
+            <div class="exec-kpi-val ${scoreToneClass}">${score}%</div>
             <div class="exec-kpi-lbl">Score de Recuperação</div>
-            <div class="exec-kpi-sub" style="color:${scoreColor};">${scoreLabel}</div>
+            <div class="exec-kpi-sub ${scoreToneClass}">${scoreLabel}</div>
           </div>
-          <div class="exec-kpi exec-divider" style="padding-left:20px;">
+          <div class="exec-kpi exec-divider acdd-kpi-divider">
             <div class="exec-kpi-val">${pct}%</div>
             <div class="exec-kpi-lbl">Onboarding</div>
-            <div class="exec-kpi-sub" style="color:${onboarding.completed ? '#34D399' : '#93C5FD'};">${onboarding.completed ? 'Concluído' : 'Em andamento'}</div>
+            <div class="exec-kpi-sub ${onboardingToneClass}">${onboarding.completed ? 'Concluído' : 'Em andamento'}</div>
           </div>
-          <div class="exec-kpi exec-divider" style="padding-left:20px;">
+          <div class="exec-kpi exec-divider acdd-kpi-divider">
             <div class="exec-kpi-val">${calcTotalDebt(data.dividas)}</div>
             <div class="exec-kpi-lbl">Total dívidas</div>
           </div>
