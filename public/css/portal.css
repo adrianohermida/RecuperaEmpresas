@@ -1869,8 +1869,8 @@ body {
   font-size: 10px; color: var(--text-muted);
 }
 .admin-detail-toggle {
-  border: 1px solid var(--border); border-radius: 6px; padding: 3px 8px;
-  font-size: 11px; background: none; cursor: pointer;
+  border: 1px solid var(--border); border-radius: 6px; padding: 5px 10px;
+  font-size: 12px; background: none; cursor: pointer; min-height: 28px;
 }
 .admin-audit-detail {
   display: none; margin-top: 8px; font-size: 11px; font-family: monospace;

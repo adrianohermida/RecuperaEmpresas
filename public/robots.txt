@@ -1,0 +1,8 @@
+User-agent: *
+Disallow: /api/
+Disallow: /admin.html
+Disallow: /reset-password.html
+Disallow: /oauth/
+Allow: /
+
+Sitemap: https://recuperaempresas.com.br/sitemap.xml
