@@ -92,7 +92,7 @@
   }
 
   async function confirmApptDrawer(apptId) {
-    const response = await fetch(`/api/admin/appointments/${_currentClientId}/${apptId}`, {
+    const response = await fetch(`/api/admin/appointments/${apptId}`, {
       method: 'PUT',
       headers: authH(),
       body: JSON.stringify({ status: 'confirmado' }),
