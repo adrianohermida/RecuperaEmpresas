@@ -63,6 +63,39 @@ function isFreshchatEnabled() {
   return !!(window.RE_ENABLE_FRESHCHAT && window.RE_FRESHCHAT_TOKEN && window.RE_FRESHCHAT_SITE_ID);
 }
 
+function toggleSidebar() {
+  var sidebar = document.getElementById('appSidebar');
+  var backdrop = document.getElementById('sidebarBackdrop');
+  var isOpen = sidebar?.classList.contains('mobile-open');
+  sidebar?.classList.toggle('mobile-open', !isOpen);
+  backdrop?.classList.toggle('open', !isOpen);
+}
+
+function closeSidebar() {
+  document.getElementById('appSidebar')?.classList.remove('mobile-open');
+  document.getElementById('sidebarBackdrop')?.classList.remove('open');
+}
+
+function toggleUserDropup() {
+  var dropup = document.getElementById('userDropup');
+  var btn = document.getElementById('userMenuBtn');
+  var isOpen = dropup?.classList.contains('open');
+  dropup?.classList.toggle('open', !isOpen);
+  btn?.setAttribute('aria-expanded', String(!isOpen));
+}
+
+document.addEventListener('click', function (e) {
+  var footer = document.querySelector('.sidebar-footer');
+  if (footer && !footer.contains(e.target)) {
+    var dropup = document.getElementById('userDropup');
+    var btn = document.getElementById('userMenuBtn');
+    if (dropup?.classList.contains('open')) {
+      dropup.classList.remove('open');
+      btn?.setAttribute('aria-expanded', 'false');
+    }
+  }
+});
+
 function showSection(name, el) {
   // Close any open overlay modals before switching sections
   document.querySelectorAll('.admin-modal-overlay').forEach(function (m) {
@@ -79,6 +112,7 @@ function showSection(name, el) {
   if (name === 'adminInvoices') loadAdminInvoices();
   if (name === 'adminMarketplace') loadAdminMarketplace();
   if (name === 'auditlog') loadAuditLog();
+  closeSidebar();
   window.scrollTo({ top: 0, behavior: 'instant' });
 }
 

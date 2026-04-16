@@ -212,8 +212,12 @@
 
     const userName = document.getElementById('userName');
     const userAvatar = document.getElementById('userAvatar');
+    const dropupUserName = document.getElementById('dropupUserName');
+    const dropupUserEmail = document.getElementById('dropupUserEmail');
     if (userName) userName.textContent = user.name || user.email;
     if (userAvatar) userAvatar.textContent = (user.name || user.email || '?')[0].toUpperCase();
+    if (dropupUserName) dropupUserName.textContent = user.name || user.email;
+    if (dropupUserEmail) dropupUserEmail.textContent = user.email || '';
     document.getElementById('authGuard')?.remove();
     console.info('[RE:admin-bootstrap] auth guard removed, loading data...');
 
