@@ -1,9 +1,27 @@
 'use strict';
 
 (function () {
+  function tertiaryLoading(message) {
+    return `<div class="admin-finance-loading">${message}</div>`;
+  }
+
+  function tertiaryRoleTone(role) {
+    const toneMap = {
+      financeiro: 'cdt-role-financeiro',
+      contador: 'cdt-role-contador',
+      operacional: 'cdt-role-operacional',
+      visualizador: 'cdt-role-visualizador',
+    };
+    return toneMap[role] || 'cdt-role-visualizador';
+  }
+
+  function tertiaryStatusClass(active) {
+    return active ? 'cdt-member-status-active' : 'cdt-member-status-inactive';
+  }
+
   async function renderFinancial(context) {
     const { body, currentClientId } = context;
-    body.innerHTML = '<div style="padding:16px;color:var(--text-muted);font-size:14px;">Carregando financeiro...</div>';
+    body.innerHTML = tertiaryLoading('Carregando financeiro...');
 
     try {
       const route = `/api/admin/client/${currentClientId}/financial`;
@@ -26,18 +44,18 @@
       const paidTotal = paid.reduce((sum, invoice) => sum + parseFloat(invoice.amount || 0), 0);
 
       body.innerHTML = `
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
-          <div class="stat-card blue" style="margin:0;">
-            <div class="stat-value" style="font-size:18px;">${window.REShared.formatCurrencyBRL(paidTotal)}</div>
+        <div class="cdt-summary-grid">
+          <div class="stat-card blue cdt-summary-card">
+            <div class="stat-value cdt-summary-value">${window.REShared.formatCurrencyBRL(paidTotal)}</div>
             <div class="stat-label">Total pago</div>
           </div>
-          <div class="stat-card" style="margin:0;">
-            <div class="stat-value" style="font-size:18px;">${invoices.length}</div>
+          <div class="stat-card cdt-summary-card">
+            <div class="stat-value cdt-summary-value">${invoices.length}</div>
             <div class="stat-label">Cobranças (${paid.length} pagas)</div>
           </div>
         </div>
-        <div style="font-size:13px;font-weight:700;margin-bottom:10px;">Histórico de cobranças</div>
-        <div style="display:flex;flex-direction:column;gap:8px;">
+        <div class="cdt-section-title">Histórico de cobranças</div>
+        <div class="cdt-stack-list">
           ${invoices.map(invoice => {
             const isPaid = invoice.status === 'paid' || invoice.status === 'succeeded';
             const statusClass = isPaid ? 'badge-green' : invoice.status === 'open' ? 'badge-amber' : 'badge-red';
@@ -45,14 +63,14 @@
             const invoiceDate = window.REShared.formatDateBR(invoice.date);
             const amount = window.REShared.formatCurrencyBRL(parseFloat(invoice.amount || 0));
             const link = invoice.pdfUrl || invoice.hostedUrl;
-            return `<div style="background:#F8FAFC;border:1px solid var(--border);border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:10px;">
-              <div style="flex:1;min-width:0;">
-                <div style="font-weight:600;font-size:13px;">${invoice.description || 'Cobrança'}</div>
-                <div style="font-size:11px;color:var(--text-muted);">${invoiceDate}</div>
+            return `<div class="cdt-invoice-card">
+              <div class="cdt-invoice-copy">
+                <div class="cdt-invoice-title">${invoice.description || 'Cobrança'}</div>
+                <div class="cdt-invoice-date">${invoiceDate}</div>
               </div>
-              <div style="font-weight:700;font-size:13px;">${amount}</div>
+              <div class="cdt-invoice-amount">${amount}</div>
               <span class="badge ${statusClass}">${statusLabel}</span>
-              ${link ? `<a href="${link}" target="_blank" style="font-size:11px;color:var(--primary);">Ver</a>` : ''}
+              ${link ? `<a href="${link}" target="_blank" class="cdt-invoice-link">Ver</a>` : ''}
             </div>`;
           }).join('')}
         </div>`;
@@ -71,7 +89,7 @@
 
   async function renderTeam(context) {
     const { body, currentClientId } = context;
-    body.innerHTML = '<div style="padding:16px;color:var(--text-muted);font-size:14px;">Carregando equipe...</div>';
+    body.innerHTML = tertiaryLoading('Carregando equipe...');
 
     const route = `/api/admin/client/${currentClientId}/members`;
     const response = await fetch(route, { headers: authH() });
@@ -83,8 +101,7 @@
 
     const { members = [] } = payload;
     const roleLabels = { financeiro:'Financeiro', contador:'Contador', operacional:'Operacional', visualizador:'Visualizador' };
-    const roleColors = { financeiro:'#2563eb', contador:'#7c3aed', operacional:'#059669', visualizador:'#6b7280' };
-    let html = `<div style="font-size:14px;font-weight:700;color:#1e3a5f;margin-bottom:14px;">Membros da empresa (${members.length})</div>`;
+  let html = `<div class="cdt-team-title">Membros da empresa (${members.length})</div>`;
 
     if (!members.length) {
       html += `<div class="empty-state"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg><p>Nenhum membro cadastrado pelo cliente.</p></div>`;
@@ -92,19 +109,19 @@
       return;
     }
 
-    html += `<div style="display:flex;flex-direction:column;gap:8px;">
+    html += `<div class="cdt-stack-list">
       ${members.map(member => `
-      <div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:12px;">
-        <div style="width:34px;height:34px;border-radius:50%;background:${roleColors[member.role] || '#6b7280'}22;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:${roleColors[member.role] || '#6b7280'}">
+      <div class="cdt-member-card">
+        <div class="cdt-member-avatar ${tertiaryRoleTone(member.role)}">
           ${(member.name || '?')[0].toUpperCase()}
         </div>
-        <div style="flex:1;min-width:0;">
-          <div style="font-weight:600;font-size:13px;color:#1e293b;">${member.name}</div>
-          <div style="font-size:11px;color:#64748b;">${member.email}</div>
+        <div class="cdt-member-copy">
+          <div class="cdt-member-name">${member.name}</div>
+          <div class="cdt-member-email">${member.email}</div>
         </div>
-        <span style="background:${roleColors[member.role] || '#6b7280'}18;color:${roleColors[member.role] || '#6b7280'};font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;">${roleLabels[member.role] || member.role}</span>
-        <span style="font-size:10px;padding:2px 8px;border-radius:20px;${member.active ? 'background:#dcfce7;color:#16a34a;' : 'background:#fee2e2;color:#dc2626;'}">${member.active ? 'Ativo' : 'Inativo'}</span>
-        <div style="font-size:10px;color:#94a3b8;">${member.last_login ? 'Último login: ' + new Date(member.last_login).toLocaleDateString('pt-BR') : 'Nunca logou'}</div>
+        <span class="cdt-member-role ${tertiaryRoleTone(member.role)}">${roleLabels[member.role] || member.role}</span>
+        <span class="cdt-member-status ${tertiaryStatusClass(member.active)}">${member.active ? 'Ativo' : 'Inativo'}</span>
+        <div class="cdt-member-login">${member.last_login ? 'Último login: ' + new Date(member.last_login).toLocaleDateString('pt-BR') : 'Nunca logou'}</div>
       </div>`).join('')}
     </div>`;
 

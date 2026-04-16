@@ -3869,8 +3869,153 @@ body {
 .drawer-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
 .drawer-tab:hover:not(.active) { background: var(--bg); color: var(--text); }
 .drawer-body { flex: 1; overflow-y: auto; padding: 20px 24px; }
+.cdt-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.cdt-summary-card {
+  margin: 0;
+}
+
+.cdt-summary-value {
+  font-size: 18px;
+}
+
+.cdt-section-title,
+.cdt-team-title {
+  margin-bottom: 10px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.cdt-team-title {
+  margin-bottom: 14px;
+  color: #1e3a5f;
+  font-size: 14px;
+}
+
+.cdt-stack-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cdt-invoice-card,
+.cdt-member-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-radius: 8px;
+  padding: 10px 14px;
+  background: #F8FAFC;
+  border: 1px solid var(--border);
+}
+
+.cdt-invoice-copy,
+.cdt-member-copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.cdt-invoice-title,
+.cdt-member-name {
+  color: #1e293b;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.cdt-invoice-date,
+.cdt-member-email {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.cdt-invoice-amount {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.cdt-invoice-link {
+  color: var(--primary);
+  font-size: 11px;
+  text-decoration: none;
+}
+
+.cdt-invoice-link:hover {
+  text-decoration: underline;
+}
+
+.cdt-member-card {
+  border-color: #E2E8F0;
+}
+
+.cdt-member-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.cdt-member-role,
+.cdt-member-status {
+  border-radius: 20px;
+  padding: 2px 8px;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.cdt-member-login {
+  color: #94a3b8;
+  font-size: 10px;
+}
+
+.cdt-member-status-active {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.cdt-member-status-inactive {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.cdt-role-financeiro {
+  background: rgba(37, 99, 235, 0.14);
+  color: #2563eb;
+}
+
+.cdt-role-contador {
+  background: rgba(124, 58, 237, 0.14);
+  color: #7c3aed;
+}
+
+.cdt-role-operacional {
+  background: rgba(5, 150, 105, 0.14);
+  color: #059669;
+}
+
+.cdt-role-visualizador {
+  background: rgba(107, 114, 128, 0.14);
+  color: #6b7280;
+}
 
 @media (max-width: 960px) {
+  .cdt-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .cdt-invoice-card,
+  .cdt-member-card {
+    flex-wrap: wrap;
+  }
+
   .fp-list-card {
     flex-wrap: wrap;
   }
