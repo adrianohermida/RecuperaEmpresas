@@ -88,6 +88,7 @@ function loadFormBuilder() {
 ──────────────────────────────────────────────────────────────────────────────*/
 function fbShowView(view) {
   FB.view = view;
+  fbCloseTransientModals();
   ['list','builder','responses'].forEach(v => {
     const el = document.getElementById('fb-view-'+v);
     if (el) el.classList.toggle('ui-hidden', v !== view);

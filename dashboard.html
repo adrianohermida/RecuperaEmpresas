@@ -186,9 +186,9 @@
           <span class="badge" id="onboardingBadge">—</span>
         </div>
         <div class="progress-ring-wrap">
-          <svg class="progress-ring" width="90" height="90">
-            <circle class="progress-ring-bg"   cx="45" cy="45" r="38" stroke-width="7"/>
-            <circle class="progress-ring-fill" cx="45" cy="45" r="38" stroke-width="7"
+          <svg class="progress-ring" width="90" height="90" viewBox="0 0 90 90">
+            <circle class="progress-ring-bg"   cx="45" cy="45" r="38" fill="none" stroke-width="7"/>
+            <circle class="progress-ring-fill" cx="45" cy="45" r="38" fill="none" stroke-width="7"
                     id="progressRing" stroke-dasharray="238.76" stroke-dashoffset="238.76"/>
           </svg>
           <div class="progress-ring-info">
@@ -267,7 +267,8 @@
       </div>
 
       <!-- Chapter comment modal -->
-      <div id="commentModal" class="admin-modal-overlay admin-modal-overlay-high dashboard-modal-hidden">
+      <div id="commentModal" class="admin-modal-overlay admin-modal-overlay-high dashboard-modal-hidden"
+           onclick="if(event.target===this)closeCommentModal()">
         <div class="admin-modal dashboard-comment-modal">
           <h3 class="admin-modal-title dashboard-comment-modal-title" id="commentModalTitle">Adicionar comentário</h3>
           <textarea id="commentText" class="portal-input admin-modal-textarea" rows="4" placeholder="Descreva sua solicitação ou comentário..."></textarea>

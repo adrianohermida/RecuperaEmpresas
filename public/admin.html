@@ -494,7 +494,8 @@
     </div><!-- /sec-jornadas -->
 
     <!-- ── MODAL: New/Edit Journey ──────────────────────────────────────────── -->
-    <div id="jrn-modal-form" class="admin-modal-overlay journey-modal-overlay ui-hidden">
+    <div id="jrn-modal-form" class="admin-modal-overlay journey-modal-overlay ui-hidden"
+         onclick="if(event.target===this)this.classList.add('ui-hidden')">
       <div class="admin-modal journey-modal journey-modal-md">
         <div id="jrn-modal-title" class="journey-modal-title">Nova Jornada</div>
         <div class="journey-modal-stack">
@@ -523,7 +524,8 @@
     </div>
 
     <!-- ── MODAL: Add Step ─────────────────────────────────────────────────── -->
-    <div id="jrn-modal-step" class="admin-modal-overlay journey-modal-overlay ui-hidden">
+    <div id="jrn-modal-step" class="admin-modal-overlay journey-modal-overlay ui-hidden"
+         onclick="if(event.target===this)this.classList.add('ui-hidden')">
       <div class="admin-modal journey-modal journey-modal-lg">
         <div id="jrn-step-modal-title" class="journey-modal-title">Adicionar Etapa</div>
         <input type="hidden" id="jrn-step-editing-id">
@@ -555,7 +557,8 @@
     </div>
 
     <!-- ── MODAL: Assign client to Journey ─────────────────────────────────── -->
-    <div id="jrn-modal-assign" class="admin-modal-overlay journey-modal-overlay ui-hidden">
+    <div id="jrn-modal-assign" class="admin-modal-overlay journey-modal-overlay ui-hidden"
+         onclick="if(event.target===this)this.classList.add('ui-hidden')">
       <div class="admin-modal journey-modal journey-modal-md">
         <div class="journey-modal-title">Atribuir Cliente</div>
         <div class="journey-modal-stack">

@@ -4,7 +4,6 @@ require('dotenv').config();
 const express      = require('express');
 const cookieParser = require('cookie-parser');
 const multer       = require('multer');
-const jwt          = require('jsonwebtoken');
 const crypto       = require('crypto');
 const path         = require('path');
 const fs           = require('fs');
@@ -24,20 +23,14 @@ const documentRoutes = require('./routes/documents');
 const appointmentRoutes = require('./routes/appointments');
 const agendaRoutes = require('./routes/agenda');
 const adminAgendaRoutes = require('./routes/admin-agenda');
+const supportFinancialRoutes = require('./routes/support-financial');
+const formConfigRoutes = require('./routes/form-config');
 const { adjustCredits } = agendaRoutes;
 
 const {
   PORT,
   JWT_SECRET,
   BASE_URL,
-  FRESHDESK_HOST,
-  FRESHDESK_KEY,
-  FD_AUTH,
-  FRESHSALES_HOST,
-  FRESHSALES_KEY,
-  FRESHCHAT_HOST,
-  FRESHCHAT_KEY,
-  FRESHCHAT_JWT_SECRET,
   RESEND_KEY,
   EMAIL_FROM,
   EMAIL_TO,
@@ -68,14 +61,6 @@ const {
   saveOnboarding,
 } = require('./lib/db');
 const { logAccess, auditLog, pushNotification } = require('./lib/logging');
-const {
-  createFreshdeskTicket,
-  createFreshdeskContact,
-  addFreshdeskNote,
-  updateFreshdeskTicket,
-  syncFreshsalesContact,
-  createFreshsalesDeal,
-} = require('./lib/crm');
 const {
   sendMail,
   STEP_TITLES,
@@ -387,6 +372,8 @@ app.use(documentRoutes);
 app.use(appointmentRoutes);
 app.use(agendaRoutes);
 app.use(adminAgendaRoutes);
+app.use(supportFinancialRoutes);
+app.use(formConfigRoutes);
 
 // ── Stripe webhook: credit the account on payment ────────────────────────────
 // Body is already raw Buffer via the global middleware at /api/stripe/webhook
@@ -475,283 +462,6 @@ app.get('/api/admin/stats', requireAdmin, async (req, res) => {
   // Users with no onboarding row → nao_iniciado
   stats.naoIniciado += ids.length - (obs || []).length;
   res.json(stats);
-});
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// FRESHCHAT / SUPPORT / APPOINTMENTS / FINANCIAL
-// ═══════════════════════════════════════════════════════════════════════════════
-
-// Freshchat JWT for identity verification
-app.get('/api/freshchat-token', requireAuth, (req, res) => {
-  const name = req.user.name || req.user.full_name || '';
-  const [firstName, ...rest] = name.split(' ');
-  const token = jwt.sign({
-    sub:        req.user.email,
-    first_name: firstName || '',
-    last_name:  rest.join(' ') || '',
-    iat: Math.floor(Date.now() / 1000),
-    exp: Math.floor(Date.now() / 1000) + 86400,
-  }, FRESHCHAT_JWT_SECRET, { algorithm: 'HS256' });
-  res.json({ token });
-});
-
-// Support: list tickets for current user
-app.get('/api/support/tickets', requireAuth, async (req, res) => {
-  const result = await freshdeskRequest('GET',
-    `tickets?email=${encodeURIComponent(req.user.email)}&include=stats&per_page=30`, null);
-  const tickets = (result.ok && Array.isArray(result.data)) ? result.data : [];
-  res.json({ tickets });
-});
-
-// Support: open a new ticket
-app.post('/api/support/ticket', requireAuth, async (req, res) => {
-  const { subject, description } = req.body;
-  if (!subject?.trim()) return res.status(400).json({ error: 'Assunto obrigatório.' });
-  const result = await freshdeskRequest('POST', 'tickets', {
-    subject: subject.trim(),
-    description: (description || subject).trim(),
-    email: req.user.email, name: req.user.name || req.user.email,
-    priority: 2, status: 2, tags: ['portal']
-  });
-  if (result.ok) res.json({ success: true, ticket: result.data });
-  else res.status(503).json({ error: 'Suporte temporariamente indisponível. Tente novamente mais tarde.' });
-});
-
-// Financial: invoices (Stripe real)
-app.get('/api/financial/invoices', requireAuth, async (req, res) => {
-  if (!STRIPE_SECRET_KEY) return res.json({ invoices: [], stripeConfigured: false });
-  try {
-    const Stripe = require('stripe');
-    const stripe = Stripe(STRIPE_SECRET_KEY);
-    const user   = req.user;
-
-    let customerId = user.stripe_customer_id;
-    if (!customerId) {
-      const found = await stripe.customers.list({ email: user.email, limit: 1 });
-      customerId  = found.data[0]?.id || null;
-      if (customerId) await sb.from('re_users').update({ stripe_customer_id: customerId }).eq('id', user.id);
-    }
-    if (!customerId) return res.json({ invoices: [], stripeConfigured: true });
-
-    const [invList, piList] = await Promise.all([
-      stripe.invoices.list({ customer: customerId, limit: 50 }),
-      stripe.paymentIntents.list({ customer: customerId, limit: 50 }),
-    ]);
-
-    const invoices = invList.data.map(inv => ({
-      id: inv.id, type: 'invoice',
-      amount: (inv.amount_due / 100).toFixed(2),
-      amountPaid: (inv.amount_paid / 100).toFixed(2),
-      currency: inv.currency.toUpperCase(),
-      status: inv.status,
-      date: new Date(inv.created * 1000).toISOString(),
-      dueDate: inv.due_date ? new Date(inv.due_date * 1000).toISOString() : null,
-      pdfUrl:    inv.invoice_pdf        || null,
-      hostedUrl: inv.hosted_invoice_url || null,
-      description: inv.description || inv.lines?.data?.[0]?.description || 'Fatura',
-    }));
-
-    // Inclui pagamentos de créditos que não geram invoice formal
-    const payments = piList.data
-      .filter(p => p.status === 'succeeded' && !invoices.find(i => i.id === p.invoice))
-      .map(p => ({
-        id: p.id, type: 'payment',
-        amount: (p.amount / 100).toFixed(2), amountPaid: (p.amount / 100).toFixed(2),
-        currency: p.currency.toUpperCase(), status: 'paid',
-        date: new Date(p.created * 1000).toISOString(),
-        description: p.description || 'Pagamento',
-      }));
-
-    const all = [...invoices, ...payments].sort((a, b) => b.date.localeCompare(a.date));
-    res.json({ invoices: all, stripeConfigured: true });
-  } catch (e) {
-    console.error('[FINANCIAL]', e.message);
-    res.json({ invoices: [], stripeConfigured: true, error: e.message });
-  }
-});
-
-// Financial: request 2nd copy
-app.post('/api/financial/request-invoice', requireAuth, async (req, res) => {
-  const { description } = req.body;
-  await Promise.all([
-    freshdeskRequest('POST', 'tickets', {
-      subject: `2ª via boleto — ${req.user.company || req.user.name || req.user.email}`,
-      description: `<p>Solicitação de 2ª via.</p>
-        <p><b>Cliente:</b> ${req.user.name || ''}<br/><b>E-mail:</b> ${req.user.email}<br/>
-        <b>Empresa:</b> ${req.user.company || '—'}</p>
-        ${description ? `<p><b>Detalhe:</b> ${description}</p>` : ''}`,
-      email: req.user.email, name: req.user.name || req.user.email,
-      priority: 2, status: 2, tags: ['financeiro', '2a-via']
-    }),
-    sendMail(EMAIL_TO, `Solicitação 2ª via — ${req.user.company || req.user.name || req.user.email}`,
-      emailWrapper('Solicitação de fatura', `
-        <p>Cliente <b>${req.user.name || ''}</b> (${req.user.email}) solicita 2ª via do boleto.</p>
-        ${description ? `<p><b>Detalhe:</b> ${description}</p>` : ''}
-      `)
-    )
-  ]).catch(e => console.warn('[async]', e?.message));
-  res.json({ success: true, message: 'Solicitação enviada. Nossa equipe entrará em contato.' });
-});
-
-// ─── Admin: visão financeira consolidada (Stripe) ────────────────────────────
-app.get('/api/admin/financial', requireAdmin, async (req, res) => {
-  if (!STRIPE_SECRET_KEY) return res.json({ configured: false, clients: [], totalRevenue: 0 });
-  try {
-    const Stripe = require('stripe');
-    const stripe = Stripe(STRIPE_SECRET_KEY);
-
-    const { data: users } = await sb.from('re_users')
-      .select('id, name, email, company, stripe_customer_id')
-      .eq('is_admin', false);
-
-    const results = await Promise.all((users || []).map(async u => {
-      try {
-        if (!u.stripe_customer_id) return { userId: u.id, name: u.name, email: u.email, company: u.company, totalPaid: 0, paymentsCount: 0, lastPaymentDate: null };
-        const piList = await stripe.paymentIntents.list({ customer: u.stripe_customer_id, limit: 20 });
-        const paid   = piList.data.filter(p => p.status === 'succeeded');
-        return {
-          userId: u.id, name: u.name, email: u.email, company: u.company,
-          customerId: u.stripe_customer_id,
-          totalPaid:      paid.reduce((s, p) => s + p.amount, 0) / 100,
-          paymentsCount:  paid.length,
-          lastPaymentDate: paid[0] ? new Date(paid[0].created * 1000).toISOString() : null,
-        };
-      } catch { return { userId: u.id, name: u.name, email: u.email, company: u.company, totalPaid: 0, paymentsCount: 0, lastPaymentDate: null }; }
-    }));
-
-    const totalRevenue = results.reduce((s, c) => s + (c.totalPaid || 0), 0);
-    res.json({ configured: true, clients: results, totalRevenue });
-  } catch (e) {
-    console.error('[ADMIN FINANCIAL]', e.message);
-    res.json({ configured: false, clients: [], totalRevenue: 0, error: e.message });
-  }
-});
-
-// Admin: invoices de um cliente específico
-app.get('/api/admin/client/:id/financial', requireAdmin, async (req, res) => {
-  if (!STRIPE_SECRET_KEY) return res.json({ invoices: [], configured: false });
-  try {
-    const Stripe = require('stripe');
-    const stripe = Stripe(STRIPE_SECRET_KEY);
-    const { data: user } = await sb.from('re_users').select('stripe_customer_id, email').eq('id', req.params.id).single();
-    if (!user) return res.status(404).json({ error: 'Cliente não encontrado.' });
-
-    let customerId = user.stripe_customer_id;
-    if (!customerId) {
-      const found = await stripe.customers.list({ email: user.email, limit: 1 });
-      customerId  = found.data[0]?.id || null;
-    }
-    if (!customerId) return res.json({ invoices: [], configured: true });
-
-    const piList = await stripe.paymentIntents.list({ customer: customerId, limit: 30 });
-    const invoices = piList.data.map(p => ({
-      id: p.id, amount: (p.amount / 100).toFixed(2),
-      currency: p.currency.toUpperCase(), status: p.status,
-      date: new Date(p.created * 1000).toISOString(),
-      description: p.description || 'Pagamento',
-    }));
-    res.json({ invoices, configured: true });
-  } catch (e) { res.json({ invoices: [], configured: true, error: e.message }); }
-});
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// FORM BUILDER — configuração dinâmica do formulário de onboarding
-// ═══════════════════════════════════════════════════════════════════════════════
-
-const FORM_CONFIG_PATH = path.join(__dirname, 'form-config.json');
-
-const FORM_CONFIG_DEFAULTS = {
-  steps: [
-    { id:1,  title:'Consentimento LGPD',       description:'', enabled:true,  required:true  },
-    { id:2,  title:'Dados da Empresa',          description:'', enabled:true,  required:true  },
-    { id:3,  title:'Sócios',                   description:'', enabled:true,  required:true  },
-    { id:4,  title:'Estrutura Operacional',     description:'', enabled:true,  required:false },
-    { id:5,  title:'Quadro de Funcionários',    description:'', enabled:true,  required:false },
-    { id:6,  title:'Ativos',                   description:'', enabled:true,  required:false },
-    { id:7,  title:'Dados Financeiros',         description:'', enabled:true,  required:true  },
-    { id:8,  title:'Dívidas e Credores',        description:'', enabled:true,  required:true  },
-    { id:9,  title:'Histórico da Crise',        description:'', enabled:true,  required:false },
-    { id:10, title:'Diagnóstico Estratégico',   description:'', enabled:true,  required:false },
-    { id:11, title:'Mercado e Operação',        description:'', enabled:true,  required:false },
-    { id:12, title:'Expectativas e Estratégia', description:'', enabled:true,  required:false },
-    { id:13, title:'Documentos',               description:'', enabled:true,  required:false },
-    { id:14, title:'Confirmação e Envio',       description:'', enabled:true,  required:true  },
-  ],
-  welcomeMessage: 'Preencha as informações da sua empresa para que possamos elaborar o Business Plan de recuperação.',
-  lastUpdated: null,
-};
-
-function readFormConfig() {
-  try {
-    if (fs.existsSync(FORM_CONFIG_PATH)) {
-      const raw = fs.readFileSync(FORM_CONFIG_PATH, 'utf8');
-      const cfg = JSON.parse(raw);
-      // Merge: keep defaults for any step missing in saved config
-      const savedIds = new Set((cfg.steps||[]).map(s => s.id));
-      const merged = FORM_CONFIG_DEFAULTS.steps.map(def => {
-        const saved = (cfg.steps||[]).find(s => s.id === def.id);
-        return saved ? { ...def, ...saved } : def;
-      });
-      return { ...FORM_CONFIG_DEFAULTS, ...cfg, steps: merged };
-    }
-  } catch (e) { console.warn('[FORM-CONFIG] read error:', e.message); }
-  return { ...FORM_CONFIG_DEFAULTS, steps: FORM_CONFIG_DEFAULTS.steps.map(s => ({ ...s })) };
-}
-
-function writeFormConfig(cfg) {
-  try { fs.writeFileSync(FORM_CONFIG_PATH, JSON.stringify(cfg, null, 2), 'utf8'); } catch (e) {
-    console.error('[FORM-CONFIG] write error:', e.message);
-    throw e;
-  }
-}
-
-// Authenticated clients: read enabled steps only
-app.get('/api/form-config', requireAuth, (req, res) => {
-  const cfg = readFormConfig();
-  res.json({
-    steps: cfg.steps.filter(s => s.enabled),
-    welcomeMessage: cfg.welcomeMessage || '',
-  });
-});
-
-// Admin: full config
-app.get('/api/admin/form-config', requireAdmin, (req, res) => {
-  res.json(readFormConfig());
-});
-
-// Admin: save config
-app.put('/api/admin/form-config', requireAdmin, (req, res) => {
-  try {
-    const current = readFormConfig();
-    const { steps, welcomeMessage } = req.body;
-    // Validate and sanitise steps
-    const merged = (FORM_CONFIG_DEFAULTS.steps).map(def => {
-      const incoming = (steps||[]).find(s => s.id === def.id);
-      if (!incoming) return current.steps.find(s => s.id === def.id) || def;
-      return {
-        id:          def.id,
-        title:       (typeof incoming.title === 'string' ? incoming.title.trim() : '') || def.title,
-        description: typeof incoming.description === 'string' ? incoming.description.trim() : '',
-        enabled:     !!incoming.enabled,
-        required:    !!incoming.required,
-      };
-    });
-    // Steps 1 and 14 are always enabled & required (LGPD + confirmação)
-    merged[0]  = { ...merged[0],  enabled: true, required: true };
-    merged[13] = { ...merged[13], enabled: true, required: true };
-
-    const updated = {
-      ...current,
-      steps: merged,
-      welcomeMessage: typeof welcomeMessage === 'string' ? welcomeMessage.trim() : current.welcomeMessage,
-      lastUpdated: new Date().toISOString(),
-    };
-    writeFormConfig(updated);
-    res.json({ success: true, config: updated });
-  } catch (e) {
-    console.error('[FORM-CONFIG PUT]', e.message);
-    res.status(500).json({ error: 'Erro ao salvar configuração.' });
-  }
 });
 
 // ══════════════════════════════════════════════════════════════════════════════
