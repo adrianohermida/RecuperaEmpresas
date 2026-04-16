@@ -45,17 +45,17 @@ const FP = {
 async function loadClientForms() {
   const el = document.getElementById('fp-forms-list');
   if (!el) return;
-  el.innerHTML = '<div style="padding:24px;color:#94A3B8;text-align:center;">Carregando formulários...</div>';
+  el.innerHTML = '<div class="fp-list-loading">Carregando formulários...</div>';
 
   const res = await fetch('/api/my-forms', { headers: fpAuthH() });
-  if (!res.ok) { el.innerHTML = '<div style="padding:24px;color:#EF4444;">Erro ao carregar formulários.</div>'; return; }
+  if (!res.ok) { el.innerHTML = '<div class="fp-list-error">Erro ao carregar formulários.</div>'; return; }
   FP.forms = await res.json();
 
   if (!FP.forms.length) {
-    el.innerHTML = `<div style="padding:40px;text-align:center;color:#94A3B8;">
-      <div style="font-size:40px;margin-bottom:12px;">📋</div>
-      <div style="font-size:15px;font-weight:600;color:#64748B;margin-bottom:8px;">Nenhum formulário atribuído</div>
-      <div style="font-size:13px;">Quando seu consultor atribuir formulários, eles aparecerão aqui.</div>
+    el.innerHTML = `<div class="fp-list-empty">
+      <div class="fp-list-empty-icon">📋</div>
+      <div class="fp-list-empty-title">Nenhum formulário atribuído</div>
+      <div class="fp-list-empty-copy">Quando seu consultor atribuir formulários, eles aparecerão aqui.</div>
     </div>`;
     return;
   }
@@ -69,38 +69,42 @@ async function loadClientForms() {
 
   el.innerHTML = FP.forms.map(f => {
     const st = STATUS_MAP[f.response_status] || STATUS_MAP.nao_iniciado;
+    const progress = f.response_progress || 0;
     return `
-    <div style="background:#fff;border:1px solid #E2E8F0;border-radius:12px;padding:20px;display:flex;align-items:flex-start;gap:16px;transition:box-shadow .15s;"
-         onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,.08)'" onmouseout="this.style.boxShadow=''">
-      <div style="font-size:32px;flex-shrink:0;">${st.icon}</div>
-      <div style="flex:1;min-width:0;">
-        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-          <div style="font-weight:700;font-size:15px;color:#1E293B;">${fpEsc(f.title)}</div>
+    <div class="fp-list-card">
+      <div class="fp-list-card-icon">${st.icon}</div>
+      <div class="fp-list-card-copy">
+        <div class="fp-list-card-header">
+          <div class="fp-list-card-title">${fpEsc(f.title)}</div>
           <span class="badge ${st.cls}">${st.label}</span>
         </div>
-        <div style="font-size:12px;color:#94A3B8;margin-top:2px;">${TYPE_LABELS[f.type] || f.type || ''}</div>
-        ${f.description ? `<div style="font-size:13px;color:#64748B;margin-top:6px;line-height:1.5;">${fpEsc(f.description)}</div>` : ''}
+        <div class="fp-list-card-type">${TYPE_LABELS[f.type] || f.type || ''}</div>
+        ${f.description ? `<div class="fp-list-card-desc">${fpEsc(f.description)}</div>` : ''}
         ${f.response_status === 'em_andamento' ? `
-          <div style="margin-top:8px;">
-            <div style="display:flex;justify-content:space-between;font-size:11px;color:#64748B;margin-bottom:4px;">
+          <div class="fp-list-progress-block">
+            <div class="fp-list-progress-meta">
               <span>Progresso</span><span>${f.response_progress || 0}%</span>
             </div>
-            <div style="height:4px;background:#E2E8F0;border-radius:99px;overflow:hidden;">
-              <div style="height:100%;background:#1A56DB;border-radius:99px;width:${f.response_progress||0}%;transition:width .3s;"></div>
+            <div class="fp-list-progress-track">
+              <div class="fp-list-progress-fill" data-progress="${progress}"></div>
             </div>
           </div>` : ''}
         ${f.response_status === 'concluido' && f.score_pct != null ? `
-          <div style="margin-top:8px;font-size:13px;color:#16A34A;font-weight:600;">
+          <div class="fp-list-score">
             Pontuação: ${Math.round(f.score_pct)}%
           </div>` : ''}
       </div>
-      <div style="flex-shrink:0;">
-        <button class="btn-primary" style="font-size:13px;padding:8px 16px;" onclick="fpPlayForm(${f.id})">
+      <div class="fp-list-card-action">
+        <button class="btn-primary fp-list-card-btn" onclick="fpPlayForm(${f.id})">
           ${st.btn} →
         </button>
       </div>
     </div>`;
   }).join('');
+
+  el.querySelectorAll('.fp-list-progress-fill').forEach(bar => {
+    bar.style.width = `${bar.dataset.progress || 0}%`;
+  });
 }
 
 /* ──────────────────────────────────────────────────────────────────────────────
@@ -118,15 +122,15 @@ async function fpPlayForm(formId) {
   modal.style.display = 'flex';
 
   const content = document.getElementById('fp-player-content');
-  if (content) content.innerHTML = `<div style="padding:40px;text-align:center;color:#94A3B8;">
-    <div style="font-size:32px;margin-bottom:12px;">⏳</div>
-    <div style="font-size:14px;">Carregando formulário...</div>
+  if (content) content.innerHTML = `<div class="fp-modal-state fp-modal-state-muted">
+    <div class="fp-modal-state-icon">⏳</div>
+    <div class="fp-modal-state-copy">Carregando formulário...</div>
   </div>`;
 
   // Load full form
   const res = await fetch(`/api/my-forms/${formId}`, { headers: fpAuthH() });
   if (!res.ok) {
-    if (content) content.innerHTML = '<div style="padding:40px;text-align:center;color:#EF4444;">Erro ao carregar formulário.</div>';
+    if (content) content.innerHTML = '<div class="fp-modal-state fp-modal-state-error">Erro ao carregar formulário.</div>';
     return;
   }
   FP.currentForm = await res.json();
@@ -242,29 +246,27 @@ function fpRenderPlayer() {
   if (pbLabel) pbLabel.textContent = `Página ${idx+1} de ${total}`;
 
   if (!page) {
-    content.innerHTML = '<div style="padding:40px;text-align:center;color:#94A3B8;">Formulário sem páginas.</div>';
+    content.innerHTML = '<div class="fp-modal-state fp-modal-state-muted">Formulário sem páginas.</div>';
     return;
   }
 
   const questions = page.questions || [];
 
   content.innerHTML = `
-    ${page.title ? `<div style="margin-bottom:20px;">
-      <h2 style="font-size:20px;font-weight:700;color:#1E293B;margin:0 0 4px;">${fpEsc(page.title)}</h2>
-      ${page.description ? `<div style="font-size:14px;color:#64748B;">${fpEsc(page.description)}</div>` : ''}
+    ${page.title ? `<div class="fp-page-header">
+      <h2 class="fp-page-title">${fpEsc(page.title)}</h2>
+      ${page.description ? `<div class="fp-page-desc">${fpEsc(page.description)}</div>` : ''}
     </div>` : ''}
-    <div id="fp-questions" style="display:flex;flex-direction:column;gap:24px;">
+    <div id="fp-questions" class="fp-questions">
       ${questions.map(q => fpRenderQuestion(q)).join('')}
     </div>
     <!-- Nav -->
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:32px;padding-top:20px;border-top:1px solid #F1F5F9;">
-      <button onclick="fpPrevPage()" class="btn-ghost"
-        style="${isFirst ? 'visibility:hidden;' : ''}font-size:14px;padding:10px 20px;">
+    <div class="fp-page-nav">
+      <button onclick="fpPrevPage()" class="btn-ghost fp-page-nav-btn ${isFirst ? 'fp-page-nav-btn-hidden' : ''}">
         ← Anterior
       </button>
       <button onclick="${isLast ? 'fpSubmitForm()' : 'fpNextPage()'}"
-        class="btn-primary" id="fp-next-btn"
-        style="font-size:14px;padding:10px 24px;">
+        class="btn-primary fp-page-nav-btn fp-page-nav-btn-primary" id="fp-next-btn">
         ${isLast ? '✅ Enviar formulário' : 'Próxima →'}
       </button>
     </div>
@@ -280,17 +282,17 @@ function fpRenderPlayer() {
    Question renderers
 ──────────────────────────────────────────────────────────────────────────────*/
 function fpRenderQuestion(q) {
-  const reqMark = q.required ? '<span style="color:#EF4444;margin-left:2px;">*</span>' : '';
+  const reqMark = q.required ? '<span class="fp-question-required">*</span>' : '';
   return `
-  <div class="fp-question" id="fpq-${q.id}" style="display:flex;flex-direction:column;gap:8px;">
+  <div class="fp-question" id="fpq-${q.id}">
     ${q.type !== 'section' ? `
-    <label style="font-size:15px;font-weight:600;color:#1E293B;line-height:1.4;">
+    <label class="fp-question-label">
       ${fpEsc(q.label)}${reqMark}
     </label>
-    ${q.description ? `<div style="font-size:13px;color:#64748B;margin-top:-4px;">${fpEsc(q.description)}</div>` : ''}
-    ` : `<div style="font-size:18px;font-weight:700;color:#1e3a5f;border-bottom:2px solid #E2E8F0;padding-bottom:8px;">${fpEsc(q.label)}</div>`}
+    ${q.description ? `<div class="fp-question-desc">${fpEsc(q.description)}</div>` : ''}
+    ` : `<div class="fp-question-section">${fpEsc(q.label)}</div>`}
     ${fpRenderInput(q)}
-    <div id="fpq-err-${q.id}" style="display:none;font-size:12px;color:#EF4444;font-weight:500;"></div>
+    <div id="fpq-err-${q.id}" class="fp-question-error"></div>
   </div>`;
 }
 
@@ -299,23 +301,23 @@ function fpRenderInput(q) {
   switch (q.type) {
     case 'section': return '';
     case 'short_text':
-      return `<input id="${id}" type="text" class="portal-input" placeholder="${fpEsc(q.placeholder||'')}" style="max-width:480px;">`;
+      return `<input id="${id}" type="text" class="portal-input fp-input-limit-lg" placeholder="${fpEsc(q.placeholder||'')}">`;
     case 'long_text':
-      return `<textarea id="${id}" class="portal-input" rows="4" placeholder="${fpEsc(q.placeholder||'')}" style="resize:vertical;"></textarea>`;
+      return `<textarea id="${id}" class="portal-input fp-input-textarea" rows="4" placeholder="${fpEsc(q.placeholder||'')}"></textarea>`;
     case 'number':
-      return `<input id="${id}" type="number" class="portal-input" placeholder="${fpEsc(q.placeholder||'0')}" style="max-width:200px;">`;
+      return `<input id="${id}" type="number" class="portal-input fp-input-limit-sm" placeholder="${fpEsc(q.placeholder||'0')}">`;
     case 'currency':
-      return `<div style="display:flex;align-items:center;gap:8px;max-width:240px;">
-        <span style="color:#64748B;font-size:14px;font-weight:600;">R$</span>
-        <input id="${id}" type="number" min="0" step="0.01" class="portal-input" placeholder="0,00" style="flex:1;">
+      return `<div class="fp-inline-input fp-inline-input-md">
+        <span class="fp-inline-input-prefix">R$</span>
+        <input id="${id}" type="number" min="0" step="0.01" class="portal-input fp-inline-input-control" placeholder="0,00">
       </div>`;
     case 'percentage':
-      return `<div style="display:flex;align-items:center;gap:8px;max-width:180px;">
-        <input id="${id}" type="number" min="0" max="100" step="0.1" class="portal-input" placeholder="0" style="flex:1;">
-        <span style="color:#64748B;font-size:14px;font-weight:600;">%</span>
+      return `<div class="fp-inline-input fp-inline-input-sm">
+        <input id="${id}" type="number" min="0" max="100" step="0.1" class="portal-input fp-inline-input-control" placeholder="0">
+        <span class="fp-inline-input-prefix">%</span>
       </div>`;
     case 'date':
-      return `<input id="${id}" type="date" class="portal-input" style="max-width:220px;">`;
+      return `<input id="${id}" type="date" class="portal-input fp-input-limit-md">`;
     case 'single_choice': {
       const opts = Array.isArray(q.options) ? q.options : [];
       return `<div style="display:flex;flex-direction:column;gap:8px;" id="${id}-wrap">
@@ -346,7 +348,7 @@ function fpRenderInput(q) {
     }
     case 'dropdown': {
       const opts = Array.isArray(q.options) ? q.options : [];
-      return `<select id="${id}" class="portal-input" style="max-width:320px;">
+      return `<select id="${id}" class="portal-input fp-input-limit-select">
         <option value="">Selecione...</option>
         ${opts.map(o => { const l = typeof o==='string'?o:(o.label||o); return `<option value="${fpEsc(l)}">${fpEsc(l)}</option>`; }).join('')}
       </select>`;
@@ -595,15 +597,17 @@ function fpValidatePage() {
     const val = FP.answers[q.id];
     const isEmpty = val == null || val === '' || (Array.isArray(val) && val.length === 0);
     if (isEmpty) {
-      if (errEl) { errEl.textContent = 'Esta questão é obrigatória.'; errEl.style.display='block'; }
-      // Highlight question
+      if (errEl) {
+        errEl.textContent = 'Esta questão é obrigatória.';
+        errEl.classList.add('fp-question-error-visible');
+      }
       const qEl = document.getElementById(`fpq-${q.id}`);
-      if (qEl) { qEl.style.border = '1px solid #FCA5A5'; qEl.style.borderRadius = '8px'; qEl.style.padding = '12px'; }
+      if (qEl) qEl.classList.add('fp-question-invalid');
       valid = false;
     } else {
-      if (errEl) errEl.style.display='none';
+      if (errEl) errEl.classList.remove('fp-question-error-visible');
       const qEl = document.getElementById(`fpq-${q.id}`);
-      if (qEl) { qEl.style.border=''; qEl.style.padding=''; }
+      if (qEl) qEl.classList.remove('fp-question-invalid');
     }
   });
   if (!valid) { fpToast('Responda as questões obrigatórias antes de continuar.','error'); }
