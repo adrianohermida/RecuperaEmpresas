@@ -1352,7 +1352,7 @@ body {
 }
 
 .journey-modal-overlay {
-  z-index: 500;
+  z-index: 1000;
   align-items: flex-start;
   padding: clamp(16px, 4vh, 32px) 20px;
   overflow-y: auto;
@@ -5415,6 +5415,7 @@ body {
 @media (max-width: 640px) {
   .admin-modal-overlay {
     padding: 0;
+    padding-left: 0; /* reset desktop sidebar offset */
     align-items: flex-end;
   }
   .admin-modal {
@@ -5433,6 +5434,11 @@ body {
   }
   /* journey modals */
   .journey-modal { border-radius: 20px 20px 0 0; width: 100%; max-width: 100%; }
+  /* form-builder modals — full-width sheet on mobile */
+  .form-builder-modal { width: 100%; border-radius: 20px 20px 0 0; padding: 20px 16px 32px; }
+  .form-builder-modal-xl,
+  .form-builder-modal-lg,
+  .form-builder-modal-md { max-width: 100%; max-height: 92dvh; }
   /* agenda modals */
   .agenda-modal-card,
   .agenda-modal-card-sm,
@@ -5440,12 +5446,51 @@ body {
   .agenda-modal-card-lg { width: 100%; border-radius: 20px 20px 0 0; }
 }
 
-@media (min-width: 641px) and (max-width: 960px) {
+/* 641-768px: sidebar off-canvas, no sidebar offset */
+@media (min-width: 641px) and (max-width: 768px) {
   .admin-modal {
     width: min(500px, calc(100vw - 48px));
     padding: 24px;
   }
   .journey-modal { width: min(520px, calc(100vw - 48px)); }
+}
+
+/* ≥769px: sidebar is visible — offset overlay so modals center on the content area */
+@media (min-width: 769px) {
+  .admin-modal-overlay {
+    padding-left: var(--sidebar-w);
+  }
+  /* Cap all modal widths to available content area */
+  .admin-modal {
+    max-width: min(440px, calc(100vw - var(--sidebar-w) - 48px));
+  }
+  .journey-modal {
+    max-width: calc(100vw - var(--sidebar-w) - 48px);
+  }
+  .journey-modal-md {
+    max-width: min(480px, calc(100vw - var(--sidebar-w) - 48px));
+  }
+  .journey-modal-lg {
+    max-width: min(520px, calc(100vw - var(--sidebar-w) - 48px));
+  }
+  .form-builder-modal {
+    width: min(760px, calc(100vw - var(--sidebar-w) - 48px));
+  }
+  .form-builder-modal-md {
+    max-width: min(560px, calc(100vw - var(--sidebar-w) - 48px));
+  }
+  .form-builder-modal-lg {
+    max-width: min(960px, calc(100vw - var(--sidebar-w) - 48px));
+  }
+  .form-builder-modal-xl {
+    max-width: min(1200px, calc(100vw - var(--sidebar-w) - 48px));
+  }
+  .agenda-modal-card,
+  .agenda-modal-card-sm,
+  .agenda-modal-card-md,
+  .agenda-modal-card-lg {
+    max-width: calc(100vw - var(--sidebar-w) - 48px);
+  }
 }
 
 /* Modal drag-handle visual cue on mobile */
