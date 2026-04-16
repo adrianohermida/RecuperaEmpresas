@@ -21,13 +21,14 @@ function getFreePort() {
   });
 }
 
-function request(port, route) {
+function request(port, route, options = {}) {
   return new Promise((resolve, reject) => {
     const req = http.request({
       hostname: '127.0.0.1',
       port,
       path: route,
       method: 'GET',
+      headers: options.headers || {},
     }, (res) => {
       let body = '';
       res.setEncoding('utf8');
@@ -65,6 +66,14 @@ function assert(condition, message) {
   if (!condition) throw new Error(message);
 }
 
+function parseJson(body, route) {
+  try {
+    return JSON.parse(body);
+  } catch {
+    throw new Error(`Resposta de ${route} nao contem JSON valido`);
+  }
+}
+
 async function run() {
   const port = await getFreePort();
   const serverPath = path.resolve(__dirname, '..', 'server.js');
@@ -92,7 +101,7 @@ async function run() {
 
     const health = await request(port, '/api/health');
     assert(health.statusCode === 200, 'GET /api/health deve retornar 200');
-    const healthJson = JSON.parse(health.body);
+    const healthJson = parseJson(health.body, '/api/health');
     assert(healthJson.status === 'ok', 'GET /api/health deve retornar status ok');
 
     const config = await request(port, '/js/config.js');
@@ -107,6 +116,46 @@ async function run() {
     const fallback = await request(port, '/rota-inexistente-smoke');
     assert(fallback.statusCode === 200, 'Fallback deve retornar 200');
     assert(/html/i.test(String(fallback.headers['content-type'] || '')), 'Fallback deve retornar HTML');
+
+    const protectedUserRoutes = [
+      '/api/auth/verify',
+      '/api/forms',
+      '/api/notifications',
+      '/api/services',
+    ];
+
+    for (const route of protectedUserRoutes) {
+      const response = await request(port, route);
+      assert(response.statusCode === 401, `GET ${route} sem token deve retornar 401`);
+      const payload = parseJson(response.body, route);
+      assert(typeof payload.error === 'string' && payload.error.length > 0, `GET ${route} sem token deve retornar erro legivel`);
+    }
+
+    const invalidUserToken = await request(port, '/api/auth/verify', {
+      headers: { Authorization: 'Bearer smoke-test-token-invalido' },
+    });
+    assert(invalidUserToken.statusCode === 401, 'GET /api/auth/verify com token invalido deve retornar 401');
+    const invalidUserTokenPayload = parseJson(invalidUserToken.body, '/api/auth/verify');
+    assert(/token/i.test(String(invalidUserTokenPayload.error || '')), 'GET /api/auth/verify com token invalido deve indicar erro de token');
+
+    const protectedAdminRoutes = [
+      '/api/admin/logs',
+      '/api/admin/stats',
+    ];
+
+    for (const route of protectedAdminRoutes) {
+      const response = await request(port, route);
+      assert(response.statusCode === 401, `GET ${route} sem token deve retornar 401`);
+      const payload = parseJson(response.body, route);
+      assert(typeof payload.error === 'string' && payload.error.length > 0, `GET ${route} sem token deve retornar erro legivel`);
+    }
+
+    const invalidAdminToken = await request(port, '/api/admin/logs', {
+      headers: { Authorization: 'Bearer smoke-test-token-invalido' },
+    });
+    assert(invalidAdminToken.statusCode === 401, 'GET /api/admin/logs com token invalido deve retornar 401');
+    const invalidAdminTokenPayload = parseJson(invalidAdminToken.body, '/api/admin/logs');
+    assert(/token/i.test(String(invalidAdminTokenPayload.error || '')), 'GET /api/admin/logs com token invalido deve indicar erro de token');
 
     console.log('Smoke test concluído com sucesso.');
   } finally {
