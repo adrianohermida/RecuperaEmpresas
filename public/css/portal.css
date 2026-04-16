@@ -10,7 +10,7 @@
   --bg:            #F1F5F9;
   --card:          #FFFFFF;
   --text:          #1E293B;
-  --text-muted:    #64748B;
+  --text-muted:    #475569;
   --border:        #CBD5E1;
   --success:       #059669;
   --success-light: #ECFDF5;
@@ -187,7 +187,7 @@ body {
 }
 .admin-empty-state-soft {
   padding: 24px;
-  color: #94A3B8;
+  color: #475569;
   text-align: center;
 }
 .admin-card-grid {
@@ -370,7 +370,7 @@ body {
 }
 .journey-empty-state {
   padding: 20px;
-  color: #94A3B8;
+  color: #475569;
   text-align: center;
 }
 .journey-empty-state-sm {
@@ -1147,7 +1147,7 @@ body {
 
 .form-builder-canvas-empty {
   padding: 40px;
-  color: #94A3B8;
+  color: #475569;
   text-align: center;
 }
 
