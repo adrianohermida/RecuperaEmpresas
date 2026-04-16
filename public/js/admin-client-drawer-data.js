@@ -134,9 +134,9 @@
   function execSectionHtml(title, rows) {
     const validRows = rows.filter(([, value]) => value !== null && value !== undefined && value !== '' && value !== '—');
     if (!validRows.length) return '';
-    return `<div class="exec-section">
-      <div class="exec-section-title">${title}</div>
-      <table class="exec-table">
+    return `<div class="acdd-exec-section">
+      <div class="acdd-exec-section-title">${title}</div>
+      <table class="acdd-exec-table">
         ${validRows.map(([label, value]) => `<tr><td>${label}</td><td>${value}</td></tr>`).join('')}
       </table>
     </div>`;
@@ -160,7 +160,7 @@
   }
 
   function switchDataTab(idx, el) {
-    document.querySelectorAll('.data-tab-btn').forEach(button => button.classList.remove('active'));
+    document.querySelectorAll('.acdd-data-tab-btn').forEach(button => button.classList.remove('active'));
     if (el) el.classList.add('active');
     const content = document.getElementById('dataTabContent');
     if (!content || !window._execData) return;
@@ -227,9 +227,9 @@
       if (rec > 0 && cst > 0) {
         const margin = ((rec - cst) / rec * 100).toFixed(1);
         const marginToneClass = execMarginToneClass(parseFloat(margin));
-        html += `<div class="exec-section">
-          <div class="exec-section-title">Indicadores calculados</div>
-          <table class="exec-table">
+        html += `<div class="acdd-exec-section">
+          <div class="acdd-exec-section-title">Indicadores calculados</div>
+          <table class="acdd-exec-table">
             <tr><td>Margem de contribuição estimada</td><td class="acdd-emphasis-cell ${marginToneClass}">${margin}%</td></tr>
             <tr><td>Resultado mensal estimado</td><td class="acdd-result-cell ${marginToneClass}">${fmtCur(rec - cst)}</td></tr>
           </table>
@@ -243,18 +243,18 @@
       } else {
         const total = dividas.reduce((sum, debt) => sum + parseCurrencyVal(debt.saldoAtual || debt.valorOriginal), 0);
         const judicializadas = dividas.filter(debt => debt.estaJudicializada === 'sim').length;
-        html += `<div class="exec-section">
-          <div class="exec-section-title">Resumo</div>
-          <table class="exec-table">
+        html += `<div class="acdd-exec-section">
+          <div class="acdd-exec-section-title">Resumo</div>
+          <table class="acdd-exec-table">
             <tr><td>Total de credores</td><td><strong>${dividas.length}</strong></td></tr>
             <tr><td>Total estimado de dívidas</td><td class="acdd-emphasis-cell acdd-tone-danger">R$ ${total.toLocaleString('pt-BR',{minimumFractionDigits:2})}</td></tr>
             <tr><td>Dívidas judicializadas</td><td>${judicializadas > 0 ? `<span class="badge badge-red">${judicializadas}</span>` : '<span class="badge badge-green">Nenhuma</span>'}</td></tr>
           </table>
         </div>`;
-        html += `<div class="exec-section">
-          <div class="exec-section-title">Detalhamento</div>
+        html += `<div class="acdd-exec-section">
+          <div class="acdd-exec-section-title">Detalhamento</div>
           <div class="admin-table-wrap acdd-debt-wrap">
-            <table class="debt-table">
+            <table class="acdd-debt-table">
               <thead><tr>
                 <th>Credor</th><th>Tipo</th><th>Valor original</th><th>Saldo atual</th><th>Garantia</th><th>Judicial</th>
               </tr></thead>
@@ -372,56 +372,56 @@
     const onboardingToneClass = execOnboardingToneClass(onboarding.completed);
 
     body.innerHTML = `
-      <div class="exec-header">
-        <div class="exec-company">${empresa.razaoSocial || user.company || '—'}</div>
-        <div class="exec-cnpj">CNPJ: ${empresa.cnpj || '—'} &nbsp;·&nbsp; <span class="badge ${statusCls} acdd-badge-sm">${statusLabel}</span></div>
-        <div class="exec-kpis">
-          <div class="exec-kpi">
-            <div class="exec-kpi-val ${scoreToneClass}">${score}%</div>
-            <div class="exec-kpi-lbl">Score de Recuperação</div>
-            <div class="exec-kpi-sub ${scoreToneClass}">${scoreLabel}</div>
+      <div class="acdd-exec-header">
+        <div class="acdd-exec-company">${empresa.razaoSocial || user.company || '—'}</div>
+        <div class="acdd-exec-cnpj">CNPJ: ${empresa.cnpj || '—'} &nbsp;·&nbsp; <span class="badge ${statusCls} acdd-badge-sm">${statusLabel}</span></div>
+        <div class="acdd-exec-kpis">
+          <div class="acdd-exec-kpi">
+            <div class="acdd-exec-kpi-val ${scoreToneClass}">${score}%</div>
+            <div class="acdd-exec-kpi-lbl">Score de Recuperação</div>
+            <div class="acdd-exec-kpi-sub ${scoreToneClass}">${scoreLabel}</div>
           </div>
-          <div class="exec-kpi exec-divider acdd-kpi-divider">
-            <div class="exec-kpi-val">${pct}%</div>
-            <div class="exec-kpi-lbl">Onboarding</div>
-            <div class="exec-kpi-sub ${onboardingToneClass}">${onboarding.completed ? 'Concluído' : 'Em andamento'}</div>
+          <div class="acdd-exec-kpi acdd-exec-divider acdd-kpi-divider">
+            <div class="acdd-exec-kpi-val">${pct}%</div>
+            <div class="acdd-exec-kpi-lbl">Onboarding</div>
+            <div class="acdd-exec-kpi-sub ${onboardingToneClass}">${onboarding.completed ? 'Concluído' : 'Em andamento'}</div>
           </div>
-          <div class="exec-kpi exec-divider acdd-kpi-divider">
-            <div class="exec-kpi-val">${calcTotalDebt(data.dividas)}</div>
-            <div class="exec-kpi-lbl">Total dívidas</div>
+          <div class="acdd-exec-kpi acdd-exec-divider acdd-kpi-divider">
+            <div class="acdd-exec-kpi-val">${calcTotalDebt(data.dividas)}</div>
+            <div class="acdd-exec-kpi-lbl">Total dívidas</div>
           </div>
         </div>
       </div>
 
-      <div class="data-tab-bar">
+      <div class="acdd-data-tab-bar">
         ${['Resumo','Financeiro','Dívidas','Operação','Crise','Estratégia','Sócios'].map((title, index) =>
-          `<button class="data-tab-btn${index === 0 ? ' active' : ''}" onclick="switchDataTab(${index},this)">${title}</button>`
+          `<button class="acdd-data-tab-btn${index === 0 ? ' active' : ''}" onclick="switchDataTab(${index},this)">${title}</button>`
         ).join('')}
       </div>
 
       <div id="dataTabContent"></div>
 
       ${insights.length ? `
-      <div class="insights-box">
-        <div class="insights-title">
+      <div class="acdd-insights-box">
+        <div class="acdd-insights-title">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
           Pontos de atenção identificados
         </div>
-        <ul class="insights-list">${insights.map(insight => `<li>${insight}</li>`).join('')}</ul>
+        <ul class="acdd-insights-list">${insights.map(insight => `<li>${insight}</li>`).join('')}</ul>
       </div>` : ''}
 
       ${suggestions.length ? `
-      <div class="suggestions-box">
-        <div class="suggestions-title">
+      <div class="acdd-suggestions-box">
+        <div class="acdd-suggestions-title">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
           Sugestões estratégicas
         </div>
-        <ul class="suggestions-list">${suggestions.map(suggestion => `<li>${suggestion}</li>`).join('')}</ul>
+        <ul class="acdd-suggestions-list">${suggestions.map(suggestion => `<li>${suggestion}</li>`).join('')}</ul>
       </div>` : ''}
     `;
 
     window._execData = { d: data, user, onboarding };
-    switchDataTab(0, body.querySelector('.data-tab-btn'));
+    switchDataTab(0, body.querySelector('.acdd-data-tab-btn'));
   }
 
   window.switchDataTab = switchDataTab;

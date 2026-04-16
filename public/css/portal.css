@@ -5010,18 +5010,18 @@ body {
 }
 
 /* ── Executive view (consultant drawer) ──────────────────────────────────────── */
-.exec-header {
+.acdd-exec-header {
   background: linear-gradient(135deg, #1E3A8A 0%, #1D4ED8 100%);
   border-radius: 12px; padding: 18px 20px; margin-bottom: 16px; color: #fff;
 }
-.exec-company { font-size: 16px; font-weight: 700; margin-bottom: 3px; line-height: 1.3; }
-.exec-cnpj    { font-size: 12px; opacity: .75; margin-bottom: 14px; }
-.exec-kpis    { display: flex; gap: 20px; flex-wrap: wrap; }
-.exec-kpi     { flex: 1; min-width: 80px; }
-.exec-kpi-val { font-size: 22px; font-weight: 800; line-height: 1; }
-.exec-kpi-lbl { font-size: 11px; opacity: .75; margin-top: 3px; }
-.exec-kpi-sub { font-size: 12px; font-weight: 700; margin-top: 2px; }
-.exec-divider { border-left: 1px solid rgba(255,255,255,.25); }
+.acdd-exec-company { font-size: 16px; font-weight: 700; margin-bottom: 3px; line-height: 1.3; }
+.acdd-exec-cnpj    { font-size: 12px; opacity: .75; margin-bottom: 14px; }
+.acdd-exec-kpis    { display: flex; gap: 20px; flex-wrap: wrap; }
+.acdd-exec-kpi     { flex: 1; min-width: 80px; }
+.acdd-exec-kpi-val { font-size: 22px; font-weight: 800; line-height: 1; }
+.acdd-exec-kpi-lbl { font-size: 11px; opacity: .75; margin-top: 3px; }
+.acdd-exec-kpi-sub { font-size: 12px; font-weight: 700; margin-top: 2px; }
+.acdd-exec-divider { border-left: 1px solid rgba(255,255,255,.25); }
 .acdd-badge-sm { font-size: 11px; }
 .acdd-kpi-divider { padding-left: 20px; }
 .acdd-empty-state { padding: 24px 0; }
@@ -5063,29 +5063,29 @@ body {
   color: #93C5FD;
 }
 
-.data-tab-bar { display: flex; gap: 3px; flex-wrap: wrap; margin-bottom: 14px; }
-.data-tab-btn {
+.acdd-data-tab-bar { display: flex; gap: 3px; flex-wrap: wrap; margin-bottom: 14px; }
+.acdd-data-tab-btn {
   background: #F1F5F9; border: 1px solid var(--border); color: var(--text-muted);
   font-size: 12px; font-weight: 600; padding: 5px 11px; border-radius: 6px;
   cursor: pointer; transition: all .15s;
 }
-.data-tab-btn:hover  { background: #E2E8F0; color: var(--text); }
-.data-tab-btn.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+.acdd-data-tab-btn:hover  { background: #E2E8F0; color: var(--text); }
+.acdd-data-tab-btn.active { background: var(--primary); border-color: var(--primary); color: #fff; }
 
-.exec-section { margin-bottom: 18px; }
-.exec-section-title {
+.acdd-exec-section { margin-bottom: 18px; }
+.acdd-exec-section-title {
   font-size: 11px; font-weight: 700; color: var(--primary); text-transform: uppercase;
   letter-spacing: .06em; margin-bottom: 8px; padding-bottom: 5px;
   border-bottom: 2px solid #DBEAFE;
 }
-.exec-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-.exec-table tr td:first-child { color: var(--text-muted); width: 44%; padding: 5px 0; vertical-align: top; }
-.exec-table tr td:last-child  { font-weight: 500; color: #0F172A; padding: 5px 0 5px 8px; }
+.acdd-exec-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.acdd-exec-table tr td:first-child { color: var(--text-muted); width: 44%; padding: 5px 0; vertical-align: top; }
+.acdd-exec-table tr td:last-child  { font-weight: 500; color: #0F172A; padding: 5px 0 5px 8px; }
 
-.debt-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-.debt-table th { background: #F8FAFC; border-bottom: 2px solid var(--border); padding: 7px 8px; text-align: left; font-weight: 600; color: var(--text-muted); font-size: 11px; text-transform: uppercase; }
-.debt-table td { padding: 8px; border-bottom: 1px solid #F1F5F9; }
-.debt-table tr:last-child td { border-bottom: none; }
+.acdd-debt-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.acdd-debt-table th { background: #F8FAFC; border-bottom: 2px solid var(--border); padding: 7px 8px; text-align: left; font-weight: 600; color: var(--text-muted); font-size: 11px; text-transform: uppercase; }
+.acdd-debt-table td { padding: 8px; border-bottom: 1px solid #F1F5F9; }
+.acdd-debt-table tr:last-child td { border-bottom: none; }
 .acdd-debt-creditor { font-weight: 500; }
 .acdd-debt-balance {
   color: var(--error);
@@ -5093,25 +5093,25 @@ body {
 }
 .acdd-debt-wrap { overflow-x: auto; }
 
-.insights-box {
+.acdd-insights-box {
   background: #FFFBEB; border: 1px solid #FCD34D; border-radius: 10px;
   padding: 14px 16px; margin-top: 16px;
 }
-.insights-title {
+.acdd-insights-title {
   font-size: 12px; font-weight: 700; color: #92400E;
   margin-bottom: 8px; display: flex; align-items: center; gap: 6px;
 }
-.insights-list { margin: 0; padding-left: 18px; font-size: 12px; color: #78350F; line-height: 1.7; }
+.acdd-insights-list { margin: 0; padding-left: 18px; font-size: 12px; color: #78350F; line-height: 1.7; }
 
-.suggestions-box {
+.acdd-suggestions-box {
   background: #EFF6FF; border: 1px solid #BFDBFE; border-radius: 10px;
   padding: 14px 16px; margin-top: 10px;
 }
-.suggestions-title {
+.acdd-suggestions-title {
   font-size: 12px; font-weight: 700; color: #1E40AF;
   margin-bottom: 8px; display: flex; align-items: center; gap: 6px;
 }
-.suggestions-list { margin: 0; padding-left: 18px; font-size: 12px; color: #1E3A8A; line-height: 1.7; }
+.acdd-suggestions-list { margin: 0; padding-left: 18px; font-size: 12px; color: #1E3A8A; line-height: 1.7; }
 
 /* ── Message templates ───────────────────────────────────────────────────────── */
 .msg-templates { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
