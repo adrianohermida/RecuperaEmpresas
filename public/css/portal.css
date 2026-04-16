@@ -1717,6 +1717,9 @@ body {
   background: #F8FAFC; border: 1px solid var(--border); border-radius: 6px;
   padding: 8px; max-width: 340px; word-break: break-all; white-space: pre-wrap;
 }
+.admin-audit-detail-open {
+  display: block;
+}
 .admin-log-empty-cell {
   text-align: center; color: var(--text-muted); padding: 20px;
 }
