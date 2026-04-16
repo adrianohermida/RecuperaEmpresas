@@ -66,6 +66,8 @@ router.put('/api/admin/journeys/:id', requireAdmin, async (req, res) => {
 
 router.delete('/api/admin/journeys/:id', requireAdmin, async (req, res) => {
   try {
+    const { data: journey } = await sb.from('re_journeys').select('is_system').eq('id', req.params.id).maybeSingle();
+    if (journey?.is_system) return res.status(403).json({ error: 'Jornadas do sistema não podem ser excluídas.' });
     await sb.from('re_journeys').delete().eq('id', req.params.id);
     res.json({ success: true });
   } catch (e) {

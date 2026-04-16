@@ -180,6 +180,8 @@ router.put('/api/admin/forms/:id', requireAdmin, async (req, res) => {
 
 router.delete('/api/admin/forms/:id', requireAdmin, async (req, res) => {
   try {
+    const { data: form } = await sb.from('re_forms').select('is_system').eq('id', req.params.id).maybeSingle();
+    if (form?.is_system) return res.status(403).json({ error: 'Formulários do sistema não podem ser excluídos.' });
     await sb.from('re_forms').delete().eq('id', req.params.id);
     res.json({ success: true });
   } catch (error) {
