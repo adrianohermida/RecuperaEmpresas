@@ -9,9 +9,13 @@ router.get('/api/tasks', requireAuth, async (req, res) => {
 });
 
 router.put('/api/tasks/:id', requireAuth, async (req, res) => {
-  if (req.body.status) {
-    await sb.from('re_tasks').update({ status: req.body.status }).eq('id', req.params.id).eq('user_id', req.user.id);
-  }
+  if (!req.body.status) return res.status(400).json({ error: 'status é obrigatório.' });
+  const { data, error } = await sb.from('re_tasks')
+    .update({ status: req.body.status })
+    .eq('id', req.params.id)
+    .eq('user_id', req.user.id)
+    .select('id').single();
+  if (error || !data) return res.status(404).json({ error: 'Tarefa não encontrada.' });
   res.json({ success: true });
 });
 

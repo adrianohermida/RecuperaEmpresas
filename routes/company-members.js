@@ -112,7 +112,7 @@ router.post('/api/company/members/:memberId/reset-password', requireAuth, async 
   if (req.user.company_id) return res.status(403).json({ error: 'Apenas o titular pode redefinir senhas.' });
   const companyId = req.user.id;
   const { password } = req.body;
-  if (!password || password.length < 6) return res.status(400).json({ error: 'Senha deve ter ao menos 6 caracteres.' });
+  if (!password || password.length < 8) return res.status(400).json({ error: 'Senha deve ter ao menos 8 caracteres.' });
   const hash = await bcrypt.hash(password, 10);
   const { data, error } = await sb.from('re_company_users')
     .update({ password_hash: hash })

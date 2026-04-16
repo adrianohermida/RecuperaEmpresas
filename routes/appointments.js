@@ -61,7 +61,7 @@ router.get('/api/admin/appointments', requireAdmin, async (req, res) => {
 });
 
 // Admin: update appointment status
-router.put('/api/admin/appointments/:userId/:id', requireAdmin, async (req, res) => {
+router.put('/api/admin/appointments/:id', requireAdmin, async (req, res) => {
   const { status, notes } = req.body;
   const updates = {};
   if (status !== undefined) updates.status = status;
