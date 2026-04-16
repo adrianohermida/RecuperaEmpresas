@@ -25,12 +25,11 @@ const internalInvoiceRoutes = require('./routes/internal-invoices');
 const serviceRoutes = require('./routes/services');
 const auditLogRoutes = require('./routes/audit-log');
 const cronRoutes = require('./routes/crons');
-const { adjustCredits } = agendaRoutes;
+const stripeWebhookRoutes = require('./routes/stripe-webhook');
+const adminSystemRoutes = require('./routes/admin-system');
 
 const {
   PORT,
-  STRIPE_SECRET_KEY,
-  STRIPE_WEBHOOK_SECRET,
   ADMIN_EMAILS,
   SUPABASE_URL,
   SUPABASE_SERVICE_KEY,
@@ -38,15 +37,9 @@ const {
   AUTH_EMAIL_REDIRECTS,
   sb,
 } = require('./lib/config');
-const { requireAdmin } = require('./lib/auth');
 const {
   findUserByEmail,
 } = require('./lib/db');
-const {
-  sendMail,
-  emailStyle,
-  emailWrapper,
-} = require('./lib/email');
 
 // ─── Express ──────────────────────────────────────────────────────────────────
 const app = express();
@@ -179,95 +172,8 @@ app.use(internalInvoiceRoutes);
 app.use(serviceRoutes);
 app.use(auditLogRoutes);
 app.use(cronRoutes);
-
-// ── Stripe webhook: credit the account on payment ────────────────────────────
-// Body is already raw Buffer via the global middleware at /api/stripe/webhook
-app.post('/api/stripe/webhook', async (req, res) => {
-    if (!STRIPE_SECRET_KEY || !STRIPE_WEBHOOK_SECRET) return res.sendStatus(400);
-    const Stripe = require('stripe');
-    const stripe = Stripe(STRIPE_SECRET_KEY);
-    let event;
-    try {
-      event = stripe.webhooks.constructEvent(req.body, req.headers['stripe-signature'], STRIPE_WEBHOOK_SECRET);
-    } catch (err) {
-      console.error('[STRIPE WEBHOOK]', err.message);
-      return res.status(400).send(`Webhook Error: ${err.message}`);
-    }
-
-    if (event.type === 'checkout.session.completed') {
-      const session = event.data.object;
-      const { user_id, credits } = session.metadata || {};
-      if (user_id && credits) {
-        const delta = parseInt(credits, 10);
-        await adjustCredits(user_id, delta, 'purchase', session.payment_intent);
-        console.log(`[CREDITS] +${delta} créditos para user ${user_id}`);
-      }
-    }
-
-    if (event.type === 'invoice.paid') {
-      const inv = event.data.object;
-      console.log(`[STRIPE] invoice.paid: ${inv.id} customer=${inv.customer} amount=${inv.amount_paid}`);
-      if (inv.customer) {
-        const { data: user } = await sb.from('re_users')
-          .select('email,name,company').eq('stripe_customer_id', inv.customer).single();
-        if (user) {
-          sendMail(user.email, 'Pagamento confirmado — Recupera Empresas', emailWrapper(
-            'Pagamento recebido',
-            `<p>Olá, <b>${user.name || user.company || user.email}</b>!</p>
-             <p>Confirmamos o recebimento do seu pagamento referente à fatura
-                <b>${inv.number || inv.id}</b>
-                no valor de <b>R$ ${(inv.amount_paid / 100).toFixed(2).replace('.', ',')}</b>.</p>
-             <p>Obrigado pela confiança.</p>`
-          )).catch(e => console.warn('[async]', e?.message));
-        }
-      }
-    }
-
-    if (event.type === 'invoice.payment_failed') {
-      const inv = event.data.object;
-      console.warn(`[STRIPE] invoice.payment_failed: ${inv.id} customer=${inv.customer}`);
-      if (inv.customer && inv.hosted_invoice_url) {
-        const { data: user } = await sb.from('re_users')
-          .select('email,name,company').eq('stripe_customer_id', inv.customer).single();
-        if (user) {
-          sendMail(user.email, 'Falha no pagamento — Recupera Empresas', emailWrapper(
-            'Falha no pagamento',
-            `<p>Olá, <b>${user.name || user.company || user.email}</b>!</p>
-             <p>Não foi possível processar o pagamento da fatura <b>${inv.number || inv.id}</b>.</p>
-             <p><a href="${inv.hosted_invoice_url}" ${emailStyle('footerLink')}>Clique aqui para regularizar o pagamento.</a></p>`
-          )).catch(e => console.warn('[async]', e?.message));
-        }
-      }
-    }
-
-    res.json({ received: true });
-  }
-);
-
-app.get('/api/admin/logs', requireAdmin, async (req, res) => {
-  const { data: logs } = await sb.from('re_access_log')
-    .select('*').order('ts', { ascending: false }).limit(500);
-  res.json({ logs: (logs || []).map(l => ({
-    ts: l.ts, email: l.email, event: l.event, ip: l.ip, step: l.step
-  })) });
-});
-
-app.get('/api/admin/stats', requireAdmin, async (req, res) => {
-  const { data: users } = await sb.from('re_users').select('id').eq('is_admin', false);
-  const ids = (users || []).map(u => u.id);
-  const { data: obs } = await sb.from('re_onboarding')
-    .select('status').in('user_id', ids);
-
-  const stats = { total: ids.length, naoIniciado: 0, emAndamento: 0, concluido: 0 };
-  (obs || []).forEach(o => {
-    if (o.status === 'concluido') stats.concluido++;
-    else if (o.status === 'em_andamento') stats.emAndamento++;
-    else stats.naoIniciado++;
-  });
-  // Users with no onboarding row → nao_iniciado
-  stats.naoIniciado += ids.length - (obs || []).length;
-  res.json(stats);
-});
+app.use(stripeWebhookRoutes);
+app.use(adminSystemRoutes);
 
 // ─── Health check (used by Render.com and uptime monitors) ───────────────────
 app.get(['/api/health', '/healthz'], (req, res) => {
