@@ -32,6 +32,12 @@ function showSection(name, clickedEl) {
     });
   }
   window.scrollTo({ top: 0, behavior: 'instant' });
+  // Update URL hash so browser back/forward works and deep links are shareable
+  if (history.replaceState) history.replaceState(null, '', '#' + name);
+
+  // Section-specific data loaders (refresh on every navigation)
+  if (name === 'tasks')       loadTasks();
+  if (name === 'plan')        loadPlan();
   if (name === 'support')     loadSupport();
   if (name === 'agenda')      loadAgendaSlots();
   if (name === 'financeiro')  { loadFinanceiro(); loadInternalInvoices(); }
@@ -40,7 +46,19 @@ function showSection(name, clickedEl) {
   if (name === 'marketplace') loadMarketplace();
   if (name === 'formularios') loadClientForms();
   if (name === 'jornadas')    loadClientJourneys();
-  if (name === 'messages') { startMsgPolling(); } else { stopMsgPolling(); }
+  if (name === 'messages') { loadMessages(); startMsgPolling(); } else { stopMsgPolling(); }
+}
+
+// ── Navigate to a section programmatically (e.g. from notifications) ─────────
+function navigateTo(section, highlightId) {
+  showSection(section, null);
+  // Optionally scroll to a specific element after render
+  if (highlightId) {
+    setTimeout(() => {
+      const el = document.getElementById(highlightId) || document.querySelector('[data-id="' + highlightId + '"]');
+      if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); el.classList.add('highlight-pulse'); }
+    }, 300);
+  }
 }
 
 // ── Progress ring ─────────────────────────────────────────────────────────────
@@ -240,17 +258,28 @@ function renderMessages(messages) {
 }
 
 // ── Load data ─────────────────────────────────────────────────────────────────
+async function loadProgress() {
+  const res = await fetch('/api/progress', { headers: authH() });
+  if (res.ok) renderProgress(await res.json());
+}
+
+async function loadPlan() {
+  const res = await fetch('/api/plan', { headers: authH() });
+  if (res.ok) { const p = await res.json(); renderPlan(p.chapters || []); }
+}
+
+async function loadTasks() {
+  const res = await fetch('/api/tasks', { headers: authH() });
+  if (res.ok) { const t = await res.json(); renderTasks(t.tasks || []); }
+}
+
+async function loadMessages() {
+  const res = await fetch('/api/messages', { headers: authH() });
+  if (res.ok) { const m = await res.json(); renderMessages(m.messages || []); }
+}
+
 async function loadData() {
-  const [progressRes, planRes, tasksRes, msgsRes] = await Promise.all([
-    fetch('/api/progress',  { headers: authH() }),
-    fetch('/api/plan',      { headers: authH() }),
-    fetch('/api/tasks',     { headers: authH() }),
-    fetch('/api/messages',  { headers: authH() }),
-  ]);
-  if (progressRes.ok) renderProgress(await progressRes.json());
-  if (planRes.ok)     { const p = await planRes.json(); renderPlan(p.chapters || []); }
-  if (tasksRes.ok)    { const t = await tasksRes.json(); renderTasks(t.tasks || []); }
-  if (msgsRes.ok)     { const m = await msgsRes.json(); renderMessages(m.messages || []); }
+  await Promise.all([loadProgress(), loadPlan(), loadTasks(), loadMessages()]);
 }
 
 // ── Actions ───────────────────────────────────────────────────────────────────
@@ -278,8 +307,7 @@ async function sendMessage() {
   if (!text) return;
   input.value = '';
   await fetch('/api/messages', { method: 'POST', headers: authH(), body: JSON.stringify({ text }) });
-  const res = await fetch('/api/messages', { headers: authH() });
-  if (res.ok) { const m = await res.json(); renderMessages(m.messages || []); }
+  await loadMessages();
 }
 
 // ── Mensagens polling ─────────────────────────────────────────────────────────
