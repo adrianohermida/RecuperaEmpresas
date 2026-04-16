@@ -39,6 +39,11 @@ const FP = {
   autoSaveTimer: null,
 };
 
+function fpApplyPercentClass(element, value) {
+  if (!window.REShared || typeof window.REShared.applyPercentClass !== 'function') return;
+  window.REShared.applyPercentClass(element, value);
+}
+
 /* ──────────────────────────────────────────────────────────────────────────────
    Load forms list (client section)
 ──────────────────────────────────────────────────────────────────────────────*/
@@ -103,7 +108,7 @@ async function loadClientForms() {
   }).join('');
 
   el.querySelectorAll('.fp-list-progress-fill').forEach(bar => {
-    bar.style.width = `${bar.dataset.progress || 0}%`;
+    fpApplyPercentClass(bar, bar.dataset.progress || 0);
   });
 }
 
@@ -241,7 +246,7 @@ function fpRenderPlayer() {
 
   // Progress bar
   const pb = document.getElementById('fp-player-progress');
-  if (pb) pb.style.width = pct + '%';
+  fpApplyPercentClass(pb, pct);
   const pbLabel = document.getElementById('fp-player-progress-label');
   if (pbLabel) pbLabel.textContent = `Página ${idx+1} de ${total}`;
 
@@ -562,7 +567,7 @@ function fpTriggerLogic() {
   const idx   = Math.min(FP.currentPageIdx, total - 1);
   const pct   = total > 1 ? Math.round((idx / (total-1)) * 100) : 0;
   const pb    = document.getElementById('fp-player-progress');
-  if (pb) pb.style.width = pct + '%';
+  fpApplyPercentClass(pb, pct);
 }
 
 /* ──────────────────────────────────────────────────────────────────────────────
@@ -683,8 +688,7 @@ function fpShowCompletion(data) {
   const CLASS_LBL = { saudavel:'Saudável', risco_moderado:'Risco Moderado', risco_alto:'Risco Alto' };
   const CLASS_CLR = { saudavel:'#16A34A', risco_moderado:'#D97706', risco_alto:'#DC2626' };
 
-  const pb = document.getElementById('fp-player-progress');
-  if (pb) pb.style.width = '100%';
+  fpApplyPercentClass(document.getElementById('fp-player-progress'), 100);
 
   content.innerHTML = `
     <div class="fp-submit-success">
@@ -793,7 +797,7 @@ async function loadClientJourneys() {
   }).join('');
 
   el.querySelectorAll('.fp-journey-card-progress-fill').forEach(bar => {
-    bar.style.width = `${bar.dataset.progress || 0}%`;
+    fpApplyPercentClass(bar, bar.dataset.progress || 0);
   });
 }
 

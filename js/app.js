@@ -131,7 +131,7 @@ function updateProgress(step) {
   const pct = Math.round(((pos - 1) / TOTAL_STEPS) * 100);
   el('progressLabel').textContent = `Etapa ${pos} de ${TOTAL_STEPS}`;
   el('progressPct').textContent   = `${pct}% concluído`;
-  el('progressFill').style.width  = pct + '%';
+  window.REShared.applyPercentClass(el('progressFill'), pct);
 
   // dots — only show active steps
   const dots = el('stepsDots');
@@ -151,7 +151,7 @@ function updateNavButtons(step) {
   const next = el('btnNext');
   const isFirst = ACTIVE_STEP_IDS.indexOf(step) === 0;
   const isLast  = ACTIVE_STEP_IDS.indexOf(step) === ACTIVE_STEP_IDS.length - 1;
-  back.style.visibility = isFirst ? 'hidden' : 'visible';
+  back.classList.toggle('ui-visibility-hidden', isFirst);
   if (isLast) {
     next.classList.add('ui-hidden');
   } else {

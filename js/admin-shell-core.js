@@ -128,6 +128,6 @@ function renderClientTable(clients) {
   }).join('');
 
   tbody.querySelectorAll('.mini-progress-fill').forEach(function (bar) {
-    bar.style.width = (bar.dataset.progress || 0) + '%';
+    window.REShared.applyPercentClass(bar, bar.dataset.progress || 0);
   });
 }

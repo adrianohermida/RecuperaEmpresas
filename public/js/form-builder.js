@@ -241,7 +241,7 @@ async function fbOpenStatsPanel(formIdOverride) {
       <div class="form-builder-spark-title">Inícios por dia (últimos 14 dias)</div>
       <div class="form-builder-spark-row">${bars}</div>`;
     document.querySelectorAll('.form-builder-spark-bar').forEach(bar => {
-      bar.style.height = `${bar.dataset.height || 0}px`;
+      window.REShared.applyPixelHeightClass(bar, bar.dataset.height || 0, 40);
     });
   }
 }

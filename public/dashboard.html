@@ -830,7 +830,7 @@ function setRing(pct) {
   const circumference = 238.76;
   const offset = circumference - (pct / 100) * circumference;
   const ring = document.getElementById('progressRing');
-  if (ring) ring.style.strokeDashoffset = offset;
+  if (ring) ring.setAttribute('stroke-dashoffset', offset);
 }
 
 // ── Step icon SVGs ─────────────────────────────────────────────────────────────
@@ -861,7 +861,7 @@ function renderProgress(progress) {
   document.getElementById('progressStep').textContent = completed
     ? 'Onboarding concluído'
     : `Etapa ${step} de 14`;
-  document.getElementById('progressBar').style.width = displayPct + '%';
+  window.REShared.applyPercentClass(document.getElementById('progressBar'), displayPct);
   setRing(displayPct);
 
   const badge   = document.getElementById('onboardingBadge');

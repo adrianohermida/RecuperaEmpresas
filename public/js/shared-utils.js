@@ -91,7 +91,40 @@
     return date ? date.toLocaleString('pt-BR', options || {}) : '';
   }
 
+  function clampNumber(value, min, max) {
+    var number = Number(value);
+    if (!isFinite(number)) number = 0;
+    number = Math.round(number);
+    if (number < min) return min;
+    if (number > max) return max;
+    return number;
+  }
+
+  function applyRangeClass(element, value, min, max, prefix, datasetKey) {
+    if (!element) return min;
+
+    var safeValue = clampNumber(value, min, max);
+    var previousClass = element.dataset[datasetKey];
+    if (previousClass) element.classList.remove(previousClass);
+
+    var nextClass = prefix + '-' + safeValue;
+    element.classList.add(nextClass);
+    element.dataset[datasetKey] = nextClass;
+    return safeValue;
+  }
+
+  function applyPercentClass(element, value) {
+    return applyRangeClass(element, value, 0, 100, 'ui-progress', 'uiProgressClass');
+  }
+
+  function applyPixelHeightClass(element, value, max) {
+    var safeMax = typeof max === 'number' ? max : 40;
+    return applyRangeClass(element, value, 0, safeMax, 'ui-height', 'uiHeightClass');
+  }
+
   window.REShared = {
+    applyPercentClass: applyPercentClass,
+    applyPixelHeightClass: applyPixelHeightClass,
     buildAuthHeaders: buildAuthHeaders,
     clearStoredAuth: clearStoredAuth,
     formatCurrencyBRL: formatCurrencyBRL,

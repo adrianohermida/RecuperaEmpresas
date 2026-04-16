@@ -200,7 +200,7 @@
       </div>`;
 
     element.querySelectorAll('.jrn-progress-fill').forEach(bar => {
-      bar.style.width = `${bar.dataset.progress || 0}%`;
+      window.REShared.applyPercentClass(bar, bar.dataset.progress || 0);
     });
   }
 
