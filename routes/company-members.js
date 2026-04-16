@@ -201,4 +201,17 @@ router.get('/api/admin/client/:id/members', requireAdmin, async (req, res) => {
   })) });
 });
 
+// ─── Admin: update member (active status, role, etc.) ────────────────────────
+router.put('/api/admin/client/:id/members/:memberId', requireAdmin, async (req, res) => {
+  const allowed = ['active', 'role', 'name', 'job_title', 'department_id'];
+  const updates = {};
+  allowed.forEach(k => { if (req.body[k] !== undefined) updates[k] = req.body[k]; });
+  if (!Object.keys(updates).length) return res.status(400).json({ error: 'Nenhum campo para atualizar.' });
+  const { data, error } = await sb.from('re_company_users')
+    .update(updates).eq('id', req.params.memberId).eq('company_id', req.params.id).select().single();
+  if (error) return res.status(500).json({ error: error.message });
+  if (!data) return res.status(404).json({ error: 'Membro não encontrado.' });
+  res.json({ success: true, member: data });
+});
+
 module.exports = router;
