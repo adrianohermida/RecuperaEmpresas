@@ -309,7 +309,7 @@
       </div>
 
       <!-- ── VIEW: BUILDER ──────────────────────────────────────────────── -->
-      <div id="fb-view-builder" style="display:none;">
+      <div id="fb-view-builder" class="ui-hidden">
         <!-- Builder header -->
         <div class="journey-editor-toolbar">
           <button class="btn-ghost admin-compact-btn journey-editor-toolbar-btn" onclick="fbLoadFormsList()">
@@ -328,7 +328,7 @@
         </div>
 
         <!-- Settings panel (collapsible) -->
-        <div id="fb-settings-panel" class="form-builder-panel" style="display:none;">
+        <div id="fb-settings-panel" class="form-builder-panel ui-hidden">
           <div class="form-builder-settings-grid">
             <div>
               <label class="form-builder-field-label">Título</label>
@@ -351,7 +351,7 @@
         </div>
 
         <!-- Stats panel (collapsible) -->
-        <div id="fb-stats-panel" class="form-builder-panel" style="display:none;">
+        <div id="fb-stats-panel" class="form-builder-panel ui-hidden">
           <div class="form-builder-stats-header">
             <div class="journey-panel-title">Estatísticas do Formulário</div>
             <button class="btn-ghost form-builder-mini-btn" onclick="fbOpenStatsPanel()">Atualizar</button>
@@ -402,7 +402,7 @@
       </div>
 
       <!-- ── VIEW: RESPONSES ────────────────────────────────────────────── -->
-      <div id="fb-view-responses" style="display:none;">
+      <div id="fb-view-responses" class="ui-hidden">
         <div class="section-header">
           <div>
             <div class="section-title" id="fb-resp-title">Respostas</div>
@@ -427,7 +427,7 @@
     </div><!-- /sec-formularios -->
 
     <!-- JORNADAS -->
-    <div id="sec-jornadas" class="tab-content" style="display:none;">
+    <div id="sec-jornadas" class="tab-content">
 
       <!-- ── VIEW: LIST ──────────────────────────────────────────────────── -->
       <div id="jrn-view-list">
@@ -447,7 +447,7 @@
       </div>
 
       <!-- ── VIEW: EDITOR ────────────────────────────────────────────────── -->
-      <div id="jrn-view-editor" style="display:none;">
+      <div id="jrn-view-editor" class="ui-hidden">
         <div class="journey-editor-toolbar">
           <button class="btn-ghost admin-compact-btn journey-editor-toolbar-btn" onclick="jrnLoadList()">← Todas as jornadas</button>
           <h1 id="jrn-editor-title" class="journey-editor-title">—</h1>
@@ -481,7 +481,7 @@
       </div>
 
       <!-- ── VIEW: PROGRESS ──────────────────────────────────────────────── -->
-      <div id="jrn-view-progress" style="display:none;">
+      <div id="jrn-view-progress" class="ui-hidden">
         <div class="journey-editor-toolbar journey-progress-toolbar">
           <button class="btn-ghost admin-compact-btn journey-editor-toolbar-btn" id="jrn-progress-back-btn">← Voltar</button>
           <h1 id="jrn-progress-title" class="journey-editor-title">Progresso</h1>
@@ -494,7 +494,7 @@
     </div><!-- /sec-jornadas -->
 
     <!-- ── MODAL: New/Edit Journey ──────────────────────────────────────────── -->
-    <div id="jrn-modal-form" class="admin-modal-overlay journey-modal-overlay" style="display:none;">
+    <div id="jrn-modal-form" class="admin-modal-overlay journey-modal-overlay ui-hidden">
       <div class="admin-modal journey-modal journey-modal-md">
         <div id="jrn-modal-title" class="journey-modal-title">Nova Jornada</div>
         <div class="journey-modal-stack">
@@ -523,7 +523,7 @@
     </div>
 
     <!-- ── MODAL: Add Step ─────────────────────────────────────────────────── -->
-    <div id="jrn-modal-step" class="admin-modal-overlay journey-modal-overlay" style="display:none;">
+    <div id="jrn-modal-step" class="admin-modal-overlay journey-modal-overlay ui-hidden">
       <div class="admin-modal journey-modal journey-modal-lg">
         <div id="jrn-step-modal-title" class="journey-modal-title">Adicionar Etapa</div>
         <input type="hidden" id="jrn-step-editing-id">
@@ -555,7 +555,7 @@
     </div>
 
     <!-- ── MODAL: Assign client to Journey ─────────────────────────────────── -->
-    <div id="jrn-modal-assign" class="admin-modal-overlay journey-modal-overlay" style="display:none;">
+    <div id="jrn-modal-assign" class="admin-modal-overlay journey-modal-overlay ui-hidden">
       <div class="admin-modal journey-modal journey-modal-md">
         <div class="journey-modal-title">Atribuir Cliente</div>
         <div class="journey-modal-stack">
@@ -571,14 +571,14 @@
           </div>
         </div>
         <div class="admin-modal-actions journey-modal-actions">
-          <button class="btn-ghost admin-modal-btn" onclick="document.getElementById('jrn-modal-assign').style.display='none'">Cancelar</button>
+          <button class="btn-ghost admin-modal-btn" onclick="jrnCloseAssignModal()">Cancelar</button>
           <button class="btn-primary admin-modal-btn" onclick="jrnSaveAssign()">Atribuir</button>
         </div>
       </div>
     </div>
 
     <!-- ── MODAL: New Form ────────────────────────────────────────────────── -->
-    <div id="fb-modal-new" class="admin-modal-overlay journey-modal-overlay" style="display:none;">
+    <div id="fb-modal-new" class="admin-modal-overlay journey-modal-overlay ui-hidden">
       <div class="admin-modal journey-modal journey-modal-md">
         <div class="journey-modal-title">Novo Formulário</div>
         <div class="journey-modal-stack">
@@ -609,7 +609,7 @@
     </div>
 
     <!-- ── MODAL: Logic Editor ────────────────────────────────────────────── -->
-    <div id="fb-logic-modal" class="admin-modal-overlay journey-modal-overlay" style="display:none;">
+    <div id="fb-logic-modal" class="admin-modal-overlay journey-modal-overlay ui-hidden">
       <div class="admin-modal form-builder-modal form-builder-modal-lg">
         <div class="form-builder-modal-header">
           <div class="form-builder-modal-title">🔀 Lógica Condicional</div>
@@ -653,7 +653,7 @@
     </div>
 
     <!-- ── MODAL: Assign Clients ──────────────────────────────────────────── -->
-    <div id="fb-assign-modal" class="admin-modal-overlay journey-modal-overlay" style="display:none;">
+    <div id="fb-assign-modal" class="admin-modal-overlay journey-modal-overlay ui-hidden">
       <div class="admin-modal form-builder-modal form-builder-modal-md">
         <div class="form-builder-modal-header">
           <div class="form-builder-modal-title">👥 Atribuir Clientes</div>
@@ -668,7 +668,7 @@
     </div>
 
     <!-- ── MODAL: Response detail ─────────────────────────────────────────── -->
-    <div id="fb-resp-detail-modal" class="admin-modal-overlay journey-modal-overlay" style="display:none;">
+    <div id="fb-resp-detail-modal" class="admin-modal-overlay journey-modal-overlay ui-hidden">
       <div class="admin-modal form-builder-modal form-builder-modal-xl">
         <div class="form-builder-modal-header">
           <div class="form-builder-modal-title">📊 Detalhes da Resposta</div>

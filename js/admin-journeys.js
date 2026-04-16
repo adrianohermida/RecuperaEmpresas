@@ -218,7 +218,7 @@
   function jrnShowView(view) {
     ['list', 'editor', 'progress'].forEach(currentView => {
       const element = document.getElementById(`jrn-view-${currentView}`);
-      if (element) element.style.display = currentView === view ? 'block' : 'none';
+      if (element) element.classList.toggle('ui-hidden', currentView !== view);
     });
   }
 
@@ -233,7 +233,7 @@
     document.getElementById('jrn-f-name').value = '';
     document.getElementById('jrn-f-desc').value = '';
     document.getElementById('jrn-f-status').value = 'draft';
-    document.getElementById('jrn-modal-form').style.display = 'flex';
+    document.getElementById('jrn-modal-form').classList.remove('ui-hidden');
   }
 
   function jrnOpenEditModal() {
@@ -244,11 +244,11 @@
     document.getElementById('jrn-f-name').value = JRN.current.name || '';
     document.getElementById('jrn-f-desc').value = JRN.current.description || '';
     document.getElementById('jrn-f-status').value = JRN.current.status || 'draft';
-    document.getElementById('jrn-modal-form').style.display = 'flex';
+    document.getElementById('jrn-modal-form').classList.remove('ui-hidden');
   }
 
   function jrnCloseFormModal() {
-    document.getElementById('jrn-modal-form').style.display = 'none';
+    document.getElementById('jrn-modal-form').classList.add('ui-hidden');
   }
 
   async function jrnSaveForm() {
@@ -289,7 +289,7 @@
     document.getElementById('jrn-step-desc').value = '';
     document.getElementById('jrn-step-form').value = '';
     document.getElementById('jrn-step-optional').checked = false;
-    document.getElementById('jrn-modal-step').style.display = 'flex';
+    document.getElementById('jrn-modal-step').classList.remove('ui-hidden');
   }
 
   function jrnEditStep(id, title, desc, formId, isOptional) {
@@ -299,11 +299,11 @@
     document.getElementById('jrn-step-desc').value = desc;
     document.getElementById('jrn-step-form').value = formId || '';
     document.getElementById('jrn-step-optional').checked = !!isOptional;
-    document.getElementById('jrn-modal-step').style.display = 'flex';
+    document.getElementById('jrn-modal-step').classList.remove('ui-hidden');
   }
 
   function jrnCloseStepModal() {
-    document.getElementById('jrn-modal-step').style.display = 'none';
+    document.getElementById('jrn-modal-step').classList.add('ui-hidden');
   }
 
   async function jrnSaveStep() {
@@ -364,7 +364,11 @@
   async function jrnOpenAssignModal() {
     await jrnLoadClients();
     document.getElementById('jrn-assign-notes').value = '';
-    document.getElementById('jrn-modal-assign').style.display = 'flex';
+    document.getElementById('jrn-modal-assign').classList.remove('ui-hidden');
+  }
+
+  function jrnCloseAssignModal() {
+    document.getElementById('jrn-modal-assign').classList.add('ui-hidden');
   }
 
   async function jrnSaveAssign() {
@@ -387,7 +391,7 @@
       return;
     }
 
-    document.getElementById('jrn-modal-assign').style.display = 'none';
+    jrnCloseAssignModal();
     jrnOpenEditor(JRN.currentId);
   }
 

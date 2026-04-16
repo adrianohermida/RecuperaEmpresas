@@ -89,7 +89,7 @@ function fbShowView(view) {
   FB.view = view;
   ['list','builder','responses'].forEach(v => {
     const el = document.getElementById('fb-view-'+v);
-    if (el) el.style.display = (v === view) ? '' : 'none';
+     if (el) el.classList.toggle('ui-hidden', v !== view);
   });
 }
 
@@ -173,7 +173,7 @@ async function fbOpenStatsPanel(formIdOverride) {
   const panel = document.getElementById('fb-stats-panel');
   if (!panel) return;
   // Show panel
-  panel.style.display = 'block';
+  panel.classList.remove('ui-hidden');
   document.getElementById('fb-stats-content').innerHTML = '<div class="admin-empty-state-soft form-builder-stats-loading">Carregando...</div>';
   document.getElementById('fb-stats-chart').innerHTML = '';
 
@@ -182,7 +182,7 @@ async function fbOpenStatsPanel(formIdOverride) {
     FB.currentFormId = formIdOverride;
     fbShowView('builder');
     document.getElementById('fb-builder-title').textContent = FB.forms?.find(f=>f.id===formIdOverride)?.title || '—';
-    panel.style.display = 'block';
+    panel.classList.remove('ui-hidden');
   }
 
   const res = await fetch(`/api/admin/forms/${formId}/stats`, { headers: fbAuthH() });
@@ -247,13 +247,13 @@ async function fbOpenStatsPanel(formIdOverride) {
    New form modal
 ──────────────────────────────────────────────────────────────────────────────*/
 function fbOpenNewFormModal() {
-  document.getElementById('fb-modal-new').style.display = 'flex';
+  document.getElementById('fb-modal-new').classList.remove('ui-hidden');
   document.getElementById('fb-new-title').value = '';
   document.getElementById('fb-new-desc').value  = '';
   document.getElementById('fb-new-type').value  = 'diagnostico';
 }
 function fbCloseNewModal() {
-  document.getElementById('fb-modal-new').style.display = 'none';
+  document.getElementById('fb-modal-new').classList.add('ui-hidden');
 }
 async function fbSubmitNewForm() {
   const title = document.getElementById('fb-new-title').value.trim();
@@ -283,10 +283,6 @@ async function fbOpenBuilder(formId, readOnly = false) {
   FB.selectedQ = null;
   FB.readOnly = readOnly;
   fbShowView('builder');
-
-  // Show/hide read-only banner
-  const banner = document.getElementById('fb-readonly-banner');
-  if (banner) banner.style.display = readOnly ? '' : 'none';
 
   const titleEl = document.getElementById('fb-builder-title');
   if (titleEl) titleEl.textContent = 'Carregando...';
@@ -712,15 +708,15 @@ async function fbSaveFormSettings() {
     const jset = await res.json(); FB.currentForm = jset.form || jset;
     document.getElementById('fb-builder-title').textContent = title;
     fbToast('Configurações salvas!','success');
-    document.getElementById('fb-settings-panel').style.display = 'none';
+    document.getElementById('fb-settings-panel').classList.add('ui-hidden');
   } else fbToast('Erro ao salvar.','error');
 }
 
 function fbToggleSettings() {
   const p = document.getElementById('fb-settings-panel');
   if (!p) return;
-  const show = p.style.display === 'none' || !p.style.display;
-  p.style.display = show ? '' : 'none';
+  const show = p.classList.contains('ui-hidden');
+  p.classList.toggle('ui-hidden', !show);
   if (show && FB.currentForm) {
     document.getElementById('fb-settings-title').value  = FB.currentForm.title || '';
     document.getElementById('fb-settings-desc').value   = FB.currentForm.description || '';
@@ -737,12 +733,12 @@ async function fbOpenLogicEditor(qId) {
   _logicSourceQId = qId;
   const modal = document.getElementById('fb-logic-modal');
   if (!modal) return;
-  modal.style.display = 'flex';
+  modal.classList.remove('ui-hidden');
   await fbLoadLogicRules(qId);
 }
 
 function fbCloseLogicModal() {
-  document.getElementById('fb-logic-modal').style.display = 'none';
+  document.getElementById('fb-logic-modal').classList.add('ui-hidden');
 }
 
 async function fbLoadLogicRules(qId) {
@@ -811,11 +807,11 @@ async function fbDeleteLogicRule(ruleId) {
 async function fbOpenAssignModal() {
   const modal = document.getElementById('fb-assign-modal');
   if (!modal) return;
-  modal.style.display = 'flex';
+  modal.classList.remove('ui-hidden');
   await fbLoadAssignments();
 }
 function fbCloseAssignModal() {
-  document.getElementById('fb-assign-modal').style.display = 'none';
+  document.getElementById('fb-assign-modal').classList.add('ui-hidden');
 }
 
 async function fbLoadAssignments() {
@@ -935,7 +931,7 @@ async function fbOpenResponses(formId, formTitle) {
 async function fbOpenResponseDetail(respId) {
   const modal = document.getElementById('fb-resp-detail-modal');
   if (!modal) return;
-  modal.style.display = 'flex';
+  modal.classList.remove('ui-hidden');
 
   const body = document.getElementById('fb-resp-detail-body');
   if (body) body.innerHTML = '<div class="admin-empty-state-soft">Carregando detalhes...</div>';
@@ -985,7 +981,7 @@ async function fbOpenResponseDetail(respId) {
 }
 
 function fbCloseRespDetailModal() {
-  document.getElementById('fb-resp-detail-modal').style.display = 'none';
+  document.getElementById('fb-resp-detail-modal').classList.add('ui-hidden');
 }
 
 /* ──────────────────────────────────────────────────────────────────────────────

@@ -119,7 +119,7 @@ async function fpPlayForm(formId) {
   // Open modal early, show loading
   const modal = document.getElementById('fp-player-modal');
   if (!modal) { fpToast('Player não disponível.','error'); return; }
-  modal.style.display = 'flex';
+  modal.classList.add('dashboard-player-modal-open');
 
   const content = document.getElementById('fp-player-content');
   if (content) content.innerHTML = `<div class="fp-modal-state fp-modal-state-muted">
@@ -161,7 +161,7 @@ async function fpPlayForm(formId) {
 
 function fpClosePlayer() {
   const modal = document.getElementById('fp-player-modal');
-  if (modal) modal.style.display = 'none';
+  if (modal) modal.classList.remove('dashboard-player-modal-open');
   clearTimeout(FP.autoSaveTimer);
   // Refresh forms list
   loadClientForms();
@@ -593,7 +593,10 @@ function fpValidatePage() {
   let valid = true;
   (page.questions||[]).forEach(q => {
     const errEl = document.getElementById(`fpq-err-${q.id}`);
-    if (!q.required) { if(errEl) errEl.style.display='none'; return; }
+    if (!q.required) {
+      if (errEl) errEl.classList.remove('fp-question-error-visible');
+      return;
+    }
     const val = FP.answers[q.id];
     const isEmpty = val == null || val === '' || (Array.isArray(val) && val.length === 0);
     if (isEmpty) {
@@ -732,7 +735,7 @@ async function loadClientJourneys() {
 
   // Show/hide sidebar button
   const btn = document.getElementById('jornadasSideLink');
-  if (btn) btn.style.display = journeys.length ? '' : 'none';
+  if (btn) btn.classList.toggle('ui-hidden', !journeys.length);
 
   if (!journeys.length) {
     el.innerHTML = `<div class="fp-journey-empty">

@@ -2557,6 +2557,9 @@ body {
   padding: 24px 16px;
   background: rgba(15,23,42,.7);
 }
+.dashboard-player-modal-open {
+  display: flex;
+}
 .dashboard-player-modal-card {
   width: 100%;
   max-width: 700px;
@@ -3274,6 +3277,10 @@ body {
 .badge-red     { background: var(--error-light); color: var(--error); }
 .badge-gray    { background: #F1F5F9; color: var(--text-muted); }
 .badge-purple  { background: #F5F3FF; color: #6D28D9; }
+
+.ui-hidden {
+  display: none !important;
+}
 
 /* ── Chapter cards (business plan) ──────────────────────────────────────────── */
 .chapter-list { display: flex; flex-direction: column; gap: 10px; }
