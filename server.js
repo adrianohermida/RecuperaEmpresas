@@ -41,6 +41,7 @@ const {
   SUPABASE_ANON_KEY,
 } = require('./lib/config');
 const { seedAdminAccounts } = require('./lib/startup');
+const { seedDefaultContent } = require('./lib/seed');
 
 // ─── Express ──────────────────────────────────────────────────────────────────
 const app = express();
@@ -203,4 +204,5 @@ app.listen(PORT, async () => {
   console.log(`  Dashboard: http://localhost:${PORT}/dashboard.html`);
   console.log(`  Admin:     http://localhost:${PORT}/admin.html\n`);
   await seedAdminAccounts();
+  await seedDefaultContent();
 });
