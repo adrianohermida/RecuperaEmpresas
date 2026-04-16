@@ -604,6 +604,9 @@ const EMAIL_STYLE = {
   table: 'width:100%;border-collapse:collapse;margin-bottom:16px',
   tableLabel: 'padding:6px 12px;border:1px solid #e2e8f0;background:#f8fafc;width:38%;font-weight:600;font-size:13px;color:#334155',
   tableValue: 'padding:6px 12px;border:1px solid #e2e8f0;font-size:13px;color:#1e293b',
+  factTable: 'width:100%;border-collapse:collapse;font-size:14px;margin:16px 0',
+  factLabel: 'padding:6px 0;color:#64748B;width:40%',
+  factValue: 'padding:6px 0;font-weight:600',
   infoBar: 'background:#EFF6FF;padding:12px 24px;border-bottom:1px solid #BFDBFE',
   infoLabel: 'font-size:13px;color:#1E40AF',
   infoValue: 'font-size:13px;color:#1E3A5F',
@@ -618,6 +621,14 @@ function emailStyle(name, extra = '') {
   const base = EMAIL_STYLE[name] || '';
   const full = [base, extra].filter(Boolean).join(';');
   return `style="${full}"`;
+}
+
+function emailFactRow(label, value, valueExtra = '') {
+  return `<tr><td ${emailStyle('factLabel')}>${label}</td><td ${emailStyle('factValue', valueExtra)}>${value}</td></tr>`;
+}
+
+function emailFactTable(rows) {
+  return `<table ${emailStyle('factTable')}>${rows}</table>`;
 }
 
 function emailWrapper(title, body) {
@@ -2448,22 +2459,19 @@ app.post('/api/agenda/book/:slotId', requireAuth, async (req, res) => {
     'Solicitação de agendamento recebida',
     `<p>Olá, <b>${clientName}</b>!</p>
      <p>Sua solicitação foi recebida e está <b>aguardando confirmação</b> do consultor.</p>
-     <table style="width:100%;border-collapse:collapse;font-size:14px;margin:16px 0;">
-       <tr><td style="padding:6px 0;color:#64748B;width:40%;">Sessão</td>
-           <td style="padding:6px 0;font-weight:600;">${slot.title || 'Consultoria'}</td></tr>
-       <tr><td style="padding:6px 0;color:#64748B;">Data e hora</td>
-           <td style="padding:6px 0;font-weight:600;">${startsAtFmt}</td></tr>
-       <tr><td style="padding:6px 0;color:#64748B;">Créditos reservados</td>
-           <td style="padding:6px 0;font-weight:600;">${slot.credits_cost}</td></tr>
-     </table>
-     <p style="font-size:13px;color:#F59E0B;font-weight:600;">⏳ Você receberá um e-mail assim que o consultor confirmar.</p>`
+     ${emailFactTable([
+       emailFactRow('Sessão', slot.title || 'Consultoria'),
+       emailFactRow('Data e hora', startsAtFmt),
+       emailFactRow('Créditos reservados', slot.credits_cost),
+     ].join(''))}
+     <p ${emailStyle('factValue', 'font-size:13px;color:#F59E0B')}>⏳ Você receberá um e-mail assim que o consultor confirmar.</p>`
   )).catch(e => console.warn('[async]', e?.message));
 
   sendMail(EMAIL_TO, `[Novo Agendamento] ${clientName} — ${startsAtFmt}`, emailWrapper(
     'Nova solicitação de agendamento',
     `<p><b>${clientName}</b> (${req.user.company || '—'}) solicitou um agendamento.</p>
      <p><b>Sessão:</b> ${slot.title || 'Consultoria'}<br><b>Data:</b> ${startsAtFmt}</p>
-     <p style="font-size:13px;color:#64748B;">Acesse o painel do consultor → Agenda para confirmar, remarcar ou cancelar.</p>`
+      <p ${emailStyle('metaText', 'margin-top:0')}>Acesse o painel do consultor → Agenda para confirmar, remarcar ou cancelar.</p>`
   )).catch(e => console.warn('[async]', e?.message));
 
   res.json({ success: true, booking, credits_balance: newBal });
@@ -2775,20 +2783,17 @@ app.put('/api/admin/agenda/bookings/:bookingId/confirm', requireAdmin, async (re
     const startsAtFmt = new Date(slot?.starts_at || Date.now()).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
 
     if (email) {
-      const linkLine = slot?.meeting_link ? `<tr><td style="padding:6px 0;color:#64748B;">Link da reunião</td><td style="padding:6px 0;font-weight:600;"><a href="${slot.meeting_link}">${slot.meeting_link}</a></td></tr>` : '';
+      const linkLine = slot?.meeting_link ? emailFactRow('Link da reunião', `<a href="${slot.meeting_link}">${slot.meeting_link}</a>`) : '';
       sendMail(email, '✅ Agendamento confirmado — Recupera Empresas', emailWrapper(
         'Agendamento confirmado!',
         `<p>Olá, <b>${name}</b>! Seu agendamento foi <b>confirmado</b> pelo consultor.</p>
-         <table style="width:100%;border-collapse:collapse;font-size:14px;margin:16px 0;">
-           <tr><td style="padding:6px 0;color:#64748B;width:40%;">Sessão</td>
-               <td style="padding:6px 0;font-weight:600;">${slot?.title||'Consultoria'}</td></tr>
-           <tr><td style="padding:6px 0;color:#64748B;">Data e hora</td>
-               <td style="padding:6px 0;font-weight:600;">${startsAtFmt}</td></tr>
-           <tr><td style="padding:6px 0;color:#64748B;">Modalidade</td>
-               <td style="padding:6px 0;font-weight:600;">${slot?.location==='presencial'?'Presencial':'Online'}</td></tr>
-           ${linkLine}
-         </table>
-         <p style="font-size:13px;color:#64748B;">Você receberá um lembrete 24h antes da sessão.</p>`
+         ${emailFactTable([
+           emailFactRow('Sessão', slot?.title||'Consultoria'),
+           emailFactRow('Data e hora', startsAtFmt),
+           emailFactRow('Modalidade', slot?.location==='presencial'?'Presencial':'Online'),
+           linkLine,
+         ].filter(Boolean).join(''))}
+         <p ${emailStyle('metaText', 'margin-top:0')}>Você receberá um lembrete 24h antes da sessão.</p>`
       )).catch(e => console.warn('[async]', e?.message));
     }
 
@@ -2839,8 +2844,8 @@ app.put('/api/admin/agenda/bookings/:bookingId/cancel', requireAdmin, async (req
          <p>Seu agendamento foi <b>cancelado</b> pelo consultor.</p>
          <p><b>Sessão:</b> ${slot?.title||'Consultoria'}<br><b>Data:</b> ${startsAtFmt}</p>
          ${reason ? `<p><b>Motivo:</b> ${reason}</p>` : ''}
-         ${booking.credits_spent ? `<p style="color:#10B981;font-weight:600;">Seus créditos foram devolvidos.</p>` : ''}
-         <p style="font-size:13px;color:#64748B;">Entre em contato para reagendar.</p>`
+         ${booking.credits_spent ? `<p ${emailStyle('factValue', 'color:#10B981')}>Seus créditos foram devolvidos.</p>` : ''}
+         <p ${emailStyle('metaText', 'margin-top:0')}>Entre em contato para reagendar.</p>`
       )).catch(e => console.warn('[async]', e?.message));
     }
 
@@ -2897,21 +2902,18 @@ app.put('/api/admin/agenda/bookings/:bookingId/reschedule', requireAdmin, async 
     const newFmt  = new Date(newSlot.starts_at).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
 
     if (email) {
-      const linkLine = newSlot.meeting_link ? `<tr><td style="padding:6px 0;color:#64748B;">Link</td><td style="padding:6px 0;"><a href="${newSlot.meeting_link}">${newSlot.meeting_link}</a></td></tr>` : '';
+      const linkLine = newSlot.meeting_link ? emailFactRow('Link', `<a href="${newSlot.meeting_link}">${newSlot.meeting_link}</a>`, 'font-weight:400') : '';
       sendMail(email, '📅 Agendamento remarcado — Recupera Empresas', emailWrapper(
         'Agendamento remarcado',
         `<p>Olá, <b>${name}</b>! Seu agendamento foi <b>remarcado</b>.</p>
          ${reason ? `<p><b>Motivo:</b> ${reason}</p>` : ''}
-         <table style="width:100%;border-collapse:collapse;font-size:14px;margin:16px 0;">
-           <tr><td style="padding:6px 0;color:#64748B;width:40%;">Data anterior</td>
-               <td style="padding:6px 0;text-decoration:line-through;color:#94A3B8;">${oldFmt}</td></tr>
-           <tr><td style="padding:6px 0;color:#64748B;">Nova data</td>
-               <td style="padding:6px 0;font-weight:700;color:#10B981;">${newFmt}</td></tr>
-           <tr><td style="padding:6px 0;color:#64748B;">Sessão</td>
-               <td style="padding:6px 0;font-weight:600;">${newSlot.title||'Consultoria'}</td></tr>
-           ${linkLine}
-         </table>
-         <p style="font-size:13px;color:#64748B;">Você receberá um lembrete 24h antes da nova sessão.</p>`
+         ${emailFactTable([
+           emailFactRow('Data anterior', oldFmt, 'text-decoration:line-through;color:#94A3B8'),
+           emailFactRow('Nova data', newFmt, 'font-weight:700;color:#10B981'),
+           emailFactRow('Sessão', newSlot.title||'Consultoria'),
+           linkLine,
+         ].filter(Boolean).join(''))}
+         <p ${emailStyle('metaText', 'margin-top:0')}>Você receberá um lembrete 24h antes da nova sessão.</p>`
       )).catch(e => console.warn('[async]', e?.message));
     }
 
@@ -5557,14 +5559,12 @@ app.post('/api/cron/booking-reminders', async (req, res) => {
       'Lembrete de sessão — amanhã',
       `<p>Olá, <b>${name}</b>!</p>
        <p>Você tem uma sessão agendada para <b>amanhã</b>:</p>
-       <table style="width:100%;border-collapse:collapse;font-size:14px;margin:16px 0;">
-         <tr><td style="padding:6px 0;color:#64748B;width:40%;">Sessão</td>
-             <td style="padding:6px 0;font-weight:600;">${slot.title||'Consultoria'}</td></tr>
-         <tr><td style="padding:6px 0;color:#64748B;">Data e hora</td>
-             <td style="padding:6px 0;font-weight:600;">${startsAtFmt}</td></tr>
-       </table>
+       ${emailFactTable([
+         emailFactRow('Sessão', slot.title||'Consultoria'),
+         emailFactRow('Data e hora', startsAtFmt),
+       ].join(''))}
        ${meetingLine}
-       <p style="font-size:13px;color:#64748B;">Em caso de imprevistos, acesse o portal para cancelar com antecedência.</p>`
+       <p ${emailStyle('metaText', 'margin-top:0')}>Em caso de imprevistos, acesse o portal para cancelar com antecedência.</p>`
     )).catch(e => console.warn('[async]', e?.message));
 
     // Reminder to admin
@@ -5611,14 +5611,11 @@ app.post('/api/cron/invoice-overdue', async (req, res) => {
         'Fatura em atraso',
         `<p>Olá, <b>${user.name || user.email}</b>!</p>
          <p>Sua fatura está em atraso:</p>
-         <table style="width:100%;border-collapse:collapse;font-size:14px;margin:16px 0;">
-           <tr><td style="padding:6px 0;color:#64748B;width:40%;">Descrição</td>
-               <td style="padding:6px 0;font-weight:600;">${inv.description}</td></tr>
-           <tr><td style="padding:6px 0;color:#64748B;">Valor</td>
-               <td style="padding:6px 0;font-weight:600;color:#DC2626;">${valor}</td></tr>
-           <tr><td style="padding:6px 0;color:#64748B;">Vencimento</td>
-               <td style="padding:6px 0;font-weight:600;">${dueFmt}</td></tr>
-         </table>
+         ${emailFactTable([
+           emailFactRow('Descrição', inv.description),
+           emailFactRow('Valor', valor, 'color:#DC2626'),
+           emailFactRow('Vencimento', dueFmt),
+         ].join(''))}
          <p>Entre em contato com nossa equipe para regularizar.</p>`
       )).catch(e => console.warn('[async]', e?.message));
     }
