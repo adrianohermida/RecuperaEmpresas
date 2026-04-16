@@ -733,16 +733,17 @@ function fbToggleSettings() {
    Logic editor (modal)
 ──────────────────────────────────────────────────────────────────────────────*/
 let _logicSourceQId = null;
+const FB_TRANSIENT_MODAL_IDS = ['fb-modal-new', 'fb-logic-modal', 'fb-assign-modal', 'fb-resp-detail-modal'];
 
 function fbCloseTransientModals(exceptId) {
-  ['fb-modal-new', 'fb-logic-modal', 'fb-assign-modal', 'fb-resp-detail-modal'].forEach(id => {
+  FB_TRANSIENT_MODAL_IDS.forEach(id => {
     if (id === exceptId) return;
     document.getElementById(id)?.classList.add('ui-hidden');
   });
 }
 
 function fbBindTransientModalBehavior() {
-  ['fb-modal-new', 'fb-logic-modal', 'fb-assign-modal', 'fb-resp-detail-modal'].forEach(id => {
+  FB_TRANSIENT_MODAL_IDS.forEach(id => {
     const modal = document.getElementById(id);
     if (!modal || modal.dataset.boundBackdrop === '1') return;
 
@@ -759,7 +760,7 @@ function fbBindTransientModalBehavior() {
   document.addEventListener('keydown', event => {
     if (event.key !== 'Escape') return;
 
-    const openModal = ['fb-resp-detail-modal', 'fb-logic-modal', 'fb-assign-modal', 'fb-modal-new']
+    const openModal = [...FB_TRANSIENT_MODAL_IDS].reverse()
       .map(id => document.getElementById(id))
       .find(modal => modal && !modal.classList.contains('ui-hidden'));
 
