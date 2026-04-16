@@ -29,8 +29,13 @@
     const unread = !notification.read;
     const titleClass = unread ? 'admin-notif-item-title admin-notif-item-title-unread' : 'admin-notif-item-title';
     const unreadDot = unread ? '<div class="admin-notif-item-dot"></div>' : '';
+    const dataAttrs = [
+      notification.entity_type ? `data-entity-type="${escHtml(notification.entity_type)}"` : '',
+      notification.entity_id   ? `data-entity-id="${escHtml(notification.entity_id)}"` : '',
+      notification.type        ? `data-type="${escHtml(notification.type)}"` : '',
+    ].filter(Boolean).join(' ');
 
-    return `<button type="button" class="admin-notif-item${unread ? ' admin-notif-item-unread' : ''}" data-id="${notification.id}" onclick="adminReadNotif('${notification.id}', this)">
+    return `<button type="button" class="admin-notif-item${unread ? ' admin-notif-item-unread' : ''}" data-id="${notification.id}" onclick="adminReadNotif('${notification.id}', this)" ${dataAttrs}>
       <span class="admin-notif-item-icon">${iconMap[notification.type] || 'ℹ️'}</span>
       <span class="admin-notif-item-content">
         <span class="${titleClass}">${escHtml(notification.title)}</span>

@@ -887,6 +887,21 @@ async function initFreshchat(user) {
   // Load portal data
   await loadData();
 
+  // Hash-based deep link routing — must run after loadData so sections are populated
+  (function handleDeepLink() {
+    const VALID_SECTIONS = ['dashboard','onboarding','plan','tasks','messages','support','agenda',
+                            'financeiro','marketplace','documentos','formularios','jornadas','equipe'];
+    const hash = location.hash.replace('#', '').trim();
+    if (hash && VALID_SECTIONS.includes(hash)) {
+      showSection(hash, null);
+    }
+    // Support ?section=xxx query param (used by notification links)
+    const qSection = new URLSearchParams(location.search).get('section');
+    if (qSection && VALID_SECTIONS.includes(qSection)) {
+      showSection(qSection, null);
+    }
+  })();
+
   // Show Equipe nav only for the owner (no company_id in token = is the owner)
   if (!user.company_id) {
     document.getElementById('equipeNavBtn')?.classList.remove('ui-hidden');

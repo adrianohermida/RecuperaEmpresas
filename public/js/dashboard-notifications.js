@@ -51,7 +51,12 @@ async function loadNotifications() {
     listEl.innerHTML = notifications.map(n => {
       const ts  = new Date(n.created_at).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
       const unr = !n.read;
-      return `<button type="button" class="admin-notif-item${unr ? ' admin-notif-item-unread' : ''}" onclick="readNotif('${n.id}',this)">
+      const dataAttrs = [
+        n.entity_type ? `data-entity-type="${escHtmlD(n.entity_type)}"` : '',
+        n.entity_id   ? `data-entity-id="${escHtmlD(n.entity_id)}"` : '',
+        n.type        ? `data-type="${escHtmlD(n.type)}"` : '',
+      ].filter(Boolean).join(' ');
+      return `<button type="button" class="admin-notif-item${unr ? ' admin-notif-item-unread' : ''}" onclick="readNotif('${n.id}',this)" ${dataAttrs}>
         <span class="admin-notif-item-icon">${iconMap[n.type] || 'ℹ️'}</span>
         <div class="admin-notif-item-content">
           <div class="admin-notif-item-title${unr ? ' admin-notif-item-title-unread' : ''}">${escHtmlD(n.title)}</div>
@@ -66,13 +71,49 @@ async function loadNotifications() {
   }
 }
 
+// Maps notification entity_type (and type) to the client portal section name
+const _NOTIF_NAV_MAP = {
+  // entity_type values
+  task:                 'tasks',
+  message:              'messages',
+  document:             'documentos',
+  document_request:     'documentos',
+  re_document_requests: 'documentos',
+  change_request:       'documentos',
+  appointment:          'agenda',
+  service:              'marketplace',
+  payment:              'financeiro',
+  plan:                 'plan',
+  journey:              'jornadas',
+  form:                 'formularios',
+  support:              'support',
+  // notification type values (fallback)
+  info:                 null,
+};
+
 async function readNotif(id, el) {
   el.classList.remove('admin-notif-item-unread');
   const title = el.querySelector('.admin-notif-item-title');
   if (title) title.classList.remove('admin-notif-item-title-unread');
   const dot = el.querySelector('.admin-notif-item-dot');
   if (dot) dot.remove();
+
+  // Retrieve entity_type from data attributes set during render
+  const entityType = el.dataset.entityType || el.dataset.type || null;
+  const entityId   = el.dataset.entityId   || null;
+
   fetch(`/api/notifications/${id}/read`, { method: 'POST', headers: authH() }).catch(() => {});
+
+  // Navigate to the relevant section
+  const section = _NOTIF_NAV_MAP[entityType] || null;
+  if (section && typeof navigateTo === 'function') {
+    // Close dropdown before navigating
+    _notifOpen = false;
+    document.getElementById('notifDropdown')?.classList.remove('admin-notif-dropdown-open');
+    navigateTo(section, entityId);
+    return;
+  }
+
   loadNotifications();
 }
 
