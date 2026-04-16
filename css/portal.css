@@ -1029,15 +1029,22 @@ body {
 }
 
 .form-builder-answer-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 12px;
 }
 
 .form-builder-answer-card {
   padding: 12px 14px;
   border: 1px solid #E2E8F0;
   border-radius: 8px;
+  background: #fff;
+}
+
+#fb-resp-detail-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .form-builder-answer-label {
@@ -1346,6 +1353,9 @@ body {
 
 .journey-modal-overlay {
   z-index: 500;
+  align-items: flex-start;
+  padding: clamp(16px, 4vh, 32px) 20px;
+  overflow-y: auto;
 }
 
 .journey-modal {
@@ -1418,25 +1428,25 @@ body {
 }
 
 .form-builder-modal {
-  width: 100%;
+  width: min(96vw, 760px);
   border-radius: 14px;
-  max-height: 80vh;
+  max-height: calc(100vh - 48px);
   overflow-y: auto;
   box-shadow: 0 20px 60px rgba(0,0,0,.2);
   padding: 24px;
 }
 
 .form-builder-modal-md {
-  max-width: 480px;
-}
-
-.form-builder-modal-lg {
   max-width: 560px;
 }
 
+.form-builder-modal-lg {
+  max-width: 960px;
+}
+
 .form-builder-modal-xl {
-  max-width: 600px;
-  max-height: 88vh;
+  max-width: 1200px;
+  max-height: calc(100vh - 36px);
 }
 
 .form-builder-modal-header {
@@ -1464,6 +1474,9 @@ body {
 
 .form-builder-logic-rules {
   margin-bottom: 16px;
+  max-height: 36vh;
+  overflow-y: auto;
+  padding-right: 4px;
 }
 
 .form-builder-logic-loading {
@@ -1535,7 +1548,7 @@ body {
 
 .form-builder-logic-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(180px, 1fr));
   gap: 8px;
   margin-bottom: 8px;
 }
@@ -1645,6 +1658,8 @@ body {
   .form-builder-settings-save,
   .form-builder-mini-btn {
     width: 100%;
+  }
+
   .fb-config-shell {
     border-top: 1px solid var(--border);
   }
@@ -2123,10 +2138,15 @@ body {
 .admin-modal-overlay {
   position: fixed; inset: 0; background: rgba(0,0,0,.5); display: flex;
   align-items: center; justify-content: center; z-index: 1000;
+  padding: 20px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  backdrop-filter: blur(2px);
 }
 .admin-modal {
   background: #fff; border-radius: 12px; padding: 28px; width: 440px;
-  max-width: 96vw; max-height: 90vh; overflow-y: auto;
+  max-width: 96vw; max-height: calc(100vh - 40px); overflow-y: auto;
+  margin: auto;
 }
 .admin-modal-title {
   font-size: 17px; font-weight: 700; color: var(--dark); margin-bottom: 18px;
