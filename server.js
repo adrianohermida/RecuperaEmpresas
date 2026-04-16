@@ -30,6 +30,7 @@ const journeyRoutes = require('./routes/journeys');
 const notificationRoutes = require('./routes/notifications');
 const internalInvoiceRoutes = require('./routes/internal-invoices');
 const serviceRoutes = require('./routes/services');
+const auditLogRoutes = require('./routes/audit-log');
 const { adjustCredits } = agendaRoutes;
 
 const {
@@ -384,6 +385,7 @@ app.use(journeyRoutes);
 app.use(notificationRoutes);
 app.use(internalInvoiceRoutes);
 app.use(serviceRoutes);
+app.use(auditLogRoutes);
 
 // ── Stripe webhook: credit the account on payment ────────────────────────────
 // Body is already raw Buffer via the global middleware at /api/stripe/webhook
@@ -472,63 +474,6 @@ app.get('/api/admin/stats', requireAdmin, async (req, res) => {
   // Users with no onboarding row → nao_iniciado
   stats.naoIniciado += ids.length - (obs || []).length;
   res.json(stats);
-});
-
-// ─── Audit Log ───────────────────────────────────────────────────────────────
-app.get('/api/admin/audit-log', requireAdmin, async (req, res) => {
-  try {
-    const { entity_type, actor_id, from, to, limit = '50', offset = '0' } = req.query;
-    let q = sb.from('re_audit_log')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(parseInt(limit))
-      .range(parseInt(offset), parseInt(offset) + parseInt(limit) - 1);
-    if (entity_type) q = q.eq('entity_type', entity_type);
-    if (actor_id)    q = q.eq('actor_id', actor_id);
-    if (from)        q = q.gte('created_at', from);
-    if (to)          q = q.lte('created_at', to);
-    const { data: rows } = await q;
-    res.json({ entries: rows || [] });
-  } catch (e) {
-    console.error('[AUDIT LOG GET]', e.message);
-    res.json({ entries: [] });
-  }
-});
-
-// Audit log export CSV (sem paginação — retorna até 10.000 registros)
-app.get('/api/admin/audit-log/export', requireAdmin, async (req, res) => {
-  try {
-    const { entity_type, actor_id, from, to } = req.query;
-    let q = sb.from('re_audit_log')
-      .select('created_at,actor_id,actor_email,action,entity_type,entity_id,details,before_data,after_data')
-      .order('created_at', { ascending: false })
-      .limit(10000);
-    if (entity_type) q = q.eq('entity_type', entity_type);
-    if (actor_id)    q = q.eq('actor_id', actor_id);
-    if (from)        q = q.gte('created_at', from);
-    if (to)          q = q.lte('created_at', to);
-    const { data: rows } = await q;
-
-    const header = ['Data/Hora', 'Actor ID', 'E-mail', 'Ação', 'Entidade', 'Entidade ID', 'Detalhes'];
-    const csvRows = (rows || []).map(r => [
-      new Date(r.created_at).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }),
-      r.actor_id   || '',
-      r.actor_email|| '',
-      r.action     || '',
-      r.entity_type|| '',
-      r.entity_id  || '',
-      r.after_data ? JSON.stringify(r.after_data) : (r.before_data ? JSON.stringify(r.before_data) : ''),
-    ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(','));
-
-    const csv = [header.join(','), ...csvRows].join('\r\n');
-    const filename = `audit_log_${new Date().toISOString().slice(0,10)}.csv`;
-    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-    res.send('\uFEFF' + csv); // BOM para Excel abrir corretamente
-  } catch (e) {
-    console.error('[AUDIT LOG EXPORT]', e.message);
-    res.status(500).json({ error: 'Erro ao exportar log.' });
-  }
 });
 
 // ─── Booking reminders cron (call daily, e.g. via Render cron job) ───────────
