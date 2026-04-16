@@ -176,6 +176,10 @@ app.get(['/api/health', '/healthz'], (req, res) => {
 
 // ─── Fallback ──────────────────────────────────────────────────────────────────
 app.get('*', (req, res) => {
+  // Return JSON 404 for unmatched API routes instead of serving login HTML
+  if (req.path.startsWith('/api/')) {
+    return res.status(404).json({ error: 'Rota não encontrada.' });
+  }
   res.sendFile(path.join(__dirname, 'public', 'login.html'));
 });
 

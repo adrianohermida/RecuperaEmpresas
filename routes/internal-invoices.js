@@ -122,7 +122,7 @@ router.get('/api/admin/invoices', requireAdmin, async (req, res) => {
   try {
     const { status, user_id, from, to, limit = '50', offset = '0' } = req.query;
     let query = sb.from('re_invoices')
-      .select('*,re_users!re_invoices_user_id_fkey(name,email,company)')
+      .select('*,re_users!re_invoices_user_id_fkey(name,email,company)', { count: 'exact' })
       .order('created_at', { ascending: false })
       .limit(parseInt(limit, 10))
       .range(parseInt(offset, 10), parseInt(offset, 10) + parseInt(limit, 10) - 1);

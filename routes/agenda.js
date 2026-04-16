@@ -76,10 +76,10 @@ router.post('/api/agenda/book/:slotId', requireAuth, async (req, res) => {
   if (!slot) return res.status(404).json({ error: 'Slot não encontrado.' });
   if (new Date(slot.starts_at) < new Date()) return res.status(400).json({ error: 'Horário já passou.' });
 
-  // Check capacity
+  // Check capacity (only pending/confirmed count — cancelled and rescheduled don't occupy the slot)
   const { count } = await sb.from('re_bookings')
     .select('id', { count: 'exact', head: true })
-    .eq('slot_id', slotId).neq('status', 'cancelled');
+    .eq('slot_id', slotId).in('status', ['pending', 'confirmed']);
   if ((count||0) >= slot.max_bookings) return res.status(400).json({ error: 'Horário lotado.' });
 
   // Check duplicate
