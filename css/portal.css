@@ -4006,6 +4006,242 @@ body {
   color: #6b7280;
 }
 
+.cds-message-thread {
+  max-height: 260px;
+}
+
+.cds-message-input-row {
+  margin-top: 12px;
+}
+
+.cds-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.cds-section-title {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.cds-new-booking-btn {
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+.cds-booking-item {
+  padding: 11px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.cds-booking-item-past {
+  opacity: 0.7;
+}
+
+.cds-booking-header-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.cds-booking-copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.cds-booking-title {
+  color: #1e293b;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.cds-booking-time {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.cds-booking-note {
+  margin-top: 2px;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-style: italic;
+}
+
+.cds-booking-cancel-reason {
+  margin-top: 2px;
+  color: #DC2626;
+  font-size: 11px;
+}
+
+.cds-status-pill {
+  white-space: nowrap;
+  border-radius: 12px;
+  padding: 2px 8px;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.cds-status-pending {
+  background: #FEF3C7;
+  color: #D97706;
+}
+
+.cds-status-confirmed {
+  background: #DCFCE7;
+  color: #16A34A;
+}
+
+.cds-status-cancelled {
+  background: #FEE2E2;
+  color: #DC2626;
+}
+
+.cds-status-rescheduled {
+  background: #EDE9FE;
+  color: #7C3AED;
+}
+
+.cds-status-neutral {
+  background: #F1F5F9;
+  color: #64748b;
+}
+
+.cds-booking-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.cds-action-btn {
+  border-radius: 5px;
+  padding: 3px 8px;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.cds-action-btn-confirm {
+  background: #DCFCE7;
+  border: 1px solid #86EFAC;
+  color: #15803D;
+}
+
+.cds-action-btn-reschedule {
+  background: #EEF2FF;
+  border: 1px solid #A5B4FC;
+  color: #4338CA;
+}
+
+.cds-action-btn-cancel {
+  background: #FEF2F2;
+  border: 1px solid #FECACA;
+  color: #DC2626;
+}
+
+.cds-docs-summary {
+  margin-bottom: 12px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.cds-doc-card {
+  margin-bottom: 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+}
+
+.cds-doc-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.cds-doc-copy {
+  flex: 1;
+}
+
+.cds-doc-name {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.cds-doc-meta {
+  margin-top: 2px;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.cds-doc-controls {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  align-items: end;
+  margin-top: 12px;
+}
+
+.cds-doc-label {
+  font-size: 11px;
+}
+
+.cds-doc-select,
+.cds-doc-comment-input {
+  font-size: 12px;
+}
+
+.cds-doc-comment-wrap {
+  margin-top: 8px;
+}
+
+.cds-doc-link-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.cds-doc-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--primary);
+  font-size: 12px;
+  text-decoration: none;
+}
+
+.cds-doc-link:hover {
+  text-decoration: underline;
+}
+
+.cds-doc-comments {
+  margin-top: 10px;
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
+}
+
+.cds-doc-comment-item {
+  margin-top: 4px;
+  border-radius: 6px;
+  background: #F8FAFC;
+  padding: 6px 8px;
+  font-size: 11px;
+}
+
+.cds-doc-comment-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.cds-doc-comment-date {
+  color: var(--text-muted);
+}
+
 @media (max-width: 960px) {
   .cdt-summary-grid {
     grid-template-columns: 1fr;
@@ -4013,6 +4249,22 @@ body {
 
   .cdt-invoice-card,
   .cdt-member-card {
+    flex-wrap: wrap;
+  }
+
+  .cds-section-header,
+  .cds-doc-controls,
+  .cds-doc-header,
+  .cds-booking-header-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .cds-doc-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .cds-booking-actions {
     flex-wrap: wrap;
   }
 

@@ -1,6 +1,20 @@
 'use strict';
 
 (function () {
+  function secondaryLoading(message) {
+    return `<div class="admin-finance-loading">${message}</div>`;
+  }
+
+  function agendaStatusClass(status) {
+    const toneMap = {
+      pending: 'cds-status-pending',
+      confirmed: 'cds-status-confirmed',
+      cancelled: 'cds-status-cancelled',
+      rescheduled: 'cds-status-rescheduled',
+    };
+    return toneMap[status] || 'cds-status-neutral';
+  }
+
   function renderMessages(context) {
     const { body, messages, currentClientId, currentClientData } = context;
     logDrawerDiagnostic('Mensagens', {
@@ -35,7 +49,7 @@
             ${template.label}
           </button>`).join('')}
       </div>
-      <div class="message-thread" style="max-height:260px;" id="adminMsgThread">
+      <div class="message-thread cds-message-thread" id="adminMsgThread">
         ${!messages.length
           ? '<div class="empty-state"><p>Nenhuma mensagem.</p></div>'
           : messages.map(message => `<div>
@@ -46,7 +60,7 @@
               </div>
             </div>`).join('')}
       </div>
-      <div class="message-input-row" style="margin-top:12px;">
+      <div class="message-input-row cds-message-input-row">
         <input type="text" class="message-input" id="adminMsgInput" placeholder="Escrever mensagem ao cliente..."
                onkeydown="if(event.key==='Enter')sendAdminMessage()"/>
         <button class="btn-send" onclick="sendAdminMessage()">Enviar</button>
@@ -62,7 +76,7 @@
 
   async function renderAgenda(context) {
     const { body, currentClientId, currentClientData } = context;
-    body.innerHTML = '<div style="padding:16px;color:var(--text-muted);font-size:14px;">Carregando agendamentos...</div>';
+    body.innerHTML = secondaryLoading('Carregando agendamentos...');
     let bookings = [];
 
     try {
@@ -82,17 +96,17 @@
     }
 
     const statusMap = {
-      pending: { bg:'#FEF3C7', color:'#D97706', label:'Pendente' },
-      confirmed: { bg:'#DCFCE7', color:'#16A34A', label:'Confirmado' },
-      cancelled: { bg:'#FEE2E2', color:'#DC2626', label:'Cancelado' },
-      rescheduled: { bg:'#EDE9FE', color:'#7C3AED', label:'Remarcado' },
+      pending: { label:'Pendente' },
+      confirmed: { label:'Confirmado' },
+      cancelled: { label:'Cancelado' },
+      rescheduled: { label:'Remarcado' },
     };
 
     let html = `
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-        <div style="font-size:14px;font-weight:700;">Agendamentos</div>
+      <div class="cds-section-header">
+        <div class="cds-section-title">Agendamentos</div>
         <button onclick="openBookForClientFromDrawer('${currentClientId}')"
-          style="background:#1e3a5f;color:#fff;border:none;border-radius:6px;padding:6px 12px;cursor:pointer;font-size:12px;font-weight:600;">
+          class="btn-primary cds-new-booking-btn">
           📅 Novo agendamento
         </button>
       </div>`;
@@ -116,32 +130,33 @@
       const slot = booking.re_agenda_slots || {};
       const startsAt = slot.starts_at ? new Date(slot.starts_at) : null;
       const endsAt = slot.ends_at ? new Date(slot.ends_at) : null;
-      const status = statusMap[booking.status] || { bg:'#F1F5F9', color:'#64748b', label: booking.status };
+      const status = statusMap[booking.status] || { label: booking.status };
       const isPast = startsAt && startsAt < new Date();
       const clientName = (currentClientData.user?.name || '').replace(/'/g, '');
+      const bookingClasses = `cds-booking-item${isPast ? ' cds-booking-item-past' : ''}`;
       return `
-        <div style="padding:11px 0;border-bottom:1px solid var(--border);${isPast ? 'opacity:.7' : ''}">
-          <div style="display:flex;align-items:flex-start;gap:10px;">
-            <div style="flex:1;min-width:0;">
-              <div style="font-weight:600;font-size:13px;color:#1e293b;">${slot.title || '—'}</div>
-              ${startsAt ? `<div style="font-size:12px;color:var(--text-muted);">
+        <div class="${bookingClasses}">
+          <div class="cds-booking-header-row">
+            <div class="cds-booking-copy">
+              <div class="cds-booking-title">${slot.title || '—'}</div>
+              ${startsAt ? `<div class="cds-booking-time">
                 ${startsAt.toLocaleDateString('pt-BR')} às ${String(startsAt.getHours()).padStart(2,'0')}:${String(startsAt.getMinutes()).padStart(2,'0')}
                 ${endsAt ? `– ${String(endsAt.getHours()).padStart(2,'0')}:${String(endsAt.getMinutes()).padStart(2,'0')}` : ''}
               </div>` : ''}
-              ${booking.notes ? `<div style="font-size:11px;color:var(--text-muted);font-style:italic;margin-top:2px;">${booking.notes}</div>` : ''}
-              ${booking.cancel_reason ? `<div style="font-size:11px;color:#DC2626;margin-top:2px;">Motivo: ${booking.cancel_reason}</div>` : ''}
+              ${booking.notes ? `<div class="cds-booking-note">${booking.notes}</div>` : ''}
+              ${booking.cancel_reason ? `<div class="cds-booking-cancel-reason">Motivo: ${booking.cancel_reason}</div>` : ''}
             </div>
-            <span style="font-size:10px;padding:2px 8px;border-radius:12px;background:${status.bg};color:${status.color};font-weight:600;white-space:nowrap;">${status.label}</span>
+            <span class="cds-status-pill ${agendaStatusClass(booking.status)}">${status.label}</span>
           </div>
           ${booking.status === 'pending' ? `
-          <div style="display:flex;gap:6px;margin-top:8px;">
-            <button onclick="agendaConfirmBooking('${booking.id}');renderDrawerTab('agenda');" style="background:#DCFCE7;border:1px solid #86EFAC;border-radius:5px;padding:3px 8px;cursor:pointer;color:#15803D;font-size:11px;font-weight:600;">✅ Confirmar</button>
-            <button onclick="agendaRescheduleBooking('${booking.id}','${clientName}')" style="background:#EEF2FF;border:1px solid #A5B4FC;border-radius:5px;padding:3px 8px;cursor:pointer;color:#4338CA;font-size:11px;font-weight:600;">↕️ Remarcar</button>
-            <button onclick="agendaCancelBooking('${booking.id}','${clientName}')" style="background:#FEF2F2;border:1px solid #FECACA;border-radius:5px;padding:3px 8px;cursor:pointer;color:#DC2626;font-size:11px;font-weight:600;">❌ Cancelar</button>
+          <div class="cds-booking-actions">
+            <button onclick="agendaConfirmBooking('${booking.id}');renderDrawerTab('agenda');" class="cds-action-btn cds-action-btn-confirm">✅ Confirmar</button>
+            <button onclick="agendaRescheduleBooking('${booking.id}','${clientName}')" class="cds-action-btn cds-action-btn-reschedule">↕️ Remarcar</button>
+            <button onclick="agendaCancelBooking('${booking.id}','${clientName}')" class="cds-action-btn cds-action-btn-cancel">❌ Cancelar</button>
           </div>` : booking.status === 'confirmed' ? `
-          <div style="display:flex;gap:6px;margin-top:8px;">
-            <button onclick="agendaRescheduleBooking('${booking.id}','${clientName}')" style="background:#EEF2FF;border:1px solid #A5B4FC;border-radius:5px;padding:3px 8px;cursor:pointer;color:#4338CA;font-size:11px;font-weight:600;">↕️ Remarcar</button>
-            <button onclick="agendaCancelBooking('${booking.id}','${clientName}')" style="background:#FEF2F2;border:1px solid #FECACA;border-radius:5px;padding:3px 8px;cursor:pointer;color:#DC2626;font-size:11px;font-weight:600;">❌ Cancelar</button>
+          <div class="cds-booking-actions">
+            <button onclick="agendaRescheduleBooking('${booking.id}','${clientName}')" class="cds-action-btn cds-action-btn-reschedule">↕️ Remarcar</button>
+            <button onclick="agendaCancelBooking('${booking.id}','${clientName}')" class="cds-action-btn cds-action-btn-cancel">❌ Cancelar</button>
           </div>` : ''}
         </div>`;
     }).join('');
@@ -151,7 +166,7 @@
 
   async function renderDocs(context) {
     const { body, currentClientId } = context;
-    body.innerHTML = '<div style="padding:16px;color:var(--text-muted);font-size:14px;">Carregando...</div>';
+    body.innerHTML = secondaryLoading('Carregando...');
 
     const route = `/api/admin/client/${currentClientId}/documents`;
     const response = await fetch(route, { headers: authH() });
@@ -184,7 +199,7 @@
     }
 
     body.innerHTML = `
-      <div style="font-size:13px;font-weight:700;margin-bottom:12px;">
+      <div class="cds-docs-summary">
         ${documents.length} documento(s) — clique no status para alterar
       </div>
       ${documents.map(documentItem => {
@@ -192,40 +207,43 @@
         const typeLabel = docTypeMap[documentItem.docType] || documentItem.docType;
         const createdAt = new Date(documentItem.createdAt).toLocaleDateString('pt-BR');
         const comments = documentItem.comments || [];
-        return `<div style="border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:12px;">
-          <div style="display:flex;align-items:flex-start;gap:10px;">
-            <div style="flex:1;">
-              <div style="font-weight:600;font-size:13px;">${documentItem.name}</div>
-              <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">${typeLabel} · ${createdAt}</div>
+        return `<div class="cds-doc-card">
+          <div class="cds-doc-header">
+            <div class="cds-doc-copy">
+              <div class="cds-doc-name">${documentItem.name}</div>
+              <div class="cds-doc-meta">${typeLabel} · ${createdAt}</div>
             </div>
             <span class="badge ${status.cls}">${status.label}</span>
           </div>
 
-          <div style="margin-top:12px;display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end;">
+          <div class="cds-doc-controls">
             <div>
-              <label class="form-label-sm" style="font-size:11px;">Alterar status</label>
-              <select class="portal-select" id="docSt_${documentItem.id}" style="font-size:12px;">
+              <label class="form-label-sm cds-doc-label">Alterar status</label>
+              <select class="portal-select cds-doc-select" id="docSt_${documentItem.id}">
                 ${Object.entries(docStatusMap).map(([value, config]) => `<option value="${value}"${documentItem.status === value ? ' selected' : ''}>${config.label}</option>`).join('')}
               </select>
             </div>
             <button class="btn-sm btn-sm-approve" onclick="updateDocStatus('${documentItem.id}')">Salvar</button>
           </div>
-          <div style="margin-top:8px;">
-            <input type="text" class="portal-input" id="docCmt_${documentItem.id}" placeholder="Comentário para o cliente (opcional)" style="font-size:12px;"/>
+          <div class="cds-doc-comment-wrap">
+            <input type="text" class="portal-input cds-doc-comment-input" id="docCmt_${documentItem.id}" placeholder="Comentário para o cliente (opcional)"/>
           </div>
 
-          <div style="margin-top:10px;display:flex;gap:12px;align-items:center;">
+          <div class="cds-doc-link-row">
             <a href="${(window.RE_API_BASE || '').replace(/\/+$/, '')}/api/documents/${documentItem.id}/file?token=${getToken()}" target="_blank"
-               style="font-size:12px;color:var(--primary);text-decoration:none;display:flex;align-items:center;gap:4px;">
+               class="cds-doc-link">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
               Visualizar / baixar
             </a>
           </div>
 
-          ${comments.length ? `<div style="margin-top:10px;border-top:1px solid var(--border);padding-top:8px;">
-            ${comments.map(comment => `<div style="font-size:11px;background:#F8FAFC;padding:6px 8px;border-radius:6px;margin-top:4px;">
-              <strong>${comment.from === 'admin' ? 'Equipe' : 'Cliente'}</strong>: ${comment.text}
-              <span style="float:right;color:var(--text-muted);">${new Date(comment.ts).toLocaleDateString('pt-BR')}</span>
+          ${comments.length ? `<div class="cds-doc-comments">
+            ${comments.map(comment => `<div class="cds-doc-comment-item">
+              <div class="cds-doc-comment-head">
+                <strong>${comment.from === 'admin' ? 'Equipe' : 'Cliente'}</strong>
+                <span class="cds-doc-comment-date">${new Date(comment.ts).toLocaleDateString('pt-BR')}</span>
+              </div>
+              <div>${comment.text}</div>
             </div>`).join('')}
           </div>` : ''}
         </div>`;
