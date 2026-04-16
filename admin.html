@@ -336,7 +336,7 @@
             </div>
             <div>
               <label class="form-builder-field-label">Status</label>
-              <select id="fb-settings-status" class="portal-input">
+              <select id="fb-settings-status" class="portal-input" aria-label="Status do formulário">
                 <option value="draft">Rascunho</option>
                 <option value="active">Publicado</option>
                 <option value="inactive">Arquivado</option>
@@ -509,7 +509,7 @@
           </div>
           <div>
             <label class="form-builder-field-label">Status</label>
-            <select id="jrn-f-status" class="portal-input">
+            <select id="jrn-f-status" class="portal-input" aria-label="Status da jornada">
               <option value="draft">Rascunho</option>
               <option value="active">Ativo</option>
               <option value="archived">Arquivado</option>
@@ -540,7 +540,7 @@
           </div>
           <div>
             <label class="form-builder-field-label">Formulário vinculado</label>
-            <select id="jrn-step-form" class="portal-input">
+            <select id="jrn-step-form" class="portal-input" aria-label="Formulário vinculado">
               <option value="">— Nenhum formulário —</option>
             </select>
           </div>
@@ -564,7 +564,7 @@
         <div class="journey-modal-stack">
           <div>
             <label class="form-builder-field-label">Cliente *</label>
-            <select id="jrn-assign-user" class="portal-input">
+            <select id="jrn-assign-user" class="portal-input" aria-label="Cliente">
               <option value="">Selecione um cliente...</option>
             </select>
           </div>
@@ -591,7 +591,7 @@
           </div>
           <div>
             <label class="form-builder-field-label">Tipo</label>
-            <select id="fb-new-type" class="portal-input">
+            <select id="fb-new-type" class="portal-input" aria-label="Tipo de formulário">
               <option value="diagnostico">Diagnóstico</option>
               <option value="pesquisa">Pesquisa</option>
               <option value="avaliacao">Avaliação</option>
@@ -624,7 +624,7 @@
           <div class="form-builder-logic-grid">
             <div>
               <label class="form-builder-logic-label">Operador</label>
-              <select id="fb-logic-op" class="portal-input form-builder-logic-control">
+              <select id="fb-logic-op" class="portal-input form-builder-logic-control" aria-label="Operador lógico">
                 <option value="equals">É igual a</option>
                 <option value="not_equals">Diferente de</option>
                 <option value="contains">Contém</option>
@@ -640,7 +640,7 @@
             </div>
             <div>
               <label class="form-builder-logic-label">Ação</label>
-              <select id="fb-logic-action" class="portal-input form-builder-logic-control">
+              <select id="fb-logic-action" class="portal-input form-builder-logic-control" aria-label="Ação da regra">
                 <option value="skip_to_page">Ir para página</option>
                 <option value="hide_question">Ocultar questão</option>
               </select>
@@ -728,7 +728,7 @@
 
       <!-- Filters -->
       <div class="admin-filter-bar">
-        <select id="invFilterStatus" onchange="loadAdminInvoices()" class="portal-select admin-filter-control">
+        <select id="invFilterStatus" onchange="loadAdminInvoices()" class="portal-select admin-filter-control" aria-label="Filtrar por status">
           <option value="">Todos os status</option>
           <option value="pending">Em aberto</option>
           <option value="paid">Pago</option>
@@ -799,7 +799,7 @@
 
       <!-- Filters -->
       <div class="admin-filter-bar">
-        <select id="auditFilterType" onchange="loadAuditLog()" class="portal-select admin-filter-control">
+        <select id="auditFilterType" onchange="loadAuditLog()" class="portal-select admin-filter-control" aria-label="Filtrar por tipo">
           <option value="">Todos os tipos</option>
           <option value="invoice">Cobrança</option>
           <option value="task">Tarefa</option>
@@ -807,8 +807,8 @@
           <option value="service_order">Pedido</option>
           <option value="member">Membro</option>
         </select>
-        <input type="date" id="auditFilterFrom" onchange="loadAuditLog()" class="portal-input admin-filter-control admin-filter-date"/>
-        <input type="date" id="auditFilterTo" onchange="loadAuditLog()" class="portal-input admin-filter-control admin-filter-date"/>
+        <input type="date" id="auditFilterFrom" onchange="loadAuditLog()" class="portal-input admin-filter-control admin-filter-date" aria-label="Data inicial"/>
+        <input type="date" id="auditFilterTo" onchange="loadAuditLog()" class="portal-input admin-filter-control admin-filter-date" aria-label="Data final"/>
       </div>
 
       <div class="portal-card">
@@ -842,7 +842,7 @@
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
         Ver como cliente
       </button>
-      <button class="drawer-close" onclick="closeDrawer()">
+      <button class="drawer-close" onclick="closeDrawer()" aria-label="Fechar">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
     </div>

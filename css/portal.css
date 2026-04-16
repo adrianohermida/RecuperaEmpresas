@@ -113,7 +113,7 @@ body {
 }
 .admin-notif-list { padding: 4px 0; }
 .admin-notif-empty {
-  padding: 20px; text-align: center; color: #94A3B8; font-size: 13px;
+  padding: 20px; text-align: center; color: #475569; font-size: 13px;
 }
 .admin-notif-item {
   width: 100%; padding: 12px 16px; cursor: pointer; border: 0;
@@ -138,7 +138,7 @@ body {
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .admin-notif-item-time {
-  font-size: 11px; color: #94A3B8; margin-top: 3px;
+  font-size: 11px; color: #475569; margin-top: 3px;
 }
 .admin-notif-item-dot {
   width: 7px; height: 7px; border-radius: 50%; background: #2563EB;
@@ -187,7 +187,7 @@ body {
 }
 .admin-empty-state-soft {
   padding: 24px;
-  color: #94A3B8;
+  color: #475569;
   text-align: center;
 }
 .admin-card-grid {
@@ -202,7 +202,7 @@ body {
 
 .form-builder-list-empty {
   padding: 40px;
-  color: #94A3B8;
+  color: #475569;
   text-align: center;
 }
 
@@ -256,7 +256,7 @@ body {
 
 .form-builder-list-card-type {
   margin-top: 2px;
-  color: #94A3B8;
+  color: #475569;
   font-size: 12px;
 }
 
@@ -290,7 +290,7 @@ body {
 .form-builder-list-card-meta {
   display: flex;
   gap: 8px;
-  color: #94A3B8;
+  color: #475569;
   font-size: 12px;
 }
 
@@ -370,7 +370,7 @@ body {
 }
 .journey-empty-state {
   padding: 20px;
-  color: #94A3B8;
+  color: #475569;
   text-align: center;
 }
 .journey-empty-state-sm {
@@ -440,7 +440,7 @@ body {
   border-radius: 8px;
 .jrn-state-loading {
   padding: 24px;
-  color: #94A3B8;
+  color: #475569;
   text-align: center;
 }
 .jrn-state-error,
@@ -452,7 +452,7 @@ body {
 }
 .jrn-state-empty {
   padding: 40px;
-  color: #94A3B8;
+  color: #475569;
   text-align: center;
 }
 .jrn-state-empty-icon {
@@ -501,7 +501,7 @@ body {
 .jrn-list-card-meta {
   display: flex;
   gap: 12px;
-  color: #94A3B8;
+  color: #475569;
   font-size: 12px;
 }
 .jrn-list-card-actions {
@@ -523,7 +523,7 @@ body {
   font-size: 11px;
 }
 .jrn-status-pill-gray {
-  color: #94A3B8;
+  color: #475569;
 }
 .jrn-status-pill-green {
   color: #10B981;
@@ -571,7 +571,7 @@ body {
   font-size: 11px;
 }
 .jrn-step-optional {
-  color: #94A3B8;
+  color: #475569;
   font-size: 10px;
 }
 .jrn-step-actions {
@@ -607,7 +607,7 @@ body {
   white-space: nowrap;
 }
 .jrn-assignment-email {
-  color: #94A3B8;
+  color: #475569;
   font-size: 11px;
 }
 .jrn-progress-summary {
@@ -673,7 +673,7 @@ body {
 }
 .jrn-progress-step-index-pending {
   background: #E2E8F0;
-  color: #94A3B8;
+  color: #475569;
 }
 .jrn-progress-step-index-done {
   background: #10B981;
@@ -688,7 +688,7 @@ body {
   font-weight: 600;
 }
 .jrn-progress-step-meta {
-  color: #94A3B8;
+  color: #475569;
   font-size: 11px;
 }
 .jrn-progress-step-meta-done {
@@ -915,7 +915,7 @@ body {
 
 .form-builder-response-empty {
   padding: 40px;
-  color: #94A3B8;
+  color: #475569;
   text-align: center;
 }
 
@@ -951,7 +951,7 @@ body {
 }
 
 .form-builder-response-email {
-  color: #94A3B8;
+  color: #475569;
   font-size: 11px;
 }
 
@@ -963,12 +963,12 @@ body {
 
 .form-builder-response-score-meta {
   margin-left: 4px;
-  color: #94A3B8;
+  color: #475569;
   font-size: 11px;
 }
 
 .form-builder-response-date {
-  color: #94A3B8;
+  color: #475569;
   font-size: 12px;
 }
 
@@ -1049,7 +1049,7 @@ body {
 
 .form-builder-answer-label {
   margin-bottom: 4px;
-  color: #94A3B8;
+  color: #475569;
   font-size: 12px;
 }
 
@@ -1060,7 +1060,7 @@ body {
 }
 
 .form-builder-answer-empty {
-  color: #94A3B8;
+  color: #475569;
 }
 
 .form-builder-answer-score {
@@ -1147,7 +1147,7 @@ body {
 
 .form-builder-canvas-empty {
   padding: 40px;
-  color: #94A3B8;
+  color: #475569;
   text-align: center;
 }
 
@@ -1219,11 +1219,11 @@ body {
   font-weight: 600;
 }
 .fb-question-card-title-empty {
-  color: #94A3B8;
+  color: #475569;
 }
 .fb-question-card-description {
   margin-top: 2px;
-  color: #94A3B8;
+  color: #475569;
   font-size: 12px;
 }
 .fb-question-card-actions {
@@ -1236,7 +1236,7 @@ body {
   border: none;
   border-radius: 4px;
   background: none;
-  color: #94A3B8;
+  color: #475569;
   cursor: pointer;
   font-size: 14px;
 }
@@ -1256,7 +1256,7 @@ body {
   border: 1px solid #E2E8F0;
   border-radius: 6px;
   background: #F8FAFC;
-  color: #94A3B8;
+  color: #475569;
   font-size: 13px;
   box-sizing: border-box;
 }
@@ -1270,7 +1270,7 @@ body {
   width: auto;
 }
 .fb-question-preview-empty {
-  color: #94A3B8;
+  color: #475569;
   font-size: 12px;
 }
 .fb-question-preview-options {
@@ -1300,12 +1300,12 @@ body {
   border: 1px solid #E2E8F0;
   border-radius: 6px;
   background: #F8FAFC;
-  color: #94A3B8;
+  color: #475569;
   font-size: 12px;
   cursor: default;
 }
 .fb-question-preview-scale-more {
-  color: #94A3B8;
+  color: #475569;
   font-size: 12px;
   line-height: 32px;
 }
@@ -1318,14 +1318,14 @@ body {
   border: 1px solid #E2E8F0;
   border-radius: 6px;
   background: #F8FAFC;
-  color: #94A3B8;
+  color: #475569;
   font-size: 13px;
 }
 .fb-question-preview-upload {
   padding: 16px;
   border: 2px dashed #E2E8F0;
   border-radius: 8px;
-  color: #94A3B8;
+  color: #475569;
   text-align: center;
   font-size: 13px;
 }
@@ -1334,13 +1334,13 @@ body {
   border: 1px solid #E2E8F0;
   border-radius: 6px;
   background: #F8FAFC;
-  color: #94A3B8;
+  color: #475569;
   font-size: 12px;
   font-family: monospace;
 }
 .fb-props-empty {
   padding: 24px;
-  color: #94A3B8;
+  color: #475569;
   text-align: center;
 }
 .fb-props-empty-icon {
@@ -1466,7 +1466,7 @@ body {
 .form-builder-modal-close {
   border: 0;
   background: none;
-  color: #94A3B8;
+  color: #475569;
   cursor: pointer;
   font-size: 20px;
   line-height: 1;
@@ -1481,12 +1481,12 @@ body {
 
 .form-builder-logic-loading {
   padding: 16px;
-  color: #94A3B8;
+  color: #475569;
 }
 
 .form-builder-logic-empty {
   padding: 16px;
-  color: #94A3B8;
+  color: #475569;
   font-size: 13px;
   text-align: center;
 }
@@ -1587,7 +1587,7 @@ body {
 .form-builder-assign-loading,
 .form-builder-assign-empty {
   padding: 12px;
-  color: #94A3B8;
+  color: #475569;
   font-size: 13px;
 }
 
@@ -1610,7 +1610,7 @@ body {
 }
 
 .form-builder-assign-email {
-  color: #94A3B8;
+  color: #475569;
   font-size: 11px;
 }
 
@@ -1869,8 +1869,8 @@ body {
   font-size: 10px; color: var(--text-muted);
 }
 .admin-detail-toggle {
-  border: 1px solid var(--border); border-radius: 6px; padding: 3px 8px;
-  font-size: 11px; background: none; cursor: pointer;
+  border: 1px solid var(--border); border-radius: 6px; padding: 5px 10px;
+  font-size: 12px; background: none; cursor: pointer; min-height: 28px;
 }
 .admin-audit-detail {
   display: none; margin-top: 8px; font-size: 11px; font-family: monospace;
@@ -2419,7 +2419,7 @@ body {
   font-size: 11px; padding: 3px 10px; border-radius: 20px; white-space: nowrap;
 }
 .agenda-slot-status-past {
-  background: #F1F5F9; color: #94a3b8;
+  background: #F1F5F9; color: #475569;
 }
 .agenda-slot-status-full {
   background: #FEE2E2; color: #DC2626;
@@ -2455,13 +2455,13 @@ body {
   font-size: 12px; font-weight: 600; color: #1e293b;
 }
 .agenda-booking-note {
-  font-size: 11px; color: #94a3b8; margin-top: 1px;
+  font-size: 11px; color: #475569; margin-top: 1px;
 }
 .agenda-booking-reason {
-  font-size: 11px; color: #94a3b8; font-style: italic; margin-top: 1px;
+  font-size: 11px; color: #475569; font-style: italic; margin-top: 1px;
 }
 .agenda-booking-external {
-  font-size: 10px; color: #94a3b8;
+  font-size: 10px; color: #475569;
 }
 .agenda-booking-badge {
   font-size: 10px; padding: 2px 8px; border-radius: 12px; font-weight: 600;
@@ -2798,7 +2798,7 @@ body {
 .dashboard-grid-empty-state-plain {
   padding: 24px;
   text-align: center;
-  color: #94A3B8;
+  color: #475569;
   font-size: 13px;
 }
 .dashboard-two-col-grid {
@@ -3014,7 +3014,7 @@ body {
   color: #374151;
 }
 .dashboard-credit-history-date {
-  color: #94A3B8;
+  color: #475569;
   font-size: 11px;
 }
 .dashboard-credit-history-balance {
@@ -3345,7 +3345,7 @@ body {
   padding: 0;
   border: none;
   background: none;
-  color: #94A3B8;
+  color: #475569;
   cursor: pointer;
   font-size: 20px;
   line-height: 1;
@@ -3384,7 +3384,7 @@ body {
 }
 .dashboard-player-modal-progress-label {
   flex-shrink: 0;
-  color: #94A3B8;
+  color: #475569;
   font-size: 11px;
   white-space: nowrap;
 }
@@ -3393,7 +3393,7 @@ body {
 }
 .dashboard-player-modal-loading {
   padding: 40px;
-  color: #94A3B8;
+  color: #475569;
   text-align: center;
 }
 .fp-list-loading,
@@ -3402,14 +3402,14 @@ body {
   text-align: center;
 }
 .fp-list-loading {
-  color: #94A3B8;
+  color: #475569;
 }
 .fp-list-error {
   color: #EF4444;
 }
 .fp-list-empty {
   padding: 40px;
-  color: #94A3B8;
+  color: #475569;
   text-align: center;
 }
 .fp-list-empty-icon {
@@ -3459,7 +3459,7 @@ body {
 }
 .fp-list-card-type {
   margin-top: 2px;
-  color: #94A3B8;
+  color: #475569;
   font-size: 12px;
 }
 .fp-list-card-desc {
@@ -3509,7 +3509,7 @@ body {
   text-align: center;
 }
 .fp-modal-state-muted {
-  color: #94A3B8;
+  color: #475569;
 }
 .fp-modal-state-error {
   color: #EF4444;
@@ -3705,7 +3705,7 @@ body {
   display: flex;
   justify-content: space-between;
   margin-top: 4px;
-  color: #94A3B8;
+  color: #475569;
   font-size: 11px;
 }
 .fp-rating-wrap {
@@ -3852,7 +3852,7 @@ body {
 }
 .fp-journey-empty {
   padding: 40px;
-  color: #94A3B8;
+  color: #475569;
   text-align: center;
 }
 .fp-journey-empty-icon {
@@ -3930,7 +3930,7 @@ body {
 }
 .fp-journey-card-empty {
   padding: 16px 0;
-  color: #94A3B8;
+  color: #475569;
   font-size: 13px;
 }
 .fp-journey-step {
@@ -3963,7 +3963,7 @@ body {
 }
 .fp-journey-step-index-pending {
   background: #E2E8F0;
-  color: #94A3B8;
+  color: #475569;
 }
 .fp-journey-step-copy {
   flex: 1;
@@ -4477,7 +4477,7 @@ body {
 }
 
 .cdt-member-login {
-  color: #94a3b8;
+  color: #475569;
   font-size: 10px;
 }
 
