@@ -1,0 +1,7 @@
+/login /login.html 200
+/register /register.html 200
+/dashboard /dashboard.html 200
+/admin /admin.html 200
+/forgot-password /forgot-password.html 200
+/reset-password /reset-password.html 200
+/oauth/consent /oauth-consent.html 200

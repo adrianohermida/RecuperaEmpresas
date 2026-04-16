@@ -150,7 +150,10 @@
     }, 30);
   }
 
+  let _shellInited = false;
   async function initAdminShell() {
+    if (_shellInited) { console.warn('[RE:admin-bootstrap] initAdminShell already ran — skipping duplicate call'); return; }
+    _shellInited = true;
     console.info('[RE:admin-bootstrap] initAdminShell starting');
     const token = getToken();
     if (!token) {

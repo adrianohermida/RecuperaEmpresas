@@ -26,6 +26,10 @@
   }
 
   initFreshchatBoot();
-  window.addEventListener('load', initAdminShell);
+  if (document.readyState === 'complete') {
+    initAdminShell();
+  } else {
+    window.addEventListener('load', initAdminShell);
+  }
   console.info('[RE:admin-init] loaded');
 })();

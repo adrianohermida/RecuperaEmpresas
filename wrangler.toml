@@ -1,0 +1,10 @@
+name = "recuperaempresas-pages"
+compatibility_date = "2026-04-16"
+pages_build_output_dir = "dist"
+
+# Cloudflare Pages serve apenas o frontend estatico neste primeiro corte.
+# Configure no dashboard do Pages:
+# - Build command: npm ci && npm run build
+# - RE_API_BASE=https://api.recuperaempresas.com.br
+# - VITE_SUPABASE_URL=https://riiajjmnzgagntiqqshs.supabase.co
+# - VITE_SUPABASE_ANON_KEY=<publishable-key>
