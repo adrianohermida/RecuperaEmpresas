@@ -320,28 +320,26 @@ function fpRenderInput(q) {
       return `<input id="${id}" type="date" class="portal-input fp-input-limit-md">`;
     case 'single_choice': {
       const opts = Array.isArray(q.options) ? q.options : [];
-      return `<div style="display:flex;flex-direction:column;gap:8px;" id="${id}-wrap">
+      return `<div class="fp-choice-list" id="${id}-wrap">
         ${opts.map((o,i) => {
           const label = typeof o === 'string' ? o : (o.label || o);
-          return `<label style="display:flex;align-items:center;gap:10px;padding:10px 14px;border:1px solid #E2E8F0;border-radius:8px;cursor:pointer;transition:border-color .15s,background .15s;"
-            onmouseover="this.style.background='#F8FAFC'" onmouseout="if(!this.querySelector('input').checked)this.style.background=''"
+          return `<label class="fp-choice-option"
             onclick="fpSelectRadio(this, '${id}', '${fpEsc(label)}')">
-            <input type="radio" name="${id}" value="${fpEsc(label)}" style="width:16px;height:16px;flex-shrink:0;cursor:pointer;">
-            <span style="font-size:14px;color:#1E293B;">${fpEsc(label)}</span>
+            <input type="radio" name="${id}" value="${fpEsc(label)}" class="fp-choice-input">
+            <span class="fp-choice-copy">${fpEsc(label)}</span>
           </label>`;
         }).join('')}
       </div>`;
     }
     case 'multi_choice': {
       const opts = Array.isArray(q.options) ? q.options : [];
-      return `<div style="display:flex;flex-direction:column;gap:8px;" id="${id}-wrap">
+      return `<div class="fp-choice-list" id="${id}-wrap">
         ${opts.map((o,i) => {
           const label = typeof o === 'string' ? o : (o.label || o);
-          return `<label style="display:flex;align-items:center;gap:10px;padding:10px 14px;border:1px solid #E2E8F0;border-radius:8px;cursor:pointer;transition:border-color .15s,background .15s;"
-            onmouseover="this.style.background='#F8FAFC'" onmouseout="this.style.background=''">
-            <input type="checkbox" value="${fpEsc(label)}" data-mcq="${q.id}" style="width:16px;height:16px;flex-shrink:0;cursor:pointer;"
+          return `<label class="fp-choice-option">
+            <input type="checkbox" value="${fpEsc(label)}" data-mcq="${q.id}" class="fp-choice-input"
               onchange="fpCheckboxChange(${q.id})">
-            <span style="font-size:14px;color:#1E293B;">${fpEsc(label)}</span>
+            <span class="fp-choice-copy">${fpEsc(label)}</span>
           </label>`;
         }).join('')}
       </div>`;
@@ -360,14 +358,14 @@ function fpRenderInput(q) {
       const range = [];
       for (let i = min; i <= max; i++) range.push(i);
       return `<div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;" id="${id}-wrap">
+        <div class="fp-scale-wrap fp-scale-wrap-default" id="${id}-wrap">
           ${range.map(v => `<button type="button" data-scale="${q.id}" data-val="${v}"
             onclick="fpSelectScale(${q.id}, ${v})"
-            style="min-width:36px;height:36px;border:1px solid #E2E8F0;border-radius:6px;background:#fff;color:#64748B;font-size:13px;cursor:pointer;transition:all .15s;font-weight:500;">
+            class="fp-scale-btn">
             ${v}
           </button>`).join('')}
         </div>
-        ${s.label_min||s.label_max ? `<div style="display:flex;justify-content:space-between;font-size:11px;color:#94A3B8;margin-top:4px;">
+        ${s.label_min||s.label_max ? `<div class="fp-scale-labels">
           <span>${fpEsc(s.label_min||'')}</span><span>${fpEsc(s.label_max||'')}</span>
         </div>` : ''}
         <input type="hidden" id="${id}">
@@ -377,52 +375,51 @@ function fpRenderInput(q) {
       const range = [];
       for (let i = 0; i <= 10; i++) range.push(i);
       return `<div>
-        <div style="display:flex;gap:4px;flex-wrap:wrap;" id="${id}-wrap">
+        <div class="fp-scale-wrap fp-scale-wrap-nps" id="${id}-wrap">
           ${range.map(v => `<button type="button" data-scale="${q.id}" data-val="${v}"
             onclick="fpSelectScale(${q.id}, ${v})"
-            style="min-width:36px;height:36px;border:1px solid #E2E8F0;border-radius:6px;background:#fff;font-size:13px;cursor:pointer;transition:all .15s;font-weight:500;color:${v<=6?'#EF4444':v<=8?'#F59E0B':'#16A34A'}">
+            class="fp-scale-btn ${fpGetNpsToneClass(v)}">
             ${v}
           </button>`).join('')}
         </div>
-        <div style="display:flex;justify-content:space-between;font-size:11px;color:#94A3B8;margin-top:4px;">
+        <div class="fp-scale-labels">
           <span>Detrator</span><span>Promotor</span>
         </div>
         <input type="hidden" id="${id}">
       </div>`;
     }
     case 'rating': {
-      return `<div style="display:flex;gap:4px;" id="${id}-wrap">
+      return `<div class="fp-rating-wrap" id="${id}-wrap">
         ${[1,2,3,4,5].map(v => `<button type="button" data-rating="${q.id}" data-val="${v}"
           onclick="fpSelectRating(${q.id}, ${v})"
-          style="font-size:28px;background:none;border:none;cursor:pointer;color:#E2E8F0;transition:color .1s;padding:2px;">★</button>`).join('')}
+          class="fp-rating-btn">★</button>`).join('')}
         <input type="hidden" id="${id}">
       </div>`;
     }
     case 'yes_no':
-      return `<div style="display:flex;gap:10px;" id="${id}-wrap">
+      return `<div class="fp-yesno-wrap" id="${id}-wrap">
         <button type="button" data-yn="${q.id}" data-val="sim"
           onclick="fpSelectYesNo(${q.id}, 'sim')"
-          style="padding:10px 28px;border:1px solid #E2E8F0;border-radius:8px;background:#fff;font-size:14px;cursor:pointer;transition:all .15s;font-weight:500;">
+          class="fp-yesno-btn">
           ✅ Sim
         </button>
         <button type="button" data-yn="${q.id}" data-val="nao"
           onclick="fpSelectYesNo(${q.id}, 'nao')"
-          style="padding:10px 28px;border:1px solid #E2E8F0;border-radius:8px;background:#fff;font-size:14px;cursor:pointer;transition:all .15s;font-weight:500;">
+          class="fp-yesno-btn">
           ❌ Não
         </button>
         <input type="hidden" id="${id}">
       </div>`;
     case 'file_upload':
-      return `<div style="border:2px dashed #CBD5E1;border-radius:10px;padding:24px;text-align:center;cursor:pointer;transition:border-color .15s;"
-          onmouseover="this.style.borderColor='#1A56DB'" onmouseout="this.style.borderColor='#CBD5E1'"
+      return `<div class="fp-upload-dropzone"
           onclick="document.getElementById('${id}').click()">
-        <div style="font-size:24px;margin-bottom:8px;">📎</div>
-        <div style="font-size:13px;color:#64748B;">Clique para selecionar o arquivo</div>
-        <input type="file" id="${id}" style="display:none;" onchange="fpFileChange(${q.id}, this)">
-        <div id="fpfile-name-${q.id}" style="font-size:12px;color:#1A56DB;margin-top:8px;"></div>
+        <div class="fp-upload-icon">📎</div>
+        <div class="fp-upload-copy">Clique para selecionar o arquivo</div>
+        <input type="file" id="${id}" class="fp-upload-input" onchange="fpFileChange(${q.id}, this)">
+        <div id="fpfile-name-${q.id}" class="fp-upload-file-name"></div>
       </div>`;
     case 'calculated':
-      return `<div id="${id}-result" style="padding:12px 16px;background:#F0FDF4;border:1px solid #BBF7D0;border-radius:8px;font-size:15px;font-weight:700;color:#16A34A;">
+      return `<div id="${id}-result" class="fp-calculated-result">
         Calculado automaticamente
       </div><input type="hidden" id="${id}">`;
     default:
@@ -460,12 +457,16 @@ function fpRestoreAnswer(q) {
     if (el) el.value = val;
   } else if (q.type === 'single_choice') {
     document.querySelectorAll(`input[name="${id}"]`).forEach(r => {
-      if (r.value === val) { r.checked = true; r.closest('label').style.background = '#EFF6FF'; r.closest('label').style.borderColor = '#1A56DB'; }
+      if (r.value === val) {
+        r.checked = true;
+        r.closest('label')?.classList.add('fp-choice-option-selected');
+      }
     });
   } else if (q.type === 'multi_choice') {
     const vals = Array.isArray(val) ? val : [];
     document.querySelectorAll(`input[data-mcq="${q.id}"]`).forEach(cb => {
       cb.checked = vals.includes(cb.value);
+      cb.closest('label')?.classList.toggle('fp-choice-option-selected', cb.checked);
     });
   } else if (q.type === 'scale' || q.type === 'nps') {
     const el = document.getElementById(id);
@@ -484,11 +485,9 @@ function fpRestoreAnswer(q) {
 function fpSelectRadio(labelEl, inputName, value) {
   // Reset all labels in this group
   document.querySelectorAll(`input[name="${inputName}"]`).forEach(r => {
-    r.closest('label').style.background = '';
-    r.closest('label').style.borderColor = '#E2E8F0';
+    r.closest('label')?.classList.remove('fp-choice-option-selected');
   });
-  labelEl.style.background = '#EFF6FF';
-  labelEl.style.borderColor = '#1A56DB';
+  labelEl.classList.add('fp-choice-option-selected');
   const qId = parseInt(inputName.replace('fpinput-',''));
   FP.answers[qId] = value;
   fpTriggerLogic();
@@ -499,6 +498,7 @@ function fpCheckboxChange(qId) {
   const vals = [];
   document.querySelectorAll(`input[data-mcq="${qId}"]`).forEach(cb => {
     if (cb.checked) vals.push(cb.value);
+    cb.closest('label')?.classList.toggle('fp-choice-option-selected', cb.checked);
   });
   FP.answers[qId] = vals;
   fpTriggerLogic();
@@ -508,10 +508,7 @@ function fpCheckboxChange(qId) {
 function fpSelectScale(qId, val, skipSave) {
   const id = `fpinput-${qId}`;
   document.querySelectorAll(`button[data-scale="${qId}"]`).forEach(b => {
-    const bv = parseInt(b.dataset.val);
-    b.style.background  = bv === val ? '#1A56DB' : '#fff';
-    b.style.color       = bv === val ? '#fff'    : '#64748B';
-    b.style.borderColor = bv === val ? '#1A56DB' : '#E2E8F0';
+    b.classList.toggle('fp-scale-btn-active', parseInt(b.dataset.val) === val);
   });
   const hidden = document.getElementById(id);
   if (hidden) hidden.value = val;
@@ -522,7 +519,7 @@ function fpSelectScale(qId, val, skipSave) {
 function fpSelectRating(qId, val, skipSave) {
   const id = `fpinput-${qId}`;
   document.querySelectorAll(`button[data-rating="${qId}"]`).forEach(b => {
-    b.style.color = parseInt(b.dataset.val) <= val ? '#F59E0B' : '#E2E8F0';
+    b.classList.toggle('fp-rating-btn-active', parseInt(b.dataset.val) <= val);
   });
   const hidden = document.getElementById(id);
   if (hidden) hidden.value = val;
@@ -532,10 +529,7 @@ function fpSelectRating(qId, val, skipSave) {
 
 function fpSelectYesNo(qId, val, skipSave) {
   document.querySelectorAll(`button[data-yn="${qId}"]`).forEach(b => {
-    const bv = b.dataset.val;
-    b.style.background  = bv === val ? '#1A56DB' : '#fff';
-    b.style.color       = bv === val ? '#fff'    : '#64748B';
-    b.style.borderColor = bv === val ? '#1A56DB' : '#E2E8F0';
+    b.classList.toggle('fp-yesno-btn-active', b.dataset.val === val);
   });
   const hidden = document.getElementById(`fpinput-${qId}`);
   if (hidden) hidden.value = val;
@@ -550,6 +544,12 @@ function fpFileChange(qId, input) {
   if (nameEl) nameEl.textContent = file.name;
   FP.answers[qId] = file.name; // actual upload would be a separate endpoint
   fpScheduleAutoSave();
+}
+
+function fpGetNpsToneClass(value) {
+  if (value <= 6) return 'fp-scale-btn-nps-low';
+  if (value <= 8) return 'fp-scale-btn-nps-mid';
+  return 'fp-scale-btn-nps-high';
 }
 
 /* ──────────────────────────────────────────────────────────────────────────────
@@ -684,25 +684,25 @@ function fpShowCompletion(data) {
   if (pb) pb.style.width = '100%';
 
   content.innerHTML = `
-    <div style="text-align:center;padding:32px 20px;">
-      <div style="font-size:56px;margin-bottom:16px;">🎉</div>
-      <h2 style="font-size:22px;font-weight:800;color:#1E293B;margin:0 0 8px;">Formulário enviado!</h2>
-      <p style="font-size:15px;color:#64748B;margin:0 0 24px;">Suas respostas foram registradas com sucesso.</p>
+    <div class="fp-submit-success">
+      <div class="fp-submit-success-icon">🎉</div>
+      <h2 class="fp-submit-success-title">Formulário enviado!</h2>
+      <p class="fp-submit-success-copy">Suas respostas foram registradas com sucesso.</p>
 
       ${score != null ? `
-      <div style="background:linear-gradient(135deg,#1e3a5f,#1A56DB);border-radius:16px;padding:24px;margin-bottom:24px;color:#fff;">
-        <div style="font-size:48px;font-weight:900;margin-bottom:4px;">${score}%</div>
-        <div style="font-size:15px;opacity:.85;margin-bottom:${data.score_classification?'12px':'0'};">Pontuação total: ${data.score_total||0} / ${data.score_max||0}</div>
-        ${data.score_classification ? `<div style="display:inline-block;background:rgba(255,255,255,.2);border-radius:8px;padding:4px 16px;font-size:14px;font-weight:700;">${CLASS_LBL[data.score_classification]||data.score_classification}</div>` : ''}
+      <div class="fp-submit-score-card">
+        <div class="fp-submit-score-value">${score}%</div>
+        <div class="fp-submit-score-copy ${data.score_classification ? 'fp-submit-score-copy-spaced' : ''}">Pontuação total: ${data.score_total||0} / ${data.score_max||0}</div>
+        ${data.score_classification ? `<div class="fp-submit-score-badge">${CLASS_LBL[data.score_classification]||data.score_classification}</div>` : ''}
       </div>` : ''}
 
       ${data.auto_report ? `
-      <div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:12px;padding:20px;margin-bottom:24px;text-align:left;">
-        <div style="font-size:13px;font-weight:700;color:#16A34A;margin-bottom:8px;">📄 Seu relatório de diagnóstico</div>
-        <div style="font-size:13px;color:#166534;line-height:1.6;white-space:pre-wrap;">${fpEsc(data.auto_report)}</div>
+      <div class="fp-submit-report-card">
+        <div class="fp-submit-report-title">📄 Seu relatório de diagnóstico</div>
+        <div class="fp-submit-report-copy">${fpEsc(data.auto_report)}</div>
       </div>` : ''}
 
-      <button class="btn-primary" onclick="fpClosePlayer()" style="font-size:14px;padding:12px 28px;">
+      <button class="btn-primary fp-submit-success-btn" onclick="fpClosePlayer()">
         ← Voltar ao portal
       </button>
     </div>
