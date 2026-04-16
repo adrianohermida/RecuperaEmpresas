@@ -25,10 +25,10 @@
   }
 
   async function jrnLoadClients() {
-    const response = await fetch('/api/admin/users', { headers: jrnAuthH() });
+    const response = await fetch('/api/admin/clients', { headers: jrnAuthH() });
     if (!response.ok) return;
     const payload = await response.json();
-    JRN.clients = (payload.users || payload || []).filter(user => !user.is_admin);
+    JRN.clients = (payload.clients || payload.users || payload || []).filter(user => !user.is_admin);
     const select = document.getElementById('jrn-assign-user');
     if (select) {
       select.innerHTML = '<option value="">Selecione um cliente...</option>' +
