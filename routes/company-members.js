@@ -46,7 +46,12 @@ router.post('/api/company/members', requireAuth, async (req, res) => {
   // Check uniqueness
   const { data: existing, error: existingError } = await sb.from('re_company_users')
     .select('id').eq('company_id', companyId).eq('email', email.toLowerCase()).single();
-  if (existingError && !String(existingError.message || '').toLowerCase().includes('multiple') && !String(existingError.message || '').toLowerCase().includes('json object requested')) {
+  const isNoRowsError = (err) => {
+    const msg = String(err?.message || '').toLowerCase();
+    const code = String(err?.code || '').toLowerCase();
+    return code === 'pgrst116' || msg.includes('0 rows') || msg.includes('multiple') || msg.includes('json object requested');
+  };
+  if (existingError && !isNoRowsError(existingError)) {
     if (isCompanyMembersSchemaError(existingError.message)) {
       console.warn('[COMPANY MEMBERS CREATE] recurso multiusuário indisponível neste schema:', existingError.message);
       return res.status(503).json({ error: 'Recurso de equipe indisponível neste ambiente no momento.' });
