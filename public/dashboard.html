@@ -729,39 +729,21 @@
 
 <div class="toast" id="toast"></div>
 
+<!-- Dashboard modules -->
+<script src="./js/dashboard-core.js?v=20260416"></script>
+<script src="./js/dashboard-support.js?v=20260416"></script>
+<script src="./js/dashboard-appointments.js?v=20260416"></script>
+<script src="./js/dashboard-finance.js?v=20260416"></script>
+<script src="./js/dashboard-docs.js?v=20260416"></script>
+<script src="./js/dashboard-members.js?v=20260416"></script>
+<script src="./js/dashboard-agenda.js?v=20260416"></script>
+<script src="./js/dashboard-notifications.js?v=20260416"></script>
+<script src="./js/dashboard-marketplace.js?v=20260416"></script>
+
 <script>
 'use strict';
-
-const STEP_TITLES = {
-  1:'Consentimento LGPD', 2:'Dados da Empresa', 3:'Sócios',
-  4:'Estrutura Operacional', 5:'Quadro de Funcionários', 6:'Ativos',
-  7:'Dados Financeiros', 8:'Dívidas e Credores', 9:'Histórico da Crise',
-  10:'Diagnóstico Estratégico', 11:'Mercado e Operação',
-  12:'Expectativas e Estratégia', 13:'Documentos', 14:'Confirmação'
-};
-
-const CHAPTER_STATUS = {
-  pendente:       { label: 'Aguardando dados',  cls: 'badge-gray'   },
-  em_elaboracao:  { label: 'Em elaboração',     cls: 'badge-blue'   },
-  aguardando:     { label: 'Aguardando cliente',cls: 'badge-amber'  },
-  em_revisao:     { label: 'Em revisão',        cls: 'badge-purple' },
-  aprovado:       { label: 'Aprovado',          cls: 'badge-green'  },
-};
-
-const FD_STATUS = {
-  2: { label: 'Aberto',       cls: 'badge-blue'   },
-  3: { label: 'Pendente',     cls: 'badge-amber'  },
-  4: { label: 'Resolvido',    cls: 'badge-green'  },
-  5: { label: 'Fechado',      cls: 'badge-gray'   },
-};
-
-const APPT_TYPES = {
-  diagnostico: 'Diagnóstico inicial',
-  revisao:     'Revisão do Business Plan',
-  financeiro:  'Análise financeira',
-  estrategia:  'Planejamento estratégico',
-  outro:       'Outro',
-};
+// bootstrap-only: auth helpers, showToast, freshchat, init()
+// ── Todas as seções funcionais estão agora em dashboard-*.js ──────────────────
 
 // ── Impersonation token handling ──────────────────────────────────────────────
 (function() {
