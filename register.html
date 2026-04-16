@@ -82,35 +82,34 @@
       <p class="auth-card-subtitle">Preencha os dados abaixo para começar</p>
 
       <div class="alert alert-error" id="alertError">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;margin-top:1px">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="auth-alert-icon">
           <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
         </svg>
         <span id="alertErrorMsg"></span>
       </div>
 
       <!-- Confirmation pending screen -->
-      <div id="confirmStep" style="display:none;text-align:center;padding:16px 0;">
-        <div style="width:64px;height:64px;background:#EFF6FF;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;">
+      <div id="confirmStep" class="auth-state-screen auth-state-screen-compact">
+        <div class="auth-state-icon auth-state-icon-info">
           <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#1A56DB" stroke-width="2">
             <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
             <polyline points="22,6 12,13 2,6"/>
           </svg>
         </div>
-        <h2 style="font-size:20px;font-weight:700;color:#0F172A;margin-bottom:8px;">Verifique seu e-mail</h2>
-        <p style="color:#64748B;font-size:14px;line-height:1.7;margin-bottom:6px;">
+        <h2 class="auth-state-title">Verifique seu e-mail</h2>
+        <p class="auth-state-copy auth-state-copy-tight">
           Enviamos um link de confirmação para
         </p>
-        <p style="font-weight:700;color:#1A56DB;font-size:14px;margin-bottom:20px;" id="confirmEmailDisplay"></p>
-        <p style="color:#64748B;font-size:13px;line-height:1.7;margin-bottom:24px;">
+        <p class="auth-state-email" id="confirmEmailDisplay"></p>
+        <p class="auth-state-copy auth-state-copy-sm">
           Clique no link do e-mail para ativar sua conta.<br/>
           Verifique também a caixa de spam.
         </p>
-        <button onclick="resendConfirmEmail()" id="btnResend"
-          style="background:none;border:1.5px solid #CBD5E1;color:#1A56DB;border-radius:8px;padding:10px 20px;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:16px;">
+        <button onclick="resendConfirmEmail()" id="btnResend" class="btn-auth-secondary auth-state-cta">
           Reenviar e-mail
         </button>
         <br/>
-        <a href="./login.html" style="color:#64748B;font-size:13px;text-decoration:none;">
+        <a href="./login.html" class="auth-inline-link auth-inline-link-muted">
           Já confirmei → Fazer login
         </a>
       </div>
@@ -129,7 +128,7 @@
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="company">Empresa <span style="font-weight:400;color:#94A3B8;">(opcional)</span></label>
+          <label class="form-label" for="company">Empresa <span class="auth-optional">(opcional)</span></label>
           <input class="form-control" type="text" id="company" placeholder="Razão social ou nome fantasia"/>
           <div class="field-error" id="err_company"></div>
         </div>
@@ -145,7 +144,7 @@
               </svg>
             </button>
           </div>
-          <div class="pwd-strength" id="pwdStrength" style="display:none">
+          <div class="pwd-strength" id="pwdStrength">
             <div class="pwd-strength-fill" id="pwdStrengthFill"></div>
           </div>
           <div class="field-error" id="err_password"></div>
@@ -165,9 +164,9 @@
           <div class="field-error" id="err_confirm"></div>
         </div>
 
-        <p style="font-size:12px;color:#94A3B8;margin-bottom:12px;line-height:1.6;">
+        <p class="auth-legal-copy">
           Ao criar a conta, você concorda com o tratamento dos seus dados conforme a
-          <strong style="color:#64748B;">LGPD (Lei 13.709/2018)</strong>.
+          <strong>LGPD (Lei 13.709/2018)</strong>.
         </p>
 
         <button type="submit" class="btn-auth" id="btnRegister">
@@ -188,24 +187,22 @@ function togglePwd(id, btn) {
   const inp = document.getElementById(id);
   const showing = inp.type === 'text';
   inp.type = showing ? 'password' : 'text';
-  btn.querySelector('.eye-icon').style.opacity = showing ? '1' : '0.4';
+  btn.classList.toggle('toggle-password-active', !showing);
 }
 
 function checkStrength(val) {
   const bar   = document.getElementById('pwdStrength');
   const fill  = document.getElementById('pwdStrengthFill');
-  if (!val) { bar.style.display = 'none'; return; }
-  bar.style.display = 'block';
+  fill.className = 'pwd-strength-fill';
+  bar.classList.toggle('pwd-strength-visible', Boolean(val));
+  if (!val) return;
   let score = 0;
   if (val.length >= 8)  score++;
   if (val.length >= 12) score++;
   if (/[A-Z]/.test(val)) score++;
   if (/[0-9]/.test(val)) score++;
   if (/[^A-Za-z0-9]/.test(val)) score++;
-  const pct   = (score / 5) * 100;
-  const color = score <= 1 ? '#EF4444' : score <= 3 ? '#F59E0B' : '#10B981';
-  fill.style.width = pct + '%';
-  fill.style.background = color;
+  fill.classList.add(`pwd-strength-fill-strength-${score}`);
 }
 
 function showError(id, msg) {
@@ -254,9 +251,9 @@ document.getElementById('registerForm').addEventListener('submit', async (e) => 
     if (json.pending_confirmation) {
       // Supabase requires email confirmation — show "check your inbox" screen
       document.getElementById('confirmEmailDisplay').textContent = json.email || email;
-      document.getElementById('registerForm').style.display  = 'none';
-      document.getElementById('confirmStep').style.display   = 'block';
-      document.querySelector('.auth-links').style.display    = 'none';
+      document.getElementById('registerForm').classList.add('auth-hidden');
+      document.getElementById('confirmStep').classList.add('auth-state-screen-visible');
+      document.querySelector('.auth-links').classList.add('auth-hidden');
       // store email so the resend button can use it
       window._pendingEmail = json.email || email;
     } else if (json.token) {

@@ -7,8 +7,9 @@
   <title>Login — Recupera Empresas</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
   <link rel="stylesheet" href="./css/auth.css"/>
-  <script src="./js/config.js?v=20260415a"></script>
-  <script src="./js/api-base.js?v=20260415a"></script>
+  <script src="./js/config.js?v=20260415b"></script>
+  <script src="./js/api-base.js?v=20260415b"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 </head>
 <body>
 <div class="auth-layout">
@@ -85,8 +86,16 @@
       <h1 class="auth-card-title">Bem-vindo de volta</h1>
       <p class="auth-card-subtitle">Acesse o portal para continuar o seu onboarding</p>
 
+      <!-- Success (email confirmed, etc.) -->
+      <div class="alert alert-success" id="alertSuccess">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="auth-alert-icon">
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
+        </svg>
+        <span id="alertSuccessMsg"></span>
+      </div>
+
       <div class="alert alert-error" id="alertError">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;margin-top:1px">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="auth-alert-icon">
           <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
         </svg>
         <span id="alertErrorMsg"></span>
@@ -100,9 +109,9 @@
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="password" style="display:flex;justify-content:space-between;">
+          <label class="form-label auth-label-row" for="password">
             Senha
-            <a href="./forgot-password.html" style="font-weight:400;font-size:13px;color:#1A56DB;">Esqueci a senha</a>
+            <a href="./forgot-password.html" class="auth-inline-link auth-inline-link-muted">Esqueci a senha</a>
           </label>
           <div class="form-control-wrap">
             <input class="form-control" type="password" id="password" placeholder="••••••••" autocomplete="current-password"/>
@@ -134,7 +143,7 @@ function togglePwd(id, btn) {
   const inp = document.getElementById(id);
   const showing = inp.type === 'text';
   inp.type = showing ? 'password' : 'text';
-  btn.querySelector('.eye-icon').style.opacity = showing ? '1' : '0.4';
+  btn.classList.toggle('toggle-password-active', !showing);
 }
 
 function showError(id, msg) {
@@ -148,6 +157,13 @@ function clearErrors() {
   document.querySelectorAll('.is-error').forEach(e => e.classList.remove('is-error'));
   document.getElementById('alertError').classList.remove('show');
 }
+
+// ── Supabase client (browser-side) — persists session automatically ───────────
+const _sbUrl  = (window.RE_SUPABASE_URL  || 'https://riiajjmnzgagntiqqshs.supabase.co').replace(/\/$/, '');
+const _sbAnon = window.RE_SUPABASE_ANON  || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJpaWFqam1uemdhZ250aXFxc2hzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYxNzY0ODUsImV4cCI6MjA5MTc1MjQ4NX0.zyOFjVFIBJem5FZmXBD-ya78RheD_a-YHetibyVvXcI';
+const _sb     = (_sbUrl && _sbAnon && window.supabase)
+  ? window.supabase.createClient(_sbUrl, _sbAnon, { auth: { persistSession: true, autoRefreshToken: true } })
+  : null;
 
 document.getElementById('loginForm').addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -166,7 +182,16 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
   btn.innerHTML = '<div class="spinner"></div> Entrando...';
 
   try {
-    // Try owner login first; if it fails try member login
+    // ── Step 1: sign in directly via supabase-js so the Supabase session is
+    // stored in localStorage automatically (needed for OAuth consent page).
+    if (_sb) {
+      const { error: sbErr } = await _sb.auth.signInWithPassword({ email, password });
+      // Ignore errors here — server login below is authoritative.
+      // If the anon key is misconfigured, we still fall through to server login.
+      if (sbErr) console.warn('[LOGIN] supabase-js signIn:', sbErr.message);
+    }
+
+    // ── Step 2: call our server to get the custom JWT + user profile.
     let res  = await fetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -186,13 +211,43 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
     }
 
     if (json.token || json.success) {
+      if (_sb && json.supabase_session?.access_token && json.supabase_session?.refresh_token) {
+        const { error: setSessionErr } = await _sb.auth.setSession({
+          access_token: json.supabase_session.access_token,
+          refresh_token: json.supabase_session.refresh_token,
+        });
+        if (setSessionErr) console.warn('[LOGIN] supabase-js setSession:', setSessionErr.message);
+      }
+
       localStorage.setItem('re_token', json.token);
       localStorage.setItem('re_user', JSON.stringify(json.user));
+
+      // If we were redirected here from the OAuth consent page, go back there.
+      const returnTo = new URLSearchParams(window.location.search).get('returnTo');
+      if (returnTo && returnTo.startsWith('/')) {
+        window.location.href = returnTo;
+        return;
+      }
       window.location.href = json.user?.isAdmin ? 'admin.html' : 'dashboard.html';
     } else {
-      const alertEl = document.getElementById('alertError');
-      document.getElementById('alertErrorMsg').textContent = json.error || 'Credenciais inválidas.';
-      alertEl.classList.add('show');
+      const msg = json.error || 'Credenciais inválidas.';
+      // Email not confirmed — offer to resend
+      if (msg.toLowerCase().includes('not confirmed') || msg.toLowerCase().includes('confirmar')) {
+        document.getElementById('alertErrorMsg').innerHTML =
+          'Confirme seu e-mail antes de entrar. ' +
+          '<a href="#" id="resendLink" class="auth-inline-link-danger">Reenviar confirmação</a>';
+        document.getElementById('resendLink')?.addEventListener('click', async (ev) => {
+          ev.preventDefault();
+          await fetch('/api/auth/resend-confirmation', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email })
+          });
+          document.getElementById('alertErrorMsg').textContent = 'E-mail de confirmação reenviado. Verifique sua caixa de entrada.';
+        });
+      } else {
+        document.getElementById('alertErrorMsg').textContent = msg;
+      }
+      document.getElementById('alertError').classList.add('show');
       btn.disabled = false;
       btn.textContent = 'Entrar no Portal';
     }
@@ -204,11 +259,70 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
   }
 });
 
-// Show timeout notice if redirected here from an auth guard timeout
-if (new URLSearchParams(window.location.search).get('err') === 'timeout') {
-  document.getElementById('alertErrorMsg').textContent =
-    'O servidor demorou para responder. Tente fazer login novamente.';
-  document.getElementById('alertError').classList.add('show');
+// ── Handle URL params & hash tokens on page load ──────────────────────────────
+(async () => {
+  const params      = new URLSearchParams(window.location.search);
+  const hash        = Object.fromEntries(new URLSearchParams(window.location.hash.slice(1)));
+  const accessToken = hash.access_token || '';
+  const hashType    = hash.type         || '';
+
+  // Came back from OAuth callback — server already exchanged code, passes portal token in hash
+  if (hash.oauth_token) {
+    try {
+      const user = JSON.parse(decodeURIComponent(hash.oauth_user || '{}'));
+      localStorage.setItem('re_token', decodeURIComponent(hash.oauth_token));
+      localStorage.setItem('re_user', JSON.stringify(user));
+      history.replaceState(null, '', window.location.pathname + window.location.search);
+      window.location.href = user?.isAdmin ? 'admin.html' : 'dashboard.html';
+      return;
+    } catch {}
+  }
+
+  // Came back from email confirmation link → auto-login with the hash tokens
+  if (accessToken && (hashType === 'signup' || hashType === 'magiclink')) {
+    try {
+      const res  = await fetch('/api/auth/confirm', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ access_token: accessToken, refresh_token: hash.refresh_token || '' })
+      });
+      const json = await res.json();
+      if (json.token) {
+        localStorage.setItem('re_token', json.token);
+        localStorage.setItem('re_user', JSON.stringify(json.user));
+        window.location.href = json.user?.isAdmin ? 'admin.html' : 'dashboard.html';
+        return;
+      }
+    } catch {}
+    // Auto-login failed — fall back to showing a success message so they log in manually
+    showSuccess('E-mail confirmado! Faça login para continuar.');
+  } else if (params.get('confirmed') === '1') {
+    showSuccess('E-mail confirmado com sucesso! Faça login para continuar.');
+  } else if (params.get('invited') === '1') {
+    showSuccess('Convite confirmado. Defina sua senha e entre na plataforma.');
+  } else if (params.get('magic') === '1') {
+    showSuccess('Magic link enviado. Abra o e-mail e use o link para entrar.');
+  } else if (params.get('email_changed') === '1') {
+    showSuccess('Alteração de e-mail confirmada com sucesso.');
+  } else if (params.get('reauthenticated') === '1') {
+    showSuccess('Reautenticação concluída com sucesso.');
+  } else if (params.get('err') === 'timeout') {
+    document.getElementById('alertErrorMsg').textContent =
+      'O servidor demorou para responder. Tente fazer login novamente.';
+    document.getElementById('alertError').classList.add('show');
+  } else if (params.get('err') === 'oauth') {
+    const desc = params.get('desc') || 'Erro na autorização OAuth.';
+    document.getElementById('alertErrorMsg').textContent =
+      desc === 'session_expired_retry'
+        ? 'Sessão OAuth expirada. Inicie o fluxo novamente.'
+        : `Erro OAuth: ${desc}`;
+    document.getElementById('alertError').classList.add('show');
+  }
+})();
+
+function showSuccess(msg) {
+  const el = document.getElementById('alertSuccess');
+  document.getElementById('alertSuccessMsg').textContent = msg;
+  el.classList.add('show');
 }
 
 // Redirect if already logged in

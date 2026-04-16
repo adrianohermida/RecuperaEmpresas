@@ -9,83 +9,32 @@
   <link rel="stylesheet" href="/css/auth.css"/>
   <script src="/js/config.js?v=20260415a"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-  <style>
-    .consent-card { max-width: 440px; }
-    .app-badge {
-      display: flex; align-items: center; gap: 14px;
-      background: #F8FAFC; border: 1px solid #E2E8F0;
-      border-radius: 12px; padding: 16px; margin-bottom: 24px;
-    }
-    .app-icon {
-      width: 48px; height: 48px; border-radius: 10px;
-      background: #1A56DB; display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0; font-size: 22px; color: #fff; font-weight: 700;
-    }
-    .app-name  { font-weight: 700; font-size: 15px; color: #1E293B; }
-    .app-domain{ font-size: 12px; color: #64748B; margin-top: 2px; }
-    .scope-list { list-style: none; display: flex; flex-direction: column; gap: 10px; margin: 20px 0 28px; }
-    .scope-list li {
-      display: flex; align-items: center; gap: 10px;
-      font-size: 14px; color: #1E293B;
-    }
-    .scope-list li span.scope-icon { flex-shrink: 0; font-size: 16px; }
-    .consent-actions { display: flex; gap: 12px; }
-    .btn-allow {
-      flex: 1; background: #1A56DB; color: #fff; border: none;
-      border-radius: 8px; padding: 13px; font-size: 14px; font-weight: 600;
-      cursor: pointer; transition: background .15s;
-    }
-    .btn-allow:hover { background: #1244AB; }
-    .btn-allow:disabled { background: #93C5FD; cursor: not-allowed; }
-    .btn-deny {
-      flex: 1; background: #fff; color: #64748B;
-      border: 1.5px solid #CBD5E1; border-radius: 8px;
-      padding: 13px; font-size: 14px; font-weight: 600;
-      cursor: pointer; transition: border-color .15s, color .15s;
-    }
-    .btn-deny:hover { border-color: #94A3B8; color: #1E293B; }
-    .btn-deny:disabled { opacity: .5; cursor: not-allowed; }
-    .consent-footer {
-      text-align: center; font-size: 12px; color: #94A3B8; margin-top: 20px; line-height: 1.6;
-    }
-    .divider {
-      display: flex; align-items: center; gap: 10px;
-      margin: 20px 0; color: #CBD5E1; font-size: 12px;
-    }
-    .divider::before, .divider::after {
-      content: ''; flex: 1; height: 1px; background: #E2E8F0;
-    }
-    #loadingGate {
-      text-align: center; padding: 32px 0; color: #64748B; font-size: 14px;
-    }
-    #consentGate { display: none; }
-  </style>
 </head>
 <body>
-<div class="auth-layout" style="align-items:center;justify-content:center;min-height:100vh;">
-  <div class="auth-card consent-card" style="width:100%;max-width:440px;">
+<div class="auth-layout auth-layout-centered">
+  <div class="auth-card auth-card-compact consent-card">
 
     <!-- Portal logo -->
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:28px;">
+    <div class="auth-brand-inline">
       <svg width="32" height="26" viewBox="0 0 44 36" fill="none">
         <rect x="0"  y="26" width="8" height="10" rx="4" fill="#4B9EFF"/>
         <rect x="12" y="18" width="8" height="18" rx="4" fill="#2B7FFF"/>
         <rect x="24" y="10" width="8" height="26" rx="4" fill="#1A56DB"/>
         <rect x="36" y="2"  width="8" height="34" rx="4" fill="#1244AB"/>
       </svg>
-      <span style="font-weight:700;font-size:14px;color:#1E293B;">Recupera Empresas</span>
+      <span class="auth-brand-inline-text">Recupera Empresas</span>
     </div>
 
     <!-- Loading -->
-    <div id="loadingGate">
-      <div class="spinner" style="margin:0 auto 12px;"></div>
+    <div id="loadingGate" class="auth-loading-gate">
+      <div class="spinner auth-loading-spinner"></div>
       Verificando sessão...
     </div>
 
     <!-- Consent UI (hidden until session confirmed) -->
-    <div id="consentGate">
-      <h1 class="auth-card-title" style="margin-bottom:6px;">Autorizar acesso</h1>
-      <p class="auth-card-subtitle" style="margin-bottom:20px;">
+    <div id="consentGate" class="auth-hidden">
+      <h1 class="auth-card-title auth-card-title-tight">Autorizar acesso</h1>
+      <p class="auth-card-subtitle auth-card-subtitle-tight">
         O aplicativo abaixo está solicitando acesso à sua conta Recupera Empresas.
       </p>
 
@@ -97,11 +46,11 @@
         </div>
       </div>
 
-      <p style="font-size:11px;font-weight:700;color:#94A3B8;letter-spacing:.05em;margin-bottom:10px;">PERMISSÕES SOLICITADAS</p>
+      <p class="auth-consent-caption">PERMISSÕES SOLICITADAS</p>
       <ul class="scope-list" id="scopeList"></ul>
 
-      <div class="alert alert-error" id="consentError" style="display:none;margin-bottom:16px;">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;margin-top:1px">
+      <div class="alert alert-error" id="consentError">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="auth-alert-icon">
           <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
         </svg>
         <span id="consentErrorMsg"></span>
@@ -138,20 +87,20 @@
   // ── Guard: must have authorization_id ──────────────────────────────────────
   if (!authorizationId) {
     document.querySelector('.auth-card').innerHTML = `
-      <div style="text-align:center;padding:20px 0;">
-        <div style="width:56px;height:56px;background:#FEF2F2;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+      <div class="auth-state-screen auth-state-screen-visible">
+        <div class="auth-state-icon auth-state-icon-error">
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#DC2626" stroke-width="2">
             <circle cx="12" cy="12" r="10"/>
             <line x1="12" y1="8" x2="12" y2="12"/>
             <line x1="12" y1="16" x2="12.01" y2="16"/>
           </svg>
         </div>
-        <h2 style="font-size:18px;font-weight:700;color:#0F172A;margin-bottom:8px;">Acesso inválido</h2>
-        <p style="color:#64748B;font-size:14px;line-height:1.6;margin-bottom:20px;">
+        <h2 class="auth-state-title auth-state-title-sm">Acesso inválido</h2>
+        <p class="auth-state-copy">
           Esta página só pode ser acessada via fluxo OAuth.<br/>
           Inicie a autorização pelo aplicativo que solicitou acesso.
         </p>
-        <a href="/login.html" style="color:#1A56DB;font-size:14px;font-weight:600;text-decoration:none;">← Voltar ao login</a>
+        <a href="/login.html" class="auth-inline-link">← Voltar ao login</a>
       </div>`;
     return;
   }
@@ -168,8 +117,8 @@
   }
 
   // ── Session confirmed — render consent UI ───────────────────────────────────
-  document.getElementById('loadingGate').style.display  = 'none';
-  document.getElementById('consentGate').style.display  = 'block';
+  document.getElementById('loadingGate').classList.add('auth-hidden');
+  document.getElementById('consentGate').classList.remove('auth-hidden');
 
   // Render scope list
   const SCOPE_LABELS = {
@@ -206,7 +155,7 @@
     const btnDeny  = document.getElementById('btnDeny');
     const errEl    = document.getElementById('consentError');
     const errMsg   = document.getElementById('consentErrorMsg');
-    errEl.style.display = 'none';
+    errEl.classList.remove('show');
 
     btnAllow.disabled = btnDeny.disabled = true;
     if (allow) btnAllow.innerHTML = '<div class="spinner"></div> Autorizando...';
@@ -254,7 +203,7 @@
       console.error('[CONSENT] error:', err);
       const detail = [err?.name, err?.code, err?.status, err?.message].filter(Boolean).join(' | ');
       errMsg.textContent = detail || 'Erro ao processar decisão. Tente novamente.';
-      errEl.style.display = 'flex';
+      errEl.classList.add('show');
       btnAllow.disabled = btnDeny.disabled = false;
       btnAllow.textContent = 'Autorizar';
       btnDeny.textContent  = 'Negar acesso';

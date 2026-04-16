@@ -583,8 +583,8 @@
           </div>
           <div id="docDropZone" class="dashboard-doc-dropzone"
                onclick="document.getElementById('docFileInput').click()"
-               ondragover="event.preventDefault();this.style.borderColor='var(--primary)'"
-               ondragleave="this.style.borderColor='var(--border)'"
+            ondragover="handleDocDragEnter(event)"
+            ondragleave="handleDocDragLeave()"
                ondrop="handleDocDrop(event)">
             <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5" class="dashboard-doc-dropzone-icon"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
             <div class="dashboard-doc-dropzone-label" id="docDropLabel">Clique ou arraste o arquivo aqui</div>
@@ -1111,8 +1111,10 @@ async function submitTicket() {
 // ── Agenda ────────────────────────────────────────────────────────────────────
 function toggleApptForm() {
   const card = document.getElementById('apptFormCard');
-  card.style.display = card.style.display === 'none' ? 'block' : 'none';
-  if (card.style.display === 'block') {
+  if (!card) return;
+  const willShow = card.classList.contains('dashboard-hidden-card');
+  card.classList.toggle('dashboard-hidden-card');
+  if (willShow) {
     const today = new Date().toISOString().split('T')[0];
     document.getElementById('apptDate').min = today;
   }
@@ -1215,7 +1217,9 @@ async function loadFinanceiro() {
   const { invoices = [], stripeConfigured } = await res.json();
 
   const noticeEl = document.getElementById('stripeNotice');
-  if (noticeEl && !stripeConfigured) noticeEl.style.display = 'block';
+  if (noticeEl) {
+    noticeEl.classList.toggle('dashboard-hidden-card', Boolean(stripeConfigured));
+  }
 
   const isPaid = i => i.status === 'paid' || i.status === 'succeeded';
   document.getElementById('finTotal').textContent   = invoices.length;
@@ -1278,10 +1282,10 @@ function openCommentModal(chId, title, action='approve_comment') {
   document.getElementById('commentModalTitle').textContent = title;
   document.getElementById('commentText').value = '';
   const modal = document.getElementById('commentModal');
-  modal.style.display = 'flex';
+  modal.classList.remove('dashboard-modal-hidden');
 }
 function closeCommentModal() {
-  document.getElementById('commentModal').style.display = 'none';
+  document.getElementById('commentModal').classList.add('dashboard-modal-hidden');
 }
 async function submitComment() {
   const text = document.getElementById('commentText').value.trim();
@@ -1384,14 +1388,15 @@ let _selectedDocFile = null;
 
 function toggleDocUploadForm() {
   const card = document.getElementById('docUploadCard');
-  card.style.display = card.style.display === 'none' ? 'block' : 'none';
-  if (card.style.display === 'none') {
+  const wasHidden = card.classList.contains('dashboard-hidden-card');
+  card.classList.toggle('dashboard-hidden-card');
+  if (!wasHidden) {
     _selectedDocFile = null;
     document.getElementById('docFileInput').value = '';
     document.getElementById('docNameInput').value = '';
     document.getElementById('docDropLabel').textContent = 'Clique ou arraste o arquivo aqui';
     document.getElementById('docSubmitBtn').disabled = true;
-    document.getElementById('docSubmitBtn').style.opacity = '.5';
+    document.getElementById('docDropZone').classList.remove('dashboard-doc-dropzone-active');
   }
 }
 
@@ -1400,19 +1405,26 @@ function handleDocFileSelect(input) {
     _selectedDocFile = input.files[0];
     document.getElementById('docDropLabel').textContent = _selectedDocFile.name;
     document.getElementById('docSubmitBtn').disabled = false;
-    document.getElementById('docSubmitBtn').style.opacity = '1';
   }
+}
+
+function handleDocDragEnter(event) {
+  event.preventDefault();
+  document.getElementById('docDropZone').classList.add('dashboard-doc-dropzone-active');
+}
+
+function handleDocDragLeave() {
+  document.getElementById('docDropZone').classList.remove('dashboard-doc-dropzone-active');
 }
 
 function handleDocDrop(event) {
   event.preventDefault();
-  document.getElementById('docDropZone').style.borderColor = 'var(--border)';
+  document.getElementById('docDropZone').classList.remove('dashboard-doc-dropzone-active');
   const file = event.dataTransfer.files[0];
   if (!file) return;
   _selectedDocFile = file;
   document.getElementById('docDropLabel').textContent = file.name;
   document.getElementById('docSubmitBtn').disabled = false;
-  document.getElementById('docSubmitBtn').style.opacity = '1';
 }
 
 async function submitDocument() {
@@ -1702,8 +1714,9 @@ async function loadMembers() {
 
 function toggleMemberForm() {
   const f = document.getElementById('memberForm');
-  f.style.display = f.style.display === 'none' ? 'block' : 'none';
-  if (f.style.display === 'block') document.getElementById('memberName').focus();
+  const willShow = f.classList.contains('dashboard-hidden-panel');
+  f.classList.toggle('dashboard-hidden-panel');
+  if (willShow) document.getElementById('memberName').focus();
 }
 
 async function addMember() {

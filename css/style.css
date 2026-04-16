@@ -34,6 +34,30 @@ body {
   padding-bottom: 90px;
 }
 
+.onboarding-auth-guard {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--dark);
+}
+
+.onboarding-auth-guard-content {
+  color: #fff;
+  text-align: center;
+}
+
+.onboarding-auth-guard-logo {
+  margin-bottom: 16px;
+}
+
+.onboarding-auth-guard-copy {
+  color: var(--text-muted);
+  font-size: 15px;
+}
+
 /* ── Header ─────────────────────────────────────────────────────────────────── */
 .header {
   background: #fff;
@@ -142,6 +166,7 @@ body {
   overflow: hidden;
 }
 .progress-fill {
+  width: 0;
   height: 100%;
   background: linear-gradient(90deg, #1A56DB, #3B82F6, #60A5FA);
   border-radius: 99px;

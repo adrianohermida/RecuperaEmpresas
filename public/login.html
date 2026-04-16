@@ -87,15 +87,15 @@
       <p class="auth-card-subtitle">Acesse o portal para continuar o seu onboarding</p>
 
       <!-- Success (email confirmed, etc.) -->
-      <div class="alert alert-success" id="alertSuccess" style="display:none;background:#ECFDF5;border:1px solid #A7F3D0;color:#065F46;border-radius:8px;padding:12px 14px;font-size:13px;display:none;align-items:flex-start;gap:10px;margin-bottom:16px;">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;margin-top:1px">
+      <div class="alert alert-success" id="alertSuccess">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="auth-alert-icon">
           <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
         </svg>
         <span id="alertSuccessMsg"></span>
       </div>
 
       <div class="alert alert-error" id="alertError">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;margin-top:1px">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="auth-alert-icon">
           <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
         </svg>
         <span id="alertErrorMsg"></span>
@@ -109,9 +109,9 @@
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="password" style="display:flex;justify-content:space-between;">
+          <label class="form-label auth-label-row" for="password">
             Senha
-            <a href="./forgot-password.html" style="font-weight:400;font-size:13px;color:#1A56DB;">Esqueci a senha</a>
+            <a href="./forgot-password.html" class="auth-inline-link auth-inline-link-muted">Esqueci a senha</a>
           </label>
           <div class="form-control-wrap">
             <input class="form-control" type="password" id="password" placeholder="••••••••" autocomplete="current-password"/>
@@ -143,7 +143,7 @@ function togglePwd(id, btn) {
   const inp = document.getElementById(id);
   const showing = inp.type === 'text';
   inp.type = showing ? 'password' : 'text';
-  btn.querySelector('.eye-icon').style.opacity = showing ? '1' : '0.4';
+  btn.classList.toggle('toggle-password-active', !showing);
 }
 
 function showError(id, msg) {
@@ -235,7 +235,7 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
       if (msg.toLowerCase().includes('not confirmed') || msg.toLowerCase().includes('confirmar')) {
         document.getElementById('alertErrorMsg').innerHTML =
           'Confirme seu e-mail antes de entrar. ' +
-          '<a href="#" id="resendLink" style="color:#B91C1C;font-weight:600;text-decoration:underline;">Reenviar confirmação</a>';
+          '<a href="#" id="resendLink" class="auth-inline-link-danger">Reenviar confirmação</a>';
         document.getElementById('resendLink')?.addEventListener('click', async (ev) => {
           ev.preventDefault();
           await fetch('/api/auth/resend-confirmation', {
@@ -322,7 +322,7 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
 function showSuccess(msg) {
   const el = document.getElementById('alertSuccess');
   document.getElementById('alertSuccessMsg').textContent = msg;
-  el.style.display = 'flex';
+  el.classList.add('show');
 }
 
 // Redirect if already logged in

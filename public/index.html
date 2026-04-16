@@ -13,15 +13,15 @@
 <body>
 
   <!-- Auth guard overlay -->
-  <div id="authGuard" style="position:fixed;inset:0;background:#0F172A;display:flex;align-items:center;justify-content:center;z-index:9999;">
-    <div style="text-align:center;color:#fff;">
-      <svg width="44" height="36" viewBox="0 0 44 36" fill="none" style="margin-bottom:16px;">
+  <div id="authGuard" class="onboarding-auth-guard">
+    <div class="onboarding-auth-guard-content">
+      <svg width="44" height="36" viewBox="0 0 44 36" fill="none" class="onboarding-auth-guard-logo">
         <rect x="0"  y="26" width="8" height="10" rx="4" fill="#4B9EFF"/>
         <rect x="12" y="18" width="8" height="18" rx="4" fill="#2B7FFF"/>
         <rect x="24" y="10" width="8" height="26" rx="4" fill="#1A56DB"/>
         <rect x="36" y="2"  width="8" height="34" rx="4" fill="#1244AB"/>
       </svg>
-      <div style="font-size:15px;color:#64748B;">Verificando acesso...</div>
+      <div class="onboarding-auth-guard-copy">Verificando acesso...</div>
     </div>
   </div>
 
@@ -64,7 +64,7 @@
       <span id="progressPct" class="progress-pct-text">0% concluído</span>
     </div>
     <div class="progress-track">
-      <div class="progress-fill" id="progressFill" style="width:0%"></div>
+      <div class="progress-fill" id="progressFill"></div>
     </div>
     <div class="steps-dots" id="stepsDots"></div>
   </div>
