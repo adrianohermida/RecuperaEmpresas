@@ -175,4 +175,6 @@
   window.markInvoicePaid = markInvoicePaid;
   window.cancelInvoice = cancelInvoice;
   window.sendInvoiceEmail = sendInvoiceEmail;
+
+console.info('[RE:admin-invoices] loaded');
 })();

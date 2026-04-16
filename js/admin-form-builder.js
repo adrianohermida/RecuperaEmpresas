@@ -120,4 +120,6 @@
   window.loadFormBuilder = loadFormBuilder;
   window.fbToggleStep = fbToggleStep;
   window.saveFormConfig = saveFormConfig;
+
+console.info('[RE:admin-form-builder] loaded');
 })();

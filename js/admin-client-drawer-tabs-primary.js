@@ -162,4 +162,6 @@
       return false;
     },
   };
+
+console.info('[RE:admin-client-drawer-tabs-primary] loaded');
 })();

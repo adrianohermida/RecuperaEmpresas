@@ -180,3 +180,5 @@ async function renderDrawerTab(tab) {
     window.REAdminDrawerDataTab.render({ body, user, onboarding });
   }
 }
+
+console.info('[RE:admin-client-drawer] loaded');

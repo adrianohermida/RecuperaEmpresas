@@ -120,3 +120,4 @@ async function removeMember(memberId, name) {
     showToast(j.error || 'Erro ao remover.', 'error');
   }
 }
+console.info('[RE:dashboard-members] loaded');

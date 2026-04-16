@@ -463,4 +463,6 @@
   window._submitBookForClient = submitBookForClient;
   window.openBookForClientFromDrawer = openBookForClientFromDrawer;
   window._submitBookFromDrawer = submitBookFromDrawer;
+
+console.info('[RE:admin-agenda] loaded');
 })();

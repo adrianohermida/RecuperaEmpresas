@@ -136,3 +136,4 @@ async function loadInternalInvoices() {
     console.warn('[INT INVOICES]', e.message);
   }
 }
+console.info('[RE:dashboard-finance] loaded');

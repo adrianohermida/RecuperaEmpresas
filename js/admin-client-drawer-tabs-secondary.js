@@ -332,4 +332,6 @@
       return false;
     },
   };
+
+console.info('[RE:admin-client-drawer-tabs-secondary] loaded');
 })();

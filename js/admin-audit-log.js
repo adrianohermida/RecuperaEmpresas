@@ -96,4 +96,6 @@
   window.loadAuditLog = loadAuditLog;
   window.exportAuditLog = exportAuditLog;
   window.toggleAuditDetail = toggleAuditDetail;
+
+console.info('[RE:admin-audit-log] loaded');
 })();

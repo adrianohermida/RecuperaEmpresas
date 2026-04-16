@@ -335,3 +335,4 @@ function stopMsgPolling() {
   clearInterval(_msgPollTimer);
   _msgPollTimer = null;
 }
+console.info('[RE:dashboard-core] loaded');

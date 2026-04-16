@@ -965,4 +965,6 @@
     adminRejectDocReq,
     adminCancelDocReq,
   });
+
+console.info('[RE:admin-client-actions-extended] loaded');
 })();

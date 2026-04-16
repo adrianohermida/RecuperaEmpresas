@@ -282,3 +282,4 @@ async function _submitFulfillReq(reqId, docType) {
     if (btn) { btn.disabled = false; btn.textContent = 'Enviar'; }
   }
 }
+console.info('[RE:dashboard-docs] loaded');

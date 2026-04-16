@@ -431,4 +431,6 @@
       return true;
     },
   };
+
+console.info('[RE:admin-client-drawer-data] loaded');
 })();

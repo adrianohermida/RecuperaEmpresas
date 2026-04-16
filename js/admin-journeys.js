@@ -452,4 +452,6 @@
   window.jrnOpenAssignModal = jrnOpenAssignModal;
   window.jrnSaveAssign = jrnSaveAssign;
   window.jrnRemoveAssignment = jrnRemoveAssignment;
+
+console.info('[RE:admin-journeys] loaded');
 })();

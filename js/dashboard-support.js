@@ -64,3 +64,4 @@ async function submitTicket() {
     showToast(json.error || 'Erro ao abrir chamado.', 'error');
   }
 }
+console.info('[RE:dashboard-support] loaded');

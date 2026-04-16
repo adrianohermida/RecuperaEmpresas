@@ -147,3 +147,4 @@ async function checkoutCredits(pack) {
   if (j.url) window.location.href = j.url;
   else showToast(j.error || 'Erro ao iniciar pagamento.', 'error');
 }
+console.info('[RE:dashboard-agenda] loaded');

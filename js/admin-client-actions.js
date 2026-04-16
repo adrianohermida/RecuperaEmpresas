@@ -121,4 +121,6 @@
   window.updateDocStatus = updateDocStatus;
   window.confirmApptDrawer = confirmApptDrawer;
   window.escHtml = escHtml;
+
+console.info('[RE:admin-client-actions] loaded');
 })();

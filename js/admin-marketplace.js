@@ -239,4 +239,6 @@
   window.submitCreateService = submitCreateService;
   window.toggleService = toggleService;
   window.updateOrderStatus = updateOrderStatus;
+
+console.info('[RE:admin-marketplace] loaded');
 })();

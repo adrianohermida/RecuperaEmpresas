@@ -135,3 +135,5 @@ function renderClientTable(clients) {
     window.REShared.applyPercentClass(bar, bar.dataset.progress || 0);
   });
 }
+
+console.info('[RE:admin-shell-core] loaded');
