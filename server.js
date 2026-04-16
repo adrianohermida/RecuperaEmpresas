@@ -25,6 +25,7 @@ const agendaRoutes = require('./routes/agenda');
 const adminAgendaRoutes = require('./routes/admin-agenda');
 const supportFinancialRoutes = require('./routes/support-financial');
 const formConfigRoutes = require('./routes/form-config');
+const formRoutes = require('./routes/forms');
 const { adjustCredits } = agendaRoutes;
 
 const {
@@ -374,6 +375,7 @@ app.use(agendaRoutes);
 app.use(adminAgendaRoutes);
 app.use(supportFinancialRoutes);
 app.use(formConfigRoutes);
+app.use(formRoutes);
 
 // ── Stripe webhook: credit the account on payment ────────────────────────────
 // Body is already raw Buffer via the global middleware at /api/stripe/webhook
