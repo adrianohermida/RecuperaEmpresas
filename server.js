@@ -27,6 +27,12 @@ const auditLogRoutes = require('./routes/audit-log');
 const cronRoutes = require('./routes/crons');
 const stripeWebhookRoutes = require('./routes/stripe-webhook');
 const adminSystemRoutes = require('./routes/admin-system');
+const departmentRoutes = require('./routes/departments');
+const creditorRoutes = require('./routes/creditors');
+const supplierRoutes = require('./routes/suppliers');
+const employeeRoutes = require('./routes/employees');
+const entityDocumentRoutes = require('./routes/entity-documents');
+const dataChangeRequestRoutes = require('./routes/data-change-requests');
 
 const {
   PORT,
@@ -168,6 +174,12 @@ app.use(auditLogRoutes);
 app.use(cronRoutes);
 app.use(stripeWebhookRoutes);
 app.use(adminSystemRoutes);
+app.use(departmentRoutes);
+app.use(creditorRoutes);
+app.use(supplierRoutes);
+app.use(employeeRoutes);
+app.use(entityDocumentRoutes);
+app.use(dataChangeRequestRoutes);
 
 // ─── Health check (used by Render.com and uptime monitors) ───────────────────
 app.get(['/api/health', '/healthz'], (req, res) => {

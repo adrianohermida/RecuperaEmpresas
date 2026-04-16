@@ -116,20 +116,119 @@ router.put('/api/admin/client/:id/plan/chapter/:chapterId', requireAdmin, async 
 });
 
 router.post('/api/admin/client/:id/message', requireAdmin, async (req, res) => {
-  const { text } = req.body;
+  const { text, to_member_id } = req.body;
   if (!text?.trim()) return res.status(400).json({ error: 'Mensagem vazia.' });
-  const msg = await insertMessage({
+
+  // If targeting a specific team member, insert with to_member_id
+  const msgPayload = {
     user_id:   req.params.id,
     from_role: 'admin',
     from_name: req.user.name || req.user.email,
     text:      text.trim(),
-  });
+  };
+  if (to_member_id) msgPayload.to_member_id = to_member_id;
+
+  const { data: msg } = await sb.from('re_messages').insert(msgPayload).select().single();
 
   // Notify client about new message from consultant
   pushNotification(req.params.id, 'message', 'Nova mensagem do consultor',
     text.trim().slice(0, 100), 'message', req.params.id).catch(e => console.warn('[async]', e?.message));
 
   res.json({ success: true, message: msg });
+});
+
+// ─── Admin: Edit client details ───────────────────────────────────────────────
+router.put('/api/admin/client/:id', requireAdmin, async (req, res) => {
+  const { name, company, email } = req.body;
+  if (!name?.trim() && !company?.trim() && !email?.trim()) {
+    return res.status(400).json({ error: 'Nenhum campo para atualizar.' });
+  }
+  const before = await findUserById(req.params.id);
+  if (!before) return res.status(404).json({ error: 'Cliente não encontrado.' });
+
+  const { sendMail, emailWrapper } = require('../lib/email');
+  const { BASE_URL } = require('../lib/config');
+
+  const updates = { updated_at: new Date().toISOString() };
+  if (name?.trim())    updates.name    = name.trim();
+  if (company?.trim()) updates.company = company.trim();
+  if (email?.trim())   updates.email   = email.toLowerCase().trim();
+
+  // LGPD: create a change request instead of directly updating sensitive fields
+  const { dataChangeRequestRoutes } = require('./data-change-requests');
+  const fieldChanges = {};
+  if (updates.name    && updates.name    !== before.name)    fieldChanges.name    = { from: before.name,    to: updates.name };
+  if (updates.company && updates.company !== before.company) fieldChanges.company = { from: before.company, to: updates.company };
+  if (updates.email   && updates.email   !== before.email)   fieldChanges.email   = { from: before.email,   to: updates.email };
+
+  if (!Object.keys(fieldChanges).length) {
+    return res.json({ success: true, message: 'Nenhuma alteração detectada.' });
+  }
+
+  // Insert a LGPD change request and notify the client to confirm
+  const { data: cr } = await sb.from('re_data_change_requests').insert({
+    company_id: req.params.id,
+    requested_by: req.user.id,
+    requester_role: 'admin',
+    entity_type: 're_users',
+    entity_id: req.params.id,
+    field_changes: fieldChanges,
+    reason: req.body.reason || 'Atualização de dados pelo consultor.',
+  }).select().single();
+
+  const fields = Object.entries(fieldChanges)
+    .map(([k, v]) => `<li><b>${k}:</b> ${v.from ?? '—'} → ${v.to ?? '—'}</li>`).join('');
+  const confirmUrl = `${BASE_URL}/dashboard.html?change_request=${cr?.token}`;
+  sendMail(before.email,
+    'Confirmação de alteração de dados — Recupera Empresas',
+    emailWrapper('Solicitação de alteração de dados',
+      `<p>O consultor solicitou as seguintes alterações:</p>
+       <ul>${fields}</ul>
+       <p>Acesse o portal para confirmar ou recusar:</p>
+       <p><a href="${confirmUrl}">Revisar alterações</a></p>
+       <p style="font-size:12px;color:#9ca3af">Esta solicitação expira em 48 horas.</p>`
+    )
+  ).catch(e => console.warn('[async]', e?.message));
+
+  auditLog({ actorId: req.user.id, actorEmail: req.user.email, actorRole: 'admin',
+    entityType: 're_users', entityId: req.params.id, action: 'change_requested',
+    after: fieldChanges }).catch(e => console.warn('[async]', e?.message));
+
+  res.json({ success: true, pending: true, message: 'Solicitação de alteração enviada. O cliente receberá um e-mail para confirmar.' });
+});
+
+// ─── Admin: Delete client account ────────────────────────────────────────────
+router.delete('/api/admin/client/:id', requireAdmin, async (req, res) => {
+  const { sendMail, emailWrapper } = require('../lib/email');
+  const { confirm } = req.body;
+  if (confirm !== 'CONFIRMAR_EXCLUSAO') {
+    return res.status(400).json({
+      error: 'Para excluir, envie { confirm: "CONFIRMAR_EXCLUSAO" } no body.',
+    });
+  }
+  const user = await findUserById(req.params.id);
+  if (!user) return res.status(404).json({ error: 'Cliente não encontrado.' });
+  if (user.is_admin) return res.status(403).json({ error: 'Não é possível excluir uma conta admin.' });
+
+  auditLog({ actorId: req.user.id, actorEmail: req.user.email, actorRole: 'admin',
+    entityType: 're_users', entityId: req.params.id, action: 'delete',
+    before: { email: user.email, company: user.company } }).catch(e => console.warn('[async]', e?.message));
+
+  // Cascade delete via FK (all user data will be removed)
+  const { error } = await sb.from('re_users').delete().eq('id', req.params.id);
+  if (error) return res.status(500).json({ error: error.message });
+
+  // Notify the user their account was deleted (LGPD)
+  sendMail(user.email, 'Conta encerrada — Recupera Empresas',
+    emailWrapper('Conta encerrada',
+      `<p>Olá, ${user.name || user.email}!</p>
+       <p>Sua conta no portal Recupera Empresas foi encerrada pelo consultor responsável.</p>
+       <p>Todos os seus dados foram removidos conforme a LGPD.</p>
+       <p>Se tiver dúvidas, entre em contato com nossa equipe.</p>`
+    )
+  ).catch(e => console.warn('[async]', e?.message));
+
+  res.json({ success: true, message: 'Conta excluída com sucesso.' });
 });
 
 // ─── Admin: XLS export ────────────────────────────────────────────────────────
