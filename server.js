@@ -2625,7 +2625,7 @@ app.post('/api/stripe/webhook', async (req, res) => {
             'Falha no pagamento',
             `<p>Olá, <b>${user.name || user.company || user.email}</b>!</p>
              <p>Não foi possível processar o pagamento da fatura <b>${inv.number || inv.id}</b>.</p>
-             <p><a href="${inv.hosted_invoice_url}" style="color:#2563EB;">Clique aqui para regularizar o pagamento.</a></p>`
+             <p><a href="${inv.hosted_invoice_url}" ${emailStyle('footerLink')}>Clique aqui para regularizar o pagamento.</a></p>`
           )).catch(e => console.warn('[async]', e?.message));
         }
       }
@@ -2962,7 +2962,7 @@ app.post('/api/admin/agenda/book-for-client', requireAdmin, async (req, res) => 
         `<p>Olá, <b>${name}</b>! Seu agendamento foi confirmado.</p>
          <p><b>Sessão:</b> ${slot.title||'Consultoria'}<br><b>Data:</b> ${startsAtFmt}<br><b>Modalidade:</b> ${slot.location==='presencial'?'Presencial':'Online'}</p>
          ${linkLine}
-         <p style="font-size:13px;color:#64748B;">Você receberá um lembrete 24h antes.</p>`
+         <p ${emailStyle('metaText', 'margin-top:0')}>Você receberá um lembrete 24h antes.</p>`
       )).catch(e => console.warn('[async]', e?.message));
     }
 
@@ -5081,7 +5081,7 @@ app.post('/api/admin/invoices/:id/send-email', requireAdmin, async (req, res) =>
          <li><strong>Valor:</strong> ${amtFmt}</li>
          <li><strong>Vencimento:</strong> ${dueFmt}</li>
        </ul>
-       <p><a href="${pdfUrl}" style="background:#1A56DB;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;">Baixar Boleto PDF</a></p>
+         <p><a href="${pdfUrl}" ${emailStyle('primaryButton', 'padding:10px 20px')}>Baixar Boleto PDF</a></p>
        <p>Acesse o <a href="${BASE_URL}/dashboard.html">Portal do Cliente</a> para mais detalhes.</p>`
     );
 
