@@ -17,199 +17,76 @@ const rateLimit = require('express-rate-limit');
 const authRoutes = require('./routes/auth');
 const onboardingRoutes = require('./routes/onboarding');
 
-// ─── Config ───────────────────────────────────────────────────────────────────
-const PORT       = process.env.PORT       || 3000;
-const JWT_SECRET = process.env.JWT_SECRET || crypto.randomBytes(64).toString('hex');
-const BASE_URL   = process.env.BASE_URL   || `http://localhost:${PORT}`;
-
-// Freshdesk — secret: FRESHDESK_API_KEY | domínio: FRESHSALES_ALIAS_DOMAIN (fallback FRESHDESK_DOMAIN)
-const FRESHDESK_HOST = (
-  app.use(authRoutes);
-  app.use(onboardingRoutes);
-
-  app.get('/oauth/consent', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'oauth-consent.html'));
-  });
-  generatedBox: 'margin-top:12px;padding:10px 16px;background:#f1f5f9;border-radius:6px;font-size:12px;color:#64748b',
-  completeHeading: 'font-size:15px;color:#1A56DB;margin:20px 0 8px;padding-bottom:6px;border-bottom:2px solid #DBEAFE',
-};
-
-function emailStyle(name, extra = '') {
-  const base = EMAIL_STYLE[name] || '';
-  const full = [base, extra].filter(Boolean).join(';');
-  return `style="${full}"`;
-}
-
-function emailFactRow(label, value, valueExtra = '') {
-  return `<tr><td ${emailStyle('factLabel')}>${label}</td><td ${emailStyle('factValue', valueExtra)}>${value}</td></tr>`;
-}
-
-function emailFactTable(rows) {
-  return `<table ${emailStyle('factTable')}>${rows}</table>`;
-}
-
-function emailWrapper(title, body) {
-  return `<div ${emailStyle('wrapper600')}>
-    <div ${emailStyle('header')}>
-      <h1 ${emailStyle('headerTitle')}>Recupera Empresas</h1>
-      <p ${emailStyle('headerSubtitle')}>${title}</p>
-    </div>
-    <div ${emailStyle('panel')}>${body}</div>
-    <div ${emailStyle('footer')}>
-      © 2025 Recupera Empresas · <a href="mailto:contato@recuperaempresas.com.br" ${emailStyle('footerLink')}>contato@recuperaempresas.com.br</a>
-    </div>
-  </div>`;
-}
-
-function buildClientStepConfirmHtml(stepNum, user, ts) {
-  const total = 14;
-  const pct   = Math.round((stepNum / total) * 100);
-  const name  = user.name || user.full_name || '';
-  return emailWrapper(`Etapa ${stepNum} concluída — Onboarding`, `
-    <p>Olá, <b>${name}</b>!</p>
-    <p>Recebemos as informações da <b>Etapa ${stepNum} de ${total} — ${STEP_TITLES[stepNum]}</b>.</p>
-    <div ${emailStyle('progressBox')}>
-      <div ${emailStyle('progressRow')}>
-        <div ${emailStyle('progressValue')}>${pct}%</div>
-        <div>
-          <div ${emailStyle('progressTitle')}>Progresso do onboarding</div>
-          <div ${emailStyle('progressCopy')}>${stepNum} de ${total} etapas concluídas</div>
-        </div>
-      </div>
-      <div ${emailStyle('progressTrack')}>
-        <div ${emailStyle('progressTrack', `background:#1A56DB;width:${pct}%`)}></div>
-      </div>
-    </div>
-    ${stepNum < 14
-      ? `<p ${emailStyle('centerCta')}>
-          <a href="${BASE_URL}/dashboard.html" ${emailStyle('primaryButton')}>Acessar o Portal</a>
-         </p>`
-      : `<div ${emailStyle('successBox')}>
-          <p ${emailStyle('successTitle')}>Onboarding concluído!</p>
-          <p ${emailStyle('successCopy')}>Nossa equipe iniciará a análise e elaboração do Business Plan em até 2 dias úteis.</p>
-         </div>`
-    }
-    <p ${emailStyle('metaText')}>Dúvidas? <a href="mailto:contato@recuperaempresas.com.br" ${emailStyle('footerLink')}>contato@recuperaempresas.com.br</a></p>
-    <p ${emailStyle('timeText')}>Enviado em ${ts}</p>
-  `);
-}
-
-function buildStepHtml(stepNum, allData, user, timestamp) {
-  const s  = v => v || '<em>não informado</em>';
-  const yn = v => v === 'sim' ? 'Sim' : v === 'nao' ? 'Não' : s(v);
-  const row = (k, v) => `<tr>
-    <td ${emailStyle('tableLabel')}>${k}</td>
-    <td ${emailStyle('tableValue')}>${v}</td></tr>`;
-  const tbl = rows => `<table ${emailStyle('table')}>${rows}</table>`;
-
-  const empresa  = allData.empresa || {};
-  const userName = user.name || user.full_name || user.email || '';
-  let body = `
-  <div ${emailStyle('wrapper700')}>
-    <div ${emailStyle('header')}>
-      <h1 ${emailStyle('headerTitle')}>Recupera Empresas — Onboarding</h1>
-      <p ${emailStyle('headerSubtitle')}>Etapa ${stepNum} concluída: ${STEP_TITLES[stepNum] || ''}</p>
-    </div>
-    <div ${emailStyle('infoBar')}>
-      <b ${emailStyle('infoLabel')}>Cliente:</b>
-      <span ${emailStyle('infoValue')}> ${userName} — ${empresa.razaoSocial || user.company || 'empresa'} &lt;${user.email}&gt;</span>
-      <span ${emailStyle('infoTime')}>${timestamp}</span>
-    </div>
-    <div ${emailStyle('panelCompact')}>`;
-
-  const D = allData;
-  if (stepNum === 1)  body += tbl(row('Consentimento LGPD', D.lgpd?.concordo ? 'Aceito' : 'Nao aceito'));
-  if (stepNum === 2) {
-    const e = D.empresa || {};
-    body += tbl([row('Razão Social',s(e.razaoSocial)),row('Nome Fantasia',s(e.nomeFantasia)),
-      row('CNPJ',s(e.cnpj)),row('Endereço',s(e.endereco)),
-      row('Cidade/UF',`${s(e.cidade)} / ${s(e.estado)}`),row('CEP',s(e.cep)),
-      row('E-mail',s(e.email)),row('Telefone',s(e.telefone))].join(''));
-  }
-  if (stepNum === 3) {
-    (D.socios||[]).forEach((sc,i) => {
-      body += `<p ${emailStyle('sectionHeading')}>Sócio ${i+1}</p>`;
-      body += tbl([row('Nome',s(sc.nome)),row('CPF',s(sc.cpf)),row('Data Nasc.',s(sc.dataNascimento)),
-        row('Endereço',s(sc.endereco)),row('E-mail',s(sc.email)),row('Telefone',s(sc.telefone)),
-        row('Participação',sc.participacao?`${sc.participacao}%`:'não informado'),row('Cargo',s(sc.cargo))].join(''));
-    });
-  }
-  if (stepNum === 4) {
-    const o = D.operacional||{};
-    body += tbl([row('Ramo de Atividade',s(o.ramoAtividade)),row('Atividade Principal',s(o.atividadePrincipal)),
-      row('Tempo de Operação',s(o.tempoOperacao)),row('Qtd. Unidades',s(o.quantidadeUnidades)),
-      row('Possui Filiais',yn(o.possuiFiliais)),row('Descrição',s(o.descricaoOperacao))].join(''));
-  }
-  if (stepNum === 5) {
-    const f = D.funcionarios||{};
-    body += tbl([row('Total',s(f.total)),row('Administrativo',s(f.administrativo)),
-      row('Operacional',s(f.operacional)),row('Comercial',s(f.comercial)),
-      row('Folha em Atraso',yn(f.folhaEmAtraso)),row('Ações Trabalhistas',yn(f.acoesTrabalhistasAndamento)),
-      row('Demissões Recentes',yn(f.demissoesRecentes)),row('Detalhe',s(f.detalheDemissoes))].join(''));
-  }
-  if (stepNum === 6) {
-    const a = D.ativos||{};
-    body += tbl([row('Possui Ativos',yn(a.possuiAtivos)),row('Descrição',s(a.descricaoAtivos)),
-      row('Estimativa de Valor',s(a.estimativaValor)),row('Financiados/Alienados',yn(a.ativosFinanciadosAliendados)),
-      row('Ociosos',yn(a.ativosOciosos)),row('Desc. Ociosos',s(a.descricaoAtivosOciosos))].join(''));
-  }
-  if (stepNum === 7) {
-    const f = D.financeiro||{};
-    body += tbl([row('Receita Média Mensal',s(f.receitaMediaMensal)),row('Fontes de Receita',s(f.principaisFontesReceita)),
-      row('Custos Fixos',s(f.custosFixosMensais)),row('Custos Variáveis',s(f.custosVariaveis)),
-      row('Principais Despesas',s(f.principaisDespesas)),row('Controle Financeiro',yn(f.possuiControleFinanceiro)),
-      row('Sistema de Controle',s(f.sistemaControle))].join(''));
-  }
-  if (stepNum === 8) {
-    (D.dividas||[]).forEach((d,i) => {
-      body += `<p ${emailStyle('sectionHeading')}>Dívida ${i+1}</p>`;
-      body += tbl([row('Credor',s(d.nomeCredor)),row('Tipo',s(d.tipoDivida)),
-        row('Valor Original',s(d.valorOriginal)),row('Saldo Atual',s(d.saldoAtual)),
-        row('Garantia',yn(d.possuiGarantia)),row('Judicializada',yn(d.estaJudicializada)),
-        row('Nº Processo',s(d.numeroProcesso))].join(''));
-    });
-  }
-  if (stepNum === 9) {
-    const c = D.crise||{};
-    body += tbl([row('Início das Dificuldades',s(c.inicioDificuldades)),
-      row('Principais Eventos',s(c.principaisEventos)),
-      row('Causas',Array.isArray(c.causasCrise)?c.causasCrise.join(', '):s(c.causasCrise)),
-      row('Eventos 24 meses',Array.isArray(c.eventos24m)?c.eventos24m.join(', '):s(c.eventos24m)),
-      row('Tentou Reestruturação',yn(c.tentouReestruturacao)),
-      row('Descrição Reestruturação',s(c.descricaoReestruturacao))].join(''));
-  }
-  if (stepNum === 10) {
-    const d = D.diagnostico||{};
-    body += tbl([row('Principal Problema',s(d.principalProblema)),
-      row('Áreas Críticas',Array.isArray(d.areasCriticas)?d.areasCriticas.join(', '):s(d.areasCriticas)),
-      row('O que Funciona Bem',s(d.oqueFuncionaBem)),row('Unidade Lucrativa',yn(d.existeUnidadeLucrativa)),
-      row('Descrição Unidade',s(d.descricaoUnidade)),row('Deve ser Encerrado',s(d.deveSerEncerrado))].join(''));
-  }
-  if (stepNum === 11) {
-    const m = D.mercado||{};
-    body += tbl([row('Principais Clientes',s(m.principaisClientes)),row('Concentração de Receita',yn(m.concentracaoReceita)),
-      row('Dependência de Contratos',yn(m.dependenciaContratos)),row('Demanda do Mercado',s(m.demandaMercado)),
-      row('Potencial de Crescimento',yn(m.potencialCrescimento)),row('Desc. Potencial',s(m.descricaoPotencial))].join(''));
-  }
-  if (stepNum === 12) {
-    const e = D.expectativas||{};
-    body += tbl([row('Objetivo com o Plano',Array.isArray(e.objetivoPlano)?e.objetivoPlano.join(', '):s(e.objetivoPlano)),
-      row('Disposto a',Array.isArray(e.dispostoA)?e.dispostoA.join(', '):s(e.dispostoA)),
-      row('Interesse em RJ',s(e.interesseRJ))].join(''));
-  }
-  if (stepNum === 13) body += `<p ${emailStyle('sectionNote')}>Documentos anexados — verificar e-mail de envio final.</p>`;
-  if (stepNum === 14) {
-    const r = D.responsavel||{};
-    body += tbl([row('Nome',s(r.nome)),row('Cargo',s(r.cargo)),row('E-mail',s(r.email)),row('Telefone',s(r.telefone)),
-      row('Declaração',D.confirmacao?.declaro?'Confirmada':'Nao confirmada')].join(''));
-  }
-  body += `</div>
-    <div ${emailStyle('generatedBox')}>
-      Gerado em ${timestamp} via Portal de Onboarding — Recupera Empresas
-    </div>
-  </div>`;
-  return body;
-}
+const {
+  PORT,
+  JWT_SECRET,
+  BASE_URL,
+  FRESHDESK_HOST,
+  FRESHDESK_KEY,
+  FD_AUTH,
+  FRESHSALES_HOST,
+  FRESHSALES_KEY,
+  FRESHCHAT_HOST,
+  FRESHCHAT_KEY,
+  FRESHCHAT_JWT_SECRET,
+  RESEND_KEY,
+  EMAIL_FROM,
+  EMAIL_TO,
+  STRIPE_SECRET_KEY,
+  STRIPE_PUBLIC_KEY,
+  STRIPE_ACCOUNT_ID,
+  STRIPE_WEBHOOK_SECRET,
+  ADMIN_EMAILS,
+  GOOGLE_CLIENT_EMAIL,
+  GOOGLE_PRIVATE_KEY,
+  GOOGLE_CALENDAR_ID,
+  GOOGLE_CALENDAR_TZ,
+  SUPABASE_URL,
+  SUPABASE_SERVICE_KEY,
+  SUPABASE_ANON_KEY,
+  SUPABASE_KEY,
+  AUTH_EMAIL_REDIRECTS,
+  UPLOADS_DIR,
+  sb,
+  sbAnon,
+} = require('./lib/config');
+const { signToken, verifyToken, requireAuth, requireAdmin } = require('./lib/auth');
+const {
+  findUserByEmail,
+  findUserById,
+  saveUser,
+  readOnboarding,
+  saveOnboarding,
+  readPlan,
+  saveChapterStatus,
+  readTasks,
+  upsertTask,
+  readMessages,
+  insertMessage,
+  readAppointments,
+  insertAppointment,
+  updateAppointment,
+} = require('./lib/db');
+const { logAccess, auditLog, pushNotification } = require('./lib/logging');
+const {
+  createFreshdeskTicket,
+  createFreshdeskContact,
+  addFreshdeskNote,
+  updateFreshdeskTicket,
+  syncFreshsalesContact,
+  createFreshsalesDeal,
+} = require('./lib/crm');
+const {
+  sendMail,
+  STEP_TITLES,
+  EMAIL_STYLE,
+  emailStyle,
+  emailFactRow,
+  emailFactTable,
+  emailWrapper,
+  buildClientStepConfirmHtml,
+  buildStepHtml,
+} = require('./lib/email');
 
 // ─── Express ──────────────────────────────────────────────────────────────────
 const app = express();
@@ -491,597 +368,11 @@ async function updateWithColumnFallback(table, match, payload, options = {}) {
   return { data: null, error: new Error(`Falha ao atualizar ${table} com fallback de schema.`), payload: candidate };
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// AUTH ROUTES
-// ═══════════════════════════════════════════════════════════════════════════════
+app.use(authRoutes);
+app.use(onboardingRoutes);
 
-// ─── Helper: find or create re_users profile from a Supabase Auth user ────────
-async function upsertProfileFromAuth(authUser, extra = {}) {
-  const email   = authUser.email;
-  const isAdmin = ADMIN_EMAILS.includes(email.toLowerCase());
-
-  // Try to find by Supabase Auth UUID first (id column), then by email
-  let { data: profile } = await sb.from('re_users').select('*').eq('id', authUser.id).single();
-  if (!profile) {
-    ({ data: profile } = await sb.from('re_users').select('*').ilike('email', email).limit(1).single());
-  }
-
-  if (profile) {
-    // Sync id + admin flag if needed
-    const updates = {};
-    if (profile.id !== authUser.id) updates.id = authUser.id;
-    if (!profile.is_admin && isAdmin) updates.is_admin = true;
-    if (Object.keys(updates).length) {
-      if (updates.id) {
-        // id changed — insert new row then delete old
-        try { await sb.from('re_users').insert({ ...profile, ...updates }); } catch {}
-        try { await sb.from('re_users').delete().eq('id', profile.id); } catch {}
-      } else {
-        await sb.from('re_users').update(updates).eq('id', profile.id);
-      }
-      profile = { ...profile, ...updates };
-    }
-    return profile;
-  }
-
-  // Create new profile
-  const name    = extra.name || authUser.user_metadata?.name || email.split('@')[0];
-  const company = extra.company || authUser.user_metadata?.company || '';
-  const { data: newProfile, error } = await sb.from('re_users').insert({
-    id:       authUser.id,
-    email,
-    name,
-    company,
-    is_admin: isAdmin,
-  }).select().single();
-  if (error) throw error;
-  return newProfile;
-}
-
-app.post('/api/auth/register', async (req, res) => {
-  try {
-    const { name, email, company, password } = req.body;
-    if (!name||!email||!password) return res.status(400).json({ error: 'Preencha todos os campos.' });
-    if (password.length < 8) return res.status(400).json({ error: 'A senha deve ter pelo menos 8 caracteres.' });
-
-    // Create Supabase Auth account
-    const { data: authData, error: signUpErr } = await sbAnon.auth.signUp({
-      email, password,
-      options: {
-        data: { name, company: company || '' },
-        emailRedirectTo: AUTH_EMAIL_REDIRECTS.confirmSignUp,
-      }
-    });
-    if (signUpErr) {
-      if (signUpErr.message?.toLowerCase().includes('already registered') ||
-          signUpErr.message?.toLowerCase().includes('already been registered') ||
-          signUpErr.status === 422) {
-        return res.status(409).json({ error: 'Este e-mail já está cadastrado.' });
-      }
-      throw signUpErr;
-    }
-
-    const authUser = authData.user;
-    const profile  = await upsertProfileFromAuth(authUser, { name, company: company || '' });
-
-    // Freshdesk contact + ticket + Freshsales CRM (fire and forget)
-    Promise.all([
-      createFreshdeskContact(email, name),
-      createFreshdeskTicket(email, name, company),
-      syncFreshsalesContact(email, name, company, null),
-    ]).then(async ([contactId, ticketId, fsContactId]) => {
-      const updates = {};
-      if (contactId)   updates.freshdesk_contact_id  = contactId;
-      if (ticketId)    updates.freshdesk_ticket_id   = ticketId;
-      if (fsContactId) updates.freshsales_contact_id = fsContactId;
-      if (Object.keys(updates).length) {
-        await sb.from('re_users').update(updates).eq('id', profile.id);
-      }
-    }).catch(e => console.warn('[async]', e?.message));
-
-    logAccess(profile.id, email, 'register', req.ip);
-
-    // If Supabase requires email confirmation, session is null.
-    // Return pending_confirmation so the frontend shows "check your email".
-    if (!authData.session) {
-      return res.json({ success: true, pending_confirmation: true, email });
-    }
-
-    // When email confirmation is disabled in Supabase, the account is already
-    // active and we can continue. We intentionally do not send a parallel auth
-    // email here so the Supabase templates remain the single source of truth
-    // for sign-up / invite / recovery communications.
-    const token = signToken({ userId: profile.id, email: profile.email });
-    res.json({ success: true, token, user: safeUser(profile) });
-  } catch(e) {
-    console.error('[REGISTER]', e.message);
-    res.status(500).json({ error: 'Erro interno ao criar conta.' });
-  }
-});
-
-app.post('/api/auth/login', async (req, res) => {
-  try {
-    const { email, password } = req.body;
-    if (!email||!password) return res.status(400).json({ error: 'Preencha todos os campos.' });
-
-    // Validate credentials via Supabase Auth
-    const { data: authData, error: signInErr } = await sbAnon.auth.signInWithPassword({ email, password });
-    if (signInErr || !authData?.user) {
-      return res.status(401).json({ error: 'E-mail ou senha incorretos.' });
-    }
-
-    // Look up / create re_users profile
-    const profile = await upsertProfileFromAuth(authData.user);
-
-    logAccess(profile.id, email, 'login', req.ip);
-
-    const token = signToken({ userId: profile.id, email: profile.email });
-
-    // Also return the Supabase session so the browser can store it for the
-    // OAuth consent page (supabase.auth.oauth.approveAuthorization requires
-    // a live Supabase session in localStorage, not just our custom JWT).
-    const supabaseSession = authData.session
-      ? { access_token: authData.session.access_token, refresh_token: authData.session.refresh_token, expires_at: authData.session.expires_at }
-      : null;
-
-    res.json({ success: true, token, user: safeUser(profile), supabase_session: supabaseSession });
-  } catch(e) {
-    console.error('[LOGIN]', e.message);
-    res.status(500).json({ error: 'Erro interno.' });
-  }
-});
-
-app.get('/api/auth/verify', requireAuth, async (req, res) => {
-  logAccess(req.user.id, req.user.email, 'verify', req.ip);
-  const pub = safeUser(req.user);
-  if (req.isImpersonating) pub._impersonating = true;
-  res.json({ valid: true, user: pub });
-});
-
-app.post('/api/auth/forgot', async (req, res) => {
-  try {
-    const { email } = req.body;
-    if (!email) return res.status(400).json({ error: 'Informe o e-mail.' });
-
-    // Supabase Auth sends the recovery email with a link pointing to redirectTo
-    // The link will contain #access_token=...&type=recovery in the hash fragment
-    const resetRedirect = AUTH_EMAIL_REDIRECTS.resetPassword;
-    const { error } = await sbAnon.auth.resetPasswordForEmail(email, {
-      redirectTo: resetRedirect,
-    });
-    // Always respond success to avoid email enumeration
-    if (error) console.warn('[FORGOT]', error.message);
-    res.json({ success: true });
-  } catch(e) { console.error(e); res.status(500).json({ error: 'Erro ao enviar e-mail.' }); }
-});
-
-// /api/auth/reset — called by reset-password.html with the Supabase access_token
-// from the recovery URL hash fragment.  We validate the token server-side and
-// update the password via the Auth admin API so bcrypt is never involved.
-app.post('/api/auth/reset', async (req, res) => {
-  try {
-    const { access_token, refresh_token, password } = req.body;
-    if (!access_token || !password) return res.status(400).json({ error: 'Dados inválidos.' });
-    if (password.length < 8) return res.status(400).json({ error: 'Mínimo 8 caracteres.' });
-
-    // Set session with the recovery tokens
-    const { data: sessionData, error: sessionErr } = await sbAnon.auth.setSession({
-      access_token,
-      refresh_token: refresh_token || access_token,
-    });
-    if (sessionErr || !sessionData?.user) {
-      return res.status(400).json({ error: 'Link inválido ou expirado.' });
-    }
-
-    // Update password via admin API (service role)
-    const userId = sessionData.user.id;
-    const { error: updateErr } = await sb.auth.admin.updateUserById(userId, { password });
-    if (updateErr) {
-      console.error('[RESET]', updateErr.message);
-      return res.status(400).json({ error: 'Erro ao atualizar senha. Solicite um novo link.' });
-    }
-
-    res.json({ success: true });
-  } catch(e) {
-    console.error('[RESET]', e.message);
-    res.status(500).json({ error: 'Erro interno.' });
-  }
-});
-
-// /api/auth/confirm — auto-login after user clicks email confirmation / magic-link
-// Receives the Supabase access_token from the URL hash fragment and exchanges it for our JWT
-app.post('/api/auth/confirm', async (req, res) => {
-  try {
-    const { access_token, refresh_token } = req.body;
-    if (!access_token) return res.status(400).json({ error: 'Token ausente.' });
-
-    const { data, error } = await sbAnon.auth.setSession({
-      access_token,
-      refresh_token: refresh_token || access_token,
-    });
-    if (error || !data?.user) return res.status(401).json({ error: 'Token de confirmação inválido ou expirado.' });
-
-    const profile = await upsertProfileFromAuth(data.user);
-    await sbAnon.auth.signOut().catch(e => console.warn('[async]', e?.message)); // clear Supabase session — we use our own JWT
-    logAccess(profile.id, profile.email, 'confirm', req.ip);
-    const token = signToken({ userId: profile.id, email: profile.email });
-    res.json({ success: true, token, user: safeUser(profile) });
-  } catch(e) {
-    console.error('[CONFIRM]', e.message);
-    res.status(500).json({ error: 'Erro interno.' });
-  }
-});
-
-// /api/auth/resend-confirmation — resend Supabase confirmation email
-app.post('/api/auth/resend-confirmation', async (req, res) => {
-  try {
-    const { email } = req.body;
-    if (!email) return res.status(400).json({ error: 'Informe o e-mail.' });
-    await sbAnon.auth.resend({
-      type: 'signup',
-      email,
-      options: { emailRedirectTo: AUTH_EMAIL_REDIRECTS.confirmSignUp },
-    });
-    res.json({ success: true });
-  } catch(e) {
-    console.error('[RESEND]', e.message);
-    res.status(500).json({ error: 'Erro ao reenviar.' });
-  }
-});
-
-// /api/auth/magic-link — send Supabase magic-link email using the configured
-// "Magic link" template in the Supabase dashboard.
-app.post('/api/auth/magic-link', async (req, res) => {
-  try {
-    const { email } = req.body;
-    if (!email) return res.status(400).json({ error: 'Informe o e-mail.' });
-
-    const { error } = await sbAnon.auth.signInWithOtp({
-      email,
-      options: {
-        shouldCreateUser: false,
-        emailRedirectTo: AUTH_EMAIL_REDIRECTS.magicLink,
-      },
-    });
-
-    if (error) {
-      console.warn('[MAGIC LINK]', error.message);
-      return res.status(400).json({ error: 'Não foi possível enviar o magic link.' });
-    }
-
-    res.json({ success: true });
-  } catch (e) {
-    console.error('[MAGIC LINK]', e.message);
-    res.status(500).json({ error: 'Erro ao enviar magic link.' });
-  }
-});
-
-// /api/admin/invite-user — send Supabase invite email using the configured
-// "Invite user" template in the Supabase dashboard.
-app.post('/api/admin/invite-user', requireAdmin, async (req, res) => {
-  try {
-    const { email, name, company } = req.body;
-    if (!email) return res.status(400).json({ error: 'Informe o e-mail.' });
-
-    const { data, error } = await sb.auth.admin.inviteUserByEmail(email, {
-      redirectTo: AUTH_EMAIL_REDIRECTS.inviteUser,
-      data: {
-        name: name || email.split('@')[0],
-        company: company || '',
-      },
-    });
-
-    if (error) {
-      console.error('[INVITE USER]', error.message);
-      return res.status(400).json({ error: 'Não foi possível enviar o convite.' });
-    }
-
-    res.json({ success: true, invited: data?.user?.email || email });
-  } catch (e) {
-    console.error('[INVITE USER]', e.message);
-    res.status(500).json({ error: 'Erro ao enviar convite.' });
-  }
-});
-
-// ─── OAuth PKCE store (in-memory, TTL 10 min) ─────────────────────────────────
-const _pkceStore = new Map();
-function _pkceClean() {
-  const now = Date.now();
-  for (const [k, v] of _pkceStore) if (v.exp < now) _pkceStore.delete(k);
-}
-function _b64url(buf) {
-  return buf.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
-}
-function _codeVerifier() { return _b64url(crypto.randomBytes(32)); }
-function _codeChallenge(v) {
-  return _b64url(crypto.createHash('sha256').update(v).digest());
-}
-
-// ─── OAuth Start — generates PKCE and redirects to Supabase authorize ──────────
-// Use this URL to initiate the OAuth flow instead of calling Supabase directly:
-//   https://recuperaempresas.onrender.com/api/auth/oauth/start
-// Optional query params: scope (default "openid email profile")
-app.get('/api/auth/oauth/start', (req, res) => {
-  const clientId = process.env.OAUTH_CLIENT_ID || '';
-  if (!clientId) return res.status(500).send('OAUTH_CLIENT_ID não configurado no Render.');
-
-  // Supabase OAuth Server requires PKCE for ALL clients (public and confidential).
-  _pkceClean();
-  const verifier  = _codeVerifier();
-  const challenge = _codeChallenge(verifier);
-  const state     = crypto.randomBytes(16).toString('hex');
-  _pkceStore.set(state, { verifier, challenge, exp: Date.now() + 10 * 60 * 1000 });
-
-  // Cookie carries the state through the consent redirect so /api/auth/oauth/decide
-  // can look up code_challenge and include it in the Supabase authorize call.
-  res.cookie('_oauth_st', state, {
-    httpOnly: true, secure: true, sameSite: 'lax', maxAge: 10 * 60 * 1000,
-  });
-
-  const params = new URLSearchParams({
-    client_id:             clientId,
-    response_type:         'code',
-    redirect_uri:          `${BASE_URL}/api/auth/oauth/callback`,
-    scope:                 req.query.scope || 'email profile',
-    state,
-    code_challenge:        challenge,
-    code_challenge_method: 'S256',
-  });
-  res.redirect(`${SUPABASE_URL}/auth/v1/oauth/authorize?${params}`);
-});
-
-// ─── OAuth Decide — server proxies the consent decision to Supabase ───────────
-// The browser calls GET /api/auth/oauth/decide?authorization_id=...&allow=true
-// The server adds client_id from env var (never exposed to the browser this way)
-// then redirects to Supabase's authorize endpoint.
-app.get('/api/auth/oauth/decide', (req, res) => {
-  const clientId        = process.env.OAUTH_CLIENT_ID || '';
-  const authorizationId = req.query.authorization_id  || '';
-  const allow           = req.query.allow === 'true' ? 'true' : 'false';
-
-  if (!clientId)        return res.status(500).send('OAUTH_CLIENT_ID não configurado no Render.');
-  if (!authorizationId) return res.status(400).send('authorization_id ausente.');
-
-  // Retrieve the original code_challenge from the PKCE store via the state cookie.
-  // Supabase requires all original PKCE params even on the consent-decision call.
-  const state = req.cookies?._oauth_st || '';
-  const pkce  = state ? _pkceStore.get(state) : null;
-
-  const params = new URLSearchParams({
-    authorization_id: authorizationId,
-    client_id:        clientId,
-    redirect_uri:     `${BASE_URL}/api/auth/oauth/callback`,
-    allow,
-  });
-
-  if (pkce?.challenge) {
-    params.set('code_challenge',        pkce.challenge);
-    params.set('code_challenge_method', 'S256');
-  } else {
-    console.warn('[OAUTH DECIDE] code_challenge not found — state cookie missing or expired');
-  }
-
-  res.redirect(`${SUPABASE_URL}/auth/v1/oauth/authorize?${params}`);
-});
-
-// ─── OAuth Consent page ────────────────────────────────────────────────────────
 app.get('/oauth/consent', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'oauth-consent.html'));
-});
-
-// ─── OAuth Callback — exchanges code for tokens using stored PKCE verifier ─────
-// Registered Redirect URI in Supabase OAuth App:
-//   https://recuperaempresas.onrender.com/api/auth/oauth/callback
-app.get('/api/auth/oauth/callback', async (req, res) => {
-  const { code, state, error, error_description } = req.query;
-
-  if (error) {
-    console.error('[OAUTH CALLBACK] error:', error, error_description);
-    return res.redirect(`/login.html?err=oauth&desc=${encodeURIComponent(error_description || error)}`);
-  }
-  if (!code) return res.redirect('/login.html?err=oauth&desc=no_code');
-
-  const clientId     = process.env.OAUTH_CLIENT_ID     || '';
-  const clientSecret = process.env.OAUTH_CLIENT_SECRET || '';
-  const pkce         = state ? _pkceStore.get(state) : null;
-  if (pkce) _pkceStore.delete(state);
-
-  try {
-    const body = new URLSearchParams({
-      grant_type:   'authorization_code',
-      code,
-      redirect_uri: `${BASE_URL}/api/auth/oauth/callback`,
-      client_id:    clientId,
-    });
-
-    // Supabase requires code_verifier (PKCE) for all clients.
-    // Confidential clients also send client_secret alongside it.
-    if (pkce?.verifier) {
-      body.set('code_verifier', pkce.verifier);
-    } else {
-      console.error('[OAUTH CALLBACK] PKCE verifier missing (state expired or mismatch)');
-      return res.redirect('/login.html?err=oauth&desc=session_expired_retry');
-    }
-    if (clientSecret) {
-      body.set('client_secret', clientSecret);
-    }
-
-    const tokenRes  = await fetch(`${SUPABASE_URL}/auth/v1/oauth/token`, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded', apikey: SUPABASE_ANON_KEY },
-      body,
-    });
-    const tokenData = await tokenRes.json();
-    console.log('[OAUTH CALLBACK] token response:', JSON.stringify(tokenData).slice(0, 200));
-
-    if (!tokenData.access_token) {
-      console.error('[OAUTH CALLBACK] token exchange failed:', tokenData);
-      return res.redirect('/login.html?err=oauth&desc=' + encodeURIComponent(tokenData.error_description || tokenData.msg || 'token_exchange_failed'));
-    }
-
-    const { data } = await sbAnon.auth.setSession({
-      access_token:  tokenData.access_token,
-      refresh_token: tokenData.refresh_token || tokenData.access_token,
-    });
-    if (!data?.user) return res.redirect('/login.html?err=oauth&desc=no_user');
-
-    const profile     = await upsertProfileFromAuth(data.user);
-    const portalToken = signToken({ userId: profile.id, email: profile.email });
-
-    // Pass token to browser via hash — login.html will store and redirect
-    return res.redirect(
-      `/login.html#oauth_token=${encodeURIComponent(portalToken)}&oauth_user=${encodeURIComponent(JSON.stringify(safeUser(profile)))}`
-    );
-  } catch (e) {
-    console.error('[OAUTH CALLBACK]', e.message);
-    return res.redirect('/login.html?err=oauth&desc=' + encodeURIComponent(e.message));
-  }
-});
-
-// ─── Admin: impersonate a client (view portal as client) ──────────────────────
-app.post('/api/admin/impersonate/:clientId', requireAdmin, async (req, res) => {
-  const target = await findUserById(req.params.clientId);
-  if (!target) return res.status(404).json({ error: 'Cliente não encontrado.' });
-  if (target.is_admin) return res.status(400).json({ error: 'Não é possível impersonar um administrador.' });
-
-  const token = signToken({
-    impersonating: true,
-    adminId:       req.user.id,
-    targetId:      target.id,
-    email:         target.email,
-    userId:        target.id,  // needed for requireAuth
-  });
-  res.json({ success: true, token, user: safeUser(target) });
-});
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// ONBOARDING ROUTES
-// ═══════════════════════════════════════════════════════════════════════════════
-
-app.post('/api/step-complete', requireAuth, async (req, res) => {
-  try {
-    const { stepNum, allData } = req.body;
-    const user = req.user;
-    const ts   = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
-
-    const progress = await readOnboarding(user.id);
-    const newStep  = Math.max(progress.step || 1, stepNum);
-    await saveOnboarding(user.id, {
-      step:     newStep,
-      status:   newStep >= 14 ? 'concluido' : 'em_andamento',
-      data:     allData,
-      last_activity: new Date().toISOString(),
-      completed: progress.completed || false,
-    });
-
-    const empresa  = allData.empresa || {};
-    const stepHtml = buildStepHtml(stepNum, allData, user, ts);
-    const subject  = `[Onboarding] ${empresa.razaoSocial||user.company||user.name||user.email} — Etapa ${stepNum}: ${STEP_TITLES[stepNum]||''}`;
-
-    // Email to company (internal) + client confirmation — parallel
-    await Promise.all([
-      sendMail(EMAIL_TO, subject, stepHtml),
-      sendMail(user.email, `Etapa ${stepNum} recebida — Recupera Empresas`, buildClientStepConfirmHtml(stepNum, user, ts)),
-    ]);
-
-    // Freshdesk: add public note for every step
-    const ticketId = user.freshdesk_ticket_id;
-    if (ticketId) {
-      const noteHtml = `<h3>Etapa ${stepNum} / 14 — ${STEP_TITLES[stepNum]}</h3>${stepHtml}`;
-      addFreshdeskNote(ticketId, noteHtml).catch(e => console.warn('[async]', e?.message));
-    }
-
-    logAccess(user.id, user.email, 'step_complete', req.ip, { step: stepNum });
-    res.json({ success: true });
-  } catch(e) { console.error('[STEP]', e); res.status(500).json({ error: 'Erro ao registrar etapa.' }); }
-});
-
-app.get('/api/progress', requireAuth, async (req, res) => {
-  res.json(await readOnboarding(req.user.id));
-});
-
-// ─── Final submit ─────────────────────────────────────────────────────────────
-const fileFields = [
-  { name:'balanco',maxCount:5 }, { name:'dre',maxCount:5 },
-  { name:'extratos',maxCount:10 }, { name:'contratos',maxCount:10 }
-];
-
-app.post('/api/submit', requireAuth, upload.fields(fileFields), async (req, res) => {
-  try {
-    const user    = req.user;
-    const allData = JSON.parse(req.body.formData || '{}');
-    const ts      = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
-    const files   = req.files || {};
-    const empresa = allData.empresa || {};
-
-    const attachments = [];
-    for (const fileList of Object.values(files))
-      for (const f of fileList)
-        attachments.push({ filename: f.originalname, path: f.path, contentType: f.mimetype });
-
-    await saveOnboarding(user.id, {
-      step: 14, status: 'concluido', completed: true,
-      data: allData, completedAt: ts, last_activity: new Date().toISOString(),
-    });
-
-    // Build full report (all 14 steps)
-    let allStepsHtml = '';
-    for (let i=1; i<=14; i++) {
-      allStepsHtml += `<h2 ${emailStyle('completeHeading')}>
-        Etapa ${i} — ${STEP_TITLES[i]}</h2>`;
-      allStepsHtml += buildStepHtml(i, allData, user, ts);
-    }
-    const fullHtml = `<div ${emailStyle('wrapper800')}>
-      <div ${emailStyle('header')}>
-        <h1 ${emailStyle('headerTitleLg')}>Onboarding Completo — Recupera Empresas</h1>
-        <p ${emailStyle('headerSubtitle')}>${empresa.razaoSocial||user.company||user.name||user.email} — ${ts}</p>
-      </div>
-      <div ${emailStyle('panel')}>${allStepsHtml}</div>
-    </div>`;
-
-    await Promise.all([
-      sendMail(EMAIL_TO,
-        `[Onboarding COMPLETO] ${empresa.razaoSocial||user.company||user.name||user.email} — ${new Date().toLocaleDateString('pt-BR')}`,
-        fullHtml, attachments
-      ),
-      sendMail(user.email, 'Onboarding concluído — Recupera Empresas', buildClientStepConfirmHtml(14, user, ts)),
-    ]);
-
-    // Freshdesk: final note + resolve ticket
-    const ticketId = user.freshdesk_ticket_id;
-    if (ticketId) {
-      await addFreshdeskNote(ticketId,
-        `<h3>Onboarding concluído em ${ts}</h3><p>Todos os dados foram enviados. Relatório completo segue por e-mail.</p>${fullHtml}`
-      ).catch(e => console.warn('[async]', e?.message));
-      await updateFreshdeskTicket(ticketId, { status: 4 }).catch(e => console.warn('[async]', e?.message));
-    }
-
-    // Freshsales CRM: update contact + create deal (fire and forget)
-    if (FRESHSALES_KEY) {
-      const fin = allData.financeiro || {};
-      const faturamento = parseFloat(String(fin.faturamento12meses || '0').replace(/\D/g, '')) / 100 || 0;
-      const phone = empresa.telefone || allData.responsavel?.telefone || null;
-      syncFreshsalesContact(user.email, user.name || empresa.razaoSocial, empresa.razaoSocial, phone, {
-        job_title: allData.responsavel?.cargo || undefined,
-      }).then(async (fsContactId) => {
-        const storedId = user.freshsales_contact_id || fsContactId;
-        const dealName = `Recuperação — ${empresa.razaoSocial || user.company || user.name}`;
-        if (storedId) await createFreshsalesDeal(storedId, dealName, faturamento).catch(e => console.warn('[async]', e?.message));
-        if (fsContactId && !user.freshsales_contact_id) {
-          await sb.from('re_users').update({ freshsales_contact_id: fsContactId }).eq('id', user.id);
-        }
-      }).catch(e => console.warn('[async]', e?.message));
-    }
-
-    for (const fileList of Object.values(files))
-      for (const f of fileList) fs.unlink(f.path, () => {});
-
-    logAccess(user.id, user.email, 'submit', req.ip);
-    res.json({ success: true, message: 'Formulário enviado com sucesso.' });
-  } catch(e) {
-    console.error('[SUBMIT]', e);
-    res.status(500).json({ success: false, message: 'Erro ao enviar formulário.' });
-  }
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
