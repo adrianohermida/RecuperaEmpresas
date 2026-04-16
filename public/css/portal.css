@@ -1568,11 +1568,194 @@ body {
 .admin-log-empty-cell {
   text-align: center; color: var(--text-muted); padding: 20px;
 }
+.mkt-state {
+  padding: 16px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.mkt-state-error {
+  color: var(--danger);
+}
+
+.mkt-table-head-right,
+.mkt-table td.mkt-table-price {
+  text-align: right;
+}
+
+.mkt-table-head-actions {
+  width: 1%;
+}
+
+.mkt-service-name,
+.mkt-customer-name {
+  font-weight: 600;
+}
+
+.mkt-cell-muted,
+.mkt-customer-email,
+.mkt-modal-help {
+  color: var(--text-muted);
+}
+
+.mkt-customer-email {
+  font-size: 11px;
+}
+
+.mkt-journey-cell {
+  font-size: 12px;
+}
+
+.mkt-journey-link {
+  color: var(--primary);
+}
+
+.mkt-table-price {
+  font-weight: 700;
+}
+
+.mkt-table-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.mkt-action-btn,
+.mkt-status-select {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 11px;
+}
+
+.mkt-action-btn {
+  background: none;
+  cursor: pointer;
+}
+
+.mkt-status-select {
+  background: #fff;
+}
+
+.mkt-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.mkt-modal-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 28px;
+  width: 460px;
+  max-width: 96vw;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.mkt-modal-title {
+  margin-bottom: 18px;
+  color: var(--dark);
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.mkt-modal-label {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.mkt-modal-control {
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 9px;
+  font-size: 13px;
+}
+
+.mkt-modal-textarea {
+  resize: vertical;
+}
+
+.mkt-modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.mkt-modal-btn {
+  border-radius: 7px;
+  padding: 9px 18px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.mkt-modal-btn-secondary {
+  background: none;
+  border: 1px solid var(--border);
+}
+
+.mkt-modal-btn-primary {
+  background: var(--primary);
+  border: none;
+  color: #fff;
+  font-weight: 600;
+}
+
 .admin-finance-loading {
   padding: 20px;
   color: var(--text-muted);
   font-size: 14px;
 }
+.admin-finance-table th,
+.admin-finance-table td {
+  padding: 10px 14px;
+}
+
+.admin-finance-row {
+  cursor: pointer;
+}
+
+.admin-finance-client-name {
+  font-weight: 600;
+}
+
+.admin-finance-client-email {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.admin-finance-muted {
+  color: var(--text-muted);
+}
+
+.admin-finance-center {
+  text-align: center !important;
+}
+
+.admin-finance-total {
+  color: var(--text-muted);
+  font-weight: 700;
+}
+
+.admin-finance-total-positive {
+  color: #059669;
+}
+
+.admin-finance-invoices-btn {
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
 .admin-log-email {
   color: var(--primary);
 }

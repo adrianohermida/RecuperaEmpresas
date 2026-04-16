@@ -438,6 +438,262 @@ body {
   padding: 14px;
   border: 1px solid #E2E8F0;
   border-radius: 8px;
+.jrn-state-loading {
+  padding: 24px;
+  color: #94A3B8;
+  text-align: center;
+}
+.jrn-state-error,
+.jrn-inline-error {
+  color: #EF4444;
+}
+.jrn-state-error {
+  padding: 24px;
+}
+.jrn-state-empty {
+  padding: 40px;
+  color: #94A3B8;
+  text-align: center;
+}
+.jrn-state-empty-icon {
+  margin-bottom: 12px;
+  font-size: 40px;
+}
+.jrn-state-empty-title {
+  margin-bottom: 8px;
+  color: #64748B;
+  font-size: 15px;
+  font-weight: 600;
+}
+.jrn-state-empty-copy {
+  font-size: 13px;
+}
+.jrn-list-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  background: #fff;
+  cursor: pointer;
+  transition: box-shadow .15s;
+}
+.jrn-list-card:hover {
+  box-shadow: 0 4px 16px rgba(0,0,0,.08);
+}
+.jrn-list-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+.jrn-list-card-title {
+  color: #1E293B;
+  font-size: 15px;
+  font-weight: 700;
+}
+.jrn-list-card-desc {
+  color: #64748B;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.jrn-list-card-meta {
+  display: flex;
+  gap: 12px;
+  color: #94A3B8;
+  font-size: 12px;
+}
+.jrn-list-card-actions {
+  display: flex;
+  gap: 6px;
+}
+.jrn-action-btn {
+  padding: 6px 12px;
+  font-size: 12px;
+}
+.jrn-action-btn-danger {
+  color: #EF4444;
+}
+.jrn-status-pill {
+  padding: 3px 9px;
+  border-radius: 20px;
+  background: #F1F5F9;
+  white-space: nowrap;
+  font-size: 11px;
+}
+.jrn-status-pill-gray {
+  color: #94A3B8;
+}
+.jrn-status-pill-green {
+  color: #10B981;
+}
+.jrn-status-pill-amber {
+  color: #F59E0B;
+}
+.jrn-status-pill-red {
+  color: #EF4444;
+}
+.jrn-step-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  background: #F8FAFC;
+}
+.jrn-step-index {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: #1A56DB;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+}
+.jrn-step-copy {
+  flex: 1;
+  min-width: 0;
+}
+.jrn-step-title {
+  color: #1E293B;
+  font-size: 13px;
+  font-weight: 600;
+}
+.jrn-step-form {
+  margin-top: 2px;
+  color: #6366F1;
+  font-size: 11px;
+}
+.jrn-step-optional {
+  color: #94A3B8;
+  font-size: 10px;
+}
+.jrn-step-actions {
+  display: flex;
+  gap: 4px;
+}
+.jrn-mini-btn {
+  padding: 4px 8px;
+  font-size: 11px;
+}
+.jrn-mini-btn-danger {
+  color: #EF4444;
+}
+.jrn-assignment-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  background: #F8FAFC;
+}
+.jrn-assignment-copy {
+  flex: 1;
+  min-width: 0;
+}
+.jrn-assignment-name {
+  overflow: hidden;
+  color: #1E293B;
+  font-size: 13px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.jrn-assignment-email {
+  color: #94A3B8;
+  font-size: 11px;
+}
+.jrn-progress-summary {
+  margin-bottom: 16px;
+}
+.jrn-progress-summary-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+.jrn-progress-summary-title {
+  color: #1E293B;
+  font-size: 13px;
+  font-weight: 600;
+}
+.jrn-progress-summary-value {
+  color: #1A56DB;
+  font-size: 13px;
+  font-weight: 700;
+}
+.jrn-progress-track {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 4px;
+  background: #E2E8F0;
+}
+.jrn-progress-fill {
+  width: 0;
+  height: 100%;
+  border-radius: 4px;
+  background: #1A56DB;
+  transition: width .4s;
+}
+.jrn-progress-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.jrn-progress-step {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  background: #F8FAFC;
+}
+.jrn-progress-step-done {
+  border-color: #BBF7D0;
+  background: #F0FDF4;
+}
+.jrn-progress-step-index {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 700;
+}
+.jrn-progress-step-index-pending {
+  background: #E2E8F0;
+  color: #94A3B8;
+}
+.jrn-progress-step-index-done {
+  background: #10B981;
+  color: #fff;
+}
+.jrn-progress-step-copy {
+  flex: 1;
+}
+.jrn-progress-step-title {
+  color: #1E293B;
+  font-size: 13px;
+  font-weight: 600;
+}
+.jrn-progress-step-meta {
+  color: #94A3B8;
+  font-size: 11px;
+}
+.jrn-progress-step-meta-done {
+  color: #10B981;
+}
   background: #fff;
   text-align: center;
 }
@@ -1312,11 +1568,194 @@ body {
 .admin-log-empty-cell {
   text-align: center; color: var(--text-muted); padding: 20px;
 }
+.mkt-state {
+  padding: 16px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.mkt-state-error {
+  color: var(--danger);
+}
+
+.mkt-table-head-right,
+.mkt-table td.mkt-table-price {
+  text-align: right;
+}
+
+.mkt-table-head-actions {
+  width: 1%;
+}
+
+.mkt-service-name,
+.mkt-customer-name {
+  font-weight: 600;
+}
+
+.mkt-cell-muted,
+.mkt-customer-email,
+.mkt-modal-help {
+  color: var(--text-muted);
+}
+
+.mkt-customer-email {
+  font-size: 11px;
+}
+
+.mkt-journey-cell {
+  font-size: 12px;
+}
+
+.mkt-journey-link {
+  color: var(--primary);
+}
+
+.mkt-table-price {
+  font-weight: 700;
+}
+
+.mkt-table-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.mkt-action-btn,
+.mkt-status-select {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 11px;
+}
+
+.mkt-action-btn {
+  background: none;
+  cursor: pointer;
+}
+
+.mkt-status-select {
+  background: #fff;
+}
+
+.mkt-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.mkt-modal-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 28px;
+  width: 460px;
+  max-width: 96vw;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.mkt-modal-title {
+  margin-bottom: 18px;
+  color: var(--dark);
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.mkt-modal-label {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.mkt-modal-control {
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 9px;
+  font-size: 13px;
+}
+
+.mkt-modal-textarea {
+  resize: vertical;
+}
+
+.mkt-modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.mkt-modal-btn {
+  border-radius: 7px;
+  padding: 9px 18px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.mkt-modal-btn-secondary {
+  background: none;
+  border: 1px solid var(--border);
+}
+
+.mkt-modal-btn-primary {
+  background: var(--primary);
+  border: none;
+  color: #fff;
+  font-weight: 600;
+}
+
 .admin-finance-loading {
   padding: 20px;
   color: var(--text-muted);
   font-size: 14px;
 }
+.admin-finance-table th,
+.admin-finance-table td {
+  padding: 10px 14px;
+}
+
+.admin-finance-row {
+  cursor: pointer;
+}
+
+.admin-finance-client-name {
+  font-weight: 600;
+}
+
+.admin-finance-client-email {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.admin-finance-muted {
+  color: var(--text-muted);
+}
+
+.admin-finance-center {
+  text-align: center !important;
+}
+
+.admin-finance-total {
+  color: var(--text-muted);
+  font-weight: 700;
+}
+
+.admin-finance-total-positive {
+  color: #059669;
+}
+
+.admin-finance-invoices-btn {
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
 .admin-log-email {
   color: var(--primary);
 }

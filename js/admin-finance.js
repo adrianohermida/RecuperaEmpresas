@@ -1,19 +1,23 @@
 'use strict';
 
 (function () {
+  function financeState(message) {
+    return `<div class="admin-finance-loading">${message}</div>`;
+  }
+
   async function loadAdminFinanceiro() {
     const listEl = document.getElementById('finClientsList');
-    listEl.innerHTML = '<div style="padding:20px;color:var(--text-muted);font-size:14px;">Carregando dados do Stripe...</div>';
+    listEl.innerHTML = financeState('Carregando dados do Stripe...');
 
     const response = await fetch('/api/admin/financial', { headers: authH() });
     if (!response.ok) {
-      listEl.innerHTML = '<div style="padding:20px;color:var(--text-muted);">Erro ao carregar dados financeiros.</div>';
+      listEl.innerHTML = financeState('Erro ao carregar dados financeiros.');
       return;
     }
 
     const { configured, clients = [], totalRevenue = 0 } = await response.json();
     if (!configured) {
-      listEl.innerHTML = '<div style="padding:20px;color:var(--text-muted);">Stripe não configurado. Defina STRIPE_SECRET_KEY nas variáveis de ambiente.</div>';
+      listEl.innerHTML = financeState('Stripe não configurado. Defina STRIPE_SECRET_KEY nas variáveis de ambiente.');
       return;
     }
 
@@ -26,26 +30,28 @@
     document.getElementById('finSub').textContent = `${clients.length} cliente${clients.length !== 1 ? 's' : ''} — R$ ${totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} em receita total`;
 
     if (!clients.length) {
-      listEl.innerHTML = '<div style="padding:20px;color:var(--text-muted);">Nenhum cliente com histórico financeiro.</div>';
+      listEl.innerHTML = financeState('Nenhum cliente com histórico financeiro.');
       return;
     }
 
     const sortedClients = [...clients].sort((left, right) => (right.totalPaid || 0) - (left.totalPaid || 0));
-    let html = '<table style="width:100%;border-collapse:collapse;font-size:13px;">';
-    html += '<thead><tr style="border-bottom:1px solid var(--border);">';
+    let html = '<table class="admin-simple-table admin-finance-table">';
+    html += '<thead><tr>';
     ['Cliente', 'Empresa', 'Pagamentos', 'Total pago', 'Último pagamento', ''].forEach(header => {
-      html += `<th style="text-align:left;padding:10px 14px;color:var(--text-muted);font-weight:600;">${header}</th>`;
+      const headerClass = header === 'Pagamentos' ? ' class="admin-finance-center"' : '';
+      html += `<th${headerClass}>${header}</th>`;
     });
     html += '</tr></thead><tbody>';
     sortedClients.forEach(client => {
       const lastPaymentDate = client.lastPaymentDate ? new Date(client.lastPaymentDate).toLocaleDateString('pt-BR') : '—';
-      html += `<tr style="border-bottom:1px solid var(--border-light,#F1F5F9);cursor:pointer;" onclick="openClient('${client.userId}')">
-        <td style="padding:10px 14px;"><div style="font-weight:600;">${client.name || '—'}</div><div style="font-size:11px;color:var(--text-muted);">${client.email}</div></td>
-        <td style="padding:10px 14px;color:var(--text-muted);">${client.company || '—'}</td>
-        <td style="padding:10px 14px;text-align:center;">${client.paymentsCount || 0}</td>
-        <td style="padding:10px 14px;font-weight:700;color:${client.totalPaid > 0 ? '#059669' : 'var(--text-muted)'};">R$ ${(client.totalPaid || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-        <td style="padding:10px 14px;color:var(--text-muted);">${lastPaymentDate}</td>
-        <td style="padding:10px 14px;"><button class="btn-ghost" style="font-size:12px;padding:4px 10px;" onclick="event.stopPropagation();openClientFinanceiro('${client.userId}')">Ver faturas</button></td>
+      const totalPaidClass = client.totalPaid > 0 ? ' admin-finance-total-positive' : '';
+      html += `<tr class="admin-finance-row" onclick="openClient('${client.userId}')">
+        <td><div class="admin-finance-client-name">${client.name || '—'}</div><div class="admin-finance-client-email">${client.email}</div></td>
+        <td class="admin-finance-muted">${client.company || '—'}</td>
+        <td class="admin-finance-center">${client.paymentsCount || 0}</td>
+        <td class="admin-finance-total${totalPaidClass}">R$ ${(client.totalPaid || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+        <td class="admin-finance-muted">${lastPaymentDate}</td>
+        <td><button class="btn-ghost admin-finance-invoices-btn" onclick="event.stopPropagation();openClientFinanceiro('${client.userId}')">Ver faturas</button></td>
       </tr>`;
     });
     html += '</tbody></table>';

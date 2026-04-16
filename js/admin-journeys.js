@@ -40,42 +40,39 @@
     jrnShowView('list');
     const grid = document.getElementById('jrn-list-grid');
     if (!grid) return;
-    grid.innerHTML = '<div style="padding:24px;color:#94A3B8;text-align:center;">Carregando...</div>';
+    grid.innerHTML = '<div class="jrn-state-loading">Carregando...</div>';
 
     const response = await fetch('/api/admin/journeys', { headers: jrnAuthH() });
     if (!response.ok) {
-      grid.innerHTML = '<div style="padding:24px;color:#EF4444;">Erro ao carregar.</div>';
+      grid.innerHTML = '<div class="jrn-state-error">Erro ao carregar.</div>';
       return;
     }
 
     const journeys = await response.json();
     if (!journeys.length) {
-      grid.innerHTML = `<div style="padding:40px;text-align:center;color:#94A3B8;">
-        <div style="font-size:40px;margin-bottom:12px;">🗺️</div>
-        <div style="font-size:15px;font-weight:600;color:#64748B;margin-bottom:8px;">Nenhuma jornada criada</div>
-        <div style="font-size:13px;">Clique em "Nova Jornada" para começar.</div>
+      grid.innerHTML = `<div class="jrn-state-empty">
+        <div class="jrn-state-empty-icon">🗺️</div>
+        <div class="jrn-state-empty-title">Nenhuma jornada criada</div>
+        <div class="jrn-state-empty-copy">Clique em "Nova Jornada" para começar.</div>
       </div>`;
       return;
     }
 
-    const statusColor = { draft: '#94A3B8', active: '#10B981', archived: '#F59E0B' };
     const statusLabel = { draft: 'Rascunho', active: 'Ativo', archived: 'Arquivado' };
 
     grid.innerHTML = journeys.map(journey => `
-      <div style="background:#fff;border:1px solid #E2E8F0;border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:12px;cursor:pointer;transition:box-shadow .15s;"
-           onclick="jrnOpenEditor('${journey.id}')"
-           onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,.08)'" onmouseout="this.style.boxShadow=''">
-        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
-          <div style="font-weight:700;font-size:15px;color:#1E293B;">${jrnEsc(journey.name)}</div>
-          <span style="font-size:11px;padding:3px 9px;border-radius:20px;background:#F1F5F9;color:${statusColor[journey.status] || '#94A3B8'};white-space:nowrap;">${statusLabel[journey.status] || journey.status}</span>
+      <div class="jrn-list-card" onclick="jrnOpenEditor('${journey.id}')">
+        <div class="jrn-list-card-header">
+          <div class="jrn-list-card-title">${jrnEsc(journey.name)}</div>
+          <span class="jrn-status-pill ${jrnStatusClass(journey.status)}">${statusLabel[journey.status] || journey.status}</span>
         </div>
-        ${journey.description ? `<div style="font-size:13px;color:#64748B;line-height:1.5;">${jrnEsc(journey.description)}</div>` : ''}
-        <div style="display:flex;gap:12px;font-size:12px;color:#94A3B8;">
+        ${journey.description ? `<div class="jrn-list-card-desc">${jrnEsc(journey.description)}</div>` : ''}
+        <div class="jrn-list-card-meta">
           <span>📅 ${new Date(journey.created_at).toLocaleDateString('pt-BR')}</span>
         </div>
-        <div style="display:flex;gap:6px;">
-          <button class="btn-primary" style="font-size:12px;padding:6px 12px;" onclick="event.stopPropagation();jrnOpenEditor('${journey.id}')">Gerenciar</button>
-          <button class="btn-ghost" style="font-size:12px;padding:6px 12px;color:#EF4444;" onclick="event.stopPropagation();jrnDelete('${journey.id}','${jrnEsc(journey.name)}')">Excluir</button>
+        <div class="jrn-list-card-actions">
+          <button class="btn-primary jrn-action-btn" onclick="event.stopPropagation();jrnOpenEditor('${journey.id}')">Gerenciar</button>
+          <button class="btn-ghost jrn-action-btn jrn-action-btn-danger" onclick="event.stopPropagation();jrnDelete('${journey.id}','${jrnEsc(journey.name)}')">Excluir</button>
         </div>
       </div>
     `).join('');
@@ -93,11 +90,10 @@
 
     const journey = await response.json();
     document.getElementById('jrn-editor-title').textContent = journey.name;
-    const statusColor = { draft: '#94A3B8', active: '#10B981', archived: '#F59E0B' };
     const statusLabel = { draft: 'Rascunho', active: 'Ativo', archived: 'Arquivado' };
     const badge = document.getElementById('jrn-editor-status-badge');
     badge.textContent = statusLabel[journey.status] || journey.status;
-    badge.style.color = statusColor[journey.status] || '#94A3B8';
+    badge.className = `badge ${jrnEditorStatusBadgeClass(journey.status)} journey-editor-status`;
 
     JRN.current = journey;
     jrnRenderSteps(journey.steps || []);
@@ -108,23 +104,23 @@
     const element = document.getElementById('jrn-steps-list');
     if (!element) return;
     if (!steps.length) {
-      element.innerHTML = '<div style="color:#94A3B8;text-align:center;padding:20px;">Nenhuma etapa ainda.</div>';
+      element.innerHTML = '<div class="journey-empty-state">Nenhuma etapa ainda.</div>';
       return;
     }
 
     element.innerHTML = steps.map((step, index) => `
-      <div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;padding:12px 14px;display:flex;align-items:center;gap:10px;">
-        <div style="width:24px;height:24px;border-radius:50%;background:#1A56DB;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${index + 1}</div>
-        <div style="flex:1;min-width:0;">
-          <div style="font-weight:600;font-size:13px;color:#1E293B;">${jrnEsc(step.title)}</div>
-          ${step.re_forms ? `<div style="font-size:11px;color:#6366F1;margin-top:2px;">📋 ${jrnEsc(step.re_forms.title)}</div>` : ''}
-          ${step.is_optional ? '<div style="font-size:10px;color:#94A3B8;">Opcional</div>' : ''}
+      <div class="jrn-step-item">
+        <div class="jrn-step-index">${index + 1}</div>
+        <div class="jrn-step-copy">
+          <div class="jrn-step-title">${jrnEsc(step.title)}</div>
+          ${step.re_forms ? `<div class="jrn-step-form">📋 ${jrnEsc(step.re_forms.title)}</div>` : ''}
+          ${step.is_optional ? '<div class="jrn-step-optional">Opcional</div>' : ''}
         </div>
-        <div style="display:flex;gap:4px;">
-          <button class="btn-ghost" style="font-size:11px;padding:4px 8px;" onclick="jrnEditStep('${step.id}','${jrnEsc(step.title)}','${jrnEsc(step.description || '')}','${step.form_id || ''}',${step.is_optional})">✏️</button>
-          <button class="btn-ghost" style="font-size:11px;padding:4px 8px;color:#EF4444;" onclick="jrnDeleteStep('${step.id}')">🗑️</button>
-          ${index > 0 ? `<button class="btn-ghost" style="font-size:11px;padding:4px 8px;" onclick="jrnMoveStep('${step.id}','up')">↑</button>` : ''}
-          ${index < steps.length - 1 ? `<button class="btn-ghost" style="font-size:11px;padding:4px 8px;" onclick="jrnMoveStep('${step.id}','down')">↓</button>` : ''}
+        <div class="jrn-step-actions">
+          <button class="btn-ghost jrn-mini-btn" onclick="jrnEditStep('${step.id}','${jrnEsc(step.title)}','${jrnEsc(step.description || '')}','${step.form_id || ''}',${step.is_optional})">✏️</button>
+          <button class="btn-ghost jrn-mini-btn jrn-mini-btn-danger" onclick="jrnDeleteStep('${step.id}')">🗑️</button>
+          ${index > 0 ? `<button class="btn-ghost jrn-mini-btn" onclick="jrnMoveStep('${step.id}','up')">↑</button>` : ''}
+          ${index < steps.length - 1 ? `<button class="btn-ghost jrn-mini-btn" onclick="jrnMoveStep('${step.id}','down')">↓</button>` : ''}
         </div>
       </div>
     `).join('');
@@ -135,30 +131,29 @@
     const element = document.getElementById('jrn-assignments-list');
     if (!element) return;
     if (!response.ok) {
-      element.innerHTML = '<div style="color:#EF4444;">Erro ao carregar.</div>';
+      element.innerHTML = '<div class="jrn-inline-error">Erro ao carregar.</div>';
       return;
     }
 
     const list = await response.json();
     if (!list.length) {
-      element.innerHTML = '<div style="color:#94A3B8;text-align:center;padding:16px;">Nenhum cliente atribuído.</div>';
+      element.innerHTML = '<div class="journey-empty-state journey-empty-state-sm">Nenhum cliente atribuído.</div>';
       return;
     }
 
     const statusLabel = { active: 'Ativo', paused: 'Pausado', completed: 'Concluído', cancelled: 'Cancelado' };
-    const statusColor = { active: '#10B981', paused: '#F59E0B', completed: '#6366F1', cancelled: '#EF4444' };
 
     element.innerHTML = list.map(assignment => {
       const user = assignment.re_users || {};
       return `
-      <div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;padding:10px 12px;display:flex;align-items:center;gap:8px;">
-        <div style="flex:1;min-width:0;">
-          <div style="font-weight:600;font-size:13px;color:#1E293B;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${jrnEsc(user.name || user.email || '—')}</div>
-          <div style="font-size:11px;color:#94A3B8;">${jrnEsc(user.email || '')}</div>
+      <div class="jrn-assignment-item">
+        <div class="jrn-assignment-copy">
+          <div class="jrn-assignment-name">${jrnEsc(user.name || user.email || '—')}</div>
+          <div class="jrn-assignment-email">${jrnEsc(user.email || '')}</div>
         </div>
-        <span style="font-size:11px;padding:2px 8px;border-radius:12px;background:#F1F5F9;color:${statusColor[assignment.status] || '#94A3B8'};white-space:nowrap;">${statusLabel[assignment.status] || assignment.status}</span>
-        <button class="btn-ghost" style="font-size:11px;padding:4px 8px;" onclick="jrnViewProgress('${id}','${assignment.id}','${jrnEsc(user.name || user.email || '')}')">Ver progresso</button>
-        <button class="btn-ghost" style="font-size:11px;padding:4px 8px;color:#EF4444;" onclick="jrnRemoveAssignment('${id}','${assignment.id}')">✕</button>
+        <span class="jrn-status-pill ${jrnStatusClass(assignment.status)}">${statusLabel[assignment.status] || assignment.status}</span>
+        <button class="btn-ghost jrn-mini-btn" onclick="jrnViewProgress('${id}','${assignment.id}','${jrnEsc(user.name || user.email || '')}')">Ver progresso</button>
+        <button class="btn-ghost jrn-mini-btn jrn-mini-btn-danger" onclick="jrnRemoveAssignment('${id}','${assignment.id}')">✕</button>
       </div>`;
     }).join('');
   }
@@ -168,11 +163,11 @@
     document.getElementById('jrn-progress-title').textContent = `Progresso — ${clientName}`;
     document.getElementById('jrn-progress-back-btn').onclick = () => jrnOpenEditor(journeyId);
     const element = document.getElementById('jrn-progress-content');
-    element.innerHTML = '<div style="color:#94A3B8;text-align:center;padding:20px;">Carregando...</div>';
+    element.innerHTML = '<div class="journey-empty-state">Carregando...</div>';
 
     const response = await fetch(`/api/admin/journeys/${journeyId}/assignments/${assignmentId}/progress`, { headers: jrnAuthH() });
     if (!response.ok) {
-      element.innerHTML = '<div style="color:#EF4444;">Erro.</div>';
+      element.innerHTML = '<div class="jrn-inline-error">Erro.</div>';
       return;
     }
 
@@ -182,27 +177,44 @@
     const pct = total ? Math.round((done / total) * 100) : 0;
 
     element.innerHTML = `
-      <div style="margin-bottom:16px;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
-          <div style="font-size:13px;font-weight:600;color:#1E293B;">Progresso geral</div>
-          <div style="font-size:13px;font-weight:700;color:#1A56DB;">${pct}%</div>
+      <div class="jrn-progress-summary">
+        <div class="jrn-progress-summary-header">
+          <div class="jrn-progress-summary-title">Progresso geral</div>
+          <div class="jrn-progress-summary-value">${pct}%</div>
         </div>
-        <div style="height:8px;background:#E2E8F0;border-radius:4px;overflow:hidden;">
-          <div style="height:100%;width:${pct}%;background:#1A56DB;border-radius:4px;transition:width .4s;"></div>
+        <div class="jrn-progress-track">
+          <div class="jrn-progress-fill" data-progress="${pct}"></div>
         </div>
       </div>
-      <div style="display:flex;flex-direction:column;gap:8px;">
+      <div class="jrn-progress-list">
         ${data.steps.map((step, index) => `
-          <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:${step.completed ? '#F0FDF4' : '#F8FAFC'};border:1px solid ${step.completed ? '#BBF7D0' : '#E2E8F0'};border-radius:8px;">
-            <div style="width:22px;height:22px;border-radius:50%;background:${step.completed ? '#10B981' : '#E2E8F0'};color:${step.completed ? '#fff' : '#94A3B8'};font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${step.completed ? '✓' : index + 1}</div>
-            <div style="flex:1;">
-              <div style="font-size:13px;font-weight:600;color:#1E293B;">${jrnEsc(step.title)}</div>
-              ${step.completed_at ? `<div style="font-size:11px;color:#10B981;">Concluído em ${new Date(step.completed_at).toLocaleString('pt-BR')}</div>` : '<div style="font-size:11px;color:#94A3B8;">Pendente</div>'}
+          <div class="jrn-progress-step ${step.completed ? 'jrn-progress-step-done' : ''}">
+            <div class="jrn-progress-step-index ${step.completed ? 'jrn-progress-step-index-done' : 'jrn-progress-step-index-pending'}">${step.completed ? '✓' : index + 1}</div>
+            <div class="jrn-progress-step-copy">
+              <div class="jrn-progress-step-title">${jrnEsc(step.title)}</div>
+              ${step.completed_at ? `<div class="jrn-progress-step-meta jrn-progress-step-meta-done">Concluído em ${new Date(step.completed_at).toLocaleString('pt-BR')}</div>` : '<div class="jrn-progress-step-meta">Pendente</div>'}
             </div>
-            ${!step.completed ? `<button class="btn-ghost" style="font-size:11px;padding:4px 10px;" onclick="jrnMarkStepDone('${journeyId}','${assignmentId}','${step.id}','${clientName}')">Marcar concluído</button>` : ''}
+            ${!step.completed ? `<button class="btn-ghost jrn-mini-btn" onclick="jrnMarkStepDone('${journeyId}','${assignmentId}','${step.id}','${clientName}')">Marcar concluído</button>` : ''}
           </div>
         `).join('')}
       </div>`;
+
+    element.querySelectorAll('.jrn-progress-fill').forEach(bar => {
+      bar.style.width = `${bar.dataset.progress || 0}%`;
+    });
+  }
+
+  function jrnStatusClass(status) {
+    if (status === 'active' || status === 'completed') return 'jrn-status-pill-green';
+    if (status === 'archived' || status === 'paused') return 'jrn-status-pill-amber';
+    if (status === 'cancelled') return 'jrn-status-pill-red';
+    return 'jrn-status-pill-gray';
+  }
+
+  function jrnEditorStatusBadgeClass(status) {
+    if (status === 'active') return 'badge-green';
+    if (status === 'archived') return 'badge-amber';
+    return 'badge-gray';
   }
 
   async function jrnMarkStepDone(journeyId, assignmentId, stepId, clientName) {

@@ -1,12 +1,17 @@
 'use strict';
 
 (function () {
+  function mktState(message, tone) {
+    const toneClass = tone === 'error' ? ' mkt-state-error' : '';
+    return `<div class="mkt-state${toneClass}">${message}</div>`;
+  }
+
   async function loadAdminMarketplace() {
     const servicesWrap = document.getElementById('adminServicesTableWrap');
     const ordersWrap = document.getElementById('adminOrdersTableWrap');
     if (!servicesWrap) return;
-    servicesWrap.innerHTML = '<div style="padding:16px;color:var(--text-muted);font-size:13px;">Carregando serviços...</div>';
-    if (ordersWrap) ordersWrap.innerHTML = '<div style="padding:16px;color:var(--text-muted);font-size:13px;">Carregando pedidos...</div>';
+    servicesWrap.innerHTML = mktState('Carregando serviços...');
+    if (ordersWrap) ordersWrap.innerHTML = mktState('Carregando pedidos...');
 
     try {
       const [servicesResponse, ordersResponse, journeysResponse] = await Promise.all([
@@ -25,33 +30,33 @@
         });
 
         if (!services.length) {
-          servicesWrap.innerHTML = '<div style="padding:16px;color:var(--text-muted);font-size:13px;">Nenhum serviço cadastrado.</div>';
+          servicesWrap.innerHTML = mktState('Nenhum serviço cadastrado.');
         } else {
-          servicesWrap.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:13px;">
-            <thead><tr style="border-bottom:1px solid var(--border);">
-              <th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-weight:600;">Nome</th>
-              <th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-weight:600;">Categoria</th>
-              <th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-weight:600;">Jornada vinculada</th>
-              <th style="text-align:right;padding:8px 12px;color:var(--text-muted);font-weight:600;">Valor</th>
-              <th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-weight:600;">Status</th>
-              <th style="padding:8px 12px;"></th>
+          servicesWrap.innerHTML = `<table class="admin-simple-table mkt-table">
+            <thead><tr>
+              <th>Nome</th>
+              <th>Categoria</th>
+              <th>Jornada vinculada</th>
+              <th class="mkt-table-head-right">Valor</th>
+              <th>Status</th>
+              <th class="mkt-table-head-actions"></th>
             </tr></thead>
             <tbody>${services.map(service => {
               const serviceName = service.name || service.title || '—';
               const price = ((service.price_cents || Math.round((service.price || 0) * 100)) / 100)
                 .toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
               const journeyName = service.journey_id ? (journeyMap[service.journey_id] || service.journey_id) : '—';
-              return `<tr style="border-bottom:1px solid #F1F5F9;">
-                <td style="padding:10px 12px;font-weight:600;">${escHtml(serviceName)}</td>
-                <td style="padding:10px 12px;color:var(--text-muted);">${escHtml(service.category || '—')}</td>
-                <td style="padding:10px 12px;font-size:12px;color:#6366F1;">${service.journey_id ? '🗺️ ' + escHtml(journeyName) : '<span style="color:var(--text-muted);">Nenhuma</span>'}</td>
-                <td style="padding:10px 12px;text-align:right;font-weight:700;">${price}</td>
-                <td style="padding:10px 12px;"><span class="badge ${service.active ? 'badge-green' : 'badge-gray'}">${service.active ? 'Ativo' : 'Inativo'}</span></td>
-                <td style="padding:10px 12px;display:flex;gap:6px;">
+              return `<tr>
+                <td class="mkt-service-name">${escHtml(serviceName)}</td>
+                <td class="mkt-cell-muted">${escHtml(service.category || '—')}</td>
+                <td class="mkt-journey-cell">${service.journey_id ? `<span class="mkt-journey-link">🗺️ ${escHtml(journeyName)}</span>` : '<span class="mkt-cell-muted">Nenhuma</span>'}</td>
+                <td class="mkt-table-price">${price}</td>
+                <td><span class="badge ${service.active ? 'badge-green' : 'badge-gray'}">${service.active ? 'Ativo' : 'Inativo'}</span></td>
+                <td class="mkt-table-actions">
                   <button onclick="openEditServiceModal('${service.id}','${escHtml(serviceName)}','${escHtml(service.category || '')}','${escHtml(service.description || '')}',${service.price_cents || Math.round((service.price || 0) * 100)},'${service.journey_id || ''}')"
-                    style="border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:11px;background:none;cursor:pointer;">Editar</button>
+                    class="mkt-action-btn">Editar</button>
                   <button onclick="toggleService('${service.id}',${!service.active})"
-                    style="border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:11px;background:none;cursor:pointer;">
+                    class="mkt-action-btn">
                     ${service.active ? 'Desativar' : 'Ativar'}
                   </button>
                 </td>
@@ -71,30 +76,30 @@
           cancelled: 'Cancelado',
         };
         if (!orders.length) {
-          ordersWrap.innerHTML = '<div style="padding:16px;color:var(--text-muted);font-size:13px;">Nenhum pedido ainda.</div>';
+          ordersWrap.innerHTML = mktState('Nenhum pedido ainda.');
         } else {
-          ordersWrap.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:13px;">
-            <thead><tr style="border-bottom:1px solid var(--border);">
-              <th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-weight:600;">Cliente</th>
-              <th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-weight:600;">Serviço</th>
-              <th style="text-align:right;padding:8px 12px;color:var(--text-muted);font-weight:600;">Valor</th>
-              <th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-weight:600;">Status</th>
-              <th style="padding:8px 12px;"></th>
+          ordersWrap.innerHTML = `<table class="admin-simple-table mkt-table">
+            <thead><tr>
+              <th>Cliente</th>
+              <th>Serviço</th>
+              <th class="mkt-table-head-right">Valor</th>
+              <th>Status</th>
+              <th class="mkt-table-head-actions"></th>
             </tr></thead>
             <tbody>${orders.map(order => {
               const amount = ((order.amount_cents || 0) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
               const client = order.re_users || {};
               const serviceName = order.re_services?.name || order.re_services?.title || '—';
-              return `<tr style="border-bottom:1px solid #F1F5F9;">
-                <td style="padding:10px 12px;">
-                  <div style="font-weight:600;">${escHtml(client.name || '—')}</div>
-                  <div style="font-size:11px;color:var(--text-muted);">${escHtml(client.email || '')}</div>
+              return `<tr>
+                <td>
+                  <div class="mkt-customer-name">${escHtml(client.name || '—')}</div>
+                  <div class="mkt-customer-email">${escHtml(client.email || '')}</div>
                 </td>
-                <td style="padding:10px 12px;">${escHtml(serviceName)}</td>
-                <td style="padding:10px 12px;text-align:right;font-weight:700;">${amount}</td>
-                <td style="padding:10px 12px;"><span class="badge badge-gray">${statusMap[order.status] || order.status}</span></td>
-                <td style="padding:10px 12px;">
-                  <select onchange="updateOrderStatus('${order.id}',this.value)" style="border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:11px;">
+                <td>${escHtml(serviceName)}</td>
+                <td class="mkt-table-price">${amount}</td>
+                <td><span class="badge badge-gray">${statusMap[order.status] || order.status}</span></td>
+                <td>
+                  <select onchange="updateOrderStatus('${order.id}',this.value)" class="mkt-status-select">
                     ${Object.entries(statusMap).map(([value, label]) => `<option value="${value}"${order.status === value ? ' selected' : ''}>${label}</option>`).join('')}
                   </select>
                 </td>
@@ -104,7 +109,7 @@
         }
       }
     } catch (error) {
-      servicesWrap.innerHTML = '<div style="padding:16px;color:var(--danger);">Erro ao carregar.</div>';
+      servicesWrap.innerHTML = mktState('Erro ao carregar.', 'error');
       console.error('[ADMIN MARKETPLACE]', error.message);
     }
   }
@@ -112,31 +117,31 @@
   function buildServiceModalHtml(id, name, category, description, priceCents, journeyId) {
     const isEdit = !!id;
     const journeys = window._mktJourneys || [];
-    const journeySelect = `<select id="svcJourney" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:9px;font-size:13px;margin-bottom:12px;">
+    const journeySelect = `<select id="svcJourney" class="mkt-modal-control">
       <option value="">— Nenhuma jornada —</option>
       ${journeys.map(journey => `<option value="${journey.id}"${journeyId === journey.id ? ' selected' : ''}>${escHtml(journey.name)}</option>`).join('')}
     </select>`;
-    return `<div id="svcModal" style="position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:1000;">
-      <div style="background:#fff;border-radius:12px;padding:28px;width:460px;max-width:96vw;max-height:90vh;overflow-y:auto;">
-        <div style="font-size:17px;font-weight:700;color:var(--dark);margin-bottom:18px;">${isEdit ? 'Editar Serviço' : 'Novo Serviço'}</div>
+    return `<div id="svcModal" class="mkt-modal-overlay">
+      <div class="mkt-modal-card">
+        <div class="mkt-modal-title">${isEdit ? 'Editar Serviço' : 'Novo Serviço'}</div>
         ${isEdit ? `<input type="hidden" id="svcEditId" value="${id}">` : ''}
-        <label style="font-size:12px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px;">Nome *</label>
-        <input id="svcName" type="text" value="${escHtml(name || '')}" style="width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:6px;padding:9px;font-size:13px;margin-bottom:12px;"/>
-        <label style="font-size:12px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px;">Categoria</label>
-        <select id="svcCat" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:9px;font-size:13px;margin-bottom:12px;">
+        <label class="mkt-modal-label">Nome *</label>
+        <input id="svcName" type="text" value="${escHtml(name || '')}" class="mkt-modal-control"/>
+        <label class="mkt-modal-label">Categoria</label>
+        <select id="svcCat" class="mkt-modal-control">
           ${['juridico','financeiro','consultoria','outro'].map(value => `<option value="${value}"${category === value ? ' selected' : ''}>${value.charAt(0).toUpperCase() + value.slice(1)}</option>`).join('')}
         </select>
-        <label style="font-size:12px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px;">Descrição</label>
-        <textarea id="svcDesc" rows="2" style="width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:6px;padding:9px;font-size:13px;margin-bottom:12px;resize:vertical;">${escHtml(description || '')}</textarea>
-        <label style="font-size:12px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px;">Valor (R$) *</label>
-        <input id="svcPrice" type="number" step="0.01" min="0" value="${priceCents ? (priceCents / 100).toFixed(2) : ''}" style="width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:6px;padding:9px;font-size:13px;margin-bottom:12px;"/>
-        <label style="font-size:12px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px;">Jornada vinculada
-          <span style="font-weight:400;color:var(--text-muted);"> — ativada automaticamente ao confirmar o pedido</span>
+        <label class="mkt-modal-label">Descrição</label>
+        <textarea id="svcDesc" rows="2" class="mkt-modal-control mkt-modal-textarea">${escHtml(description || '')}</textarea>
+        <label class="mkt-modal-label">Valor (R$) *</label>
+        <input id="svcPrice" type="number" step="0.01" min="0" value="${priceCents ? (priceCents / 100).toFixed(2) : ''}" class="mkt-modal-control"/>
+        <label class="mkt-modal-label">Jornada vinculada
+          <span class="mkt-modal-help"> — ativada automaticamente ao confirmar o pedido</span>
         </label>
         ${journeySelect}
-        <div style="display:flex;gap:10px;justify-content:flex-end;">
-          <button onclick="document.getElementById('svcModal').remove()" style="background:none;border:1px solid var(--border);border-radius:7px;padding:9px 18px;font-size:13px;cursor:pointer;">Cancelar</button>
-          <button onclick="submitServiceForm()" style="background:var(--primary);color:#fff;border:none;border-radius:7px;padding:9px 18px;font-size:13px;cursor:pointer;font-weight:600;">${isEdit ? 'Salvar' : 'Criar Serviço'}</button>
+        <div class="mkt-modal-actions">
+          <button onclick="document.getElementById('svcModal').remove()" class="mkt-modal-btn mkt-modal-btn-secondary">Cancelar</button>
+          <button onclick="submitServiceForm()" class="mkt-modal-btn mkt-modal-btn-primary">${isEdit ? 'Salvar' : 'Criar Serviço'}</button>
         </div>
       </div>
     </div>`;
