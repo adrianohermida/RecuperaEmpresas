@@ -722,7 +722,7 @@ async function loadClientJourneys() {
   if (!el) return;
 
   // Show nav button only when there are journeys
-  el.innerHTML = '<div style="padding:24px;color:#94A3B8;text-align:center;">Carregando...</div>';
+  el.innerHTML = '<div class="fp-list-loading">Carregando...</div>';
 
   let journeys = [];
   try {
@@ -735,61 +735,73 @@ async function loadClientJourneys() {
   if (btn) btn.style.display = journeys.length ? '' : 'none';
 
   if (!journeys.length) {
-    el.innerHTML = `<div style="padding:40px;text-align:center;color:#94A3B8;">
-      <div style="font-size:36px;margin-bottom:12px;">🗺️</div>
-      <div style="font-size:15px;font-weight:600;color:#64748B;margin-bottom:8px;">Nenhuma jornada atribuída</div>
-      <div style="font-size:13px;">Sua consultoria ainda não atribuiu nenhuma jornada à sua conta.</div>
+    el.innerHTML = `<div class="fp-journey-empty">
+      <div class="fp-journey-empty-icon">🗺️</div>
+      <div class="fp-journey-empty-title">Nenhuma jornada atribuída</div>
+      <div class="fp-journey-empty-copy">Sua consultoria ainda não atribuiu nenhuma jornada à sua conta.</div>
     </div>`;
     return;
   }
 
   const STATUS_LBL   = { active:'Em andamento', completed:'Concluída', paused:'Pausada', cancelled:'Cancelada' };
-  const STATUS_COLOR = { active:'#1A56DB', completed:'#10B981', paused:'#F59E0B', cancelled:'#EF4444' };
 
   el.innerHTML = journeys.map(j => {
     const done  = j.steps.filter(s => s.completed).length;
     const total = j.steps.length;
     const pct   = total ? Math.round((done / total) * 100) : 0;
     const stepsHtml = j.steps.map((s, i) => `
-      <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 0;${i < j.steps.length-1 ? 'border-bottom:1px solid #F1F5F9;' : ''}">
-        <div style="width:26px;height:26px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;
-             background:${s.completed ? '#10B981' : (i === j.current_step_index ? '#1A56DB' : '#E2E8F0')};
-             color:${s.completed || i === j.current_step_index ? '#fff' : '#94A3B8'};">
+      <div class="fp-journey-step ${i < j.steps.length - 1 ? 'fp-journey-step-lined' : ''}">
+        <div class="fp-journey-step-index ${fpJourneyStepStateClass(s, i === j.current_step_index)}">
           ${s.completed ? '✓' : i + 1}
         </div>
-        <div style="flex:1;min-width:0;">
-          <div style="font-size:13px;font-weight:${i === j.current_step_index && !s.completed ? '700' : '500'};color:${s.completed ? '#64748B' : '#1E293B'};
-               ${s.completed ? 'text-decoration:line-through;' : ''}">
+        <div class="fp-journey-step-copy">
+          <div class="fp-journey-step-title ${fpJourneyStepTitleClass(s, i === j.current_step_index)}">
             ${fpEsc(s.title)}
           </div>
-          ${s.re_forms ? `<div style="font-size:11px;color:#6366F1;margin-top:2px;">📋 ${fpEsc(s.re_forms.title)}</div>` : ''}
+          ${s.re_forms ? `<div class="fp-journey-step-form">📋 ${fpEsc(s.re_forms.title)}</div>` : ''}
           ${i === j.current_step_index && !s.completed && s.re_forms
             ? (s.re_forms.system_key === 'onboarding_14steps'
-                ? `<button class="btn-primary" style="font-size:11px;padding:4px 12px;margin-top:6px;" onclick="showSection('onboarding',document.getElementById('onboardSideLink'))">Ir para Onboarding →</button>`
-                : `<button class="btn-primary" style="font-size:11px;padding:4px 12px;margin-top:6px;" onclick="fpOpenPlayer('${s.re_forms.id}')">Responder formulário →</button>`)
+                ? `<button class="btn-primary fp-journey-step-btn" onclick="showSection('onboarding',document.getElementById('onboardSideLink'))">Ir para Onboarding →</button>`
+                : `<button class="btn-primary fp-journey-step-btn" onclick="fpOpenPlayer('${s.re_forms.id}')">Responder formulário →</button>`)
             : ''}
         </div>
       </div>
     `).join('');
 
     return `
-    <div class="portal-card" style="padding:0;overflow:hidden;">
-      <div style="padding:16px 20px;background:linear-gradient(135deg,#1e3a5f,#1A56DB);color:#fff;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
-          <div style="font-size:16px;font-weight:700;">${fpEsc(j.journey_name)}</div>
-          <span style="font-size:11px;padding:3px 10px;border-radius:20px;background:rgba(255,255,255,.2);color:#fff;">${STATUS_LBL[j.status] || j.status}</span>
+    <div class="portal-card fp-journey-card">
+      <div class="fp-journey-card-header">
+        <div class="fp-journey-card-headline">
+          <div class="fp-journey-card-title">${fpEsc(j.journey_name)}</div>
+          <span class="fp-journey-card-status">${STATUS_LBL[j.status] || j.status}</span>
         </div>
-        ${j.journey_description ? `<div style="font-size:12px;opacity:.8;margin-bottom:8px;">${fpEsc(j.journey_description)}</div>` : ''}
-        <div style="display:flex;align-items:center;gap:8px;margin-top:8px;">
-          <div style="flex:1;height:6px;background:rgba(255,255,255,.25);border-radius:4px;overflow:hidden;">
-            <div style="height:100%;width:${pct}%;background:#fff;border-radius:4px;transition:width .4s;"></div>
+        ${j.journey_description ? `<div class="fp-journey-card-desc">${fpEsc(j.journey_description)}</div>` : ''}
+        <div class="fp-journey-card-progress-row">
+          <div class="fp-journey-card-progress-track">
+            <div class="fp-journey-card-progress-fill" data-progress="${pct}"></div>
           </div>
-          <span style="font-size:12px;opacity:.9;white-space:nowrap;">${done}/${total} etapas • ${pct}%</span>
+          <span class="fp-journey-card-progress-label">${done}/${total} etapas • ${pct}%</span>
         </div>
       </div>
-      <div style="padding:4px 20px 16px;">
-        ${stepsHtml || '<div style="padding:16px 0;color:#94A3B8;font-size:13px;">Nenhuma etapa configurada.</div>'}
+      <div class="fp-journey-card-body">
+        ${stepsHtml || '<div class="fp-journey-card-empty">Nenhuma etapa configurada.</div>'}
       </div>
     </div>`;
   }).join('');
+
+  el.querySelectorAll('.fp-journey-card-progress-fill').forEach(bar => {
+    bar.style.width = `${bar.dataset.progress || 0}%`;
+  });
+}
+
+function fpJourneyStepStateClass(step, isCurrent) {
+  if (step.completed) return 'fp-journey-step-index-completed';
+  if (isCurrent) return 'fp-journey-step-index-current';
+  return 'fp-journey-step-index-pending';
+}
+
+function fpJourneyStepTitleClass(step, isCurrent) {
+  if (step.completed) return 'fp-journey-step-title-completed';
+  if (isCurrent) return 'fp-journey-step-title-current';
+  return 'fp-journey-step-title-pending';
 }
