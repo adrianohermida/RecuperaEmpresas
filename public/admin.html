@@ -799,7 +799,7 @@
 
       <!-- Filters -->
       <div class="admin-filter-bar">
-        <select id="auditFilterType" onchange="loadAuditLog()" class="portal-select admin-filter-control">
+        <select id="auditFilterType" onchange="loadAuditLog()" class="portal-select admin-filter-control" aria-label="Filtrar por tipo">
           <option value="">Todos os tipos</option>
           <option value="invoice">Cobrança</option>
           <option value="task">Tarefa</option>
@@ -807,8 +807,8 @@
           <option value="service_order">Pedido</option>
           <option value="member">Membro</option>
         </select>
-        <input type="date" id="auditFilterFrom" onchange="loadAuditLog()" class="portal-input admin-filter-control admin-filter-date"/>
-        <input type="date" id="auditFilterTo" onchange="loadAuditLog()" class="portal-input admin-filter-control admin-filter-date"/>
+        <input type="date" id="auditFilterFrom" onchange="loadAuditLog()" class="portal-input admin-filter-control admin-filter-date" aria-label="Data inicial"/>
+        <input type="date" id="auditFilterTo" onchange="loadAuditLog()" class="portal-input admin-filter-control admin-filter-date" aria-label="Data final"/>
       </div>
 
       <div class="portal-card">
