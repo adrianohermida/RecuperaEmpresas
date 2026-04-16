@@ -4,7 +4,6 @@ require('dotenv').config();
 const express      = require('express');
 const cookieParser = require('cookie-parser');
 const multer       = require('multer');
-const bcrypt       = require('bcryptjs');
 const jwt          = require('jsonwebtoken');
 const crypto       = require('crypto');
 const path         = require('path');
@@ -67,15 +66,6 @@ const {
   saveUser,
   readOnboarding,
   saveOnboarding,
-  readPlan,
-  saveChapterStatus,
-  readTasks,
-  upsertTask,
-  readMessages,
-  insertMessage,
-  readAppointments,
-  insertAppointment,
-  updateAppointment,
 } = require('./lib/db');
 const { logAccess, auditLog, pushNotification } = require('./lib/logging');
 const {
