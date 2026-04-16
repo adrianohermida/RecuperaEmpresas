@@ -117,6 +117,11 @@ async function run() {
     assert(fallback.statusCode === 200, 'Fallback deve retornar 200');
     assert(/html/i.test(String(fallback.headers['content-type'] || '')), 'Fallback deve retornar HTML');
 
+    const missingApiRoute = await request(port, '/api/rota-inexistente-smoke');
+    assert(missingApiRoute.statusCode === 404, 'Rotas /api inexistentes devem retornar 404');
+    const missingApiPayload = parseJson(missingApiRoute.body, '/api/rota-inexistente-smoke');
+    assert(missingApiPayload.error === 'Rota não encontrada.', 'Rotas /api inexistentes devem retornar erro JSON consistente');
+
     const protectedUserRoutes = [
       '/api/auth/verify',
       '/api/forms',
