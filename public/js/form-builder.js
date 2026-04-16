@@ -235,11 +235,14 @@ async function fbOpenStatsPanel(formIdOverride) {
     const maxCount = Math.max(...s.daily_starts.map(d=>d.count), 1);
     const bars = s.daily_starts.slice(-14).map(d => {
       const h = Math.round((d.count / maxCount) * 40);
-      return `<div title="${d.date}: ${d.count} inícios" class="form-builder-spark-bar" style="height:${h}px;"></div>`;
+      return `<div title="${d.date}: ${d.count} inícios" class="form-builder-spark-bar" data-height="${h}"></div>`;
     }).join('');
     document.getElementById('fb-stats-chart').innerHTML = `
       <div class="form-builder-spark-title">Inícios por dia (últimos 14 dias)</div>
       <div class="form-builder-spark-row">${bars}</div>`;
+    document.querySelectorAll('.form-builder-spark-bar').forEach(bar => {
+      bar.style.height = `${bar.dataset.height || 0}px`;
+    });
   }
 }
 

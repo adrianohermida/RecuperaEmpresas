@@ -90,7 +90,7 @@
 
   function toggleAuditDetail(index) {
     const element = document.getElementById(`auditDetail${index}`);
-    if (element) element.style.display = element.style.display === 'none' ? 'block' : 'none';
+    if (element) element.classList.toggle('admin-audit-detail-open');
   }
 
   window.loadAuditLog = loadAuditLog;

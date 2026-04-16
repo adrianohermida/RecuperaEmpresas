@@ -32,29 +32,29 @@
     const status = STATUS_LABELS[onboarding.status] || STATUS_LABELS.nao_iniciado;
 
     body.innerHTML = `
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
-        <div class="stat-card blue" style="margin:0;">
-          <div class="stat-value" style="font-size:22px;">${pct}%</div>
+      <div class="cdp-overview-grid">
+        <div class="stat-card blue cdp-overview-card">
+          <div class="stat-value cdp-overview-value">${pct}%</div>
           <div class="stat-label">Progresso onboarding</div>
         </div>
-        <div class="stat-card ${onboarding.completed ? 'green' : 'amber'}" style="margin:0;">
-          <div class="stat-value" style="font-size:22px;">${step}/14</div>
+        <div class="stat-card ${onboarding.completed ? 'green' : 'amber'} cdp-overview-card">
+          <div class="stat-value cdp-overview-value">${step}/14</div>
           <div class="stat-label">Etapas preenchidas</div>
         </div>
       </div>
-      <div style="margin-bottom:16px;">
-        <span class="badge ${status.cls}" style="font-size:13px;">${status.label}</span>
-        ${onboarding.completedAt ? `<span style="font-size:12px;color:var(--text-muted);margin-left:8px;">Concluído em ${onboarding.completedAt}</span>` : ''}
+      <div class="cdp-section-gap">
+        <span class="badge ${status.cls} cdp-status-badge">${status.label}</span>
+        ${onboarding.completedAt ? `<span class="cdp-status-meta">Concluído em ${onboarding.completedAt}</span>` : ''}
       </div>
-      <div style="margin-bottom:16px;">
-        <div style="font-size:13px;font-weight:700;color:var(--dark);margin-bottom:8px;">Informações do cliente</div>
-        <table style="width:100%;font-size:13px;border-collapse:collapse;">
+      <div class="cdp-section-gap">
+        <div class="cdp-section-title">Informações do cliente</div>
+        <table class="cdp-info-table">
           ${[['Nome', user.name], ['E-mail', user.email], ['Empresa', user.company || '—'], ['Cadastrado em', new Date(user.createdAt).toLocaleDateString('pt-BR')]].map(([label, value]) =>
-            `<tr><td style="padding:5px 0;color:var(--text-muted);width:38%;">${label}</td><td style="padding:5px 0;font-weight:500;">${value}</td></tr>`
+            `<tr><td class="cdp-info-label">${label}</td><td class="cdp-info-value">${value}</td></tr>`
           ).join('')}
         </table>
       </div>
-      <div style="font-size:13px;font-weight:700;color:var(--dark);margin-bottom:8px;">Etapas do onboarding</div>
+      <div class="cdp-section-title">Etapas do onboarding</div>
       <div class="steps-list">
         ${Array.from({ length: 14 }, (_, index) => {
           const stepNumber = index + 1;
@@ -84,22 +84,25 @@
         const checkIcon = done
           ? `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>`
           : chapter.id;
-        const comments = (chapter.comments || []).map(comment => `<div style="font-size:12px;background:#F8FAFC;border-radius:6px;padding:8px 10px;margin-top:6px;">
-          <strong>${comment.from === 'client' ? 'Cliente' : 'Equipe'}</strong>: ${comment.text}
-          <span style="float:right;color:var(--text-muted);">${new Date(comment.ts).toLocaleDateString('pt-BR')}</span>
+        const comments = (chapter.comments || []).map(comment => `<div class="cdp-plan-comment">
+          <div class="cdp-plan-comment-head">
+            <strong>${comment.from === 'client' ? 'Cliente' : 'Equipe'}</strong>
+            <span class="cdp-plan-comment-date">${new Date(comment.ts).toLocaleDateString('pt-BR')}</span>
+          </div>
+          <div>${comment.text}</div>
         </div>`).join('');
-        return `<div class="chapter-item" style="flex-direction:column;align-items:flex-start;gap:10px;">
-          <div style="display:flex;align-items:center;gap:12px;width:100%;">
+        return `<div class="chapter-item cdp-plan-item">
+          <div class="cdp-plan-head">
             <div class="chapter-num${done ? ' done' : ''}">${checkIcon}</div>
-            <div class="chapter-title" style="flex:1;">${chapter.title}</div>
+            <div class="chapter-title cdp-plan-title">${chapter.title}</div>
             <span class="badge ${status.cls}">${status.label}</span>
           </div>
-          <div style="display:flex;gap:8px;align-items:center;padding-left:44px;width:100%;">
-            <select class="portal-select" style="width:auto;flex:1;font-size:13px;" onchange="updateChapterStatus('${currentClientId}',${chapter.id},this.value)">
+          <div class="cdp-plan-controls">
+            <select class="portal-select cdp-plan-select" onchange="updateChapterStatus('${currentClientId}',${chapter.id},this.value)">
               ${Object.entries(CHAPTER_STATUS).map(([value, config]) => `<option value="${value}"${chapter.status === value ? ' selected' : ''}>${config.label}</option>`).join('')}
             </select>
           </div>
-          ${comments ? `<div style="padding-left:44px;width:100%;">${comments}</div>` : ''}
+          ${comments ? `<div class="cdp-plan-comments">${comments}</div>` : ''}
         </div>`;
       }).join('')}
     </div>`;
@@ -116,25 +119,25 @@
     });
 
     body.innerHTML = `
-      <div style="margin-bottom:16px;">
-        <div style="font-size:14px;font-weight:700;margin-bottom:10px;">Adicionar tarefa</div>
-        <input type="text" class="portal-input" id="newTaskTitle" placeholder="Título da tarefa" style="margin-bottom:8px;"/>
-        <input type="text" class="portal-input" id="newTaskDesc" placeholder="Descrição (opcional)" style="margin-bottom:8px;"/>
-        <input type="date" class="portal-input" id="newTaskDate" style="margin-bottom:12px;"/>
+      <div class="cdp-section-gap">
+        <div class="cdp-task-heading">Adicionar tarefa</div>
+        <input type="text" class="portal-input cdp-task-input" id="newTaskTitle" placeholder="Título da tarefa"/>
+        <input type="text" class="portal-input cdp-task-input" id="newTaskDesc" placeholder="Descrição (opcional)"/>
+        <input type="date" class="portal-input cdp-task-input cdp-task-input-date" id="newTaskDate"/>
         <button class="btn-primary" onclick="addTask()">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right:4px;"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          <svg class="cdp-task-add-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           Adicionar tarefa
         </button>
       </div>
-      <div style="font-size:14px;font-weight:700;margin-bottom:10px;">Tarefas atribuídas</div>
+      <div class="cdp-task-heading">Tarefas atribuídas</div>
       <div class="task-list">
         ${!tasks.length
           ? '<div class="empty-state"><p>Nenhuma tarefa criada.</p></div>'
           : tasks.map(task => `<div class="task-item">
               <div class="task-dot ${task.status}"></div>
-              <div style="flex:1;">
-                <div class="task-title" style="${task.status === 'concluido' ? 'text-decoration:line-through;color:var(--text-muted)' : ''}">${task.title}</div>
-                ${task.description ? `<div style="font-size:12px;color:var(--text-muted);">${task.description}</div>` : ''}
+              <div class="cdp-task-copy">
+                <div class="task-title ${task.status === 'concluido' ? 'dashboard-task-title-done' : ''}">${task.title}</div>
+                ${task.description ? `<div class="cdp-task-desc">${task.description}</div>` : ''}
               </div>
               ${task.dueDate ? `<div class="task-due">${new Date(task.dueDate).toLocaleDateString('pt-BR')}</div>` : ''}
               <span class="badge ${task.status === 'concluido' ? 'badge-green' : 'badge-amber'}">${task.status === 'concluido' ? 'Concluída' : 'Pendente'}</span>

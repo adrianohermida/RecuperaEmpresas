@@ -116,7 +116,7 @@ function renderClientTable(clients) {
       <td><span class="badge ${status.cls}">${status.label}</span></td>
       <td>
         <div class="admin-client-progress-wrap">
-          <div class="mini-progress"><div class="mini-progress-fill" style="width:${progress}%"></div></div>
+          <div class="mini-progress"><div class="mini-progress-fill" data-progress="${progress}"></div></div>
           <span class="admin-client-progress-value">${progress}%</span>
         </div>
       </td>
@@ -126,4 +126,8 @@ function renderClientTable(clients) {
       <td>${msgBadge}</td>
     </tr>`;
   }).join('');
+
+  tbody.querySelectorAll('.mini-progress-fill').forEach(function (bar) {
+    bar.style.width = (bar.dataset.progress || 0) + '%';
+  });
 }

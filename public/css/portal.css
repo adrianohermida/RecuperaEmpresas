@@ -3940,6 +3940,140 @@ body {
 }
 .chapter-num.done { background: var(--success-light); color: var(--success); }
 .chapter-title { flex: 1; font-size: 14px; font-weight: 600; color: var(--text); }
+.cdp-overview-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.cdp-overview-card {
+  margin: 0;
+}
+
+.cdp-overview-value {
+  font-size: 22px;
+}
+
+.cdp-section-gap {
+  margin-bottom: 16px;
+}
+
+.cdp-section-title {
+  margin-bottom: 8px;
+  color: var(--dark);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.cdp-status-badge {
+  font-size: 13px;
+}
+
+.cdp-status-meta {
+  margin-left: 8px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.cdp-info-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.cdp-info-label {
+  width: 38%;
+  padding: 5px 0;
+  color: var(--text-muted);
+}
+
+.cdp-info-value {
+  padding: 5px 0;
+  font-weight: 500;
+}
+
+.cdp-plan-item {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.cdp-plan-head,
+.cdp-plan-controls,
+.cdp-plan-comment-head {
+  display: flex;
+  align-items: center;
+}
+
+.cdp-plan-head {
+  width: 100%;
+  gap: 12px;
+}
+
+.cdp-plan-title {
+  flex: 1;
+}
+
+.cdp-plan-controls,
+.cdp-plan-comments {
+  width: 100%;
+  padding-left: 44px;
+}
+
+.cdp-plan-controls {
+  gap: 8px;
+}
+
+.cdp-plan-select {
+  width: auto;
+  flex: 1;
+  font-size: 13px;
+}
+
+.cdp-plan-comment {
+  margin-top: 6px;
+  border-radius: 6px;
+  background: #F8FAFC;
+  padding: 8px 10px;
+  font-size: 12px;
+}
+
+.cdp-plan-comment-head {
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.cdp-plan-comment-date {
+  color: var(--text-muted);
+}
+
+.cdp-task-heading {
+  margin-bottom: 10px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.cdp-task-input {
+  margin-bottom: 8px;
+}
+
+.cdp-task-input-date {
+  margin-bottom: 12px;
+}
+
+.cdp-task-add-icon {
+  margin-right: 4px;
+}
+
+.cdp-task-copy {
+  flex: 1;
+}
+
+.cdp-task-desc {
+  color: var(--text-muted);
+  font-size: 12px;
+}
 .chapter-actions { display: flex; gap: 8px; }
 .btn-sm {
   padding: 5px 12px; border-radius: 6px; font-size: 12px; font-weight: 600;
@@ -4469,6 +4603,21 @@ body {
 
   .cds-booking-actions {
     flex-wrap: wrap;
+  }
+
+  .cdp-overview-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .cdp-plan-head,
+  .cdp-plan-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .cdp-plan-controls,
+  .cdp-plan-comments {
+    padding-left: 0;
   }
 
   .fp-list-card {

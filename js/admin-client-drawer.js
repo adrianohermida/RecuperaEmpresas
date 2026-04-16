@@ -99,7 +99,7 @@ async function openClient(id) {
   document.getElementById('drawerOverlay').classList.add('open');
   document.getElementById('clientDrawer').classList.add('open');
   document.getElementById('drawerTitle').textContent = 'Carregando...';
-  document.getElementById('drawerBody').innerHTML = '<p style="color:var(--text-muted);padding:20px 0;">Carregando dados...</p>';
+  document.getElementById('drawerBody').innerHTML = '<p class="acdd-empty-copy">Carregando dados...</p>';
 
   const route = `/api/admin/client/${id}`;
   const res = await fetch(route, { headers: authH() });
