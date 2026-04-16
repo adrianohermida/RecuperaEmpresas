@@ -576,15 +576,59 @@ const STEP_TITLES = {
   12:'Expectativas e Estratégia', 13:'Documentos', 14:'Confirmação'
 };
 
+const EMAIL_STYLE = {
+  wrapper600: 'font-family:Arial,sans-serif;max-width:600px;margin:0 auto',
+  wrapper700: 'font-family:Arial,sans-serif;max-width:700px;margin:0 auto',
+  wrapper800: 'font-family:Arial,sans-serif;max-width:800px;margin:0 auto',
+  header: 'background:#0F172A;padding:20px 24px;border-radius:8px 8px 0 0',
+  headerTitle: 'color:#fff;margin:0;font-size:18px',
+  headerTitleLg: 'color:#fff;margin:0;font-size:20px',
+  headerSubtitle: 'color:#94A3B8;margin:4px 0 0;font-size:13px',
+  panel: 'background:#fff;padding:24px;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 8px 8px',
+  panelCompact: 'background:#fff;padding:20px 24px;border-radius:0 0 8px 8px;border:1px solid #e2e8f0;border-top:none',
+  footer: 'margin-top:10px;padding:10px 16px;background:#f1f5f9;border-radius:6px;font-size:12px;color:#64748b;text-align:center',
+  footerLink: 'color:#1A56DB',
+  progressBox: 'background:#EFF6FF;border:1px solid #BFDBFE;border-radius:8px;padding:16px;margin:16px 0',
+  progressRow: 'display:flex;align-items:center;gap:12px',
+  progressValue: 'font-size:28px;font-weight:800;color:#1A56DB',
+  progressTitle: 'font-weight:700;color:#1E40AF',
+  progressCopy: 'font-size:13px;color:#3B82F6',
+  progressTrack: 'background:#DBEAFE;border-radius:4px;height:6px;margin-top:12px',
+  centerCta: 'text-align:center;margin:20px 0',
+  primaryButton: 'background:#1A56DB;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:600;font-size:14px',
+  successBox: 'background:#ECFDF5;border:1px solid #A7F3D0;border-radius:8px;padding:16px;margin:16px 0',
+  successTitle: 'margin:0;color:#065F46;font-weight:700',
+  successCopy: 'margin:4px 0 0;font-size:13px;color:#047857',
+  metaText: 'color:#64748B;font-size:13px;margin-top:16px',
+  timeText: 'font-size:12px;color:#94A3B8',
+  table: 'width:100%;border-collapse:collapse;margin-bottom:16px',
+  tableLabel: 'padding:6px 12px;border:1px solid #e2e8f0;background:#f8fafc;width:38%;font-weight:600;font-size:13px;color:#334155',
+  tableValue: 'padding:6px 12px;border:1px solid #e2e8f0;font-size:13px;color:#1e293b',
+  infoBar: 'background:#EFF6FF;padding:12px 24px;border-bottom:1px solid #BFDBFE',
+  infoLabel: 'font-size:13px;color:#1E40AF',
+  infoValue: 'font-size:13px;color:#1E3A5F',
+  infoTime: 'float:right;font-size:12px;color:#64748B',
+  sectionHeading: 'font-weight:700;color:#1A56DB;margin:12px 0 6px',
+  sectionNote: 'color:#64748b',
+  generatedBox: 'margin-top:12px;padding:10px 16px;background:#f1f5f9;border-radius:6px;font-size:12px;color:#64748b',
+  completeHeading: 'font-size:15px;color:#1A56DB;margin:20px 0 8px;padding-bottom:6px;border-bottom:2px solid #DBEAFE',
+};
+
+function emailStyle(name, extra = '') {
+  const base = EMAIL_STYLE[name] || '';
+  const full = [base, extra].filter(Boolean).join(';');
+  return `style="${full}"`;
+}
+
 function emailWrapper(title, body) {
-  return `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
-    <div style="background:#0F172A;padding:20px 24px;border-radius:8px 8px 0 0;">
-      <h1 style="color:#fff;margin:0;font-size:18px;">Recupera Empresas</h1>
-      <p style="color:#94A3B8;margin:4px 0 0;font-size:13px;">${title}</p>
+  return `<div ${emailStyle('wrapper600')}>
+    <div ${emailStyle('header')}>
+      <h1 ${emailStyle('headerTitle')}>Recupera Empresas</h1>
+      <p ${emailStyle('headerSubtitle')}>${title}</p>
     </div>
-    <div style="background:#fff;padding:24px;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 8px 8px;">${body}</div>
-    <div style="margin-top:10px;padding:10px 16px;background:#f1f5f9;border-radius:6px;font-size:12px;color:#64748b;text-align:center;">
-      © 2025 Recupera Empresas · <a href="mailto:contato@recuperaempresas.com.br" style="color:#1A56DB;">contato@recuperaempresas.com.br</a>
+    <div ${emailStyle('panel')}>${body}</div>
+    <div ${emailStyle('footer')}>
+      © 2025 Recupera Empresas · <a href="mailto:contato@recuperaempresas.com.br" ${emailStyle('footerLink')}>contato@recuperaempresas.com.br</a>
     </div>
   </div>`;
 }
@@ -596,29 +640,29 @@ function buildClientStepConfirmHtml(stepNum, user, ts) {
   return emailWrapper(`Etapa ${stepNum} concluída — Onboarding`, `
     <p>Olá, <b>${name}</b>!</p>
     <p>Recebemos as informações da <b>Etapa ${stepNum} de ${total} — ${STEP_TITLES[stepNum]}</b>.</p>
-    <div style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:8px;padding:16px;margin:16px 0;">
-      <div style="display:flex;align-items:center;gap:12px;">
-        <div style="font-size:28px;font-weight:800;color:#1A56DB;">${pct}%</div>
+    <div ${emailStyle('progressBox')}>
+      <div ${emailStyle('progressRow')}>
+        <div ${emailStyle('progressValue')}>${pct}%</div>
         <div>
-          <div style="font-weight:700;color:#1E40AF;">Progresso do onboarding</div>
-          <div style="font-size:13px;color:#3B82F6;">${stepNum} de ${total} etapas concluídas</div>
+          <div ${emailStyle('progressTitle')}>Progresso do onboarding</div>
+          <div ${emailStyle('progressCopy')}>${stepNum} de ${total} etapas concluídas</div>
         </div>
       </div>
-      <div style="background:#DBEAFE;border-radius:4px;height:6px;margin-top:12px;">
-        <div style="background:#1A56DB;border-radius:4px;height:6px;width:${pct}%;"></div>
+      <div ${emailStyle('progressTrack')}>
+        <div ${emailStyle('progressTrack', `background:#1A56DB;width:${pct}%`)}></div>
       </div>
     </div>
     ${stepNum < 14
-      ? `<p style="text-align:center;margin:20px 0;">
-          <a href="${BASE_URL}/dashboard.html" style="background:#1A56DB;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:600;font-size:14px;">Acessar o Portal</a>
+      ? `<p ${emailStyle('centerCta')}>
+          <a href="${BASE_URL}/dashboard.html" ${emailStyle('primaryButton')}>Acessar o Portal</a>
          </p>`
-      : `<div style="background:#ECFDF5;border:1px solid #A7F3D0;border-radius:8px;padding:16px;margin:16px 0;">
-          <p style="margin:0;color:#065F46;font-weight:700;">Onboarding concluído!</p>
-          <p style="margin:4px 0 0;font-size:13px;color:#047857;">Nossa equipe iniciará a análise e elaboração do Business Plan em até 2 dias úteis.</p>
+      : `<div ${emailStyle('successBox')}>
+          <p ${emailStyle('successTitle')}>Onboarding concluído!</p>
+          <p ${emailStyle('successCopy')}>Nossa equipe iniciará a análise e elaboração do Business Plan em até 2 dias úteis.</p>
          </div>`
     }
-    <p style="color:#64748B;font-size:13px;margin-top:16px;">Dúvidas? <a href="mailto:contato@recuperaempresas.com.br" style="color:#1A56DB;">contato@recuperaempresas.com.br</a></p>
-    <p style="font-size:12px;color:#94A3B8;">Enviado em ${ts}</p>
+    <p ${emailStyle('metaText')}>Dúvidas? <a href="mailto:contato@recuperaempresas.com.br" ${emailStyle('footerLink')}>contato@recuperaempresas.com.br</a></p>
+    <p ${emailStyle('timeText')}>Enviado em ${ts}</p>
   `);
 }
 
@@ -626,24 +670,24 @@ function buildStepHtml(stepNum, allData, user, timestamp) {
   const s  = v => v || '<em>não informado</em>';
   const yn = v => v === 'sim' ? 'Sim' : v === 'nao' ? 'Não' : s(v);
   const row = (k, v) => `<tr>
-    <td style="padding:6px 12px;border:1px solid #e2e8f0;background:#f8fafc;width:38%;font-weight:600;font-size:13px;color:#334155;">${k}</td>
-    <td style="padding:6px 12px;border:1px solid #e2e8f0;font-size:13px;color:#1e293b;">${v}</td></tr>`;
-  const tbl = rows => `<table style="width:100%;border-collapse:collapse;margin-bottom:16px;">${rows}</table>`;
+    <td ${emailStyle('tableLabel')}>${k}</td>
+    <td ${emailStyle('tableValue')}>${v}</td></tr>`;
+  const tbl = rows => `<table ${emailStyle('table')}>${rows}</table>`;
 
   const empresa  = allData.empresa || {};
   const userName = user.name || user.full_name || user.email || '';
   let body = `
-  <div style="font-family:Arial,sans-serif;max-width:700px;margin:0 auto;">
-    <div style="background:#0F172A;padding:20px 24px;border-radius:8px 8px 0 0;">
-      <h1 style="color:#fff;margin:0;font-size:18px;">Recupera Empresas — Onboarding</h1>
-      <p style="color:#94A3B8;margin:4px 0 0;font-size:13px;">Etapa ${stepNum} concluída: ${STEP_TITLES[stepNum] || ''}</p>
+  <div ${emailStyle('wrapper700')}>
+    <div ${emailStyle('header')}>
+      <h1 ${emailStyle('headerTitle')}>Recupera Empresas — Onboarding</h1>
+      <p ${emailStyle('headerSubtitle')}>Etapa ${stepNum} concluída: ${STEP_TITLES[stepNum] || ''}</p>
     </div>
-    <div style="background:#EFF6FF;padding:12px 24px;border-bottom:1px solid #BFDBFE;">
-      <b style="font-size:13px;color:#1E40AF;">Cliente:</b>
-      <span style="font-size:13px;color:#1E3A5F;"> ${userName} — ${empresa.razaoSocial || user.company || 'empresa'} &lt;${user.email}&gt;</span>
-      <span style="float:right;font-size:12px;color:#64748B;">${timestamp}</span>
+    <div ${emailStyle('infoBar')}>
+      <b ${emailStyle('infoLabel')}>Cliente:</b>
+      <span ${emailStyle('infoValue')}> ${userName} — ${empresa.razaoSocial || user.company || 'empresa'} &lt;${user.email}&gt;</span>
+      <span ${emailStyle('infoTime')}>${timestamp}</span>
     </div>
-    <div style="background:#fff;padding:20px 24px;border-radius:0 0 8px 8px;border:1px solid #e2e8f0;border-top:none;">`;
+    <div ${emailStyle('panelCompact')}>`;
 
   const D = allData;
   if (stepNum === 1)  body += tbl(row('Consentimento LGPD', D.lgpd?.concordo ? 'Aceito' : 'Nao aceito'));
@@ -656,7 +700,7 @@ function buildStepHtml(stepNum, allData, user, timestamp) {
   }
   if (stepNum === 3) {
     (D.socios||[]).forEach((sc,i) => {
-      body += `<p style="font-weight:700;color:#1A56DB;margin:12px 0 6px;">Sócio ${i+1}</p>`;
+      body += `<p ${emailStyle('sectionHeading')}>Sócio ${i+1}</p>`;
       body += tbl([row('Nome',s(sc.nome)),row('CPF',s(sc.cpf)),row('Data Nasc.',s(sc.dataNascimento)),
         row('Endereço',s(sc.endereco)),row('E-mail',s(sc.email)),row('Telefone',s(sc.telefone)),
         row('Participação',sc.participacao?`${sc.participacao}%`:'não informado'),row('Cargo',s(sc.cargo))].join(''));
@@ -690,7 +734,7 @@ function buildStepHtml(stepNum, allData, user, timestamp) {
   }
   if (stepNum === 8) {
     (D.dividas||[]).forEach((d,i) => {
-      body += `<p style="font-weight:700;color:#1A56DB;margin:12px 0 6px;">Dívida ${i+1}</p>`;
+      body += `<p ${emailStyle('sectionHeading')}>Dívida ${i+1}</p>`;
       body += tbl([row('Credor',s(d.nomeCredor)),row('Tipo',s(d.tipoDivida)),
         row('Valor Original',s(d.valorOriginal)),row('Saldo Atual',s(d.saldoAtual)),
         row('Garantia',yn(d.possuiGarantia)),row('Judicializada',yn(d.estaJudicializada)),
@@ -725,14 +769,14 @@ function buildStepHtml(stepNum, allData, user, timestamp) {
       row('Disposto a',Array.isArray(e.dispostoA)?e.dispostoA.join(', '):s(e.dispostoA)),
       row('Interesse em RJ',s(e.interesseRJ))].join(''));
   }
-  if (stepNum === 13) body += `<p style="color:#64748b;">Documentos anexados — verificar e-mail de envio final.</p>`;
+  if (stepNum === 13) body += `<p ${emailStyle('sectionNote')}>Documentos anexados — verificar e-mail de envio final.</p>`;
   if (stepNum === 14) {
     const r = D.responsavel||{};
     body += tbl([row('Nome',s(r.nome)),row('Cargo',s(r.cargo)),row('E-mail',s(r.email)),row('Telefone',s(r.telefone)),
       row('Declaração',D.confirmacao?.declaro?'Confirmada':'Nao confirmada')].join(''));
   }
   body += `</div>
-    <div style="margin-top:12px;padding:10px 16px;background:#f1f5f9;border-radius:6px;font-size:12px;color:#64748b;">
+    <div ${emailStyle('generatedBox')}>
       Gerado em ${timestamp} via Portal de Onboarding — Recupera Empresas
     </div>
   </div>`;
@@ -1555,16 +1599,16 @@ app.post('/api/submit', requireAuth, upload.fields(fileFields), async (req, res)
     // Build full report (all 14 steps)
     let allStepsHtml = '';
     for (let i=1; i<=14; i++) {
-      allStepsHtml += `<h2 style="font-size:15px;color:#1A56DB;margin:20px 0 8px;padding-bottom:6px;border-bottom:2px solid #DBEAFE;">
+      allStepsHtml += `<h2 ${emailStyle('completeHeading')}>
         Etapa ${i} — ${STEP_TITLES[i]}</h2>`;
       allStepsHtml += buildStepHtml(i, allData, user, ts);
     }
-    const fullHtml = `<div style="font-family:Arial,sans-serif;max-width:800px;margin:0 auto;">
-      <div style="background:#0F172A;padding:20px 24px;border-radius:8px 8px 0 0;">
-        <h1 style="color:#fff;margin:0;font-size:20px;">Onboarding Completo — Recupera Empresas</h1>
-        <p style="color:#94A3B8;margin:4px 0 0;font-size:13px;">${empresa.razaoSocial||user.company||user.name||user.email} — ${ts}</p>
+    const fullHtml = `<div ${emailStyle('wrapper800')}>
+      <div ${emailStyle('header')}>
+        <h1 ${emailStyle('headerTitleLg')}>Onboarding Completo — Recupera Empresas</h1>
+        <p ${emailStyle('headerSubtitle')}>${empresa.razaoSocial||user.company||user.name||user.email} — ${ts}</p>
       </div>
-      <div style="background:#fff;padding:24px;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 8px 8px;">${allStepsHtml}</div>
+      <div ${emailStyle('panel')}>${allStepsHtml}</div>
     </div>`;
 
     await Promise.all([
