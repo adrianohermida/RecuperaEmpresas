@@ -132,3 +132,4 @@ function stopNotifPolling() {
   clearInterval(_notifInterval);
   _notifInterval = null;
 }
+console.info('[RE:dashboard-notifications] loaded');

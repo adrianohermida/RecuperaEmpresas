@@ -2168,7 +2168,7 @@ body {
 }
 
 .admin-modal-overlay-high {
-  z-index: 9999;
+  z-index: 10100;
 }
 
 .agenda-modal-card {

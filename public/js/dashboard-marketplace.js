@@ -86,3 +86,4 @@ async function contractService(serviceId) {
     showToast(j.error || 'Erro ao contratar serviço.', 'error');
   }
 }
+console.info('[RE:dashboard-marketplace] loaded');

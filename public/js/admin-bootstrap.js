@@ -151,15 +151,20 @@
   }
 
   async function initAdminShell() {
+    console.info('[RE:admin-bootstrap] initAdminShell starting');
     const token = getToken();
     if (!token) {
+      console.warn('[RE:admin-bootstrap] no token → redirect login');
       location.href = 'login.html';
       return;
     }
 
     const warmTimer = setTimeout(() => {
       const guard = document.getElementById('authGuard');
-      if (guard) guard.querySelector('div').lastElementChild.textContent = 'Servidor aquecendo, aguarde...';
+      if (guard) {
+        const msg = guard.querySelector('.auth-guard-message');
+        if (msg) msg.textContent = 'Servidor aquecendo, aguarde...';
+      }
     }, 4000);
 
     let response;
@@ -173,18 +178,31 @@
       clearTimeout(timeout);
     } catch (error) {
       clearTimeout(warmTimer);
+      console.error('[RE:admin-bootstrap] verify fetch failed:', error.message);
       location.href = 'login.html?err=timeout';
       return;
     }
     clearTimeout(warmTimer);
 
     if (!response.ok) {
+      console.warn('[RE:admin-bootstrap] verify response not ok:', response.status);
       location.href = 'login.html';
       return;
     }
 
-    const { user } = await response.json();
+    let user;
+    try {
+      const body = await response.json();
+      user = body.user;
+      if (!user) throw new Error('user field missing from /api/auth/verify response');
+    } catch (err) {
+      console.error('[RE:admin-bootstrap] verify JSON parse error:', err.message);
+      location.href = 'login.html?err=parse';
+      return;
+    }
+
     if (!user.isAdmin) {
+      console.warn('[RE:admin-bootstrap] user is not admin → redirect dashboard');
       location.href = 'dashboard.html';
       return;
     }
@@ -194,16 +212,26 @@
     if (userName) userName.textContent = user.name || user.email;
     if (userAvatar) userAvatar.textContent = (user.name || user.email || '?')[0].toUpperCase();
     document.getElementById('authGuard')?.remove();
+    console.info('[RE:admin-bootstrap] auth guard removed, loading data...');
 
-    await loadAdminData();
+    try {
+      await loadAdminData();
+    } catch (err) {
+      console.error('[RE:admin-bootstrap] loadAdminData error:', err.message);
+    }
 
     if (isFreshchatEnabled()) {
       setTimeout(() => initFreshchatOperator(user), 2000);
     }
 
     startAdminNotifPolling();
-    await pollUnreadMessages();
+    try {
+      await pollUnreadMessages();
+    } catch (err) {
+      console.error('[RE:admin-bootstrap] pollUnreadMessages error:', err.message);
+    }
     setInterval(pollUnreadMessages, 15000);
+    console.info('[RE:admin-bootstrap] initAdminShell complete');
   }
 
   async function pollUnreadMessages() {

@@ -25,6 +25,8 @@
     loadFreshchatWidget();
   }
 
-  window.addEventListener('load', initAdminShell);
+  // NOTE: initAdminShell listener is already registered in admin-bootstrap.js.
+  // Do NOT add a second listener here — it would cause double initialization.
   initFreshchatBoot();
+  console.info('[RE:admin-init] loaded');
 })();

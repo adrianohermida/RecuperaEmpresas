@@ -95,4 +95,6 @@
   window.adminReadNotif = adminReadNotif;
   window.adminMarkAllNotifRead = adminMarkAllNotifRead;
   window.startAdminNotifPolling = startAdminNotifPolling;
+
+console.info('[RE:admin-notifications] loaded');
 })();

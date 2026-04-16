@@ -420,4 +420,6 @@
       return false;
     },
   };
+
+console.info('[RE:admin-client-drawer-tabs-tertiary] loaded');
 })();

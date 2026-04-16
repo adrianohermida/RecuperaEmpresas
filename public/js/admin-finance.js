@@ -70,4 +70,6 @@
 
   window.loadAdminFinanceiro = loadAdminFinanceiro;
   window.openClientFinanceiro = openClientFinanceiro;
+
+console.info('[RE:admin-finance] loaded');
 })();
