@@ -44,7 +44,24 @@ router.post('/api/support/ticket', requireAuth, async (req, res) => {
   });
 
   if (result.ok) return res.json({ success: true, ticket: result.data });
-  res.status(503).json({ error: 'Suporte temporariamente indisponível. Tente novamente mais tarde.' });
+
+  // Freshdesk unavailable — fall back to email so the client is not blocked
+  try {
+    await sendMail(
+      EMAIL_TO,
+      `[Suporte Portal] ${subject.trim()} — ${req.user.company || req.user.name || req.user.email}`,
+      emailWrapper('Novo ticket via portal', `
+        <p><b>Cliente:</b> ${req.user.name || ''} (${req.user.email})</p>
+        <p><b>Empresa:</b> ${req.user.company || '—'}</p>
+        <p><b>Assunto:</b> ${subject.trim()}</p>
+        ${description ? `<p><b>Descrição:</b> ${description.trim()}</p>` : ''}
+      `)
+    );
+    return res.json({ success: true, fallback: true, message: 'Solicitação recebida. Nossa equipe entrará em contato em breve.' });
+  } catch (mailError) {
+    console.error('[SUPPORT TICKET FALLBACK]', mailError?.message);
+    return res.status(503).json({ error: 'Suporte temporariamente indisponível. Tente novamente mais tarde.' });
+  }
 });
 
 router.get('/api/financial/invoices', requireAuth, async (req, res) => {

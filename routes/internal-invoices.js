@@ -5,7 +5,8 @@ const fs = require('fs');
 const path = require('path');
 const PDFDoc = require('pdfkit');
 
-const { BASE_URL, sb } = require('../lib/config');
+const { BASE_URL, sb, JWT_SECRET } = require('../lib/config');
+const jwt = require('jsonwebtoken');
 const { requireAuth, requireAdmin } = require('../lib/auth');
 const { auditLog, pushNotification } = require('../lib/logging');
 const { sendMail, emailStyle } = require('../lib/email');
@@ -93,7 +94,13 @@ router.get('/api/financial/internal-invoices', requireAuth, async (req, res) => 
   }
 });
 
-router.get('/api/financial/internal-invoices/:id/pdf', requireAuth, async (req, res) => {
+router.get('/api/financial/internal-invoices/:id/pdf', (req, res, next) => {
+  // Allow ?token= query param so email links work without browser auth session
+  if (req.query.token && !req.headers.authorization) {
+    req.headers.authorization = 'Bearer ' + req.query.token;
+  }
+  requireAuth(req, res, next);
+}, async (req, res) => {
   try {
     const { data: invoice } = await sb.from('re_invoices')
       .select('*')
@@ -317,7 +324,13 @@ router.post('/api/admin/invoices/:id/send-email', requireAdmin, async (req, res)
     const client = invoice.re_users || {};
     const amountFormatted = ((invoice.amount_cents || 0) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     const dueFormatted = new Date(`${invoice.due_date}T12:00:00`).toLocaleDateString('pt-BR');
-    const pdfUrl = `${BASE_URL}/api/financial/internal-invoices/${invoice.id}/pdf`;
+    // Short-lived token (7 days) so the email link works without browser login
+    const downloadToken = jwt.sign(
+      { id: invoice.user_id, email: client.email },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+    const pdfUrl = `${BASE_URL}/api/financial/internal-invoices/${invoice.id}/pdf?token=${downloadToken}`;
 
     await sendMail(
       client.email,
