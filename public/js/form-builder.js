@@ -78,6 +78,7 @@ const QB_TYPES = [
    Entry point — called by showSection('formularios')
 ──────────────────────────────────────────────────────────────────────────────*/
 function loadFormBuilder() {
+  fbBindTransientModalBehavior();
   fbShowView('list');
   fbLoadFormsList();
 }
@@ -250,6 +251,7 @@ async function fbOpenStatsPanel(formIdOverride) {
    New form modal
 ──────────────────────────────────────────────────────────────────────────────*/
 function fbOpenNewFormModal() {
+  fbCloseTransientModals('fb-modal-new');
   document.getElementById('fb-modal-new').classList.remove('ui-hidden');
   document.getElementById('fb-new-title').value = '';
   document.getElementById('fb-new-desc').value  = '';
@@ -732,10 +734,18 @@ function fbToggleSettings() {
 ──────────────────────────────────────────────────────────────────────────────*/
 let _logicSourceQId = null;
 
+function fbCloseTransientModals(exceptId) {
+  ['fb-modal-new', 'fb-logic-modal', 'fb-assign-modal', 'fb-resp-detail-modal'].forEach(id => {
+    if (id === exceptId) return;
+    document.getElementById(id)?.classList.add('ui-hidden');
+  });
+}
+
 async function fbOpenLogicEditor(qId) {
   _logicSourceQId = qId;
   const modal = document.getElementById('fb-logic-modal');
   if (!modal) return;
+  fbCloseTransientModals('fb-logic-modal');
   modal.classList.remove('ui-hidden');
   await fbLoadLogicRules(qId);
 }
@@ -810,6 +820,7 @@ async function fbDeleteLogicRule(ruleId) {
 async function fbOpenAssignModal() {
   const modal = document.getElementById('fb-assign-modal');
   if (!modal) return;
+  fbCloseTransientModals('fb-assign-modal');
   modal.classList.remove('ui-hidden');
   await fbLoadAssignments();
 }
@@ -934,6 +945,7 @@ async function fbOpenResponses(formId, formTitle) {
 async function fbOpenResponseDetail(respId) {
   const modal = document.getElementById('fb-resp-detail-modal');
   if (!modal) return;
+  fbCloseTransientModals('fb-resp-detail-modal');
   modal.classList.remove('ui-hidden');
 
   const body = document.getElementById('fb-resp-detail-body');
