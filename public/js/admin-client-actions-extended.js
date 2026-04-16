@@ -731,6 +731,195 @@
     else location.reload();
   }
 
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // DOCUMENT REQUESTS
+  // ═══════════════════════════════════════════════════════════════════════════════
+  async function adminRequestDoc(clientId) {
+    // Load suggestions based on onboarding data
+    const [suggestRes, membersRes, creditorsRes, suppliersRes] = await Promise.all([
+      fetch(`/api/admin/client/${clientId}/document-requests/suggestions`, { headers: authH() }),
+      fetch(`/api/admin/client/${clientId}/members`, { headers: authH() }),
+      fetch(`/api/admin/client/${clientId}/creditors`, { headers: authH() }),
+      fetch(`/api/admin/client/${clientId}/suppliers`, { headers: authH() }),
+    ]);
+    const { suggestions = [] } = suggestRes.ok ? await suggestRes.json() : {};
+    const { members = [] } = membersRes.ok ? await membersRes.json() : {};
+    const { creditors = [] } = creditorsRes.ok ? await creditorsRes.json() : {};
+    const { suppliers = [] } = suppliersRes.ok ? await suppliersRes.json() : {};
+
+    // Group suggestions by priority
+    const priority1 = suggestions.filter(s => s.priority === 1);
+    const priority2 = suggestions.filter(s => s.priority === 2);
+
+    const entityOptions = {
+      company:  [{ id: '', label: 'Empresa' }],
+      member:   members.map(m => ({ id: m.id, label: m.name })),
+      creditor: creditors.map(c => ({ id: c.id, label: c.name })),
+      supplier: suppliers.map(s => ({ id: s.id, label: s.name })),
+    };
+
+    const suggestHtml = (list, groupLabel) => list.length ? `
+      <optgroup label="${groupLabel}">
+        ${list.map((s, i) => `<option value="__s${i}_${groupLabel}" data-sug='${JSON.stringify(s).replace(/'/g,"&#39;")}'>${esc(s.name)} (${s.entity_type === 'company' ? 'Empresa' : esc(s.entity_label || s.entity_type)})</option>`).join('')}
+      </optgroup>` : '';
+
+    const docTypeOpts = [
+      ['outros','Outros'], ['contrato_social','Contrato Social'], ['procuracao','Procuração'],
+      ['certidao','Certidão'], ['balanco','Balanço Patrimonial'], ['dre','DRE'],
+      ['fluxo_caixa','Fluxo de Caixa'], ['extrato','Extrato Bancário'], ['nota_fiscal','Nota Fiscal'],
+    ].map(([v, l]) => `<option value="${v}">${l}</option>`).join('');
+
+    const entTypeOpts = [
+      ['company','Empresa'], ['member','Membro/Sócio'], ['creditor','Credor'],
+      ['supplier','Fornecedor'], ['contract','Contrato'], ['employee','Funcionário'],
+    ].map(([v, l]) => `<option value="${v}">${l}</option>`).join('');
+
+    openModal('docReqModal', 'Solicitar documento',
+      `<!-- Quick suggestions -->
+       <div style="margin-bottom:14px">
+         <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Sugestões baseadas no onboarding</label>
+         <select id="drSuggestion" class="form-control" onchange="_applyDocSuggestion(this)">
+           <option value="">— Selecionar sugestão (opcional) —</option>
+           ${suggestHtml(priority1, 'Prioritários')}
+           ${suggestHtml(priority2, 'Adicionais')}
+         </select>
+       </div>
+       <div style="display:grid;gap:10px">
+         <div>
+           <label style="font-size:12px;font-weight:500">Nome do documento *</label>
+           <input id="drName" class="form-control" placeholder="Ex.: Balanço Patrimonial 2023">
+         </div>
+         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+           <div>
+             <label style="font-size:12px;font-weight:500">Tipo</label>
+             <select id="drDocType" class="form-control">${docTypeOpts}</select>
+           </div>
+           <div>
+             <label style="font-size:12px;font-weight:500">Prazo</label>
+             <input id="drDeadline" class="form-control" type="date">
+           </div>
+         </div>
+         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+           <div>
+             <label style="font-size:12px;font-weight:500">Entidade relacionada</label>
+             <select id="drEntType" class="form-control" onchange="_updateDocReqEntityPicker('${clientId}')">${entTypeOpts}</select>
+           </div>
+           <div id="drEntPickerWrap">
+             <label style="font-size:12px;font-weight:500">Qual entidade</label>
+             <select id="drEntId" class="form-control"><option value="">Empresa (geral)</option></select>
+           </div>
+         </div>
+         <div>
+           <label style="font-size:12px;font-weight:500">Instruções para o cliente</label>
+           <textarea id="drDesc" class="form-control" rows="2" placeholder="Descreva o que deve ser enviado, período, etc."></textarea>
+         </div>
+       </div>`,
+      `<button class="btn-ghost admin-modal-btn" onclick="closeModal('docReqModal')">Cancelar</button>
+       <button class="btn-primary admin-modal-btn" onclick="_submitDocRequest('${clientId}')">Solicitar</button>`,
+      'lg'
+    );
+
+    // Store entity options for dynamic picker
+    window._docReqEntityOptions = entityOptions;
+  }
+
+  function _applyDocSuggestion(sel) {
+    const opt = sel.selectedOptions[0];
+    if (!opt || !opt.dataset.sug) return;
+    try {
+      const s = JSON.parse(opt.dataset.sug.replace(/&#39;/g, "'"));
+      const nameEl = document.getElementById('drName');
+      const typeEl = document.getElementById('drDocType');
+      const entTypeEl = document.getElementById('drEntType');
+      if (nameEl) nameEl.value = s.name || '';
+      if (typeEl) typeEl.value = s.doc_type || 'outros';
+      if (entTypeEl) {
+        entTypeEl.value = s.entity_type || 'company';
+        entTypeEl.dispatchEvent(new Event('change'));
+      }
+      // Pre-fill entity_label in the picker if we have entity_id
+      setTimeout(() => {
+        const entIdEl = document.getElementById('drEntId');
+        if (entIdEl && s.entity_id) {
+          entIdEl.value = s.entity_id;
+        }
+      }, 50);
+    } catch (e) { console.warn('suggestion parse error', e); }
+  }
+
+  function _updateDocReqEntityPicker(clientId) {
+    const type = document.getElementById('drEntType')?.value || 'company';
+    const wrap = document.getElementById('drEntPickerWrap');
+    const opts = (window._docReqEntityOptions || {})[type] || [];
+    if (!wrap) return;
+    if (type === 'company' || !opts.length) {
+      wrap.innerHTML = `<label style="font-size:12px;font-weight:500">Qual entidade</label>
+        <select id="drEntId" class="form-control"><option value="">Empresa (geral)</option></select>`;
+    } else {
+      wrap.innerHTML = `<label style="font-size:12px;font-weight:500">Qual entidade</label>
+        <select id="drEntId" class="form-control">
+          <option value="">— Selecionar —</option>
+          ${opts.map(o => `<option value="${o.id}">${esc(o.label)}</option>`).join('')}
+        </select>`;
+    }
+  }
+
+  async function _submitDocRequest(clientId) {
+    const name      = document.getElementById('drName')?.value.trim();
+    const doc_type  = document.getElementById('drDocType')?.value || 'outros';
+    const deadline  = document.getElementById('drDeadline')?.value || null;
+    const desc      = document.getElementById('drDesc')?.value.trim() || null;
+    const entType   = document.getElementById('drEntType')?.value || 'company';
+    const entId     = document.getElementById('drEntId')?.value || null;
+    const entOpts   = (window._docReqEntityOptions || {})[entType] || [];
+    const entLabel  = entId ? (entOpts.find(o => o.id === entId)?.label || null) : null;
+    if (!name) { showToast('Nome do documento é obrigatório.', 'error'); return; }
+
+    const res = await fetch(`/api/admin/client/${clientId}/document-requests`, {
+      method: 'POST', headers: authH(),
+      body: JSON.stringify({
+        name, doc_type, description: desc, deadline,
+        entity_type: entType, entity_id: entId || null, entity_label: entLabel,
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) { showToast(data.error || 'Erro ao solicitar.', 'error'); return; }
+    showToast('Solicitação enviada ao cliente!', 'success');
+    closeModal('docReqModal');
+    rerenderTab('docs');
+  }
+
+  async function adminApproveDocReq(clientId, reqId) {
+    const res = await fetch(`/api/admin/client/${clientId}/document-requests/${reqId}`, {
+      method: 'PUT', headers: authH(), body: JSON.stringify({ status: 'approved' }),
+    });
+    if (!res.ok) { showToast('Erro ao aprovar.', 'error'); return; }
+    showToast('Documento aprovado!', 'success');
+    rerenderTab('docs');
+  }
+
+  async function adminRejectDocReq(clientId, reqId) {
+    const notes = prompt('Motivo da rejeição (opcional):') ?? null;
+    if (notes === null) return; // cancelled
+    const res = await fetch(`/api/admin/client/${clientId}/document-requests/${reqId}`, {
+      method: 'PUT', headers: authH(),
+      body: JSON.stringify({ status: 'rejected', admin_notes: notes || null }),
+    });
+    if (!res.ok) { showToast('Erro ao rejeitar.', 'error'); return; }
+    showToast('Documento rejeitado.', 'success');
+    rerenderTab('docs');
+  }
+
+  async function adminCancelDocReq(clientId, reqId) {
+    if (!confirm('Cancelar esta solicitação de documento?')) return;
+    const res = await fetch(`/api/admin/client/${clientId}/document-requests/${reqId}`, {
+      method: 'DELETE', headers: authH(),
+    });
+    if (!res.ok) { showToast('Erro ao cancelar.', 'error'); return; }
+    showToast('Solicitação cancelada.', 'success');
+    rerenderTab('docs');
+  }
+
   // ─── Expose all functions globally ───────────────────────────────────────────
   Object.assign(window, {
     // internal
@@ -767,5 +956,13 @@
     adminDeleteEmployee,
     adminEditClient,
     adminDeleteClient,
+    // document requests
+    adminRequestDoc,
+    _applyDocSuggestion,
+    _updateDocReqEntityPicker,
+    _submitDocRequest,
+    adminApproveDocReq,
+    adminRejectDocReq,
+    adminCancelDocReq,
   });
 })();

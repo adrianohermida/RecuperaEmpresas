@@ -56,7 +56,7 @@ const docUpload = multer({
 
 router.post('/api/documents/upload', requireAuth, docUpload.single('file'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'Nenhum arquivo enviado.' });
-  const { docType = 'outros', name } = req.body;
+  const { docType = 'outros', name, request_id } = req.body;
 
   const docName = (name || req.file.originalname).trim().slice(0, 120);
   const { data: doc } = await sb.from('re_documents').insert({
@@ -69,7 +69,17 @@ router.post('/api/documents/upload', requireAuth, docUpload.single('file'), asyn
     doc_type:      docType,
     status:        'pendente',
     comments:      [],
+    request_id:    request_id || null,
   }).select().single();
+
+  // If upload is linked to a pending request, auto-fulfill it
+  if (request_id && doc) {
+    const cid = req.user.company_id || req.user.id;
+    await sb.from('re_document_requests').update({
+      status: 'uploaded', fulfilled_doc_id: doc.id,
+      fulfilled_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+    }).eq('id', request_id).eq('company_id', cid).eq('status', 'pending');
+  }
 
   res.json({ success: true, document: doc });
 });

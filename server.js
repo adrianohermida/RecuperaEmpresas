@@ -33,6 +33,7 @@ const supplierRoutes = require('./routes/suppliers');
 const employeeRoutes = require('./routes/employees');
 const entityDocumentRoutes = require('./routes/entity-documents');
 const dataChangeRequestRoutes = require('./routes/data-change-requests');
+const documentRequestRoutes = require('./routes/document-requests');
 
 const {
   PORT,
@@ -180,6 +181,7 @@ app.use(supplierRoutes);
 app.use(employeeRoutes);
 app.use(entityDocumentRoutes);
 app.use(dataChangeRequestRoutes);
+app.use(documentRequestRoutes);
 
 // ─── Health check (used by Render.com and uptime monitors) ───────────────────
 app.get(['/api/health', '/healthz'], (req, res) => {
