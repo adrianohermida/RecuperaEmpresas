@@ -57,16 +57,11 @@ Verificacoes no apex:
 
 Arquivos envolvidos no repositório:
 
-- [login/index.html](../login/index.html)
-- [register/index.html](../register/index.html)
-- [forgot-password/index.html](../forgot-password/index.html)
-- [reset-password/index.html](../reset-password/index.html)
-- [oauth/consent/index.html](../oauth/consent/index.html)
-- [login.html](../login.html)
-- [register.html](../register.html)
-- [forgot-password.html](../forgot-password.html)
-- [reset-password.html](../reset-password.html)
-- [oauth-consent.html](../oauth-consent.html)
+- [landing/login/index.html](../landing/login/index.html)
+- [landing/register/index.html](../landing/register/index.html)
+- [landing/forgot-password/index.html](../landing/forgot-password/index.html)
+- [landing/reset-password/index.html](../landing/reset-password/index.html)
+- [landing/oauth/consent/index.html](../landing/oauth/consent/index.html)
 
 ## Backend da API
 
@@ -89,7 +84,7 @@ Rollout gradual recomendado para o Worker:
 - Configurar `RE_API_WORKER_BASE=https://api-edge.recuperaempresas.com.br` para o Worker.
 - As rotas listadas em `RE_API_WORKER_ROUTES` passam a usar o Worker; o restante continua em `RE_API_BASE`.
 - Liberar inicialmente apenas estas rotas em `RE_API_WORKER_ROUTES`:
-	`/api/plan,/api/tasks,/api/notifications,/api/appointments,/api/messages,/api/change-requests,/api/document-requests,/api/creditors,/api/departments,/api/employees,/api/admin/appointments,/api/admin/messages,/api/admin/client/*/creditors,/api/admin/client/*/departments,/api/admin/client/*/members/invite,/api/admin/client/*/members/*/department,/api/admin/client/*/employees,/api/admin/client/*/messages,/api/admin/client/*/change-request,/api/admin/client/*/change-requests,/api/admin/client/*/document-requests`
+  `/api/plan,/api/tasks,/api/notifications,/api/appointments,/api/messages,/api/change-requests,/api/document-requests,/api/creditors,/api/departments,/api/employees,/api/admin/appointments,/api/admin/messages,/api/admin/client/*/creditors,/api/admin/client/*/departments,/api/admin/client/*/members/invite,/api/admin/client/*/members/*/department,/api/admin/client/*/employees,/api/admin/client/*/messages,/api/admin/client/*/change-request,/api/admin/client/*/change-requests,/api/admin/client/*/document-requests`
 - Fazer smoke test no portal com esse conjunto antes de expandir para outras fatias.
 
 Arquivo envolvido no repositório:

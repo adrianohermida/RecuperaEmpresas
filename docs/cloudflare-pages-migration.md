@@ -7,7 +7,7 @@ Migrar o frontend estatico para Cloudflare Pages sem quebrar o backend atual, e 
 ## Estado atual
 
 - O frontend estatico sai de `public/` e o build gera `dist/` via [scripts/build.js](../scripts/build.js).
-- A raiz do repositorio deve deixar de ser espelho automatico do portal; ela fica livre para a landing page do dominio principal.
+- A raiz do repositorio deve deixar de ser espelho automatico do portal; a landing publica do dominio principal passa a viver em `landing/`.
 - O cliente ja suporta API em origem separada via `window.RE_API_BASE` em [public/js/api-base.js](../public/js/api-base.js).
 - O backend atual depende de Express em [server.js](../server.js) e concentra rotas montadas de [routes](../routes).
 - Ainda existem dependencias de runtime Node incompativeis com Workers em [lib/config.js](../lib/config.js), [routes/onboarding.js](../routes/onboarding.js), [routes/documents.js](../routes/documents.js), [routes/entity-documents.js](../routes/entity-documents.js), [routes/internal-invoices.js](../routes/internal-invoices.js), [routes/admin-clients.js](../routes/admin-clients.js), [routes/support-financial.js](../routes/support-financial.js) e [routes/stripe-webhook.js](../routes/stripe-webhook.js).
@@ -43,12 +43,12 @@ Migrar o frontend estatico para Cloudflare Pages sem quebrar o backend atual, e 
 
 Arquitetura recomendada:
 
-- `recuperaempresas.com.br`: landing page estatica publicada no GitHub Pages.
+- `recuperaempresas.com.br`: landing page estatica publicada a partir de `landing/`.
 - `portal.recuperaempresas.com.br`: portal autenticado publicado no Cloudflare Pages.
 
 Para o login vindo do dominio principal:
 
-- Criar uma rota estatica em [login/index.html](../login/index.html) na raiz do repositorio.
+- Criar as rotas estaticas do apex em [landing/login/index.html](../landing/login/index.html), [landing/register/index.html](../landing/register/index.html), [landing/forgot-password/index.html](../landing/forgot-password/index.html), [landing/reset-password/index.html](../landing/reset-password/index.html) e [landing/oauth/consent/index.html](../landing/oauth/consent/index.html).
 - Essa pagina faz redirect imediato para `https://portal.recuperaempresas.com.br/login.html`, preservando `query string` e `hash`.
 - Isso cobre o acesso manual a `https://recuperaempresas.com.br/login`.
 

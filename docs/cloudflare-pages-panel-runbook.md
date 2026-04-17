@@ -132,11 +132,11 @@ Resultado esperado:
 
 Arquivos que implementam isso no repositorio:
 
-- [login/index.html](../login/index.html)
-- [register/index.html](../register/index.html)
-- [forgot-password/index.html](../forgot-password/index.html)
-- [reset-password/index.html](../reset-password/index.html)
-- [oauth/consent/index.html](../oauth/consent/index.html)
+- [landing/login/index.html](../landing/login/index.html)
+- [landing/register/index.html](../landing/register/index.html)
+- [landing/forgot-password/index.html](../landing/forgot-password/index.html)
+- [landing/reset-password/index.html](../landing/reset-password/index.html)
+- [landing/oauth/consent/index.html](../landing/oauth/consent/index.html)
 
 ## 8. O que fazer se o deploy abrir mas o login quebrar
 

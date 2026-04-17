@@ -1,0 +1,86 @@
+name: Deploy Cloudflare Assets
+
+on:
+  push:
+    branches:
+      - gh-pages
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-cloudflare-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy-portal:
+    name: Deploy Portal Pages
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      RE_API_BASE: https://api.recuperaempresas.com.br
+      RE_API_WORKER_BASE: https://api-edge.recuperaempresas.com.br
+      RE_API_WORKER_ROUTES: ''
+      VITE_SUPABASE_URL: https://riiajjmnzgagntiqqshs.supabase.co
+      VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+      RE_ENABLE_FRESHCHAT: 'false'
+      RE_FRESHCHAT_TOKEN: ''
+      RE_FRESHCHAT_SITE_ID: ''
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build portal
+        run: npm run build
+
+      - name: Deploy portal to Pages
+        run: npx wrangler pages deploy dist --project-name=recuperaempresas --branch=gh-pages
+
+  deploy-landing:
+    name: Deploy Landing Pages
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Deploy landing to Pages
+        run: npx wrangler pages deploy landing --project-name=recuperaempresas-landing --branch=gh-pages
+
+  deploy-worker:
+    name: Deploy API Worker
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Deploy Worker
+        run: npx wrangler deploy -c workers/portal-api/wrangler.toml

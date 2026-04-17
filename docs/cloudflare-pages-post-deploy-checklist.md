@@ -240,8 +240,8 @@ Sintoma:
 
 Conferir:
 
-- [login/index.html](../login/index.html)
-- [login.html](../login.html)
+- [landing/login/index.html](../landing/login/index.html)
+- [landing/index.html](../landing/index.html)
 - Regras do provedor que serve a landing no apex
 
 ## Critério de aceite

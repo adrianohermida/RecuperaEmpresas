@@ -8,6 +8,9 @@
     "dev": "nodemon server.js",
     "build": "node scripts/build.js",
     "sync:root": "node scripts/sync-root-mirrors.js",
+    "deploy:portal": "wrangler pages deploy dist --project-name=recuperaempresas --branch=gh-pages",
+    "deploy:landing": "wrangler pages deploy landing --project-name=recuperaempresas-landing --branch=gh-pages",
+    "deploy:worker": "wrangler deploy -c workers/portal-api/wrangler.toml",
     "test:smoke": "node scripts/smoke-test.js",
     "test:worker-canary": "node scripts/smoke-test-worker-canary.js"
   },

@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Recupera Empresas</title>
+  <meta name="description" content="Recupera Empresas: reestruturação empresarial com plano, execução e acompanhamento." />
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --surface: rgba(255, 255, 255, 0.9);
+      --text: #16324f;
+      --muted: #55657a;
+      --line: rgba(22, 50, 79, 0.12);
+      --primary: #165dff;
+      --primary-dark: #0f47c7;
+      --accent: #0ea5a4;
+      --shadow: 0 24px 70px rgba(13, 34, 66, 0.12);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Tahoma, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(14, 165, 164, 0.15), transparent 32%),
+        radial-gradient(circle at right, rgba(22, 93, 255, 0.18), transparent 28%),
+        var(--bg);
+    }
+
+    .shell {
+      min-height: 100vh;
+      padding: 32px 20px 56px;
+      display: flex;
+      flex-direction: column;
+      gap: 32px;
+    }
+
+    .hero {
+      max-width: 1120px;
+      width: 100%;
+      margin: 0 auto;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+    }
+
+    .copy, .aside { padding: 40px; }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      margin-bottom: 28px;
+    }
+
+    .bars {
+      display: inline-grid;
+      grid-template-columns: repeat(4, 8px);
+      gap: 5px;
+      align-items: end;
+      height: 34px;
+    }
+
+    .bars span {
+      display: block;
+      border-radius: 999px;
+      background: linear-gradient(180deg, #5aa8ff, #165dff);
+    }
+
+    .bars span:nth-child(1) { height: 10px; }
+    .bars span:nth-child(2) { height: 18px; }
+    .bars span:nth-child(3) { height: 26px; }
+    .bars span:nth-child(4) { height: 34px; }
+
+    h1 {
+      margin: 0 0 18px;
+      font-size: clamp(2.4rem, 4vw, 4.4rem);
+      line-height: 0.95;
+      letter-spacing: -0.05em;
+      max-width: 10ch;
+    }
+
+    .lead {
+      margin: 0 0 28px;
+      max-width: 54ch;
+      font-size: 1.05rem;
+      line-height: 1.75;
+      color: var(--muted);
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      margin-bottom: 28px;
+    }
+
+    .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 14px 20px;
+      border-radius: 999px;
+      text-decoration: none;
+      font-weight: 700;
+      transition: 0.2s ease;
+    }
+
+    .button-primary {
+      color: #fff;
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    }
+
+    .button-secondary {
+      color: var(--text);
+      background: #fff;
+      border: 1px solid var(--line);
+    }
+
+    .button:hover { transform: translateY(-1px); }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .card {
+      padding: 16px;
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.8);
+      border: 1px solid var(--line);
+    }
+
+    .card strong {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 0.95rem;
+    }
+
+    .card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.95rem;
+      line-height: 1.6;
+    }
+
+    .aside {
+      background: linear-gradient(180deg, rgba(22, 93, 255, 0.06), rgba(14, 165, 164, 0.1));
+      border-left: 1px solid var(--line);
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      justify-content: center;
+    }
+
+    .metric {
+      padding: 18px;
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.74);
+      border: 1px solid rgba(255, 255, 255, 0.8);
+    }
+
+    .metric span {
+      display: block;
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin-bottom: 6px;
+    }
+
+    .metric strong {
+      font-size: 1.7rem;
+      letter-spacing: -0.04em;
+    }
+
+    .footer {
+      max-width: 1120px;
+      width: 100%;
+      margin: 0 auto;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    @media (max-width: 880px) {
+      .hero { grid-template-columns: 1fr; }
+      .aside { border-left: 0; border-top: 1px solid var(--line); }
+      .grid { grid-template-columns: 1fr; }
+      .copy, .aside { padding: 28px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <section class="hero">
+      <div class="copy">
+        <div class="brand">
+          <div class="bars" aria-hidden="true">
+            <span></span><span></span><span></span><span></span>
+          </div>
+          Recupera Empresas
+        </div>
+
+        <h1>Reestruturação empresarial com execução.</h1>
+        <p class="lead">
+          Organizamos o diagnóstico, o plano e a operação de recuperação da empresa em uma única jornada. O portal do cliente segue em ambiente dedicado, com autenticação, documentos e acompanhamento contínuo.
+        </p>
+
+        <div class="actions">
+          <a class="button button-primary" href="https://portal.recuperaempresas.com.br/login">Entrar no portal</a>
+          <a class="button button-secondary" href="https://portal.recuperaempresas.com.br/register">Criar acesso</a>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <strong>Diagnóstico financeiro</strong>
+            <p>Levantamento da situação atual e prioridades imediatas de caixa, passivo e operação.</p>
+          </div>
+          <div class="card">
+            <strong>Plano acionável</strong>
+            <p>Estratégia com responsáveis, cronograma e indicadores de execução para acompanhar a recuperação.</p>
+          </div>
+          <div class="card">
+            <strong>Gestão contínua</strong>
+            <p>Portal com etapas, documentos, solicitações, notificações e acompanhamento da equipe.</p>
+          </div>
+        </div>
+      </div>
+
+      <aside class="aside">
+        <div class="metric">
+          <span>Fluxo protegido</span>
+          <strong>Portal segregado</strong>
+        </div>
+        <div class="metric">
+          <span>Acesso</span>
+          <strong>LGPD e autenticação</strong>
+        </div>
+        <div class="metric">
+          <span>Operação</span>
+          <strong>Plano, tarefas e suporte</strong>
+        </div>
+      </aside>
+    </section>
+
+    <footer class="footer">
+      Recupera Empresas. Para acessar a jornada do cliente, use o portal em portal.recuperaempresas.com.br.
+    </footer>
+  </div>
+</body>
+</html>
