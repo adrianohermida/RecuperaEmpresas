@@ -169,6 +169,31 @@ Validar:
 - HTML e `js/config.js` nao ficam presos em cache antigo
 - O portal nao mistura assets do apex com assets do subdominio
 
+## 11. Rollout canario do Worker
+
+No terminal, executar:
+
+```bash
+npm run test:worker-canary
+```
+
+Se quiser validar contra hosts especificos:
+
+```bash
+PORTAL_URL=https://portal.recuperaempresas.com.br \
+LEGACY_API_BASE=https://api.recuperaempresas.com.br \
+WORKER_API_BASE=https://api-edge.recuperaempresas.com.br \
+CANARY_SAMPLE_ROUTES=/api/plan,/api/tasks,/api/admin/client/00000000-0000-0000-0000-000000000000/departments \
+npm run test:worker-canary
+```
+
+Validar:
+
+- `js/config.js` publicado no portal expõe `RE_API_BASE`, `RE_API_WORKER_BASE` e `RE_API_WORKER_ROUTES` esperados.
+- `GET /api/health` responde na API principal.
+- `GET /api/health` responde no Worker quando o canario estiver habilitado.
+- O mapeamento impresso no terminal envia ao Worker apenas as rotas planejadas.
+
 ## Falhas mais provaveis
 
 ### Falha 1: CORS na API

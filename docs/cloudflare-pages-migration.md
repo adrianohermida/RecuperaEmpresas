@@ -102,6 +102,10 @@ Ordem pratica de ativacao:
 3. Ativar CRUDs admin e client de `creditors`, `departments` e `employees`.
 4. So depois disso considerar novas fatias mais complexas.
 
+Ferramenta de validacao:
+
+- O repositorio agora possui `npm run test:worker-canary`, que le o `js/config.js` publicado no portal, valida os healthchecks das origens configuradas e imprime o mapeamento efetivo das rotas de exemplo.
+
 Redirects recomendados no Supabase Auth:
 
 - `https://portal.recuperaempresas.com.br/login?confirmed=1`
