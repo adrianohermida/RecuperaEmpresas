@@ -5,6 +5,9 @@ Scaffold inicial para migrar o primeiro lote de rotas simples do portal para Clo
 Escopo inicial:
 
 - `GET /api/health`
+- `GET /api/appointments`
+- `POST /api/appointments`
+- `DELETE /api/appointments/:id`
 - `GET /api/plan`
 - `PUT /api/plan/chapter/:id`
 - `GET /api/tasks`
@@ -12,6 +15,10 @@ Escopo inicial:
 - `GET /api/notifications`
 - `POST /api/notifications/:id/read`
 - `POST /api/notifications/read-all`
+- `GET /api/admin/appointments`
+- `PUT /api/admin/appointments/:id`
+- `GET /api/admin/logs`
+- `GET /api/admin/stats`
 
 Variaveis esperadas no Worker:
 
@@ -21,3 +28,7 @@ Variaveis esperadas no Worker:
 - `ALLOWED_ORIGINS`
 
 Este scaffold nao esta roteando trafego de producao ainda. Ele existe para permitir migracao incremental e validacao isolada.
+
+Observacao:
+
+- O `POST /api/appointments` no Worker ainda nao replica o envio de email do backend Express. Antes de colocar essa rota em producao, essa integracao precisa ser portada ou substituida.

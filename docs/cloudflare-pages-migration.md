@@ -342,6 +342,9 @@ O repositorio ja possui um scaffold isolado para o primeiro lote em [workers/por
 Entradas iniciais preparadas:
 
 - `GET /api/health`
+- `GET /api/appointments`
+- `POST /api/appointments`
+- `DELETE /api/appointments/:id`
 - `GET /api/plan`
 - `PUT /api/plan/chapter/:id`
 - `GET /api/tasks`
@@ -349,6 +352,10 @@ Entradas iniciais preparadas:
 - `GET /api/notifications`
 - `POST /api/notifications/:id/read`
 - `POST /api/notifications/read-all`
+- `GET /api/admin/appointments`
+- `PUT /api/admin/appointments/:id`
+- `GET /api/admin/logs`
+- `GET /api/admin/stats`
 
 Arquivos principais:
 

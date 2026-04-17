@@ -1,5 +1,7 @@
-import { requireAuth } from './lib/auth.mjs';
+import { requireAdmin, requireAuth } from './lib/auth.mjs';
 import { applyCors, json, noContent, notFound } from './lib/http.mjs';
+import { handleAdminSystem } from './routes/admin-system.mjs';
+import { handleAppointments } from './routes/appointments.mjs';
 import { handlePlan } from './routes/plan.mjs';
 import { handleTasks } from './routes/tasks.mjs';
 import { handleNotifications } from './routes/notifications.mjs';
@@ -17,7 +19,10 @@ async function routeAuthenticated(request, env, pathname) {
   const auth = await requireAuth(request, env);
   if (!auth.ok) return auth.response;
 
-  let params = match(pathname, /^\/api\/plan(?:\/chapter\/(?<id>\d+))?$/);
+  let params = match(pathname, /^\/api\/appointments(?:\/(?<id>[^/]+))?$/);
+  if (params) return handleAppointments(request, { ...auth, params, scope: 'user' });
+
+  params = match(pathname, /^\/api\/plan(?:\/chapter\/(?<id>\d+))?$/);
   if (params) return handlePlan(request, { ...auth, params });
 
   params = match(pathname, /^\/api\/tasks(?:\/(?<id>[^/]+))?$/);
@@ -25,6 +30,19 @@ async function routeAuthenticated(request, env, pathname) {
 
   params = match(pathname, /^\/api\/notifications(?:\/(?<id>[^/]+))?$/);
   if (params) return handleNotifications(request, { ...auth, params });
+
+  return notFound();
+}
+
+async function routeAdmin(request, env, pathname) {
+  const auth = await requireAdmin(request, env);
+  if (!auth.ok) return auth.response;
+
+  let params = match(pathname, /^\/api\/admin\/appointments(?:\/(?<id>[^/]+))?$/);
+  if (params) return handleAppointments(request, { ...auth, params, scope: 'admin' });
+
+  params = match(pathname, /^\/api\/admin\/(?<resource>logs|stats)$/);
+  if (params) return handleAdminSystem(request, { ...auth, params, scope: 'admin' });
 
   return notFound();
 }
@@ -40,6 +58,11 @@ export default {
 
     if (request.method === 'GET' && (url.pathname === '/api/health' || url.pathname === '/healthz')) {
       response = json({ status: 'ok', ts: new Date().toISOString(), runtime: 'cloudflare-worker' });
+      return withCors(request, response, env);
+    }
+
+    if (url.pathname.startsWith('/api/admin/')) {
+      response = await routeAdmin(request, env, url.pathname);
       return withCors(request, response, env);
     }
 

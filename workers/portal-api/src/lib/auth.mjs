@@ -65,3 +65,20 @@ export async function requireAuth(request, env) {
 
   return { ok: true, user, sb, auth: decoded };
 }
+
+export async function requireAdmin(request, env) {
+  const auth = await requireAuth(request, env);
+  if (!auth.ok) return auth;
+
+  const adminEmails = String(env.ADMIN_EMAILS || '')
+    .split(',')
+    .map((item) => item.trim().toLowerCase())
+    .filter(Boolean);
+
+  const email = String(auth.user.email || '').toLowerCase();
+  if (!auth.user.is_admin && !adminEmails.includes(email)) {
+    return { ok: false, response: json({ error: 'Acesso negado.' }, { status: 403 }) };
+  }
+
+  return auth;
+}
