@@ -71,6 +71,9 @@ async function routeAdmin(request, env, pathname, executionCtx) {
   params = match(pathname, /^\/api\/admin\/client\/(?<clientId>[^/]+)\/departments(?:\/(?<deptId>[^/]+))?$/);
   if (params) return handleDepartments(request, { ...auth, env, executionCtx, params, scope: 'admin' });
 
+  params = match(pathname, /^\/api\/admin\/client\/(?<clientId>[^/]+)\/members\/(?<action>invite)$/);
+  if (params) return handleDepartments(request, { ...auth, env, executionCtx, params, scope: 'admin' });
+
   params = match(pathname, /^\/api\/admin\/client\/(?<clientId>[^/]+)\/members\/(?<memberId>[^/]+)\/department$/);
   if (params) return handleDepartments(request, { ...auth, env, executionCtx, params, scope: 'admin' });
 

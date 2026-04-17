@@ -388,6 +388,7 @@ Entradas iniciais preparadas:
 - `POST /api/admin/client/:id/departments`
 - `PUT /api/admin/client/:id/departments/:deptId`
 - `DELETE /api/admin/client/:id/departments/:deptId`
+- `POST /api/admin/client/:id/members/invite`
 - `PUT /api/admin/client/:id/members/:memberId/department`
 - `GET /api/admin/client/:id/employees`
 - `POST /api/admin/client/:id/employees`

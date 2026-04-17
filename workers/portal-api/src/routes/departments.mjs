@@ -1,3 +1,5 @@
+import bcrypt from 'bcryptjs';
+import { auditLog, emailWrapper, getBaseUrl, queueSideEffect, sendMail } from '../lib/effects.mjs';
 import { json, readJson } from '../lib/http.mjs';
 
 function companyId(user) {
@@ -37,10 +39,86 @@ function buildDepartmentPayload(body, cid, actorId) {
   };
 }
 
+function generateTemporaryPassword() {
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
+  const bytes = new Uint8Array(8);
+  crypto.getRandomValues(bytes);
+  let password = '';
+  for (const byte of bytes) {
+    password += alphabet[byte % alphabet.length];
+  }
+  return `${password}X1!`;
+}
+
 export async function handleDepartments(request, context) {
   if (context.scope === 'admin') {
     if (request.method === 'GET') {
       return json({ departments: await listDepartments(context.sb, context.params.clientId) });
+    }
+
+    if (request.method === 'POST' && context.params.action === 'invite') {
+      const body = await readJson(request);
+      const email = String(body.email || '').toLowerCase().trim();
+      const name = String(body.name || '').trim();
+      if (!name || !email) return json({ error: 'name e email sao obrigatorios.' }, { status: 400 });
+
+      const { data: existing } = await context.sb.from('re_company_users')
+        .select('id')
+        .eq('company_id', context.params.clientId)
+        .eq('email', email)
+        .single();
+      if (existing) return json({ error: 'E-mail ja cadastrado nesta empresa.' }, { status: 409 });
+
+      const tmpPwd = generateTemporaryPassword();
+      const hash = await bcrypt.hash(tmpPwd, 10);
+
+      const { data: member, error } = await context.sb.from('re_company_users').insert({
+        company_id: context.params.clientId,
+        name,
+        email,
+        role: body.role || 'operacional',
+        password_hash: hash,
+        job_title: body.job_title?.trim() || null,
+        department_id: body.department_id || null,
+        active: true,
+      }).select().single();
+      if (error) return json({ error: error.message }, { status: 500 });
+
+      const { data: owner } = await context.sb.from('re_users')
+        .select('name,company')
+        .eq('id', context.params.clientId)
+        .single();
+
+      const loginUrl = `${getBaseUrl(context.env)}/login.html`;
+      queueSideEffect(context, async () => {
+        await sendMail(context.env, {
+          to: email,
+          subject: `Convite: acesso ao portal da ${owner?.company || owner?.name || 'empresa'}`,
+          html: emailWrapper('Voce foi convidado!', `
+            <p>Ola, <b>${name}</b>!</p>
+            <p>Voce foi adicionado a equipe de <b>${owner?.company || owner?.name || 'sua empresa'}</b> no portal Recupera Empresas.</p>
+            <p><b>Papel:</b> ${body.role || 'Operacional'}</p>
+            <p><b>Seu acesso temporario:</b><br>
+               E-mail: <code>${email}</code><br>
+               Senha temporaria: <code>${tmpPwd}</code></p>
+            <p>Acesse o portal e altere sua senha no primeiro acesso:</p>
+            <p><a href="${loginUrl}">Acessar portal</a></p>
+            <p style="font-size:12px;color:#9ca3af">Se voce nao esperava este convite, ignore este e-mail.</p>
+          `),
+        });
+
+        await auditLog(context.sb, {
+          actorId: context.user.id,
+          actorEmail: context.user.email,
+          actorRole: 'admin',
+          entityType: 'company_member',
+          entityId: member.id,
+          action: 'invite',
+          after: { name, email, role: body.role || 'operacional' },
+        });
+      }, 'member-invite');
+
+      return json({ success: true, member: { ...member, password_hash: undefined } });
     }
 
     if (request.method === 'POST') {

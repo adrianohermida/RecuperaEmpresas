@@ -45,6 +45,7 @@ Escopo inicial:
 - `POST /api/admin/client/:id/departments`
 - `PUT /api/admin/client/:id/departments/:deptId`
 - `DELETE /api/admin/client/:id/departments/:deptId`
+- `POST /api/admin/client/:id/members/invite`
 - `PUT /api/admin/client/:id/members/:memberId/department`
 - `GET /api/admin/client/:id/employees`
 - `POST /api/admin/client/:id/employees`
@@ -82,6 +83,5 @@ Este scaffold nao esta roteando trafego de producao ainda. Ele existe para permi
 
 Observacao:
 
-- O convite de membro em departments ainda nao foi migrado para o Worker porque depende de geracao de senha e envio de email.
 - O fluxo admin de mensagens persiste o estado de leitura em KV quando o binding `ADMIN_MESSAGE_STATE` existir; sem isso, faz fallback para memoria do processo.
-- `appointments`, `messages`, `data-change-requests` e `document-requests` ja replicam email, notificacoes internas e audit log necessarios dentro do Worker, usando Resend + Supabase.
+- `appointments`, `messages`, `data-change-requests`, `document-requests` e o convite de membros em `departments` ja replicam email, notificacoes internas e audit log necessarios dentro do Worker, usando Resend + Supabase.
