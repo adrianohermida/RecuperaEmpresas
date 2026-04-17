@@ -44,7 +44,7 @@ jobs:
         run: npm run build
 
       - name: Deploy portal to Pages
-        run: npx wrangler pages deploy dist --project-name=recuperaempresas --branch=gh-pages
+        run: npx --yes wrangler@4.12.0 pages deploy dist --project-name=recuperaempresas --branch=gh-pages
 
   deploy-landing:
     name: Deploy Landing Pages
@@ -58,8 +58,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
       - name: Deploy landing to Pages
-        run: npx wrangler pages deploy landing --project-name=recuperaempresas-landing --branch=gh-pages
+        run: npx --yes wrangler@4.12.0 pages deploy landing --project-name=recuperaempresas-landing --branch=gh-pages
 
   deploy-worker:
     name: Deploy API Worker
@@ -83,4 +88,4 @@ jobs:
         run: npm ci
 
       - name: Deploy Worker
-        run: npx wrangler deploy -c workers/portal-api/wrangler.toml
+        run: npx --yes wrangler@4.12.0 deploy -c workers/portal-api/wrangler.toml
