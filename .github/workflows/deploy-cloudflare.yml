@@ -43,8 +43,25 @@ jobs:
       - name: Build portal
         run: npm run build
 
+      - name: Check Cloudflare auth for portal
+        shell: bash
+        run: |
+          set -o pipefail
+          if ! output=$(npx --yes wrangler@4.12.0 whoami 2>&1); then
+            echo "::error title=Cloudflare auth portal::${output//$'\n'/ }"
+            exit 1
+          fi
+
       - name: Deploy portal to Pages
-        run: npx --yes wrangler@4.12.0 pages deploy dist --project-name=recuperaempresas --branch=gh-pages
+        shell: bash
+        run: |
+          set -o pipefail
+          if ! output=$(npx --yes wrangler@4.12.0 pages deploy dist --project-name=recuperaempresas --branch=gh-pages 2>&1); then
+            echo "::error title=Deploy portal::${output//$'\n'/ }"
+            exit 1
+          fi
+
+          echo "$output"
 
   deploy-landing:
     name: Deploy Landing Pages
@@ -63,8 +80,25 @@ jobs:
         with:
           node-version: 22
 
+      - name: Check Cloudflare auth for landing
+        shell: bash
+        run: |
+          set -o pipefail
+          if ! output=$(npx --yes wrangler@4.12.0 whoami 2>&1); then
+            echo "::error title=Cloudflare auth landing::${output//$'\n'/ }"
+            exit 1
+          fi
+
       - name: Deploy landing to Pages
-        run: npx --yes wrangler@4.12.0 pages deploy landing --project-name=recuperaempresas-landing --branch=gh-pages
+        shell: bash
+        run: |
+          set -o pipefail
+          if ! output=$(npx --yes wrangler@4.12.0 pages deploy landing --project-name=recuperaempresas-landing --branch=gh-pages 2>&1); then
+            echo "::error title=Deploy landing::${output//$'\n'/ }"
+            exit 1
+          fi
+
+          echo "$output"
 
   deploy-worker:
     name: Deploy API Worker
@@ -87,5 +121,22 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Check Cloudflare auth for worker
+        shell: bash
+        run: |
+          set -o pipefail
+          if ! output=$(npx --yes wrangler@4.12.0 whoami 2>&1); then
+            echo "::error title=Cloudflare auth worker::${output//$'\n'/ }"
+            exit 1
+          fi
+
       - name: Deploy Worker
-        run: npx --yes wrangler@4.12.0 deploy -c workers/portal-api/wrangler.toml
+        shell: bash
+        run: |
+          set -o pipefail
+          if ! output=$(npx --yes wrangler@4.12.0 deploy -c workers/portal-api/wrangler.toml 2>&1); then
+            echo "::error title=Deploy worker::${output//$'\n'/ }"
+            exit 1
+          fi
+
+          echo "$output"
