@@ -20,6 +20,14 @@ Escopo inicial:
 - `POST /api/employees`
 - `PUT /api/employees/:id`
 - `DELETE /api/employees/:id`
+- `GET /api/messages`
+- `POST /api/messages`
+- `GET /api/messages/poll`
+- `GET /api/change-requests`
+- `GET /api/change-requests/:token`
+- `PUT /api/change-requests/:token`
+- `GET /api/document-requests`
+- `PUT /api/document-requests/:reqId/fulfill`
 - `GET /api/plan`
 - `PUT /api/plan/chapter/:id`
 - `GET /api/tasks`
@@ -42,6 +50,16 @@ Escopo inicial:
 - `POST /api/admin/client/:id/employees`
 - `PUT /api/admin/client/:id/employees/:empId`
 - `DELETE /api/admin/client/:id/employees/:empId`
+- `GET /api/admin/messages/unread`
+- `POST /api/admin/messages/seen/:clientId`
+- `GET /api/admin/client/:id/messages/poll`
+- `POST /api/admin/client/:id/change-request`
+- `GET /api/admin/client/:id/change-requests`
+- `GET /api/admin/client/:id/document-requests/suggestions`
+- `POST /api/admin/client/:id/document-requests`
+- `GET /api/admin/client/:id/document-requests`
+- `PUT /api/admin/client/:id/document-requests/:reqId`
+- `DELETE /api/admin/client/:id/document-requests/:reqId`
 - `GET /api/admin/logs`
 - `GET /api/admin/stats`
 
@@ -58,3 +76,5 @@ Observacao:
 
 - O `POST /api/appointments` no Worker ainda nao replica o envio de email do backend Express. Antes de colocar essa rota em producao, essa integracao precisa ser portada ou substituida.
 - O convite de membro em departments ainda nao foi migrado para o Worker porque depende de geracao de senha e envio de email.
+- O fluxo admin de mensagens usa estado de leitura em memoria no Worker. Antes de producao, isso precisa ir para armazenamento persistente.
+- A criacao de data-change-requests e document-requests no Worker ainda nao replica email e pushNotification.

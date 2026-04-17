@@ -357,6 +357,14 @@ Entradas iniciais preparadas:
 - `POST /api/employees`
 - `PUT /api/employees/:id`
 - `DELETE /api/employees/:id`
+- `GET /api/messages`
+- `POST /api/messages`
+- `GET /api/messages/poll`
+- `GET /api/change-requests`
+- `GET /api/change-requests/:token`
+- `PUT /api/change-requests/:token`
+- `GET /api/document-requests`
+- `PUT /api/document-requests/:reqId/fulfill`
 - `GET /api/plan`
 - `PUT /api/plan/chapter/:id`
 - `GET /api/tasks`
@@ -379,6 +387,16 @@ Entradas iniciais preparadas:
 - `POST /api/admin/client/:id/employees`
 - `PUT /api/admin/client/:id/employees/:empId`
 - `DELETE /api/admin/client/:id/employees/:empId`
+- `GET /api/admin/messages/unread`
+- `POST /api/admin/messages/seen/:clientId`
+- `GET /api/admin/client/:id/messages/poll`
+- `POST /api/admin/client/:id/change-request`
+- `GET /api/admin/client/:id/change-requests`
+- `GET /api/admin/client/:id/document-requests/suggestions`
+- `POST /api/admin/client/:id/document-requests`
+- `GET /api/admin/client/:id/document-requests`
+- `PUT /api/admin/client/:id/document-requests/:reqId`
+- `DELETE /api/admin/client/:id/document-requests/:reqId`
 - `GET /api/admin/logs`
 - `GET /api/admin/stats`
 

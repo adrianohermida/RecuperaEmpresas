@@ -3,8 +3,11 @@ import { applyCors, json, noContent, notFound } from './lib/http.mjs';
 import { handleAdminSystem } from './routes/admin-system.mjs';
 import { handleAppointments } from './routes/appointments.mjs';
 import { handleCreditors } from './routes/creditors.mjs';
+import { handleDataChangeRequests } from './routes/data-change-requests.mjs';
 import { handleDepartments } from './routes/departments.mjs';
+import { handleDocumentRequests } from './routes/document-requests.mjs';
 import { handleEmployees } from './routes/employees.mjs';
+import { handleMessages } from './routes/messages.mjs';
 import { handlePlan } from './routes/plan.mjs';
 import { handleTasks } from './routes/tasks.mjs';
 import { handleNotifications } from './routes/notifications.mjs';
@@ -33,6 +36,15 @@ async function routeAuthenticated(request, env, pathname) {
 
   params = match(pathname, /^\/api\/employees(?:\/(?<id>[^/]+))?$/);
   if (params) return handleEmployees(request, { ...auth, params, scope: 'user' });
+
+  params = match(pathname, /^\/api\/messages(?:\/(?<action>poll))?$/);
+  if (params) return handleMessages(request, { ...auth, params, scope: 'user' });
+
+  params = match(pathname, /^\/api\/change-requests(?:\/(?<token>[^/]+))?$/);
+  if (params) return handleDataChangeRequests(request, { ...auth, params, scope: 'user' });
+
+  params = match(pathname, /^\/api\/document-requests(?:\/(?<reqId>[^/]+)(?:\/(?<action>fulfill))?)?$/);
+  if (params) return handleDocumentRequests(request, { ...auth, params, scope: 'user' });
 
   params = match(pathname, /^\/api\/plan(?:\/chapter\/(?<id>\d+))?$/);
   if (params) return handlePlan(request, { ...auth, params });
@@ -64,6 +76,27 @@ async function routeAdmin(request, env, pathname) {
 
   params = match(pathname, /^\/api\/admin\/client\/(?<clientId>[^/]+)\/employees(?:\/(?<empId>[^/]+))?$/);
   if (params) return handleEmployees(request, { ...auth, params, scope: 'admin' });
+
+  params = match(pathname, /^\/api\/admin\/messages\/(?<action>unread)(?:\/(?<clientId>[^/]+))?$/);
+  if (params) return handleMessages(request, { ...auth, params, scope: 'admin' });
+
+  params = match(pathname, /^\/api\/admin\/messages\/(?<action>seen)\/(?<clientId>[^/]+)$/);
+  if (params) return handleMessages(request, { ...auth, params, scope: 'admin' });
+
+  params = match(pathname, /^\/api\/admin\/client\/(?<clientId>[^/]+)\/messages\/(?<action>poll)$/);
+  if (params) return handleMessages(request, { ...auth, params, scope: 'admin' });
+
+  params = match(pathname, /^\/api\/admin\/client\/(?<clientId>[^/]+)\/change-request$/);
+  if (params) return handleDataChangeRequests(request, { ...auth, params, scope: 'admin' });
+
+  params = match(pathname, /^\/api\/admin\/client\/(?<clientId>[^/]+)\/change-requests$/);
+  if (params) return handleDataChangeRequests(request, { ...auth, params, scope: 'admin' });
+
+  params = match(pathname, /^\/api\/admin\/client\/(?<clientId>[^/]+)\/document-requests(?:\/(?<action>suggestions))?$/);
+  if (params) return handleDocumentRequests(request, { ...auth, params, scope: 'admin' });
+
+  params = match(pathname, /^\/api\/admin\/client\/(?<clientId>[^/]+)\/document-requests\/(?<reqId>[^/]+)$/);
+  if (params) return handleDocumentRequests(request, { ...auth, params, scope: 'admin' });
 
   params = match(pathname, /^\/api\/admin\/(?<resource>logs|stats)$/);
   if (params) return handleAdminSystem(request, { ...auth, params, scope: 'admin' });
