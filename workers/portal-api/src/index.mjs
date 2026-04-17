@@ -2,6 +2,9 @@ import { requireAdmin, requireAuth } from './lib/auth.mjs';
 import { applyCors, json, noContent, notFound } from './lib/http.mjs';
 import { handleAdminSystem } from './routes/admin-system.mjs';
 import { handleAppointments } from './routes/appointments.mjs';
+import { handleCreditors } from './routes/creditors.mjs';
+import { handleDepartments } from './routes/departments.mjs';
+import { handleEmployees } from './routes/employees.mjs';
 import { handlePlan } from './routes/plan.mjs';
 import { handleTasks } from './routes/tasks.mjs';
 import { handleNotifications } from './routes/notifications.mjs';
@@ -22,6 +25,15 @@ async function routeAuthenticated(request, env, pathname) {
   let params = match(pathname, /^\/api\/appointments(?:\/(?<id>[^/]+))?$/);
   if (params) return handleAppointments(request, { ...auth, params, scope: 'user' });
 
+  params = match(pathname, /^\/api\/creditors(?:\/(?<id>[^/]+))?$/);
+  if (params) return handleCreditors(request, { ...auth, params, scope: 'user' });
+
+  params = match(pathname, /^\/api\/departments(?:\/(?<id>[^/]+))?$/);
+  if (params) return handleDepartments(request, { ...auth, params, scope: 'user' });
+
+  params = match(pathname, /^\/api\/employees(?:\/(?<id>[^/]+))?$/);
+  if (params) return handleEmployees(request, { ...auth, params, scope: 'user' });
+
   params = match(pathname, /^\/api\/plan(?:\/chapter\/(?<id>\d+))?$/);
   if (params) return handlePlan(request, { ...auth, params });
 
@@ -40,6 +52,18 @@ async function routeAdmin(request, env, pathname) {
 
   let params = match(pathname, /^\/api\/admin\/appointments(?:\/(?<id>[^/]+))?$/);
   if (params) return handleAppointments(request, { ...auth, params, scope: 'admin' });
+
+  params = match(pathname, /^\/api\/admin\/client\/(?<clientId>[^/]+)\/creditors(?:\/(?<creditorId>[^/]+))?$/);
+  if (params) return handleCreditors(request, { ...auth, params, scope: 'admin' });
+
+  params = match(pathname, /^\/api\/admin\/client\/(?<clientId>[^/]+)\/departments(?:\/(?<deptId>[^/]+))?$/);
+  if (params) return handleDepartments(request, { ...auth, params, scope: 'admin' });
+
+  params = match(pathname, /^\/api\/admin\/client\/(?<clientId>[^/]+)\/members\/(?<memberId>[^/]+)\/department$/);
+  if (params) return handleDepartments(request, { ...auth, params, scope: 'admin' });
+
+  params = match(pathname, /^\/api\/admin\/client\/(?<clientId>[^/]+)\/employees(?:\/(?<empId>[^/]+))?$/);
+  if (params) return handleEmployees(request, { ...auth, params, scope: 'admin' });
 
   params = match(pathname, /^\/api\/admin\/(?<resource>logs|stats)$/);
   if (params) return handleAdminSystem(request, { ...auth, params, scope: 'admin' });

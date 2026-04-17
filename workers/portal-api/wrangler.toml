@@ -7,3 +7,4 @@ enabled = true
 
 [vars]
 ALLOWED_ORIGINS = "https://portal.recuperaempresas.com.br"
+ADMIN_EMAILS = "contato@recuperaempresas.com.br,camilagbhmaia@gmail.com,adrianohermida@gmail.com"
