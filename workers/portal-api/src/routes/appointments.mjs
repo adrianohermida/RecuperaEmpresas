@@ -1,3 +1,4 @@
+import { emailWrapper, getOpsRecipients, queueSideEffect, sendMail } from '../lib/effects.mjs';
 import { json, readJson } from '../lib/http.mjs';
 
 function mapAppointmentForAdmin(item) {
@@ -52,11 +53,27 @@ export async function handleAppointments(request, context) {
       status: 'pendente',
     }).select().single();
 
-    return json({
-      success: true,
-      appointment: data,
-      warning: 'TODO: replicar notificação por email antes de rotear tráfego de produção para este endpoint.',
-    });
+    const typeLabels = {
+      diagnostico: 'Diagnostico Inicial',
+      revisao: 'Revisao do Business Plan',
+      financeiro: 'Analise Financeira',
+      estrategia: 'Planejamento Estrategico',
+      outro: 'Outro',
+    };
+
+    queueSideEffect(context, () => sendMail(context.env, {
+      to: getOpsRecipients(context.env),
+      subject: `[Agenda] ${typeLabels[type] || type} - ${context.user.company || context.user.name || context.user.email}`,
+      html: emailWrapper('Novo agendamento solicitado', `
+        <p><b>Cliente:</b> ${context.user.name || ''} (${context.user.email})</p>
+        <p><b>Empresa:</b> ${context.user.company || '—'}</p>
+        <p><b>Tipo:</b> ${typeLabels[type] || type}</p>
+        <p><b>Data/Hora:</b> ${new Date(`${date}T12:00:00`).toLocaleDateString('pt-BR')}${time ? ` as ${time}` : ''}</p>
+        ${notes ? `<p><b>Observacoes:</b> ${notes}</p>` : ''}
+      `),
+    }), 'appointment-email');
+
+    return json({ success: true, appointment: data });
   }
 
   if (request.method === 'DELETE') {

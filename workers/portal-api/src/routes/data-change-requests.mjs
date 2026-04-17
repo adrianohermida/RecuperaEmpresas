@@ -1,3 +1,4 @@
+import { auditLog, emailWrapper, getBaseUrl, pushNotification, queueSideEffect, sendMail } from '../lib/effects.mjs';
 import { json, readJson } from '../lib/http.mjs';
 
 function companyId(user) {
@@ -24,11 +25,46 @@ export async function handleDataChangeRequests(request, context) {
       }).select().single();
 
       if (error) return json({ error: error.message }, { status: 500 });
-      return json({
-        success: true,
-        request: data,
-        warning: 'TODO: replicar email e pushNotification ao cliente antes de produção.',
-      });
+
+      const { data: owner } = await context.sb.from('re_users')
+        .select('email,name')
+        .eq('id', context.params.clientId)
+        .single();
+
+      const confirmUrl = `${getBaseUrl(context.env)}/dashboard.html?change_request=${data.token}`;
+      const fields = Object.entries(field_changes)
+        .map(([key, value]) => `<li><b>${key}:</b> ${value?.from ?? '—'} -> ${value?.to ?? '—'}</li>`)
+        .join('');
+
+      queueSideEffect(context, async () => {
+        if (owner?.email) {
+          await sendMail(context.env, {
+            to: owner.email,
+            subject: 'Confirmacao de alteracao de dados - Recupera Empresas',
+            html: emailWrapper('Solicitacao de alteracao de dados', `
+              <p>Ola, <b>${owner?.name || 'Cliente'}</b>!</p>
+              <p>O consultor solicitou a alteracao dos seguintes dados da sua empresa:</p>
+              <ul>${fields}</ul>
+              ${reason ? `<p><b>Motivo:</b> ${reason}</p>` : ''}
+              <p>Esta solicitacao expira em <b>48 horas</b>.</p>
+              <p>Para confirmar ou recusar, acesse o portal:</p>
+              <p><a href="${confirmUrl}">Revisar solicitacao</a></p>
+            `),
+          });
+        }
+
+        await pushNotification(
+          context.sb,
+          context.params.clientId,
+          'info',
+          'Alteracao de dados pendente',
+          'O consultor solicitou alteracoes nos seus dados. Confirme no portal.',
+          'change_request',
+          data.id,
+        );
+      }, 'change-request-create');
+
+      return json({ success: true, request: data });
     }
 
     if (request.method === 'GET') {
@@ -97,6 +133,16 @@ export async function handleDataChangeRequests(request, context) {
         confirmed_by: context.user.id,
         confirmed_at: new Date().toISOString(),
       }).eq('id', changeRequest.id);
+
+      queueSideEffect(context, () => auditLog(context.sb, {
+        actorId: context.user.id,
+        actorEmail: context.user.email,
+        actorRole: 'client',
+        entityType: changeRequest.entity_type,
+        entityId: changeRequest.entity_id,
+        action: 'change_approved',
+        after: updates,
+      }), 'change-request-audit');
 
       return json({ success: true, message: 'Alterações aplicadas com sucesso.' });
     }

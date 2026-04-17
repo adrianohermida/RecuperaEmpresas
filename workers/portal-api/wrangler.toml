@@ -8,3 +8,18 @@ enabled = true
 [vars]
 ALLOWED_ORIGINS = "https://portal.recuperaempresas.com.br"
 ADMIN_EMAILS = "contato@recuperaempresas.com.br,camilagbhmaia@gmail.com,adrianohermida@gmail.com"
+BASE_URL = "https://portal.recuperaempresas.com.br"
+EMAIL_FROM = "Recupera Empresas <contato@recuperaempresas.com.br>"
+EMAIL_TO = "contato@recuperaempresas.com.br"
+
+# Secrets to configure with `wrangler secret put`:
+# - SUPABASE_URL
+# - SUPABASE_SERVICE_ROLE_KEY
+# - JWT_SECRET
+# - RESEND_API_KEY
+
+# Optional binding for persistent admin message read state:
+# [[kv_namespaces]]
+# binding = "ADMIN_MESSAGE_STATE"
+# id = "<production-namespace-id>"
+# preview_id = "<preview-namespace-id>"

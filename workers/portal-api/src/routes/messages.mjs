@@ -1,16 +1,11 @@
+import { pushNotification, queueSideEffect } from '../lib/effects.mjs';
 import { json, readJson } from '../lib/http.mjs';
-
-const adminMsgSeen = new Map();
-
-function getSeenMap(adminId) {
-  if (!adminMsgSeen.has(adminId)) adminMsgSeen.set(adminId, {});
-  return adminMsgSeen.get(adminId);
-}
+import { markSeenState, readSeenState } from '../lib/message-state.mjs';
 
 export async function handleMessages(request, context) {
   if (context.scope === 'admin') {
     if (context.params.action === 'unread' && request.method === 'GET') {
-      const seen = getSeenMap(context.user.id);
+      const { state: seen, persistent } = await readSeenState(context.env, context.user.id);
       const { data: msgs } = await context.sb.from('re_messages')
         .select('user_id, ts, from_role')
         .eq('from_role', 'client')
@@ -21,13 +16,18 @@ export async function handleMessages(request, context) {
         const lastSeen = seen[message.user_id] || '1970-01-01T00:00:00.000Z';
         if (message.ts > lastSeen) unread[message.user_id] = (unread[message.user_id] || 0) + 1;
       }
-      return json({ unread, warning: 'Best effort: estado de leitura admin ainda está em memória no Worker.' });
+      return json(persistent ? { unread } : {
+        unread,
+        warning: 'Best effort: estado de leitura admin ainda esta em memoria no Worker.',
+      });
     }
 
     if (context.params.action === 'seen' && request.method === 'POST') {
-      const seen = getSeenMap(context.user.id);
-      seen[context.params.clientId] = new Date().toISOString();
-      return json({ success: true, warning: 'Best effort: estado de leitura admin ainda está em memória no Worker.' });
+      const result = await markSeenState(context.env, context.user.id, context.params.clientId);
+      return json(result.persistent ? { success: true } : {
+        success: true,
+        warning: 'Best effort: estado de leitura admin ainda esta em memoria no Worker.',
+      });
     }
 
     if (context.params.clientId && context.params.action === 'poll' && request.method === 'GET') {
@@ -74,11 +74,24 @@ export async function handleMessages(request, context) {
 
     if (error) return json({ error: error.message }, { status: 500 });
 
-    return json({
-      success: true,
-      message: data,
-      warning: 'TODO: replicar pushNotification para admins antes de rotear tráfego de produção para este endpoint.',
-    });
+    const { data: admins } = await context.sb.from('re_users')
+      .select('id')
+      .eq('is_admin', true)
+      .limit(20);
+
+    for (const admin of (admins || [])) {
+      queueSideEffect(context, () => pushNotification(
+        context.sb,
+        admin.id,
+        'message',
+        'Nova mensagem de cliente',
+        `${context.user.name || context.user.email}: ${body.text.trim().slice(0, 80)}`,
+        'message',
+        context.user.id,
+      ), 'message-notification');
+    }
+
+    return json({ success: true, message: data });
   }
 
   return json({ error: 'Método não permitido.' }, { status: 405 });

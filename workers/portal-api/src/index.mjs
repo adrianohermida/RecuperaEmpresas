@@ -21,91 +21,91 @@ function match(pathname, pattern) {
   return matchResult ? matchResult.groups || {} : null;
 }
 
-async function routeAuthenticated(request, env, pathname) {
+async function routeAuthenticated(request, env, pathname, executionCtx) {
   const auth = await requireAuth(request, env);
   if (!auth.ok) return auth.response;
 
   let params = match(pathname, /^\/api\/appointments(?:\/(?<id>[^/]+))?$/);
-  if (params) return handleAppointments(request, { ...auth, params, scope: 'user' });
+  if (params) return handleAppointments(request, { ...auth, env, executionCtx, params, scope: 'user' });
 
   params = match(pathname, /^\/api\/creditors(?:\/(?<id>[^/]+))?$/);
-  if (params) return handleCreditors(request, { ...auth, params, scope: 'user' });
+  if (params) return handleCreditors(request, { ...auth, env, executionCtx, params, scope: 'user' });
 
   params = match(pathname, /^\/api\/departments(?:\/(?<id>[^/]+))?$/);
-  if (params) return handleDepartments(request, { ...auth, params, scope: 'user' });
+  if (params) return handleDepartments(request, { ...auth, env, executionCtx, params, scope: 'user' });
 
   params = match(pathname, /^\/api\/employees(?:\/(?<id>[^/]+))?$/);
-  if (params) return handleEmployees(request, { ...auth, params, scope: 'user' });
+  if (params) return handleEmployees(request, { ...auth, env, executionCtx, params, scope: 'user' });
 
   params = match(pathname, /^\/api\/messages(?:\/(?<action>poll))?$/);
-  if (params) return handleMessages(request, { ...auth, params, scope: 'user' });
+  if (params) return handleMessages(request, { ...auth, env, executionCtx, params, scope: 'user' });
 
   params = match(pathname, /^\/api\/change-requests(?:\/(?<token>[^/]+))?$/);
-  if (params) return handleDataChangeRequests(request, { ...auth, params, scope: 'user' });
+  if (params) return handleDataChangeRequests(request, { ...auth, env, executionCtx, params, scope: 'user' });
 
   params = match(pathname, /^\/api\/document-requests(?:\/(?<reqId>[^/]+)(?:\/(?<action>fulfill))?)?$/);
-  if (params) return handleDocumentRequests(request, { ...auth, params, scope: 'user' });
+  if (params) return handleDocumentRequests(request, { ...auth, env, executionCtx, params, scope: 'user' });
 
   params = match(pathname, /^\/api\/plan(?:\/chapter\/(?<id>\d+))?$/);
-  if (params) return handlePlan(request, { ...auth, params });
+  if (params) return handlePlan(request, { ...auth, env, executionCtx, params });
 
   params = match(pathname, /^\/api\/tasks(?:\/(?<id>[^/]+))?$/);
-  if (params) return handleTasks(request, { ...auth, params });
+  if (params) return handleTasks(request, { ...auth, env, executionCtx, params });
 
   params = match(pathname, /^\/api\/notifications(?:\/(?<id>[^/]+))?$/);
-  if (params) return handleNotifications(request, { ...auth, params });
+  if (params) return handleNotifications(request, { ...auth, env, executionCtx, params });
 
   return notFound();
 }
 
-async function routeAdmin(request, env, pathname) {
+async function routeAdmin(request, env, pathname, executionCtx) {
   const auth = await requireAdmin(request, env);
   if (!auth.ok) return auth.response;
 
   let params = match(pathname, /^\/api\/admin\/appointments(?:\/(?<id>[^/]+))?$/);
-  if (params) return handleAppointments(request, { ...auth, params, scope: 'admin' });
+  if (params) return handleAppointments(request, { ...auth, env, executionCtx, params, scope: 'admin' });
 
   params = match(pathname, /^\/api\/admin\/client\/(?<clientId>[^/]+)\/creditors(?:\/(?<creditorId>[^/]+))?$/);
-  if (params) return handleCreditors(request, { ...auth, params, scope: 'admin' });
+  if (params) return handleCreditors(request, { ...auth, env, executionCtx, params, scope: 'admin' });
 
   params = match(pathname, /^\/api\/admin\/client\/(?<clientId>[^/]+)\/departments(?:\/(?<deptId>[^/]+))?$/);
-  if (params) return handleDepartments(request, { ...auth, params, scope: 'admin' });
+  if (params) return handleDepartments(request, { ...auth, env, executionCtx, params, scope: 'admin' });
 
   params = match(pathname, /^\/api\/admin\/client\/(?<clientId>[^/]+)\/members\/(?<memberId>[^/]+)\/department$/);
-  if (params) return handleDepartments(request, { ...auth, params, scope: 'admin' });
+  if (params) return handleDepartments(request, { ...auth, env, executionCtx, params, scope: 'admin' });
 
   params = match(pathname, /^\/api\/admin\/client\/(?<clientId>[^/]+)\/employees(?:\/(?<empId>[^/]+))?$/);
-  if (params) return handleEmployees(request, { ...auth, params, scope: 'admin' });
+  if (params) return handleEmployees(request, { ...auth, env, executionCtx, params, scope: 'admin' });
 
   params = match(pathname, /^\/api\/admin\/messages\/(?<action>unread)(?:\/(?<clientId>[^/]+))?$/);
-  if (params) return handleMessages(request, { ...auth, params, scope: 'admin' });
+  if (params) return handleMessages(request, { ...auth, env, executionCtx, params, scope: 'admin' });
 
   params = match(pathname, /^\/api\/admin\/messages\/(?<action>seen)\/(?<clientId>[^/]+)$/);
-  if (params) return handleMessages(request, { ...auth, params, scope: 'admin' });
+  if (params) return handleMessages(request, { ...auth, env, executionCtx, params, scope: 'admin' });
 
   params = match(pathname, /^\/api\/admin\/client\/(?<clientId>[^/]+)\/messages\/(?<action>poll)$/);
-  if (params) return handleMessages(request, { ...auth, params, scope: 'admin' });
+  if (params) return handleMessages(request, { ...auth, env, executionCtx, params, scope: 'admin' });
 
   params = match(pathname, /^\/api\/admin\/client\/(?<clientId>[^/]+)\/change-request$/);
-  if (params) return handleDataChangeRequests(request, { ...auth, params, scope: 'admin' });
+  if (params) return handleDataChangeRequests(request, { ...auth, env, executionCtx, params, scope: 'admin' });
 
   params = match(pathname, /^\/api\/admin\/client\/(?<clientId>[^/]+)\/change-requests$/);
-  if (params) return handleDataChangeRequests(request, { ...auth, params, scope: 'admin' });
+  if (params) return handleDataChangeRequests(request, { ...auth, env, executionCtx, params, scope: 'admin' });
 
   params = match(pathname, /^\/api\/admin\/client\/(?<clientId>[^/]+)\/document-requests(?:\/(?<action>suggestions))?$/);
-  if (params) return handleDocumentRequests(request, { ...auth, params, scope: 'admin' });
+  if (params) return handleDocumentRequests(request, { ...auth, env, executionCtx, params, scope: 'admin' });
 
   params = match(pathname, /^\/api\/admin\/client\/(?<clientId>[^/]+)\/document-requests\/(?<reqId>[^/]+)$/);
-  if (params) return handleDocumentRequests(request, { ...auth, params, scope: 'admin' });
+  if (params) return handleDocumentRequests(request, { ...auth, env, executionCtx, params, scope: 'admin' });
 
   params = match(pathname, /^\/api\/admin\/(?<resource>logs|stats)$/);
-  if (params) return handleAdminSystem(request, { ...auth, params, scope: 'admin' });
+  if (params) return handleAdminSystem(request, { ...auth, env, executionCtx, params, scope: 'admin' });
 
   return notFound();
 }
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, executionCtx) {
     if (request.method === 'OPTIONS') {
       return withCors(request, noContent(), env);
     }
@@ -119,12 +119,12 @@ export default {
     }
 
     if (url.pathname.startsWith('/api/admin/')) {
-      response = await routeAdmin(request, env, url.pathname);
+      response = await routeAdmin(request, env, url.pathname, executionCtx);
       return withCors(request, response, env);
     }
 
     if (url.pathname.startsWith('/api/')) {
-      response = await routeAuthenticated(request, env, url.pathname);
+      response = await routeAuthenticated(request, env, url.pathname, executionCtx);
       return withCors(request, response, env);
     }
 

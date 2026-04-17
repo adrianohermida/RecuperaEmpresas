@@ -1,3 +1,4 @@
+import { auditLog, emailWrapper, getBaseUrl, pushNotification, queueSideEffect, sendMail } from '../lib/effects.mjs';
 import { json, readJson } from '../lib/http.mjs';
 
 function companyId(user) {
@@ -87,11 +88,54 @@ export async function handleDocumentRequests(request, context) {
       }).select().single();
       if (error) return json({ error: error.message }, { status: 500 });
 
-      return json({
-        success: true,
-        request: data,
-        warning: 'TODO: replicar email e pushNotification ao cliente antes de produção.',
-      });
+      const { data: owner } = await context.sb.from('re_users')
+        .select('email,name')
+        .eq('id', context.params.clientId)
+        .single();
+      const portalUrl = `${getBaseUrl(context.env)}/dashboard.html#documentos`;
+
+      queueSideEffect(context, async () => {
+        if (owner?.email) {
+          await sendMail(context.env, {
+            to: owner.email,
+            subject: `[Recupera Empresas] Novo documento solicitado: ${body.name.trim()}`,
+            html: emailWrapper('Documento solicitado pelo consultor', `
+              <p>Ola, <b>${owner?.name || 'Cliente'}</b>!</p>
+              <p>O seu consultor solicitou o seguinte documento:</p>
+              <table style="border-collapse:collapse;width:100%;margin:12px 0">
+                <tr><td style="font-weight:600;padding:6px 0;width:130px">Documento:</td><td>${body.name.trim()}</td></tr>
+                ${body.entity_label ? `<tr><td style="font-weight:600;padding:6px 0">Entidade:</td><td>${body.entity_label}</td></tr>` : ''}
+                ${body.deadline ? `<tr><td style="font-weight:600;padding:6px 0">Prazo:</td><td>${new Date(`${body.deadline}T12:00:00`).toLocaleDateString('pt-BR')}</td></tr>` : ''}
+                ${body.description ? `<tr><td style="font-weight:600;padding:6px 0">Instrucoes:</td><td>${body.description}</td></tr>` : ''}
+              </table>
+              <p>Acesse o portal para fazer o upload:</p>
+              <p><a href="${portalUrl}" style="background:#1A56DB;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:600">Enviar documento</a></p>
+            `),
+          });
+        }
+
+        await pushNotification(
+          context.sb,
+          context.params.clientId,
+          'info',
+          'Documento solicitado',
+          `Seu consultor solicitou: ${body.name.trim()}`,
+          'document_request',
+          data.id,
+        );
+
+        await auditLog(context.sb, {
+          actorId: context.user.id,
+          actorEmail: context.user.email,
+          actorRole: 'admin',
+          entityType: 're_document_requests',
+          entityId: data.id,
+          action: 'create',
+          after: { name: body.name.trim(), company_id: context.params.clientId },
+        });
+      }, 'document-request-create');
+
+      return json({ success: true, request: data });
     }
 
     if (request.method === 'GET') {

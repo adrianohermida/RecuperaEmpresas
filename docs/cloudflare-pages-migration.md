@@ -339,6 +339,12 @@ Entrega esperada:
 
 O repositorio ja possui um scaffold isolado para o primeiro lote em [workers/portal-api/README.md](../workers/portal-api/README.md).
 
+Status atual do scaffold:
+
+- Ja cobre efeitos assincronos de `appointments`, `messages`, `data-change-requests` e `document-requests` dentro do proprio Worker, usando Resend para email e Supabase para notificacoes/audit log.
+- O estado de leitura das mensagens do admin pode ser persistido via binding `ADMIN_MESSAGE_STATE` em Cloudflare KV; sem esse binding, o Worker faz fallback para memoria.
+- Os principais bloqueios restantes para trafego real continuam sendo os fluxos mais complexos: convite de membros, auth/OAuth, uploads, Stripe, PDF e cron.
+
 Entradas iniciais preparadas:
 
 - `GET /api/health`

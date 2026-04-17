@@ -69,12 +69,19 @@ Variaveis esperadas no Worker:
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `JWT_SECRET`
 - `ALLOWED_ORIGINS`
+- `BASE_URL`
+- `EMAIL_FROM`
+- `EMAIL_TO`
+- `RESEND_API_KEY` ou `RESEND_KEY`
+
+Binding opcional:
+
+- `ADMIN_MESSAGE_STATE` em Cloudflare KV para persistir o estado de leitura das mensagens do admin entre invocacoes.
 
 Este scaffold nao esta roteando trafego de producao ainda. Ele existe para permitir migracao incremental e validacao isolada.
 
 Observacao:
 
-- O `POST /api/appointments` no Worker ainda nao replica o envio de email do backend Express. Antes de colocar essa rota em producao, essa integracao precisa ser portada ou substituida.
 - O convite de membro em departments ainda nao foi migrado para o Worker porque depende de geracao de senha e envio de email.
-- O fluxo admin de mensagens usa estado de leitura em memoria no Worker. Antes de producao, isso precisa ir para armazenamento persistente.
-- A criacao de data-change-requests e document-requests no Worker ainda nao replica email e pushNotification.
+- O fluxo admin de mensagens persiste o estado de leitura em KV quando o binding `ADMIN_MESSAGE_STATE` existir; sem isso, faz fallback para memoria do processo.
+- `appointments`, `messages`, `data-change-requests` e `document-requests` ja replicam email, notificacoes internas e audit log necessarios dentro do Worker, usando Resend + Supabase.
