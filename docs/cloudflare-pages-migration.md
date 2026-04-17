@@ -55,6 +55,17 @@ Configuracao recomendada fora do repositorio:
 - Ajustar `BASE_URL` do backend para `https://portal.recuperaempresas.com.br` quando o portal passar a ser servido pelo subdominio.
 - Ajustar os redirects do Supabase para o subdominio do portal, evitando depender do apex para login, confirmacao e reset.
 
+Redirects recomendados no Supabase Auth:
+
+- `https://portal.recuperaempresas.com.br/login?confirmed=1`
+- `https://portal.recuperaempresas.com.br/login?invited=1`
+- `https://portal.recuperaempresas.com.br/login?magic=1`
+- `https://portal.recuperaempresas.com.br/login?email_changed=1`
+- `https://portal.recuperaempresas.com.br/login?reauthenticated=1`
+- `https://portal.recuperaempresas.com.br/reset-password`
+- `https://portal.recuperaempresas.com.br/oauth/consent`
+- `https://portal.recuperaempresas.com.br/api/auth/oauth/callback`
+
 ## Ordem exata de refatoracao
 
 ### Fase 0 - Corte do frontend para Pages
