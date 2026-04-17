@@ -1,0 +1,9 @@
+name = "recuperaempresas-api"
+main = "src/index.mjs"
+compatibility_date = "2026-04-16"
+
+[observability]
+enabled = true
+
+[vars]
+ALLOWED_ORIGINS = "https://portal.recuperaempresas.com.br"

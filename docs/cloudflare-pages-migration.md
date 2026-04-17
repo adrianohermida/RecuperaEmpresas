@@ -335,6 +335,30 @@ Entrega esperada:
 6. Migrar financeiro, webhook e crons.
 7. Desligar Node legado.
 
+## Scaffold inicial de Workers
+
+O repositorio ja possui um scaffold isolado para o primeiro lote em [workers/portal-api/README.md](../workers/portal-api/README.md).
+
+Entradas iniciais preparadas:
+
+- `GET /api/health`
+- `GET /api/plan`
+- `PUT /api/plan/chapter/:id`
+- `GET /api/tasks`
+- `PUT /api/tasks/:id`
+- `GET /api/notifications`
+- `POST /api/notifications/:id/read`
+- `POST /api/notifications/read-all`
+
+Arquivos principais:
+
+- [workers/portal-api/wrangler.toml](../workers/portal-api/wrangler.toml)
+- [workers/portal-api/src/index.mjs](../workers/portal-api/src/index.mjs)
+- [workers/portal-api/src/lib/auth.mjs](../workers/portal-api/src/lib/auth.mjs)
+- [workers/portal-api/src/routes/plan.mjs](../workers/portal-api/src/routes/plan.mjs)
+- [workers/portal-api/src/routes/tasks.mjs](../workers/portal-api/src/routes/tasks.mjs)
+- [workers/portal-api/src/routes/notifications.mjs](../workers/portal-api/src/routes/notifications.mjs)
+
 ## Checklist de aceite do corte inicial
 
 - `npm run build` gera `dist/` com `js/config.js` correto.
