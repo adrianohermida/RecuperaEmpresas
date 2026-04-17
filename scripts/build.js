@@ -43,6 +43,11 @@ copyRecursive(publicDir, distDir);
 // Production uses same-origin `/api/*` on Render.
 // Only override this explicitly with RE_API_BASE for a deliberate split-origin setup.
 const apiBase = process.env.RE_API_BASE || '';
+const workerApiBase = process.env.RE_API_WORKER_BASE || '';
+const workerApiRoutes = (process.env.RE_API_WORKER_ROUTES || '')
+  .split(',')
+  .map((item) => item.trim())
+  .filter(Boolean);
 const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || 'https://riiajjmnzgagntiqqshs.supabase.co';
 const supabaseAnon = process.env.VITE_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY || '';
 const freshchatEnabled = process.env.RE_ENABLE_FRESHCHAT === 'true';
@@ -57,6 +62,8 @@ fs.writeFileSync(
     ' * config.js — generated during build',
     ' */',
     `window.RE_API_BASE = ${JSON.stringify(apiBase)};`,
+    `window.RE_API_WORKER_BASE = ${JSON.stringify(workerApiBase)};`,
+    `window.RE_API_WORKER_ROUTES = ${JSON.stringify(workerApiRoutes)};`,
     `window.RE_SUPABASE_URL = ${JSON.stringify(supabaseUrl)};`,
     `window.RE_SUPABASE_ANON = ${JSON.stringify(supabaseAnon)};`,
     `window.RE_ENABLE_FRESHCHAT = ${JSON.stringify(freshchatEnabled)};`,

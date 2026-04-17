@@ -24,6 +24,8 @@ Migrar o frontend estatico para Cloudflare Pages sem quebrar o backend atual, e 
 ### Variaveis de build no Pages
 
 - `RE_API_BASE=https://api.recuperaempresas.com.br`
+- `RE_API_WORKER_BASE=https://api-edge.recuperaempresas.com.br`
+- `RE_API_WORKER_ROUTES=` vazio por padrao; preencher so com prefixes e patterns do lote ja migrado
 - `VITE_SUPABASE_URL=https://riiajjmnzgagntiqqshs.supabase.co`
 - `VITE_SUPABASE_ANON_KEY=<publishable-key>`
 - `RE_ENABLE_FRESHCHAT=false` por padrao no primeiro corte
@@ -54,6 +56,51 @@ Configuracao recomendada fora do repositorio:
 
 - Ajustar `BASE_URL` do backend para `https://portal.recuperaempresas.com.br` quando o portal passar a ser servido pelo subdominio.
 - Ajustar os redirects do Supabase para o subdominio do portal, evitando depender do apex para login, confirmacao e reset.
+
+## Roteamento gradual para o Worker
+
+O portal agora pode rotear apenas uma parte das chamadas para o Worker sem alterar o codigo das telas. A regra fica toda em configuracao de ambiente:
+
+- `RE_API_BASE`: origem principal da API. Se estiver preenchido, continua recebendo todo o trafego.
+- `RE_API_WORKER_BASE`: origem alternativa do Worker para rotas canario.
+- `RE_API_WORKER_ROUTES`: lista separada por virgula com prefixes ou patterns usando `*` para um segmento dinamico.
+
+Comportamento:
+
+- Se `RE_API_BASE` estiver vazio, o portal usa same-origin por padrao.
+- Se `RE_API_WORKER_BASE` estiver preenchido e a rota bater em `RE_API_WORKER_ROUTES`, essa chamada vai para o Worker mesmo com `RE_API_BASE` definido.
+- Rotas nao listadas continuam no backend legado.
+
+Conjunto inicial recomendado para canario:
+
+- `/api/plan`
+- `/api/tasks`
+- `/api/notifications`
+- `/api/appointments`
+- `/api/messages`
+- `/api/change-requests`
+- `/api/document-requests`
+- `/api/creditors`
+- `/api/departments`
+- `/api/employees`
+- `/api/admin/appointments`
+- `/api/admin/messages`
+- `/api/admin/client/*/creditors`
+- `/api/admin/client/*/departments`
+- `/api/admin/client/*/members/invite`
+- `/api/admin/client/*/members/*/department`
+- `/api/admin/client/*/employees`
+- `/api/admin/client/*/messages`
+- `/api/admin/client/*/change-request`
+- `/api/admin/client/*/change-requests`
+- `/api/admin/client/*/document-requests`
+
+Ordem pratica de ativacao:
+
+1. Habilitar apenas `/api/plan`, `/api/tasks` e `/api/notifications`.
+2. Expandir para `/api/appointments`, `/api/messages`, `/api/change-requests` e `/api/document-requests`.
+3. Ativar CRUDs admin e client de `creditors`, `departments` e `employees`.
+4. So depois disso considerar novas fatias mais complexas.
 
 Redirects recomendados no Supabase Auth:
 

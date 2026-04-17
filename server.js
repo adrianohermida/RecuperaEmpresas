@@ -129,6 +129,8 @@ app.get('/js/config.js', (req, res) => {
   res.setHeader('Content-Type', 'application/javascript');
   res.setHeader('Cache-Control', 'no-store');
   res.send(`window.RE_API_BASE        = '';
+window.RE_API_WORKER_BASE = ${JSON.stringify(process.env.RE_API_WORKER_BASE || '')};
+window.RE_API_WORKER_ROUTES = ${JSON.stringify((process.env.RE_API_WORKER_ROUTES || '').split(',').map(s => s.trim()).filter(Boolean))};
 window.RE_SUPABASE_URL    = ${JSON.stringify(SUPABASE_URL)};
 window.RE_SUPABASE_ANON   = ${JSON.stringify(SUPABASE_ANON_KEY)};
 window.RE_OAUTH_CLIENT_ID = ${JSON.stringify(process.env.OAUTH_CLIENT_ID || '')};

@@ -14,6 +14,8 @@ Projeto:
 Variaveis de ambiente do Pages:
 
 - `RE_API_BASE=https://api.recuperaempresas.com.br`
+- `RE_API_WORKER_BASE=https://api-edge.recuperaempresas.com.br` quando quiser fazer rollout gradual pelo Worker
+- `RE_API_WORKER_ROUTES=` vazio por padrao; preencher apenas com as rotas migradas que devem ir para o Worker
 - `VITE_SUPABASE_URL=https://riiajjmnzgagntiqqshs.supabase.co`
 - `VITE_SUPABASE_ANON_KEY=<publishable-key>`
 - `RE_ENABLE_FRESHCHAT=false`
@@ -80,6 +82,15 @@ Verificacoes da API:
 - `GET /js/config.js` nao e mais requisito do frontend no Pages
 - O CORS aceita `https://portal.recuperaempresas.com.br`
 - Login pelo portal nao falha por bloqueio de origin
+
+Rollout gradual recomendado para o Worker:
+
+- Manter `RE_API_BASE=https://api.recuperaempresas.com.br` como origem principal da API.
+- Configurar `RE_API_WORKER_BASE=https://api-edge.recuperaempresas.com.br` para o Worker.
+- As rotas listadas em `RE_API_WORKER_ROUTES` passam a usar o Worker; o restante continua em `RE_API_BASE`.
+- Liberar inicialmente apenas estas rotas em `RE_API_WORKER_ROUTES`:
+	`/api/plan,/api/tasks,/api/notifications,/api/appointments,/api/messages,/api/change-requests,/api/document-requests,/api/creditors,/api/departments,/api/employees,/api/admin/appointments,/api/admin/messages,/api/admin/client/*/creditors,/api/admin/client/*/departments,/api/admin/client/*/members/invite,/api/admin/client/*/members/*/department,/api/admin/client/*/employees,/api/admin/client/*/messages,/api/admin/client/*/change-request,/api/admin/client/*/change-requests,/api/admin/client/*/document-requests`
+- Fazer smoke test no portal com esse conjunto antes de expandir para outras fatias.
 
 Arquivo envolvido no repositório:
 
