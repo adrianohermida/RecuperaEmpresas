@@ -55,6 +55,7 @@ const DEFAULT_ORIGINS = [
   /^https?:\/\/localhost(:\d+)?$/,
   /^https?:\/\/127\.0\.0\.1(:\d+)?$/,
   /^https:\/\/(www\.)?recuperaempresas\.com\.br$/,
+  /^https:\/\/portal\.recuperaempresas\.com\.br$/,
   /^https:\/\/recuperaempresas\.onrender\.com$/,
   // GitHub Pages: https://<user>.github.io  (any path)
   /^https:\/\/[^.]+\.github\.io$/,
