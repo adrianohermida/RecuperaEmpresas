@@ -74,7 +74,10 @@ if (fs.existsSync(loginPath)) {
 
 fs.writeFileSync(path.join(distDir, '.nojekyll'), '', 'utf8');
 
-// Keep root-level mirrors generated from public/ so the repository has a single editable source.
-syncRootMirrors({ silent: true });
+// Root files are now reserved for the marketing/landing experience on GitHub Pages.
+// Only sync portal mirrors to the repository root when explicitly requested.
+if (process.env.SYNC_ROOT_MIRRORS === 'true') {
+  syncRootMirrors({ silent: true });
+}
 
 console.log('Build concluído com sucesso. Saída em dist/.');

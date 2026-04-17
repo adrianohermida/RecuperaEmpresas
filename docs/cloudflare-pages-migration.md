@@ -7,6 +7,7 @@ Migrar o frontend estatico para Cloudflare Pages sem quebrar o backend atual, e 
 ## Estado atual
 
 - O frontend estatico sai de `public/` e o build gera `dist/` via [scripts/build.js](../scripts/build.js).
+- A raiz do repositorio deve deixar de ser espelho automatico do portal; ela fica livre para a landing page do dominio principal.
 - O cliente ja suporta API em origem separada via `window.RE_API_BASE` em [public/js/api-base.js](../public/js/api-base.js).
 - O backend atual depende de Express em [server.js](../server.js) e concentra rotas montadas de [routes](../routes).
 - Ainda existem dependencias de runtime Node incompativeis com Workers em [lib/config.js](../lib/config.js), [routes/onboarding.js](../routes/onboarding.js), [routes/documents.js](../routes/documents.js), [routes/entity-documents.js](../routes/entity-documents.js), [routes/internal-invoices.js](../routes/internal-invoices.js), [routes/admin-clients.js](../routes/admin-clients.js), [routes/support-financial.js](../routes/support-financial.js) e [routes/stripe-webhook.js](../routes/stripe-webhook.js).
@@ -32,8 +33,27 @@ Migrar o frontend estatico para Cloudflare Pages sem quebrar o backend atual, e 
 
 - O Pages vai servir apenas frontend estatico no primeiro corte.
 - O backend continua fora do Pages durante a fase 1.
+- O build do portal nao deve mais sobrescrever arquivos da raiz; para isso [scripts/build.js](../scripts/build.js) so sincroniza espelhos com `SYNC_ROOT_MIRRORS=true`.
 - O arquivo [public/_redirects](../public/_redirects) preserva rotas amigaveis como `/oauth/consent`.
 - O arquivo [public/_headers](../public/_headers) preserva comportamento de `no-store` para HTML e `js/config.js`, evitando cache agressivo durante a transicao.
+
+## Dominio principal e subdominio do portal
+
+Arquitetura recomendada:
+
+- `recuperaempresas.com.br`: landing page estatica publicada no GitHub Pages.
+- `portal.recuperaempresas.com.br`: portal autenticado publicado no Cloudflare Pages.
+
+Para o login vindo do dominio principal:
+
+- Criar uma rota estatica em [login/index.html](../login/index.html) na raiz do repositorio.
+- Essa pagina faz redirect imediato para `https://portal.recuperaempresas.com.br/login.html`, preservando `query string` e `hash`.
+- Isso cobre o acesso manual a `https://recuperaempresas.com.br/login`.
+
+Configuracao recomendada fora do repositorio:
+
+- Ajustar `BASE_URL` do backend para `https://portal.recuperaempresas.com.br` quando o portal passar a ser servido pelo subdominio.
+- Ajustar os redirects do Supabase para o subdominio do portal, evitando depender do apex para login, confirmacao e reset.
 
 ## Ordem exata de refatoracao
 
