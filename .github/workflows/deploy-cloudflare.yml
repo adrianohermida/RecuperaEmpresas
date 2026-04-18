@@ -29,9 +29,9 @@ jobs:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       CLOUDFLARE_ZONE_NAME: recuperaempresas.com.br
-      RE_API_BASE: https://recuperaempresas.onrender.com
+      RE_API_BASE: ''
       RE_API_WORKER_BASE: https://api-edge.recuperaempresas.com.br
-      RE_API_WORKER_ROUTES: ''
+      RE_API_WORKER_ROUTES: /api
       VITE_SUPABASE_URL: https://riiajjmnzgagntiqqshs.supabase.co
       VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
       RE_ENABLE_FRESHCHAT: 'false'
@@ -85,9 +85,9 @@ jobs:
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-      RE_API_BASE: https://recuperaempresas.onrender.com
+      RE_API_BASE: ''
       RE_API_WORKER_BASE: https://api-edge.recuperaempresas.com.br
-      RE_API_WORKER_ROUTES: ''
+      RE_API_WORKER_ROUTES: /api
       VITE_SUPABASE_URL: https://riiajjmnzgagntiqqshs.supabase.co
       VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
       RE_ENABLE_FRESHCHAT: 'false'

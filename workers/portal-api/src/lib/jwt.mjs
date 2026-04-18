@@ -29,6 +29,24 @@ async function signHmac(secret, value) {
   return encodeBase64Url(new Uint8Array(signature));
 }
 
+export async function signJwt(payload, secret, options = {}) {
+  if (!secret) throw new Error('JWT secret ausente.');
+
+  const now = Math.floor(Date.now() / 1000);
+  const expiresIn = Number(options.expiresIn || 7 * 24 * 60 * 60);
+  const header = { alg: 'HS256', typ: 'JWT' };
+  const body = {
+    iat: now,
+    exp: now + expiresIn,
+    ...payload,
+  };
+
+  const encodedHeader = encodeBase64Url(new TextEncoder().encode(JSON.stringify(header)));
+  const encodedPayload = encodeBase64Url(new TextEncoder().encode(JSON.stringify(body)));
+  const encodedSignature = await signHmac(secret, `${encodedHeader}.${encodedPayload}`);
+  return `${encodedHeader}.${encodedPayload}.${encodedSignature}`;
+}
+
 export async function verifyJwt(token, secret) {
   if (!token || !secret) return null;
   const parts = token.split('.');

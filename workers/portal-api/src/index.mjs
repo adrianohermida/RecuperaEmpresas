@@ -1,5 +1,6 @@
 import { requireAdmin, requireAuth } from './lib/auth.mjs';
 import { applyCors, json, noContent, notFound } from './lib/http.mjs';
+import { handleAuth } from './routes/auth.mjs';
 import { handleAdminSystem } from './routes/admin-system.mjs';
 import { handleAppointments } from './routes/appointments.mjs';
 import { handleCreditors } from './routes/creditors.mjs';
@@ -119,6 +120,11 @@ export default {
     if (request.method === 'GET' && (url.pathname === '/api/health' || url.pathname === '/healthz')) {
       response = json({ status: 'ok', ts: new Date().toISOString(), runtime: 'cloudflare-worker' });
       return withCors(request, response, env);
+    }
+
+    if (url.pathname.startsWith('/api/auth/')) {
+      response = await handleAuth(request, env);
+      return withCors(request, response || notFound(), env);
     }
 
     if (url.pathname.startsWith('/api/admin/')) {
