@@ -3,7 +3,13 @@ import { getBaseUrl } from '../lib/effects.mjs';
 import { requireAuth } from '../lib/auth.mjs';
 import { json, readJson, methodNotAllowed } from '../lib/http.mjs';
 import { signJwt, verifyJwt } from '../lib/jwt.mjs';
-import { getSupabase, getSupabaseAnon, getSupabaseAnonKey, getSupabaseUrl } from '../lib/supabase.mjs';
+import {
+  getSupabase,
+  getSupabaseAnon,
+  getSupabaseAnonKey,
+  getSupabaseServiceRoleKey,
+  getSupabaseUrl,
+} from '../lib/supabase.mjs';
 
 function encodeBase64Url(bytes) {
   let binary = '';
@@ -377,6 +383,7 @@ async function oauthStatus(request, env) {
   if (request.method !== 'GET') return methodNotAllowed();
 
   const missing = getMissingOauthConfig(env);
+  const hasServiceRole = Boolean(getSupabaseServiceRoleKey(env));
   return json({
     configured: missing.length === 0,
     missing,
@@ -395,8 +402,14 @@ async function oauthStatus(request, env) {
       workerOrigin: getWorkerOrigin(request),
       portalBaseUrl: getBaseUrl(env),
       oauthClientConfigured: Boolean(getOauthClientId(env)),
+      authProfileSyncConfigured: hasServiceRole,
       supabaseUrlSource: env.VITE_SUPABASE_URL ? 'VITE_SUPABASE_URL' : (env.SUPABASE_URL ? 'SUPABASE_URL' : 'default'),
-      supabaseAnonSource: env.VITE_SUPABASE_ANON_KEY ? 'VITE_SUPABASE_ANON_KEY' : (env.SUPABASE_ANON_KEY ? 'SUPABASE_ANON_KEY' : 'default')
+      supabaseAnonSource: env.VITE_SUPABASE_ANON_KEY ? 'VITE_SUPABASE_ANON_KEY' : (env.SUPABASE_ANON_KEY ? 'SUPABASE_ANON_KEY' : 'default'),
+      supabaseServiceRoleSource: env.VITE_SUPABASE_SERVICE_ROLE
+        ? 'VITE_SUPABASE_SERVICE_ROLE'
+        : (env.SUPABASE_SERVICE_ROLE_KEY
+          ? 'SUPABASE_SERVICE_ROLE_KEY'
+          : (env.SUPABASE_SERVICE_KEY ? 'SUPABASE_SERVICE_KEY' : 'missing'))
     }
   });
 }
