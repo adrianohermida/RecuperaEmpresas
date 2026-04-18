@@ -12,6 +12,8 @@ env:
   FORCE_COLOR: '0'
   PAGES_PRODUCTION_BRANCH: gh-pages
   CLOUDFLARE_ZONE_NAME: recuperaempresas.com.br
+  PORTAL_PROJECT: recuperaempresas
+  LANDING_PROJECT: recuperaempresas-landing
 
 concurrency:
   group: deploy-cloudflare-${{ github.ref }}
@@ -27,6 +29,14 @@ jobs:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       CLOUDFLARE_ZONE_NAME: recuperaempresas.com.br
+      RE_API_BASE: https://api.recuperaempresas.com.br
+      RE_API_WORKER_BASE: https://api-edge.recuperaempresas.com.br
+      RE_API_WORKER_ROUTES: ''
+      VITE_SUPABASE_URL: https://riiajjmnzgagntiqqshs.supabase.co
+      VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+      RE_ENABLE_FRESHCHAT: 'false'
+      RE_FRESHCHAT_TOKEN: ''
+      RE_FRESHCHAT_SITE_ID: ''
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -35,12 +45,26 @@ jobs:
         shell: bash
         run: bash scripts/reconcile-cloudflare-bindings.sh
 
+      - name: Reconcile Pages projects via Cloudflare API
+        shell: bash
+        env:
+          AUDIT_DIR: .cloudflare-pages-audit
+        run: bash scripts/reconcile-cloudflare-pages-projects.sh
+
       - name: Upload binding audit
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: cloudflare-bindings-audit
           path: .cloudflare-audit/
+          if-no-files-found: warn
+
+      - name: Upload Pages project audit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cloudflare-pages-project-audit
+          path: .cloudflare-pages-audit/
           if-no-files-found: warn
 
   deploy-portal:
