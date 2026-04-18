@@ -38,6 +38,7 @@ Migrar o frontend estatico para Cloudflare Pages sem quebrar o backend atual, e 
 - O build do portal nao deve mais sobrescrever arquivos da raiz; para isso [scripts/build.js](../scripts/build.js) so sincroniza espelhos com `SYNC_ROOT_MIRRORS=true`.
 - O arquivo [public/_redirects](../public/_redirects) preserva rotas amigaveis como `/oauth/consent`.
 - O arquivo [public/_headers](../public/_headers) preserva comportamento de `no-store` para HTML e `js/config.js`, evitando cache agressivo durante a transicao.
+- O worker [workers/portal-api/wrangler.toml](../workers/portal-api/wrangler.toml) deve ser a fonte de verdade do custom domain `api-edge.recuperaempresas.com.br`, evitando manter o binding apenas no painel.
 
 ## Dominio principal e subdominio do portal
 

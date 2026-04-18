@@ -1,6 +1,11 @@
 name = "recuperaempresas-api"
 main = "src/index.mjs"
 compatibility_date = "2026-04-16"
+workers_dev = false
+
+routes = [
+	{ pattern = "api-edge.recuperaempresas.com.br", custom_domain = true }
+]
 
 [observability]
 enabled = true
