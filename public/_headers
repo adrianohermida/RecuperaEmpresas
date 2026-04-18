@@ -4,5 +4,35 @@
 /*.html
   Cache-Control: no-store
 
+/login
+  Cache-Control: no-store
+
+/login/*
+  Cache-Control: no-store
+
+/register
+  Cache-Control: no-store
+
+/register/*
+  Cache-Control: no-store
+
+/forgot-password
+  Cache-Control: no-store
+
+/forgot-password/*
+  Cache-Control: no-store
+
+/reset-password
+  Cache-Control: no-store
+
+/reset-password/*
+  Cache-Control: no-store
+
+/oauth/consent
+  Cache-Control: no-store
+
+/oauth/consent/*
+  Cache-Control: no-store
+
 /js/config.js
   Cache-Control: no-store
