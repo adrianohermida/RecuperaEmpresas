@@ -8,8 +8,8 @@
   <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
   <link rel="stylesheet" href="./css/auth.css"/>
   <script src="./js/config.js?v=20260418a"></script>
-  <script src="./js/api-base.js?v=20260418a"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="./js/api-base.js?v=20260418b"></script>
+  <script src="./vendor/supabase/supabase.js?v=20260418b"></script>
 </head>
 <body>
 <div class="auth-layout">
@@ -165,6 +165,19 @@ const _sb     = (_sbUrl && _sbAnon && window.supabase)
   ? window.supabase.createClient(_sbUrl, _sbAnon, { auth: { persistSession: true, autoRefreshToken: true } })
   : null;
 
+async function requestApiJson(url, options) {
+  if (typeof window.apiJsonRequest === 'function') {
+    return window.apiJsonRequest(url, options);
+  }
+
+  const response = await fetch(url, options);
+  return {
+    ok: response.ok,
+    status: response.status,
+    data: await window.readApiResponse(response)
+  };
+}
+
 document.getElementById('loginForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   clearErrors();
@@ -182,32 +195,25 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
   btn.innerHTML = '<div class="spinner"></div> Entrando...';
 
   try {
-    // ── Step 1: sign in directly via supabase-js so the Supabase session is
-    // stored in localStorage automatically (needed for OAuth consent page).
-    if (_sb) {
-      const { error: sbErr } = await _sb.auth.signInWithPassword({ email, password });
-      // Ignore errors here — server login below is authoritative.
-      // If the anon key is misconfigured, we still fall through to server login.
-      if (sbErr) console.warn('[LOGIN] supabase-js signIn:', sbErr.message);
-    }
-
-    // ── Step 2: call our server to get the custom JWT + user profile.
-    let res  = await fetch('/api/auth/login', {
+    let result = await requestApiJson('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password })
     });
-    let json = await res.json();
+    let json = result.data || {};
 
     // If owner login failed, attempt member login
     if (!json.success && !json.token) {
-      const res2  = await fetch('/api/auth/member-login', {
+      const result2 = await requestApiJson('/api/auth/member-login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
       });
-      const json2 = await res2.json();
-      if (json2.token) { json = { success: true, token: json2.token, user: json2.user }; res = res2; }
+      const json2 = result2.data || {};
+      if (json2.token) {
+        json = { success: true, token: json2.token, user: json2.user, supabase_session: json2.supabase_session };
+        result = result2;
+      }
     }
 
     if (json.token || json.success) {
@@ -238,7 +244,7 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
           '<a href="#" id="resendLink" class="auth-inline-link-danger">Reenviar confirmação</a>';
         document.getElementById('resendLink')?.addEventListener('click', async (ev) => {
           ev.preventDefault();
-          await fetch('/api/auth/resend-confirmation', {
+          await requestApiJson('/api/auth/resend-confirmation', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email })
           });
@@ -281,11 +287,11 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
   // Came back from email confirmation link → auto-login with the hash tokens
   if (accessToken && (hashType === 'signup' || hashType === 'magiclink')) {
     try {
-      const res  = await fetch('/api/auth/confirm', {
+      const result = await requestApiJson('/api/auth/confirm', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ access_token: accessToken, refresh_token: hash.refresh_token || '' })
       });
-      const json = await res.json();
+      const json = result.data || {};
       if (json.token) {
         localStorage.setItem('re_token', json.token);
         localStorage.setItem('re_user', JSON.stringify(json.user));
@@ -330,15 +336,12 @@ function showSuccess(msg) {
   const token = localStorage.getItem('re_token');
   if (!token) return;
   try {
-    const ctrl    = new AbortController();
-    const timeout = setTimeout(() => ctrl.abort(), 20000);
-    const res     = await fetch('/api/auth/verify', {
+    const result = await requestApiJson('/api/auth/verify', {
       headers: { Authorization: 'Bearer ' + token },
-      signal: ctrl.signal,
+      timeout: 20000,
     });
-    clearTimeout(timeout);
-    if (res.ok) {
-      const { user } = await res.json();
+    if (result.ok && result.data && result.data.user) {
+      const user = result.data.user;
       window.location.href = user.isAdmin ? 'admin.html' : 'dashboard.html';
     }
   } catch { /* server offline or slow — stay on login page */ }

@@ -56,10 +56,79 @@
     return base ? base + url : url;
   }
 
+  function normalizeHeaders(headers) {
+    if (!headers) return [];
+    if (typeof Headers !== 'undefined' && headers instanceof Headers) {
+      return Array.from(headers.entries());
+    }
+    return Object.keys(headers).map(function (key) {
+      return [key, headers[key]];
+    });
+  }
+
   // Patch window.fetch
   var _fetch = window.fetch.bind(window);
   window.fetch = function (url, opts) {
     return _fetch(resolveUrl(url), opts);
+  };
+
+  window.apiJsonRequest = function (url, opts) {
+    opts = opts || {};
+
+    return new Promise(function (resolve, reject) {
+      var xhr = new XMLHttpRequest();
+      var method = String(opts.method || 'GET').toUpperCase();
+      var targetUrl = resolveUrl(url);
+
+      xhr.open(method, targetUrl, true);
+
+      if (opts.credentials === 'include') {
+        xhr.withCredentials = true;
+      }
+
+      if (typeof opts.timeout === 'number' && opts.timeout > 0) {
+        xhr.timeout = opts.timeout;
+      }
+
+      normalizeHeaders(opts.headers).forEach(function (entry) {
+        if (typeof entry[1] !== 'undefined') {
+          xhr.setRequestHeader(entry[0], entry[1]);
+        }
+      });
+
+      xhr.onload = function () {
+        var text = xhr.responseText || '';
+        var data = {};
+
+        if (text) {
+          try {
+            data = JSON.parse(text);
+          } catch (error) {
+            data = {
+              error: text.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim() || ('HTTP ' + xhr.status),
+              rawText: text
+            };
+          }
+        }
+
+        resolve({
+          ok: xhr.status >= 200 && xhr.status < 300,
+          status: xhr.status,
+          data: data,
+          rawText: text
+        });
+      };
+
+      xhr.onerror = function () {
+        reject(new Error('Network request failed'));
+      };
+
+      xhr.ontimeout = function () {
+        reject(new Error('Request timed out'));
+      };
+
+      xhr.send(typeof opts.body === 'undefined' ? null : opts.body);
+    });
   };
 
   window.readApiResponse = async function (response) {

@@ -147,6 +147,11 @@ app.use((req, res, next) => {
   next();
 });
 
+app.get('/vendor/supabase/supabase.js', (req, res) => {
+  res.setHeader('Cache-Control', 'public, max-age=3600');
+  res.sendFile(path.join(__dirname, 'node_modules', '@supabase', 'supabase-js', 'dist', 'umd', 'supabase.js'));
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use(authRoutes);

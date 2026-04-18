@@ -32,6 +32,12 @@ function copyRecursive(src, dest) {
   fs.copyFileSync(src, dest);
 }
 
+function copyIfExists(src, dest) {
+  if (!fs.existsSync(src)) return;
+  ensureDir(path.dirname(dest));
+  fs.copyFileSync(src, dest);
+}
+
 function createHtmlRouteAlias(sourceRelativePath, targetRelativePath) {
   const sourcePath = path.join(distDir, sourceRelativePath);
   if (!fs.existsSync(sourcePath)) return;
@@ -48,6 +54,10 @@ if (!fs.existsSync(publicDir)) {
 
 cleanDir(distDir);
 copyRecursive(publicDir, distDir);
+copyIfExists(
+  path.join(rootDir, 'node_modules', '@supabase', 'supabase-js', 'dist', 'umd', 'supabase.js'),
+  path.join(distDir, 'vendor', 'supabase', 'supabase.js')
+);
 
 // Static portal deploys on Pages must keep working even if the Pages panel
 // executes a secondary build without custom env vars.

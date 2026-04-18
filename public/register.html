@@ -8,7 +8,7 @@
   <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
   <link rel="stylesheet" href="./css/auth.css"/>
   <script src="./js/config.js?v=20260418a"></script>
-  <script src="./js/api-base.js?v=20260418a"></script>
+  <script src="./js/api-base.js?v=20260418b"></script>
 </head>
 <body>
 <div class="auth-layout">
@@ -217,6 +217,19 @@ function clearErrors() {
   document.getElementById('alertError').classList.remove('show');
 }
 
+async function requestApiJson(url, options) {
+  if (typeof window.apiJsonRequest === 'function') {
+    return window.apiJsonRequest(url, options);
+  }
+
+  const response = await fetch(url, options);
+  return {
+    ok: response.ok,
+    status: response.status,
+    data: await window.readApiResponse(response)
+  };
+}
+
 document.getElementById('registerForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   clearErrors();
@@ -241,12 +254,12 @@ document.getElementById('registerForm').addEventListener('submit', async (e) => 
   btn.innerHTML = '<div class="spinner"></div> Criando conta...';
 
   try {
-    const res  = await fetch('/api/auth/register', {
+    const result = await requestApiJson('/api/auth/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, email, company, password })
     });
-    const json = await res.json();
+    const json = result.data || {};
 
     if (json.pending_confirmation) {
       // Supabase requires email confirmation — show "check your inbox" screen
@@ -281,7 +294,7 @@ async function resendConfirmEmail() {
   btn.disabled = true;
   btn.textContent = 'Enviando...';
   try {
-    await fetch('/api/auth/resend-confirmation', {
+    await requestApiJson('/api/auth/resend-confirmation', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email })
     });
