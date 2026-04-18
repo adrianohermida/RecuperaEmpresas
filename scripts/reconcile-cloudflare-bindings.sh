@@ -53,6 +53,12 @@ require_success() {
   fi
 }
 
+is_success_response() {
+  local response="$1"
+
+  jq -e '.success == true' >/dev/null <<<"$response"
+}
+
 save_response() {
   local file_name="$1"
   local response="$2"
@@ -62,20 +68,26 @@ save_response() {
 
 resolve_zone_id() {
   if [[ -n "$ZONE_ID" ]]; then
-    return
+    return 0
   fi
 
   local response
   response=$(cf_api GET "/zones?name=${ZONE_NAME}&status=active")
-  require_success "$response" "resolve-zone-id"
+  if ! is_success_response "$response"; then
+    save_response "zone-lookup-error.json" "$response"
+    echo "Skipping DNS cleanup: unable to resolve zone ${ZONE_NAME}" >&2
+    jq . <<<"$response" >&2 || true
+    return 1
+  fi
 
   ZONE_ID=$(jq -r '.result[0]?.id // empty' <<<"$response")
   if [[ -z "$ZONE_ID" ]]; then
-    echo "Cloudflare zone not found for ${ZONE_NAME}" >&2
-    exit 1
+    echo "Skipping DNS cleanup: active zone not found for ${ZONE_NAME}" >&2
+    return 1
   fi
 
   save_response "zone-lookup.json" "$response"
+  return 0
 }
 
 delete_dns_record_ids() {
@@ -95,7 +107,11 @@ delete_dns_record_ids() {
     echo "Deleting DNS record ${record_id} (${label})"
     local response
     response=$(cf_api DELETE "/zones/${ZONE_ID}/dns_records/${record_id}")
-    require_success "$response" "delete-dns-${record_id}"
+    if ! is_success_response "$response"; then
+      save_response "error-delete-dns-${record_id}.json" "$response"
+      echo "Skipping DNS record delete failure for ${record_id} (${label})" >&2
+      jq . <<<"$response" >&2 || true
+    fi
   done <<<"$ids"
 }
 
@@ -103,18 +119,28 @@ delete_conflicting_web_dns_records() {
   local hostname="$1"
   local label="$2"
 
-  resolve_zone_id
+  if ! resolve_zone_id; then
+    return 0
+  fi
 
   local response
   response=$(cf_api GET "/zones/${ZONE_ID}/dns_records?name=${hostname}")
-  require_success "$response" "list-dns-${label}"
+  if ! is_success_response "$response"; then
+    save_response "error-list-dns-${label}.json" "$response"
+    echo "Skipping DNS cleanup: unable to list DNS records for ${hostname}" >&2
+    jq . <<<"$response" >&2 || true
+    return 0
+  fi
   save_response "dns-${label}-before.json" "$response"
 
   delete_dns_record_ids "$response" '.result[]? | select(.type == "A" or .type == "AAAA" or .type == "CNAME")' "$label"
 
   response=$(cf_api GET "/zones/${ZONE_ID}/dns_records?name=${hostname}")
-  require_success "$response" "list-dns-${label}-after"
-  save_response "dns-${label}-after.json" "$response"
+  if is_success_response "$response"; then
+    save_response "dns-${label}-after.json" "$response"
+  else
+    save_response "error-list-dns-${label}-after.json" "$response"
+  fi
 }
 
 delete_pages_domain_if_present() {
