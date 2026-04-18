@@ -8,8 +8,8 @@
   <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
   <link rel="stylesheet" href="./css/auth.css"/>
   <script src="./js/config.js?v=20260418a"></script>
-  <script src="./js/runtime-diagnostics.js?v=20260418c"></script>
-  <script src="./js/api-base.js?v=20260418c"></script>
+  <script src="./js/runtime-diagnostics.js?v=20260418d"></script>
+  <script src="./js/api-base.js?v=20260418d"></script>
   <script src="./vendor/supabase/supabase.js?v=20260418b"></script>
 </head>
 <body>
@@ -179,6 +179,11 @@ async function requestApiJson(url, options) {
   };
 }
 
+function reportLoginIssue(code, details) {
+  if (!window.REDiagnostics || typeof window.REDiagnostics.reportIssue !== 'function') return;
+  window.REDiagnostics.reportIssue('error', code, details || {});
+}
+
 document.getElementById('loginForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   clearErrors();
@@ -199,7 +204,16 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
     let result = await requestApiJson('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password })
+      body: JSON.stringify({ email, password }),
+      diagnostics: {
+        operation: 'auth.login.owner',
+        expected: {
+          method: 'POST',
+          route: '/api/auth/login',
+          expectedResponse: '200 com token, user e opcionalmente supabase_session; ou 401 com error',
+          sourceFile: 'public/login.html'
+        }
+      }
     });
     let json = result.data || {};
 
@@ -208,7 +222,16 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
       const result2 = await requestApiJson('/api/auth/member-login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({ email, password }),
+        diagnostics: {
+          operation: 'auth.login.member',
+          expected: {
+            method: 'POST',
+            route: '/api/auth/member-login',
+            expectedResponse: '200 com token e user; ou 401 com error',
+            sourceFile: 'public/login.html'
+          }
+        }
       });
       const json2 = result2.data || {};
       if (json2.token) {
@@ -223,7 +246,19 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
           access_token: json.supabase_session.access_token,
           refresh_token: json.supabase_session.refresh_token,
         });
-        if (setSessionErr) console.warn('[LOGIN] supabase-js setSession:', setSessionErr.message);
+        if (setSessionErr) {
+          console.warn('[LOGIN] supabase-js setSession:', setSessionErr.message);
+          reportLoginIssue('login-supabase-session-failed', {
+            summary: 'O login da API funcionou, mas a sessão Supabase no navegador falhou.',
+            expected: {
+              action: 'persistir sessão Supabase para o fluxo /oauth/consent',
+              sourceFile: 'public/login.html'
+            },
+            identified: {
+              message: setSessionErr.message
+            }
+          });
+        }
       }
 
       localStorage.setItem('re_token', json.token);
@@ -259,6 +294,13 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
       btn.textContent = 'Entrar no Portal';
     }
   } catch {
+    reportLoginIssue('login-request-threw', {
+      summary: 'A tentativa de login lançou exceção antes de concluir o fluxo de autenticação.',
+      expected: {
+        action: 'receber resposta JSON dos endpoints /api/auth/login e /api/auth/member-login',
+        sourceFile: 'public/login.html'
+      }
+    });
     document.getElementById('alertErrorMsg').textContent = 'Erro de conexão. Tente novamente.';
     document.getElementById('alertError').classList.add('show');
     btn.disabled = false;
@@ -277,12 +319,45 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
   if (hash.oauth_token) {
     try {
       const user = JSON.parse(decodeURIComponent(hash.oauth_user || '{}'));
+      if (_sb && hash.oauth_access_token && hash.oauth_refresh_token) {
+        const { error: oauthSessionErr } = await _sb.auth.setSession({
+          access_token: decodeURIComponent(hash.oauth_access_token),
+          refresh_token: decodeURIComponent(hash.oauth_refresh_token),
+        });
+        if (oauthSessionErr) {
+          reportLoginIssue('oauth-callback-session-failed', {
+            summary: 'O callback OAuth retornou ao login, mas a sessão Supabase não foi persistida.',
+            expected: {
+              action: 'persistir access_token e refresh_token retornados pelo callback OAuth',
+              sourceFile: 'public/login.html'
+            },
+            identified: {
+              message: oauthSessionErr.message
+            }
+          });
+        }
+      }
       localStorage.setItem('re_token', decodeURIComponent(hash.oauth_token));
       localStorage.setItem('re_user', JSON.stringify(user));
       history.replaceState(null, '', window.location.pathname + window.location.search);
-      window.location.href = user?.isAdmin ? 'admin.html' : 'dashboard.html';
+      const returnTo = params.get('returnTo');
+      window.location.href = returnTo && returnTo.startsWith('/')
+        ? returnTo
+        : (user?.isAdmin ? 'admin.html' : 'dashboard.html');
       return;
-    } catch {}
+    } catch (error) {
+      reportLoginIssue('oauth-callback-hash-parse-failed', {
+        summary: 'O login recebeu hash OAuth, mas falhou ao interpretar os dados retornados.',
+        expected: {
+          action: 'hash contendo oauth_token, oauth_user e opcionalmente oauth_access_token/oauth_refresh_token',
+          sourceFile: 'public/login.html'
+        },
+        identified: {
+          message: error && error.message ? error.message : 'falha ao ler hash OAuth',
+          hashKeys: Object.keys(hash)
+        }
+      });
+    }
   }
 
   // Came back from email confirmation link → auto-login with the hash tokens
@@ -290,7 +365,16 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
     try {
       const result = await requestApiJson('/api/auth/confirm', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ access_token: accessToken, refresh_token: hash.refresh_token || '' })
+        body: JSON.stringify({ access_token: accessToken, refresh_token: hash.refresh_token || '' }),
+        diagnostics: {
+          operation: 'auth.confirm',
+          expected: {
+            method: 'POST',
+            route: '/api/auth/confirm',
+            expectedResponse: '200 com token e user após confirmação de e-mail',
+            sourceFile: 'public/login.html'
+          }
+        }
       });
       const json = result.data || {};
       if (json.token) {
@@ -340,6 +424,15 @@ function showSuccess(msg) {
     const result = await requestApiJson('/api/auth/verify', {
       headers: { Authorization: 'Bearer ' + token },
       timeout: 20000,
+      diagnostics: {
+        operation: 'auth.verify',
+        expected: {
+          method: 'GET',
+          route: '/api/auth/verify',
+          expectedResponse: '200 com user autenticado ou 401 quando o token expira',
+          sourceFile: 'public/login.html'
+        }
+      }
     });
     if (result.ok && result.data && result.data.user) {
       const user = result.data.user;

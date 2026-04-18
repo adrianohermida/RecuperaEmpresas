@@ -82,6 +82,8 @@ Variaveis esperadas no Worker:
 - `EMAIL_FROM`
 - `EMAIL_TO`
 - `RESEND_API_KEY` ou `RESEND_KEY`
+- `OAUTH_CLIENT_ID`
+- `OAUTH_CLIENT_SECRET` opcional para clients confidenciais
 
 Binding opcional:
 

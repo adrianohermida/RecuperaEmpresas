@@ -8,7 +8,7 @@
   <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
   <link rel="stylesheet" href="/css/auth.css"/>
   <script src="/js/config.js?v=20260418b"></script>
-  <script src="/js/runtime-diagnostics.js?v=20260418c"></script>
+  <script src="/js/runtime-diagnostics.js?v=20260418d"></script>
   <script src="/vendor/supabase/supabase.js?v=20260418b"></script>
 </head>
 <body>
@@ -75,6 +75,11 @@
 
 <script>
 (async function () {
+  function reportOauthIssue(code, details) {
+    if (!window.REDiagnostics || typeof window.REDiagnostics.reportIssue !== 'function') return;
+    window.REDiagnostics.reportIssue('error', code, details || {});
+  }
+
   const SUPA_URL  = (window.RE_SUPABASE_URL  || 'https://riiajjmnzgagntiqqshs.supabase.co').replace(/\/$/, '');
   const SUPA_ANON = window.RE_SUPABASE_ANON  || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJpaWFqam1uemdhZ250aXFxc2hzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYxNzY0ODUsImV4cCI6MjA5MTc1MjQ4NX0.zyOFjVFIBJem5FZmXBD-ya78RheD_a-YHetibyVvXcI';
 
@@ -87,6 +92,16 @@
 
   // ── Guard: must have authorization_id ──────────────────────────────────────
   if (!authorizationId) {
+    reportOauthIssue('oauth-consent-missing-authorization-id', {
+      summary: 'A página de consentimento foi aberta sem authorization_id.',
+      expected: {
+        queryParam: 'authorization_id',
+        sourceFile: 'public/oauth-consent.html'
+      },
+      identified: {
+        href: window.location.href
+      }
+    });
     document.querySelector('.auth-card').innerHTML = `
       <div class="auth-state-screen auth-state-screen-visible">
         <div class="auth-state-icon auth-state-icon-error">
@@ -110,6 +125,17 @@
   const { data: { session } } = await supabase.auth.getSession();
 
   if (!session) {
+    reportOauthIssue('oauth-consent-session-missing', {
+      summary: 'O consentimento OAuth precisa de uma sessão Supabase ativa no navegador.',
+      expected: {
+        action: 'getSession() retornar access_token para permitir getAuthorizationDetails/approveAuthorization',
+        sourceFile: 'public/oauth-consent.html'
+      },
+      identified: {
+        session: null,
+        redirectingTo: '/login.html?returnTo=' + encodeURIComponent('/oauth/consent?authorization_id=' + encodeURIComponent(authorizationId))
+      }
+    });
     // No Supabase session → send user to login page, then back here.
     // Login page will store the Supabase session and redirect to returnTo.
     const returnTo = '/oauth/consent?authorization_id=' + encodeURIComponent(authorizationId);
@@ -143,7 +169,19 @@
       if (typeof details?.scope === 'string' && details.scope.trim()) scopes = details.scope.trim().split(/\s+/);
       else if (details?.scopes?.length) scopes = details.scopes;
     }
-  } catch {}
+  } catch (error) {
+    reportOauthIssue('oauth-consent-details-failed', {
+      summary: 'Falhou ao carregar os detalhes da autorização OAuth do Supabase.',
+      expected: {
+        action: 'supabase.auth.oauth.getAuthorizationDetails(authorizationId) retornar cliente, escopos e redirect_uri',
+        sourceFile: 'public/oauth-consent.html'
+      },
+      identified: {
+        message: error && error.message ? error.message : 'getAuthorizationDetails falhou',
+        authorizationId: authorizationId
+      }
+    });
+  }
 
   document.getElementById('scopeList').innerHTML = scopes.map(s => {
     const def = SCOPE_LABELS[s] || { icon: '🔹', text: `Acesso: ${s}` };
@@ -202,6 +240,20 @@
       return;
     } catch (err) {
       console.error('[CONSENT] error:', err);
+      reportOauthIssue('oauth-consent-decision-failed', {
+        summary: 'A decisão de consentimento OAuth falhou.',
+        expected: {
+          action: allow ? 'approveAuthorization retornar redirect_to' : 'denyAuthorization retornar redirect_to',
+          sourceFile: 'public/oauth-consent.html'
+        },
+        identified: {
+          allow: allow,
+          name: err && err.name ? err.name : '',
+          code: err && err.code ? err.code : '',
+          status: err && err.status ? err.status : '',
+          message: err && err.message ? err.message : 'erro desconhecido'
+        }
+      });
       const detail = [err?.name, err?.code, err?.status, err?.message].filter(Boolean).join(' | ');
       errMsg.textContent = detail || 'Erro ao processar decisão. Tente novamente.';
       errEl.classList.add('show');

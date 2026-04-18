@@ -2,8 +2,25 @@ import bcrypt from 'bcryptjs';
 import { getBaseUrl } from '../lib/effects.mjs';
 import { requireAuth } from '../lib/auth.mjs';
 import { json, readJson, methodNotAllowed } from '../lib/http.mjs';
-import { signJwt } from '../lib/jwt.mjs';
+import { signJwt, verifyJwt } from '../lib/jwt.mjs';
 import { getSupabase, getSupabaseAnon } from '../lib/supabase.mjs';
+
+function encodeBase64Url(bytes) {
+  let binary = '';
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+}
+
+function randomBase64Url(length = 32) {
+  const bytes = new Uint8Array(length);
+  crypto.getRandomValues(bytes);
+  return encodeBase64Url(bytes);
+}
+
+async function sha256Base64Url(input) {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(input));
+  return encodeBase64Url(new Uint8Array(digest));
+}
 
 function getAdminEmails(env) {
   return String(env.ADMIN_EMAILS || '')
@@ -22,6 +39,32 @@ function getAuthRedirects(env) {
     resetPassword: `${baseUrl}/reset-password`,
     reauthentication: `${baseUrl}/login?reauthenticated=1`,
   };
+}
+
+function getWorkerOrigin(request) {
+  return new URL(request.url).origin.replace(/\/+$/, '');
+}
+
+function getPortalLoginUrl(env) {
+  return `${getBaseUrl(env).replace(/\/+$/, '')}/login`;
+}
+
+function getOauthClientId(env) {
+  return String(env.OAUTH_CLIENT_ID || '').trim();
+}
+
+function getOauthClientSecret(env) {
+  return String(env.OAUTH_CLIENT_SECRET || '').trim();
+}
+
+async function buildOauthState(env, payload) {
+  return signJwt({ kind: 'oauth_state', ...payload }, env.JWT_SECRET, { expiresIn: 10 * 60 });
+}
+
+async function readOauthState(env, token) {
+  const payload = await verifyJwt(token, env.JWT_SECRET);
+  if (!payload || payload.kind !== 'oauth_state') return null;
+  return payload;
 }
 
 function safeUser(user, env) {
@@ -288,6 +331,113 @@ async function memberLogin(request, env) {
   });
 }
 
+async function oauthStart(request, env) {
+  if (request.method !== 'GET') return methodNotAllowed();
+
+  const clientId = getOauthClientId(env);
+  if (!clientId) return json({ error: 'OAUTH_CLIENT_ID não configurado no Worker.' }, { status: 500 });
+
+  const url = new URL(request.url);
+  const scope = String(url.searchParams.get('scope') || 'openid email profile').trim();
+  const verifier = randomBase64Url(48);
+  const challenge = await sha256Base64Url(verifier);
+  const state = await buildOauthState(env, { verifier, return_to: String(url.searchParams.get('returnTo') || '') });
+  const redirectUri = `${getWorkerOrigin(request)}/api/auth/oauth/callback`;
+
+  const params = new URLSearchParams({
+    client_id: clientId,
+    response_type: 'code',
+    redirect_uri: redirectUri,
+    scope,
+    state,
+    code_challenge: challenge,
+    code_challenge_method: 'S256',
+  });
+
+  return Response.redirect(`${env.SUPABASE_URL || 'https://riiajjmnzgagntiqqshs.supabase.co'}/auth/v1/oauth/authorize?${params.toString()}`, 302);
+}
+
+async function oauthCallback(request, env) {
+  if (request.method !== 'GET') return methodNotAllowed();
+
+  const portalLoginUrl = getPortalLoginUrl(env);
+  const url = new URL(request.url);
+  const code = String(url.searchParams.get('code') || '');
+  const state = String(url.searchParams.get('state') || '');
+  const error = String(url.searchParams.get('error') || '');
+  const errorDescription = String(url.searchParams.get('error_description') || '');
+
+  if (error) {
+    return Response.redirect(`${portalLoginUrl}?err=oauth&desc=${encodeURIComponent(errorDescription || error)}`, 302);
+  }
+
+  if (!code) {
+    return Response.redirect(`${portalLoginUrl}?err=oauth&desc=no_code`, 302);
+  }
+
+  const oauthState = await readOauthState(env, state);
+  if (!oauthState?.verifier) {
+    return Response.redirect(`${portalLoginUrl}?err=oauth&desc=session_expired_retry`, 302);
+  }
+
+  const clientId = getOauthClientId(env);
+  if (!clientId) {
+    return Response.redirect(`${portalLoginUrl}?err=oauth&desc=missing_oauth_client_id`, 302);
+  }
+
+  const body = new URLSearchParams({
+    grant_type: 'authorization_code',
+    code,
+    redirect_uri: `${getWorkerOrigin(request)}/api/auth/oauth/callback`,
+    client_id: clientId,
+    code_verifier: oauthState.verifier,
+  });
+
+  const clientSecret = getOauthClientSecret(env);
+  if (clientSecret) body.set('client_secret', clientSecret);
+
+  try {
+    const sb = getSupabase(env);
+    const sbAnon = getSupabaseAnon(env);
+    const tokenRes = await fetch(`${env.SUPABASE_URL || 'https://riiajjmnzgagntiqqshs.supabase.co'}/auth/v1/oauth/token`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        apikey: String(env.SUPABASE_ANON_KEY || ''),
+      },
+      body,
+    });
+    const tokenData = await tokenRes.json();
+
+    if (!tokenData.access_token) {
+      return Response.redirect(`${portalLoginUrl}?err=oauth&desc=${encodeURIComponent(tokenData.error_description || tokenData.msg || 'token_exchange_failed')}`, 302);
+    }
+
+    const { data, error: sessionErr } = await sbAnon.auth.setSession({
+      access_token: tokenData.access_token,
+      refresh_token: tokenData.refresh_token || tokenData.access_token,
+    });
+
+    if (sessionErr || !data?.user) {
+      return Response.redirect(`${portalLoginUrl}?err=oauth&desc=${encodeURIComponent(sessionErr?.message || 'no_user')}`, 302);
+    }
+
+    const profile = await upsertProfileFromAuth(sb, data.user, env);
+    const portalToken = await signJwt({ userId: profile.id, email: profile.email }, env.JWT_SECRET);
+    const hash = new URLSearchParams({
+      oauth_token: portalToken,
+      oauth_user: JSON.stringify(safeUser(profile, env)),
+      oauth_access_token: tokenData.access_token,
+      oauth_refresh_token: tokenData.refresh_token || tokenData.access_token,
+    });
+    const returnTo = String(oauthState.return_to || '').trim();
+    const target = `${portalLoginUrl}${returnTo && returnTo.startsWith('/') ? '?returnTo=' + encodeURIComponent(returnTo) : ''}#${hash.toString()}`;
+    return Response.redirect(target, 302);
+  } catch (workerError) {
+    return Response.redirect(`${portalLoginUrl}?err=oauth&desc=${encodeURIComponent(workerError?.message || 'oauth_callback_failed')}`, 302);
+  }
+}
+
 export async function handleAuth(request, env) {
   const url = new URL(request.url);
 
@@ -299,6 +449,8 @@ export async function handleAuth(request, env) {
     if (url.pathname === '/api/auth/confirm') return await confirm(request, env);
     if (url.pathname === '/api/auth/resend-confirmation') return await resendConfirmation(request, env);
     if (url.pathname === '/api/auth/member-login') return await memberLogin(request, env);
+    if (url.pathname === '/api/auth/oauth/start') return await oauthStart(request, env);
+    if (url.pathname === '/api/auth/oauth/callback') return await oauthCallback(request, env);
   } catch (error) {
     console.error('[worker:auth]', error?.message || error);
     return json({ error: 'Erro interno.' }, { status: 500 });

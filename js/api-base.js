@@ -31,17 +31,48 @@
     }
   }
 
+  function captureTrace(label) {
+    if (window.REDiagnostics && typeof window.REDiagnostics.captureTrace === 'function') {
+      return window.REDiagnostics.captureTrace(label);
+    }
+    return { frames: [] };
+  }
+
+  function buildExpected(opts, method, resolvedUrl) {
+    var diagnostics = opts && opts.diagnostics;
+    return diagnostics && diagnostics.expected ? diagnostics.expected : {
+      method: method,
+      url: resolvedUrl
+    };
+  }
+
+  function buildIdentified(url, method, status, responseSnippet, reason) {
+    return {
+      method: method,
+      url: url,
+      status: status,
+      responseSnippet: responseSnippet || '',
+      reason: reason || ''
+    };
+  }
+
   // Patch window.fetch
   var _fetch = window.fetch.bind(window);
   window.fetch = function (url, opts) {
     var resolvedUrl = resolveUrl(url);
+    var method = String((opts && opts.method) || 'GET').toUpperCase();
+    var trace = captureTrace('fetch:' + resolvedUrl).frames;
     return _fetch(resolvedUrl, opts).catch(function (error) {
       reportApiFailure({
         url: resolvedUrl,
         originalUrl: url,
-        method: String((opts && opts.method) || 'GET').toUpperCase(),
+        method: method,
         status: 0,
-        reason: error && error.message ? error.message : 'fetch failed'
+        reason: error && error.message ? error.message : 'fetch failed',
+        expected: buildExpected(opts, method, resolvedUrl),
+        identified: buildIdentified(resolvedUrl, method, 0, '', error && error.message ? error.message : 'fetch failed'),
+        trace: trace,
+        operation: opts && opts.diagnostics ? opts.diagnostics.operation : ''
       });
       throw error;
     });
@@ -54,6 +85,7 @@
       var xhr = new XMLHttpRequest();
       var method = String(opts.method || 'GET').toUpperCase();
       var targetUrl = resolveUrl(url);
+      var trace = captureTrace('xhr:' + targetUrl).frames;
 
       xhr.open(method, targetUrl, true);
 
@@ -92,7 +124,11 @@
             originalUrl: url,
             method: method,
             status: xhr.status,
-            responseSnippet: text
+            responseSnippet: text,
+            expected: buildExpected(opts, method, targetUrl),
+            identified: buildIdentified(targetUrl, method, xhr.status, text, ''),
+            trace: trace,
+            operation: opts && opts.diagnostics ? opts.diagnostics.operation : ''
           });
         }
 
@@ -105,23 +141,33 @@
       };
 
       xhr.onerror = function () {
+        var reason = 'xhr network error';
         reportApiFailure({
           url: targetUrl,
           originalUrl: url,
           method: method,
           status: 0,
-          reason: 'xhr network error'
+          reason: reason,
+          expected: buildExpected(opts, method, targetUrl),
+          identified: buildIdentified(targetUrl, method, 0, '', reason),
+          trace: trace,
+          operation: opts && opts.diagnostics ? opts.diagnostics.operation : ''
         });
         reject(new Error('Network request failed'));
       };
 
       xhr.ontimeout = function () {
+        var reason = 'xhr timeout';
         reportApiFailure({
           url: targetUrl,
           originalUrl: url,
           method: method,
           status: 0,
-          reason: 'xhr timeout'
+          reason: reason,
+          expected: buildExpected(opts, method, targetUrl),
+          identified: buildIdentified(targetUrl, method, 0, '', reason),
+          trace: trace,
+          operation: opts && opts.diagnostics ? opts.diagnostics.operation : ''
         });
         reject(new Error('Request timed out'));
       };

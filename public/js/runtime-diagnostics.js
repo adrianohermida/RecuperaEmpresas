@@ -1,5 +1,6 @@
 (function () {
   var seen = Object.create(null);
+  var TRACE_LIMIT = 8;
 
   function nowIso() {
     return new Date().toISOString();
@@ -13,6 +14,42 @@
     var text = String(value || '');
     if (!maxLength || text.length <= maxLength) return text;
     return text.slice(0, maxLength) + '...';
+  }
+
+  function normalizeError(value) {
+    if (!value) return null;
+    if (typeof value === 'string') return { message: value };
+    return {
+      name: value.name || '',
+      message: value.message || String(value),
+      stack: value.stack || ''
+    };
+  }
+
+  function normalizeStack(stack) {
+    if (!stack) return [];
+    return String(stack)
+      .split('\n')
+      .slice(1, TRACE_LIMIT + 1)
+      .map(function (line) {
+        var trimmed = line.trim();
+        var match = trimmed.match(/(?:at\s+.*?\()?(.*?):(\d+):(\d+)\)?$/);
+        return {
+          raw: trimmed,
+          source: match ? match[1] : '',
+          line: match ? Number(match[2]) : 0,
+          column: match ? Number(match[3]) : 0
+        };
+      });
+  }
+
+  function captureTrace(label) {
+    var error = new Error(label || 'trace');
+    return {
+      label: label || 'trace',
+      stack: error.stack || '',
+      frames: normalizeStack(error.stack || '')
+    };
   }
 
   function getContext() {
@@ -141,7 +178,8 @@
       message: event && event.message ? event.message : 'Erro de runtime no navegador.',
       source: event && event.filename ? event.filename : '',
       line: event && event.lineno ? event.lineno : 0,
-      column: event && event.colno ? event.colno : 0
+      column: event && event.colno ? event.colno : 0,
+      trace: event && event.error && event.error.stack ? normalizeStack(event.error.stack) : []
     });
   }
 
@@ -149,11 +187,14 @@
     var reason = event ? event.reason : null;
     var message = reason && reason.message ? reason.message : String(reason || 'Promise rejeitada sem tratamento.');
     emit('error', 'unhandled-promise-rejection', {
-      message: message
+      message: message,
+      error: normalizeError(reason),
+      trace: normalizeStack(reason && reason.stack ? reason.stack : '')
     });
   }
 
   window.REDiagnostics = {
+    captureTrace: captureTrace,
     report: emit,
     reportApiFailure: function (details) {
       var info = classifyApiFailure(details || {});
@@ -165,7 +206,10 @@
         status: Number(details && details.status) || 0,
         originalUrl: cleanUrl(details && details.originalUrl),
         responseSnippet: limitText(details && details.responseSnippet, 240),
-        reason: cleanUrl(details && details.reason)
+        reason: cleanUrl(details && details.reason),
+        expected: details && details.expected ? details.expected : null,
+        identified: details && details.identified ? details.identified : null,
+        trace: details && details.trace ? details.trace : []
       }, details || {}));
     },
     reportResourceFailure: function (url, details) {
@@ -176,6 +220,11 @@
         impact: info.impact,
         probableCause: info.probableCause || '',
         recommendedAction: info.recommendedAction
+      }, details || {}));
+    },
+    reportIssue: function (level, code, details) {
+      emit(level || 'warn', code || 'generic-issue', Object.assign({
+        trace: details && details.trace ? details.trace : captureTrace(code || 'generic-issue').frames
       }, details || {}));
     }
   };
