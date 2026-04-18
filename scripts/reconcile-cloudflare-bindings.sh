@@ -126,7 +126,7 @@ worker_domains=$(cf_api GET "/accounts/${CLOUDFLARE_ACCOUNT_ID}/workers/domains?
 require_success "$worker_domains" "list-worker-domains"
 save_response "worker-domains-before.json" "$worker_domains"
 
-detach_worker_domain_ids "$worker_domains" --argjson_dummy 'not_used' ".result[]? | select(.hostname == \"${PORTAL_DOMAIN}\" or .hostname == \"${LANDING_DOMAIN}\")" "pages-host-conflict"
+detach_worker_domain_ids "$worker_domains" ".result[]? | select(.hostname == \"${PORTAL_DOMAIN}\" or .hostname == \"${LANDING_DOMAIN}\")" "pages-host-conflict"
 detach_worker_domain_ids "$worker_domains" ".result[]? | select(.hostname == \"${WORKER_DOMAIN}\" and .service != \"${WORKER_SERVICE}\")" "worker-host-conflict"
 
 portal_domains=$(cf_api GET "/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects/${PORTAL_PROJECT}/domains")
