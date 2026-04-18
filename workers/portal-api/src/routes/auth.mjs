@@ -61,8 +61,8 @@ function getMissingOauthConfig(env) {
   const missing = [];
   if (!getOauthClientId(env)) missing.push('OAUTH_CLIENT_ID');
   if (!env.JWT_SECRET) missing.push('JWT_SECRET');
-  if (!(env.VITE_SUPABASE_URL || env.SUPABASE_URL)) missing.push('VITE_SUPABASE_URL');
-  if (!(env.VITE_SUPABASE_ANON_KEY || env.SUPABASE_ANON_KEY)) missing.push('VITE_SUPABASE_ANON_KEY');
+  if (!getSupabaseUrl(env)) missing.push('VITE_SUPABASE_URL');
+  if (!getSupabaseAnonKey(env)) missing.push('VITE_SUPABASE_ANON_KEY');
   return missing;
 }
 
@@ -377,7 +377,12 @@ async function oauthStatus(request, env) {
       startRoute: '/api/auth/oauth/start',
       callbackRoute: '/api/auth/oauth/callback',
       consentPage: '/oauth/consent',
-      redirectUri: `${getWorkerOrigin(request)}/api/auth/oauth/callback`
+      redirectUri: `${getWorkerOrigin(request)}/api/auth/oauth/callback`,
+      required: ['OAUTH_CLIENT_ID', 'JWT_SECRET'],
+      optionalAliases: {
+        supabaseUrl: ['VITE_SUPABASE_URL', 'SUPABASE_URL'],
+        supabaseAnonKey: ['VITE_SUPABASE_ANON_KEY', 'SUPABASE_ANON_KEY']
+      }
     },
     identified: {
       workerOrigin: getWorkerOrigin(request),

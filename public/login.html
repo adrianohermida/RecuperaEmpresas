@@ -205,16 +205,20 @@ async function diagnoseOauthRuntime() {
     var payload = result.data || {};
     if (payload.configured) return;
 
-    reportLoginIssue(isOauthContext ? 'oauth-worker-misconfigured' : 'oauth-worker-unavailable', {
-      summary: 'O portal entrou ou voltou de um fluxo OAuth, mas o Worker está sem configuração mínima para concluir o Supabase OAuth.',
+    var missingItems = Array.isArray(payload.missing) ? payload.missing : [];
+    reportLoginIssue('oauth-worker-misconfigured', {
+      summary: missingItems.length
+        ? 'O Worker OAuth respondeu, mas está mal configurado: faltam ' + missingItems.join(', ') + '.'
+        : 'O Worker OAuth respondeu, mas a configuração publicada ainda está incompleta.',
       expected: payload.expected || {
         route: '/api/auth/oauth/status',
         required: ['OAUTH_CLIENT_ID', 'JWT_SECRET', 'VITE_SUPABASE_URL', 'VITE_SUPABASE_ANON_KEY']
       },
       identified: payload.identified || {
-        missing: payload.missing || []
+        missing: missingItems
       },
-      missing: payload.missing || [],
+      missing: missingItems,
+      isOauthContext: isOauthContext,
       sourceFile: 'public/login.html'
     });
   } catch (error) {
