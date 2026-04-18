@@ -86,7 +86,8 @@
     if (/static\.cloudflareinsights\.com\/beacon\.min\.js/i.test(targetUrl)) {
       return {
         code: 'cloudflare-insights-blocked',
-        level: 'warn',
+        level: 'info',
+        suppress: true,
         summary: 'Cloudflare Web Analytics foi bloqueado pelo navegador ou por uma extensão.',
         impact: 'Apenas telemetria foi afetada. Isso não bloqueia login, API, Workers ou Pages.',
         probableCause: 'Tracking Prevention, adblock ou extensão de privacidade.',
@@ -162,6 +163,7 @@
     if (!url) return;
 
     var info = classifyResourceFailure(url);
+    if (info.suppress) return;
     emit(info.level, info.code, {
       url: url,
       tagName: String(target.tagName || '').toLowerCase(),
@@ -214,6 +216,7 @@
     },
     reportResourceFailure: function (url, details) {
       var info = classifyResourceFailure(url);
+      if (info.suppress) return;
       emit(info.level, info.code, Object.assign({
         url: cleanUrl(url),
         summary: info.summary,
