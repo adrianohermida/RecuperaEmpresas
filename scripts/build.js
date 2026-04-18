@@ -32,6 +32,15 @@ function copyRecursive(src, dest) {
   fs.copyFileSync(src, dest);
 }
 
+function createHtmlRouteAlias(sourceRelativePath, targetRelativePath) {
+  const sourcePath = path.join(distDir, sourceRelativePath);
+  if (!fs.existsSync(sourcePath)) return;
+
+  const targetPath = path.join(distDir, targetRelativePath);
+  ensureDir(path.dirname(targetPath));
+  fs.copyFileSync(sourcePath, targetPath);
+}
+
 if (!fs.existsSync(publicDir)) {
   console.error('Build failed: public/ não encontrado.');
   process.exit(1);
@@ -80,6 +89,12 @@ if (fs.existsSync(loginPath)) {
 }
 
 fs.writeFileSync(path.join(distDir, '.nojekyll'), '', 'utf8');
+
+createHtmlRouteAlias('login.html', path.join('login', 'index.html'));
+createHtmlRouteAlias('register.html', path.join('register', 'index.html'));
+createHtmlRouteAlias('forgot-password.html', path.join('forgot-password', 'index.html'));
+createHtmlRouteAlias('reset-password.html', path.join('reset-password', 'index.html'));
+createHtmlRouteAlias('oauth-consent.html', path.join('oauth', 'consent', 'index.html'));
 
 // Root files are now reserved for the marketing/landing experience on GitHub Pages.
 // Only sync portal mirrors to the repository root when explicitly requested.
