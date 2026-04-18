@@ -36,7 +36,7 @@ Na lista de `Redirect URLs`, adicionar exatamente estes valores:
 - `https://portal.recuperaempresas.com.br/login?reauthenticated=1`
 - `https://portal.recuperaempresas.com.br/reset-password`
 - `https://portal.recuperaempresas.com.br/oauth/consent`
-- `https://portal.recuperaempresas.com.br/api/auth/oauth/callback`
+- `https://api-edge.recuperaempresas.com.br/api/auth/oauth/callback`
 
 Se ainda existirem redirects antigos para o apex, revisar com cuidado antes de remover. O ideal e manter somente os do subdominio do portal para os fluxos autenticados do portal.
 
@@ -56,7 +56,7 @@ Se houver OAuth consent no portal:
 
 1. Confirmar que a aplicacao externa ou o fluxo iniciado pelo portal usa o callback correto
 2. O callback esperado para a API e:
-   `https://portal.recuperaempresas.com.br/api/auth/oauth/callback`
+   `https://api-edge.recuperaempresas.com.br/api/auth/oauth/callback`
 
 Observacao importante:
 
