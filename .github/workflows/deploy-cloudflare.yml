@@ -8,6 +8,8 @@ on:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+  WRANGLER_LOG: debug
+  FORCE_COLOR: '0'
 
 concurrency:
   group: deploy-cloudflare-${{ github.ref }}
@@ -46,6 +48,9 @@ jobs:
       - name: Build portal
         run: npm run build
 
+      - name: Prepare portal logs directory
+        run: mkdir -p .wrangler-logs
+
       - name: Check Cloudflare auth for portal
         shell: bash
         run: |
@@ -59,12 +64,21 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
+          export WRANGLER_OUTPUT_FILE_PATH=.wrangler-logs/portal-pages.ndjson
           if ! output=$(npx --yes wrangler@4.12.0 pages deploy dist --project-name=recuperaempresas --branch=gh-pages 2>&1); then
             echo "::error title=Deploy portal::${output//$'\n'/ }"
             exit 1
           fi
 
           echo "$output"
+
+      - name: Upload portal logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: portal-pages-logs
+          path: .wrangler-logs/
+          if-no-files-found: warn
 
   deploy-landing:
     name: Deploy Landing Pages
@@ -83,6 +97,9 @@ jobs:
         with:
           node-version: 22
 
+      - name: Prepare landing logs directory
+        run: mkdir -p .wrangler-logs
+
       - name: Check Cloudflare auth for landing
         shell: bash
         run: |
@@ -96,12 +113,21 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
+          export WRANGLER_OUTPUT_FILE_PATH=.wrangler-logs/landing-pages.ndjson
           if ! output=$(npx --yes wrangler@4.12.0 pages deploy landing --project-name=recuperaempresas-landing --branch=gh-pages 2>&1); then
             echo "::error title=Deploy landing::${output//$'\n'/ }"
             exit 1
           fi
 
           echo "$output"
+
+      - name: Upload landing logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: landing-pages-logs
+          path: .wrangler-logs/
+          if-no-files-found: warn
 
   deploy-worker:
     name: Deploy API Worker
@@ -124,6 +150,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Prepare worker logs directory
+        run: mkdir -p .wrangler-logs
+
       - name: Check Cloudflare auth for worker
         shell: bash
         run: |
@@ -137,9 +166,18 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
+          export WRANGLER_OUTPUT_FILE_PATH=.wrangler-logs/worker-deploy.ndjson
           if ! output=$(npx --yes wrangler@4.12.0 deploy -c workers/portal-api/wrangler.toml 2>&1); then
             echo "::error title=Deploy worker::${output//$'\n'/ }"
             exit 1
           fi
 
           echo "$output"
+
+      - name: Upload worker logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: worker-deploy-logs
+          path: .wrangler-logs/
+          if-no-files-found: warn
