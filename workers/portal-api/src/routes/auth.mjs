@@ -57,6 +57,15 @@ function getOauthClientSecret(env) {
   return String(env.OAUTH_CLIENT_SECRET || '').trim();
 }
 
+function getMissingOauthConfig(env) {
+  const missing = [];
+  if (!getOauthClientId(env)) missing.push('OAUTH_CLIENT_ID');
+  if (!env.JWT_SECRET) missing.push('JWT_SECRET');
+  if (!env.SUPABASE_URL) missing.push('SUPABASE_URL');
+  if (!env.SUPABASE_ANON_KEY) missing.push('SUPABASE_ANON_KEY');
+  return missing;
+}
+
 async function buildOauthState(env, payload) {
   return signJwt({ kind: 'oauth_state', ...payload }, env.JWT_SECRET, { expiresIn: 10 * 60 });
 }
@@ -357,6 +366,27 @@ async function oauthStart(request, env) {
   return Response.redirect(`${env.SUPABASE_URL || 'https://riiajjmnzgagntiqqshs.supabase.co'}/auth/v1/oauth/authorize?${params.toString()}`, 302);
 }
 
+async function oauthStatus(request, env) {
+  if (request.method !== 'GET') return methodNotAllowed();
+
+  const missing = getMissingOauthConfig(env);
+  return json({
+    configured: missing.length === 0,
+    missing,
+    expected: {
+      startRoute: '/api/auth/oauth/start',
+      callbackRoute: '/api/auth/oauth/callback',
+      consentPage: '/oauth/consent',
+      redirectUri: `${getWorkerOrigin(request)}/api/auth/oauth/callback`
+    },
+    identified: {
+      workerOrigin: getWorkerOrigin(request),
+      portalBaseUrl: getBaseUrl(env),
+      oauthClientConfigured: Boolean(getOauthClientId(env))
+    }
+  });
+}
+
 async function oauthCallback(request, env) {
   if (request.method !== 'GET') return methodNotAllowed();
 
@@ -449,6 +479,7 @@ export async function handleAuth(request, env) {
     if (url.pathname === '/api/auth/confirm') return await confirm(request, env);
     if (url.pathname === '/api/auth/resend-confirmation') return await resendConfirmation(request, env);
     if (url.pathname === '/api/auth/member-login') return await memberLogin(request, env);
+    if (url.pathname === '/api/auth/oauth/status') return await oauthStatus(request, env);
     if (url.pathname === '/api/auth/oauth/start') return await oauthStart(request, env);
     if (url.pathname === '/api/auth/oauth/callback') return await oauthCallback(request, env);
   } catch (error) {

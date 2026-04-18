@@ -184,6 +184,53 @@ function reportLoginIssue(code, details) {
   window.REDiagnostics.reportIssue('error', code, details || {});
 }
 
+async function diagnoseOauthRuntime() {
+  var params = new URLSearchParams(window.location.search);
+  var returnTo = params.get('returnTo') || '';
+  var isOauthContext = params.get('err') === 'oauth' || returnTo.indexOf('/oauth/consent') === 0;
+
+  try {
+    var result = await requestApiJson('/api/auth/oauth/status', {
+      method: 'GET',
+      diagnostics: {
+        operation: 'oauth.status',
+        expected: {
+          method: 'GET',
+          route: '/api/auth/oauth/status',
+          expectedResponse: '200 com configured=true e nenhuma variável ausente para o Worker OAuth',
+          sourceFile: 'public/login.html'
+        }
+      }
+    });
+    var payload = result.data || {};
+    if (payload.configured) return;
+
+    reportLoginIssue(isOauthContext ? 'oauth-worker-misconfigured' : 'oauth-worker-unavailable', {
+      summary: 'O portal entrou ou voltou de um fluxo OAuth, mas o Worker está sem configuração mínima para concluir o Supabase OAuth.',
+      expected: payload.expected || {
+        route: '/api/auth/oauth/status',
+        required: ['OAUTH_CLIENT_ID', 'JWT_SECRET', 'SUPABASE_URL', 'SUPABASE_ANON_KEY']
+      },
+      identified: payload.identified || {
+        missing: payload.missing || []
+      },
+      missing: payload.missing || [],
+      sourceFile: 'public/login.html'
+    });
+  } catch (error) {
+    reportLoginIssue(isOauthContext ? 'oauth-worker-status-unreachable' : 'oauth-worker-status-check-failed', {
+      summary: 'O portal tentou diagnosticar o Worker OAuth, mas nem a rota de status respondeu corretamente.',
+      expected: {
+        route: '/api/auth/oauth/status',
+        sourceFile: 'public/login.html'
+      },
+      identified: {
+        message: error && error.message ? error.message : 'oauth status probe failed'
+      }
+    });
+  }
+}
+
 document.getElementById('loginForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   clearErrors();
@@ -409,6 +456,8 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
     document.getElementById('alertError').classList.add('show');
   }
 })();
+
+diagnoseOauthRuntime().catch(function () {});
 
 function showSuccess(msg) {
   const el = document.getElementById('alertSuccess');

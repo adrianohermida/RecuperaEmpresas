@@ -85,6 +85,10 @@ Variaveis esperadas no Worker:
 - `OAUTH_CLIENT_ID`
 - `OAUTH_CLIENT_SECRET` opcional para clients confidenciais
 
+Observacao operacional:
+
+- O workflow de deploy do Worker tenta sincronizar `OAUTH_CLIENT_ID` e `OAUTH_CLIENT_SECRET` a partir dos GitHub Secrets homônimos. Se `OAUTH_CLIENT_ID` estiver ausente, o endpoint `/api/auth/oauth/status` reportará a misconfiguração explicitamente.
+
 Binding opcional:
 
 - `ADMIN_MESSAGE_STATE` em Cloudflare KV para persistir o estado de leitura das mensagens do admin entre invocacoes.
