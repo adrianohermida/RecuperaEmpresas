@@ -105,6 +105,23 @@ function getIp(request) {
   return request.headers.get('cf-connecting-ip') || request.headers.get('x-forwarded-for') || 'unknown';
 }
 
+function isInvalidCredentialsError(error) {
+  const message = String(error?.message || '').toLowerCase();
+  return Boolean(
+    error && (
+      error.status === 400 ||
+      error.status === 401 ||
+      message.includes('invalid login credentials') ||
+      message.includes('email not confirmed') ||
+      message.includes('invalid credentials')
+    )
+  );
+}
+
+function getAuthSetupErrorResponse(message) {
+  return json({ error: message || 'Erro interno de autenticacao.' }, { status: 503 });
+}
+
 async function logAccess(sb, userId, email, event, ip) {
   try {
     await sb.from('re_access_log').insert({
@@ -175,17 +192,26 @@ async function register(request, env) {
   if (!name || !email || !password) return json({ error: 'Preencha todos os campos.' }, { status: 400 });
   if (password.length < 8) return json({ error: 'A senha deve ter pelo menos 8 caracteres.' }, { status: 400 });
 
-  const sb = getSupabase(env);
   const sbAnon = getSupabaseAnon(env);
   const redirects = getAuthRedirects(env);
-  const { data: authData, error: signUpErr } = await sbAnon.auth.signUp({
-    email,
-    password,
-    options: {
-      data: { name, company },
-      emailRedirectTo: redirects.confirmSignUp,
-    },
-  });
+  let authData;
+  let signUpErr;
+
+  try {
+    const result = await sbAnon.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { name, company },
+        emailRedirectTo: redirects.confirmSignUp,
+      },
+    });
+    authData = result.data;
+    signUpErr = result.error;
+  } catch (error) {
+    console.error('[worker:register:auth]', error?.message || error);
+    return json({ error: 'Erro ao criar conta no provedor de autenticacao.' }, { status: 502 });
+  }
 
   if (signUpErr) {
     const message = String(signUpErr.message || '').toLowerCase();
@@ -196,7 +222,27 @@ async function register(request, env) {
     return json({ error: 'Erro interno ao criar conta.' }, { status: 500 });
   }
 
-  const profile = await upsertProfileFromAuth(sb, authData.user, env, { name, company });
+  if (!authData?.user) {
+    console.error('[worker:register] signup returned without user');
+    return json({ error: 'Erro ao criar conta.' }, { status: 500 });
+  }
+
+  let sb;
+  try {
+    sb = getSupabase(env);
+  } catch (error) {
+    console.error('[worker:register:service-role]', error?.message || error);
+    return getAuthSetupErrorResponse('Conta criada, mas a configuracao interna de perfil esta indisponivel.');
+  }
+
+  let profile;
+  try {
+    profile = await upsertProfileFromAuth(sb, authData.user, env, { name, company });
+  } catch (error) {
+    console.error('[worker:register:profile-sync]', error?.message || error);
+    return getAuthSetupErrorResponse('Conta criada, mas nao foi possivel finalizar o perfil agora.');
+  }
+
   await logAccess(sb, profile.id, email, 'register', getIp(request));
 
   if (!authData.session) {
@@ -214,14 +260,42 @@ async function login(request, env) {
   const password = String(body.password || '');
   if (!email || !password) return json({ error: 'Preencha todos os campos.' }, { status: 400 });
 
-  const sb = getSupabase(env);
   const sbAnon = getSupabaseAnon(env);
-  const { data: authData, error: signInErr } = await sbAnon.auth.signInWithPassword({ email, password });
+  let authData;
+  let signInErr;
+
+  try {
+    const result = await sbAnon.auth.signInWithPassword({ email, password });
+    authData = result.data;
+    signInErr = result.error;
+  } catch (error) {
+    if (isInvalidCredentialsError(error)) {
+      return json({ error: 'E-mail ou senha incorretos.' }, { status: 401 });
+    }
+    console.error('[worker:login:auth]', error?.message || error);
+    return json({ error: 'Erro ao autenticar no provedor de login.' }, { status: 502 });
+  }
+
   if (signInErr || !authData?.user) {
     return json({ error: 'E-mail ou senha incorretos.' }, { status: 401 });
   }
 
-  const profile = await upsertProfileFromAuth(sb, authData.user, env);
+  let sb;
+  try {
+    sb = getSupabase(env);
+  } catch (error) {
+    console.error('[worker:login:service-role]', error?.message || error);
+    return getAuthSetupErrorResponse('Login validado, mas a configuracao interna de perfil esta indisponivel.');
+  }
+
+  let profile;
+  try {
+    profile = await upsertProfileFromAuth(sb, authData.user, env);
+  } catch (error) {
+    console.error('[worker:login:profile-sync]', error?.message || error);
+    return getAuthSetupErrorResponse('Login validado, mas nao foi possivel carregar o perfil agora.');
+  }
+
   await logAccess(sb, profile.id, email, 'login', getIp(request));
 
   const token = await signJwt({ userId: profile.id, email: profile.email }, env.JWT_SECRET);
