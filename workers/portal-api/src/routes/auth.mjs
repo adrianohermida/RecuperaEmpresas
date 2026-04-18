@@ -32,12 +32,12 @@ function getAdminEmails(env) {
 function getAuthRedirects(env) {
   const baseUrl = getBaseUrl(env).replace(/\/+$/, '');
   return {
-    confirmSignUp: `${baseUrl}/login?confirmed=1`,
-    inviteUser: `${baseUrl}/login?invited=1`,
-    magicLink: `${baseUrl}/login?magic=1`,
-    changeEmail: `${baseUrl}/login?email_changed=1`,
-    resetPassword: `${baseUrl}/reset-password`,
-    reauthentication: `${baseUrl}/login?reauthenticated=1`,
+    confirmSignUp: `${baseUrl}/login.html?confirmed=1`,
+    inviteUser: `${baseUrl}/login.html?invited=1`,
+    magicLink: `${baseUrl}/login.html?magic=1`,
+    changeEmail: `${baseUrl}/login.html?email_changed=1`,
+    resetPassword: `${baseUrl}/reset-password.html`,
+    reauthentication: `${baseUrl}/login.html?reauthenticated=1`,
   };
 }
 
@@ -249,7 +249,14 @@ async function forgotPassword(request, env) {
   const sbAnon = getSupabaseAnon(env);
   const redirects = getAuthRedirects(env);
   const { error } = await sbAnon.auth.resetPasswordForEmail(email, { redirectTo: redirects.resetPassword });
-  if (error) console.warn('[worker:forgot]', error.message);
+  if (error) {
+    console.warn('[worker:forgot]', error.message);
+    return json({
+      error: 'Erro ao solicitar recuperação de senha.',
+      details: error.message,
+      redirectTo: redirects.resetPassword,
+    }, { status: 500 });
+  }
   return json({ success: true });
 }
 
