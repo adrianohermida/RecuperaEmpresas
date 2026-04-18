@@ -36,9 +36,24 @@ cf_api() {
   fi
 }
 
+ensure_json_response() {
+  local response="$1"
+  local context="$2"
+
+  if jq -e . >/dev/null 2>&1 <<<"$response"; then
+    return 0
+  fi
+
+  printf '%s\n' "$response" > "$AUDIT_DIR/error-${context}-raw.txt"
+  echo "Cloudflare API returned a non-JSON response during ${context}" >&2
+  exit 1
+}
+
 require_success() {
   local response="$1"
   local context="$2"
+
+  ensure_json_response "$response" "$context"
 
   if ! jq -e '.success == true' >/dev/null <<<"$response"; then
     printf '%s\n' "$response" > "$AUDIT_DIR/error-${context}.json"
