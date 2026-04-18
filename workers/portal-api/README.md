@@ -4,6 +4,13 @@ Scaffold inicial para migrar o primeiro lote de rotas simples do portal para Clo
 
 Escopo inicial:
 
+- `POST /api/auth/register`
+- `POST /api/auth/login`
+- `POST /api/auth/member-login`
+- `GET /api/auth/verify`
+- `POST /api/auth/forgot`
+- `POST /api/auth/confirm`
+- `POST /api/auth/resend-confirmation`
 - `GET /api/health`
 - `GET /api/appointments`
 - `POST /api/appointments`
@@ -67,6 +74,7 @@ Escopo inicial:
 Variaveis esperadas no Worker:
 
 - `SUPABASE_URL`
+- `SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `JWT_SECRET`
 - `ALLOWED_ORIGINS`

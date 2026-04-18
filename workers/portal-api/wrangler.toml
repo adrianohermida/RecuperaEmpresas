@@ -19,6 +19,7 @@ EMAIL_TO = "contato@recuperaempresas.com.br"
 
 # Secrets to configure with `wrangler secret put`:
 # - SUPABASE_URL
+# - SUPABASE_ANON_KEY
 # - SUPABASE_SERVICE_ROLE_KEY
 # - JWT_SECRET
 # - RESEND_API_KEY
