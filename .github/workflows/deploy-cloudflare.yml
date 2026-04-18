@@ -11,15 +11,42 @@ env:
   WRANGLER_LOG: debug
   FORCE_COLOR: '0'
   PAGES_PRODUCTION_BRANCH: gh-pages
+  CLOUDFLARE_ZONE_NAME: recuperaempresas.com.br
 
 concurrency:
   group: deploy-cloudflare-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  reconcile-bindings:
+    name: Reconcile Cloudflare Bindings
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_ZONE_NAME: ${{ env.CLOUDFLARE_ZONE_NAME }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Reconcile bindings via Cloudflare API
+        shell: bash
+        run: bash scripts/reconcile-cloudflare-bindings.sh
+
+      - name: Upload binding audit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cloudflare-bindings-audit
+          path: .cloudflare-audit/
+          if-no-files-found: warn
+
   deploy-portal:
     name: Deploy Portal Pages
     runs-on: ubuntu-latest
+    needs: reconcile-bindings
     permissions:
       contents: read
     env:
@@ -95,6 +122,7 @@ jobs:
   deploy-landing:
     name: Deploy Landing Pages
     runs-on: ubuntu-latest
+    needs: reconcile-bindings
     permissions:
       contents: read
     env:
@@ -155,6 +183,7 @@ jobs:
   deploy-worker:
     name: Deploy API Worker
     runs-on: ubuntu-latest
+    needs: reconcile-bindings
     permissions:
       contents: read
     env:
