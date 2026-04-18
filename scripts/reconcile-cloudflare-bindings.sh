@@ -14,6 +14,7 @@ WORKER_SERVICE="${WORKER_SERVICE:-recuperaempresas-api}"
 ZONE_NAME="${CLOUDFLARE_ZONE_NAME:-recuperaempresas.com.br}"
 AUDIT_DIR="${AUDIT_DIR:-.cloudflare-audit}"
 CF_API="https://api.cloudflare.com/client/v4"
+ZONE_ID=""
 
 mkdir -p "$AUDIT_DIR"
 
@@ -57,6 +58,63 @@ save_response() {
   local response="$2"
 
   printf '%s\n' "$response" > "$AUDIT_DIR/$file_name"
+}
+
+resolve_zone_id() {
+  if [[ -n "$ZONE_ID" ]]; then
+    return
+  fi
+
+  local response
+  response=$(cf_api GET "/zones?name=${ZONE_NAME}&status=active")
+  require_success "$response" "resolve-zone-id"
+
+  ZONE_ID=$(jq -r '.result[0]?.id // empty' <<<"$response")
+  if [[ -z "$ZONE_ID" ]]; then
+    echo "Cloudflare zone not found for ${ZONE_NAME}" >&2
+    exit 1
+  fi
+
+  save_response "zone-lookup.json" "$response"
+}
+
+delete_dns_record_ids() {
+  local records_json="$1"
+  local jq_filter="$2"
+  local label="$3"
+  local ids
+
+  ids=$(jq -r "$jq_filter | .id" <<<"$records_json")
+
+  if [[ -z "$ids" ]]; then
+    return
+  fi
+
+  while IFS= read -r record_id; do
+    [[ -z "$record_id" ]] && continue
+    echo "Deleting DNS record ${record_id} (${label})"
+    local response
+    response=$(cf_api DELETE "/zones/${ZONE_ID}/dns_records/${record_id}")
+    require_success "$response" "delete-dns-${record_id}"
+  done <<<"$ids"
+}
+
+delete_conflicting_web_dns_records() {
+  local hostname="$1"
+  local label="$2"
+
+  resolve_zone_id
+
+  local response
+  response=$(cf_api GET "/zones/${ZONE_ID}/dns_records?name=${hostname}")
+  require_success "$response" "list-dns-${label}"
+  save_response "dns-${label}-before.json" "$response"
+
+  delete_dns_record_ids "$response" '.result[]? | select(.type == "A" or .type == "AAAA" or .type == "CNAME")' "$label"
+
+  response=$(cf_api GET "/zones/${ZONE_ID}/dns_records?name=${hostname}")
+  require_success "$response" "list-dns-${label}-after"
+  save_response "dns-${label}-after.json" "$response"
 }
 
 delete_pages_domain_if_present() {
@@ -110,6 +168,9 @@ detach_worker_domain_ids() {
 }
 
 echo "Auditing Pages projects"
+delete_conflicting_web_dns_records "$LANDING_DOMAIN" "landing-domain"
+delete_conflicting_web_dns_records "$PORTAL_DOMAIN" "portal-domain"
+
 portal_domains=$(cf_api GET "/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects/${PORTAL_PROJECT}/domains")
 require_success "$portal_domains" "list-pages-${PORTAL_PROJECT}"
 save_response "pages-${PORTAL_PROJECT}-domains-before.json" "$portal_domains"
