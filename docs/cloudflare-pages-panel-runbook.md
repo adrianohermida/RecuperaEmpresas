@@ -48,6 +48,7 @@ Adicionar ou revisar estas variaveis em `Production`:
 Observacao:
 
 - Nao colocar `service_role` no Pages. Essa chave nao deve ir para o frontend.
+- Em projetos `Direct Upload`, o workflow ajusta `production_branch` via API antes do deploy. Se o projeto tiver sido criado com outra branch de producao, o Pages pode continuar servindo uma versao antiga mesmo com deploys bem-sucedidos.
 
 ## 3. Disparar um deploy limpo
 

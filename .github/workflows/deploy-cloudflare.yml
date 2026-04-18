@@ -10,6 +10,7 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
   WRANGLER_LOG: debug
   FORCE_COLOR: '0'
+  PAGES_PRODUCTION_BRANCH: gh-pages
 
 concurrency:
   group: deploy-cloudflare-${{ github.ref }}
@@ -60,6 +61,17 @@ jobs:
             exit 1
           fi
 
+      - name: Ensure portal production branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error \
+            --request PATCH \
+            "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects/recuperaempresas" \
+            --header "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            --header "Content-Type: application/json" \
+            --data "{\"production_branch\":\"${PAGES_PRODUCTION_BRANCH}\"}" >/dev/null
+
       - name: Deploy portal to Pages
         shell: bash
         run: |
@@ -108,6 +120,17 @@ jobs:
             echo "::error title=Cloudflare auth landing::${output//$'\n'/ }"
             exit 1
           fi
+
+      - name: Ensure landing production branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error \
+            --request PATCH \
+            "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects/recuperaempresas-landing" \
+            --header "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            --header "Content-Type: application/json" \
+            --data "{\"production_branch\":\"${PAGES_PRODUCTION_BRANCH}\"}" >/dev/null
 
       - name: Deploy landing to Pages
         shell: bash
