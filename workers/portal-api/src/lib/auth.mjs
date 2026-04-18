@@ -1,6 +1,28 @@
-import { json } from './http.mjs';
+import { json, parseCookies } from './http.mjs';
 import { verifyJwt } from './jwt.mjs';
 import { getSupabase } from './supabase.mjs';
+
+function getAppSessionCookieName(env) {
+  return String(env.APP_SESSION_COOKIE_NAME || 're_session').trim() || 're_session';
+}
+
+function getTokenCandidates(request, env) {
+  const candidates = [];
+  const authHeader = request.headers.get('authorization') || '';
+  if (/^Bearer\s+/i.test(authHeader)) {
+    candidates.push(authHeader.replace(/^Bearer\s+/i, '').trim());
+  }
+
+  const cookies = parseCookies(request);
+  const cookieToken = String(cookies[getAppSessionCookieName(env)] || '').trim();
+  if (cookieToken) candidates.push(cookieToken);
+
+  const url = new URL(request.url);
+  const queryToken = String(url.searchParams.get('token') || '').trim();
+  if (queryToken) candidates.push(queryToken);
+
+  return candidates.filter(Boolean);
+}
 
 async function findUserById(sb, id) {
   const { data } = await sb.from('re_users').select('*').eq('id', id).single();
@@ -8,13 +30,16 @@ async function findUserById(sb, id) {
 }
 
 export async function requireAuth(request, env) {
-  const authHeader = request.headers.get('authorization') || '';
-  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
-  if (!token) {
+  const tokens = getTokenCandidates(request, env);
+  if (!tokens.length) {
     return { ok: false, response: json({ error: 'Não autenticado.' }, { status: 401 }) };
   }
 
-  const decoded = await verifyJwt(token, env.JWT_SECRET);
+  let decoded = null;
+  for (const token of tokens) {
+    decoded = await verifyJwt(token, env.JWT_SECRET);
+    if (decoded) break;
+  }
   if (!decoded) {
     return { ok: false, response: json({ error: 'Token inválido ou expirado.' }, { status: 401 }) };
   }

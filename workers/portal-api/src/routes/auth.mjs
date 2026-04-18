@@ -38,12 +38,12 @@ function getAdminEmails(env) {
 function getAuthRedirects(env) {
   const baseUrl = getBaseUrl(env).replace(/\/+$/, '');
   return {
-    confirmSignUp: `${baseUrl}/login.html?confirmed=1`,
-    inviteUser: `${baseUrl}/login.html?invited=1`,
-    magicLink: `${baseUrl}/login.html?magic=1`,
-    changeEmail: `${baseUrl}/login.html?email_changed=1`,
-    resetPassword: `${baseUrl}/reset-password.html`,
-    reauthentication: `${baseUrl}/login.html?reauthenticated=1`,
+    confirmSignUp: `${baseUrl}/login?confirmed=1`,
+    inviteUser: `${baseUrl}/login?invited=1`,
+    magicLink: `${baseUrl}/login?magic=1`,
+    changeEmail: `${baseUrl}/login?email_changed=1`,
+    resetPassword: `${baseUrl}/reset-password`,
+    reauthentication: `${baseUrl}/login?reauthenticated=1`,
   };
 }
 
@@ -53,6 +53,69 @@ function getWorkerOrigin(request) {
 
 function getPortalLoginUrl(env) {
   return `${getBaseUrl(env).replace(/\/+$/, '')}/login`;
+}
+
+function getAppSessionCookieName(env) {
+  return String(env.APP_SESSION_COOKIE_NAME || 're_session').trim() || 're_session';
+}
+
+function getAppSessionMaxAge(env) {
+  const configured = Number(env.APP_SESSION_MAX_AGE || 7 * 24 * 60 * 60);
+  return Number.isFinite(configured) && configured > 0 ? Math.round(configured) : 7 * 24 * 60 * 60;
+}
+
+function buildAppSessionCookie(request, env, token, maxAgeSeconds) {
+  const parts = [
+    `${getAppSessionCookieName(env)}=${encodeURIComponent(token)}`,
+    'Path=/',
+    'HttpOnly',
+    'SameSite=Lax',
+    `Max-Age=${maxAgeSeconds}`,
+  ];
+  if (new URL(request.url).protocol === 'https:') parts.push('Secure');
+  return parts.join('; ');
+}
+
+function buildClearedAppSessionCookie(request, env) {
+  const parts = [
+    `${getAppSessionCookieName(env)}=`,
+    'Path=/',
+    'HttpOnly',
+    'SameSite=Lax',
+    'Max-Age=0',
+    'Expires=Thu, 01 Jan 1970 00:00:00 GMT',
+  ];
+  if (new URL(request.url).protocol === 'https:') parts.push('Secure');
+  return parts.join('; ');
+}
+
+function withSetCookie(response, cookieValue) {
+  const headers = new Headers(response.headers);
+  headers.append('Set-Cookie', cookieValue);
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+}
+
+function withAppSession(response, request, env, token) {
+  return withSetCookie(response, buildAppSessionCookie(request, env, token, getAppSessionMaxAge(env)));
+}
+
+function clearAppSession(response, request, env) {
+  return withSetCookie(response, buildClearedAppSessionCookie(request, env));
+}
+
+async function createPortalSessionResponse(request, env, profile, supabaseSession = null, extra = {}) {
+  const portalToken = await signJwt({ userId: profile.id, email: profile.email }, env.JWT_SECRET);
+  const response = json({
+    success: true,
+    user: safeUser(profile, env),
+    supabase_session: supabaseSession,
+    ...extra,
+  });
+  return withAppSession(response, request, env, portalToken);
 }
 
 function getOauthClientId(env) {
@@ -249,8 +312,12 @@ async function register(request, env) {
     return json({ success: true, pending_confirmation: true, email });
   }
 
-  const token = await signJwt({ userId: profile.id, email: profile.email }, env.JWT_SECRET);
-  return json({ success: true, token, user: safeUser(profile, env) });
+  const supabaseSession = {
+    access_token: authData.session.access_token,
+    refresh_token: authData.session.refresh_token,
+    expires_at: authData.session.expires_at,
+  };
+  return createPortalSessionResponse(request, env, profile, supabaseSession);
 }
 
 async function login(request, env) {
@@ -298,7 +365,6 @@ async function login(request, env) {
 
   await logAccess(sb, profile.id, email, 'login', getIp(request));
 
-  const token = await signJwt({ userId: profile.id, email: profile.email }, env.JWT_SECRET);
   const supabaseSession = authData.session
     ? {
         access_token: authData.session.access_token,
@@ -307,7 +373,7 @@ async function login(request, env) {
       }
     : null;
 
-  return json({ success: true, token, user: safeUser(profile, env), supabase_session: supabaseSession });
+  return createPortalSessionResponse(request, env, profile, supabaseSession);
 }
 
 async function verify(request, env) {
@@ -357,8 +423,7 @@ async function confirm(request, env) {
   const profile = await upsertProfileFromAuth(sb, data.user, env);
   await sbAnon.auth.signOut().catch(() => {});
   await logAccess(sb, profile.id, profile.email, 'confirm', getIp(request));
-  const token = await signJwt({ userId: profile.id, email: profile.email }, env.JWT_SECRET);
-  return json({ success: true, token, user: safeUser(profile, env) });
+  return createPortalSessionResponse(request, env, profile);
 }
 
 async function resendConfirmation(request, env) {
@@ -414,8 +479,8 @@ async function memberLogin(request, env) {
     is_admin: false,
   }, env.JWT_SECRET, { expiresIn: 12 * 60 * 60 });
 
-  return json({
-    token,
+  return withAppSession(json({
+    success: true,
     user: {
       id: member.id,
       name: member.name,
@@ -424,7 +489,7 @@ async function memberLogin(request, env) {
       company_id: member.company_id,
       company: owner?.company || owner?.name || '',
     },
-  });
+  }), request, env, token);
 }
 
 async function oauthStart(request, env) {
@@ -554,19 +619,66 @@ async function oauthCallback(request, env) {
     }
 
     const profile = await upsertProfileFromAuth(sb, data.user, env);
-    const portalToken = await signJwt({ userId: profile.id, email: profile.email }, env.JWT_SECRET);
     const hash = new URLSearchParams({
-      oauth_token: portalToken,
+      oauth: '1',
       oauth_user: JSON.stringify(safeUser(profile, env)),
       oauth_access_token: tokenData.access_token,
       oauth_refresh_token: tokenData.refresh_token || tokenData.access_token,
     });
     const returnTo = String(oauthState.return_to || '').trim();
     const target = `${portalLoginUrl}${returnTo && returnTo.startsWith('/') ? '?returnTo=' + encodeURIComponent(returnTo) : ''}#${hash.toString()}`;
-    return Response.redirect(target, 302);
+    return withAppSession(Response.redirect(target, 302), request, env, await signJwt({ userId: profile.id, email: profile.email }, env.JWT_SECRET));
   } catch (workerError) {
     return Response.redirect(`${portalLoginUrl}?err=oauth&desc=${encodeURIComponent(workerError?.message || 'oauth_callback_failed')}`, 302);
   }
+}
+
+async function refreshSession(request, env) {
+  if (request.method !== 'POST') return methodNotAllowed();
+  const body = await readJson(request);
+  const accessToken = String(body.access_token || '').trim();
+  const refreshToken = String(body.refresh_token || '').trim();
+  if (!refreshToken) {
+    return json({ error: 'Refresh token ausente.' }, { status: 400 });
+  }
+
+  const sbAnon = getSupabaseAnon(env);
+  const sb = getSupabase(env);
+  const { data, error } = await sbAnon.auth.setSession({
+    access_token: accessToken || refreshToken,
+    refresh_token: refreshToken,
+  });
+  if (error || !data?.session || !data?.user) {
+    return clearAppSession(json({ error: 'Sessão Supabase inválida ou expirada.' }, { status: 401 }), request, env);
+  }
+
+  const profile = await upsertProfileFromAuth(sb, data.user, env);
+  const supabaseSession = {
+    access_token: data.session.access_token,
+    refresh_token: data.session.refresh_token,
+    expires_at: data.session.expires_at,
+  };
+  return createPortalSessionResponse(request, env, profile, supabaseSession);
+}
+
+async function logout(request, env) {
+  if (request.method !== 'POST') return methodNotAllowed();
+  const body = await readJson(request);
+  const accessToken = String(body.access_token || '').trim();
+  const refreshToken = String(body.refresh_token || '').trim();
+
+  if (accessToken || refreshToken) {
+    const sbAnon = getSupabaseAnon(env);
+    const { error } = await sbAnon.auth.setSession({
+      access_token: accessToken || refreshToken,
+      refresh_token: refreshToken || accessToken,
+    });
+    if (!error) {
+      await sbAnon.auth.signOut({ scope: 'local' }).catch(() => {});
+    }
+  }
+
+  return clearAppSession(json({ success: true }), request, env);
 }
 
 async function updateProfile(request, env) {
@@ -600,9 +712,20 @@ async function revokeSessions(request, env) {
   if (request.method !== 'POST') return methodNotAllowed();
   const auth = await requireAuth(request, env);
   if (!auth.ok) return auth.response;
+  const body = await readJson(request);
+  const accessToken = String(body.access_token || '').trim();
+  const refreshToken = String(body.refresh_token || '').trim();
   const sbAnon = getSupabaseAnon(env);
-  await sbAnon.auth.signOut({ scope: 'global' }).catch(() => {});
-  return json({ success: true });
+  if (accessToken || refreshToken) {
+    const { error } = await sbAnon.auth.setSession({
+      access_token: accessToken || refreshToken,
+      refresh_token: refreshToken || accessToken,
+    });
+    if (!error) {
+      await sbAnon.auth.signOut({ scope: 'global' }).catch(() => {});
+    }
+  }
+  return clearAppSession(json({ success: true }), request, env);
 }
 
 export async function handleAuth(request, env) {
@@ -614,6 +737,8 @@ export async function handleAuth(request, env) {
     if (url.pathname === '/api/auth/verify') return await verify(request, env);
     if (url.pathname === '/api/auth/forgot') return await forgotPassword(request, env);
     if (url.pathname === '/api/auth/confirm') return await confirm(request, env);
+    if (url.pathname === '/api/auth/session/refresh') return await refreshSession(request, env);
+    if (url.pathname === '/api/auth/logout') return await logout(request, env);
     if (url.pathname === '/api/auth/resend-confirmation') return await resendConfirmation(request, env);
     if (url.pathname === '/api/auth/member-login') return await memberLogin(request, env);
     if (url.pathname === '/api/auth/profile') return await updateProfile(request, env);
