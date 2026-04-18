@@ -495,6 +495,42 @@ async function oauthCallback(request, env) {
   }
 }
 
+async function updateProfile(request, env) {
+  if (request.method !== 'PATCH') return methodNotAllowed();
+  const auth = await requireAuth(request, env);
+  if (!auth.ok) return auth.response;
+  const body = await readJson(request);
+  const updates = {};
+  if (body.name !== undefined) updates.name = String(body.name || '').trim();
+  if (body.phone !== undefined) updates.phone = String(body.phone || '').trim();
+  if (!Object.keys(updates).length) return json({ error: 'Nenhum campo para atualizar.' }, { status: 400 });
+  const { error } = await auth.sb.from('re_users').update(updates).eq('id', auth.user.id);
+  if (error) return json({ error: 'Erro ao salvar perfil.' }, { status: 500 });
+  return json({ success: true });
+}
+
+async function changePassword(request, env) {
+  if (request.method !== 'POST') return methodNotAllowed();
+  const auth = await requireAuth(request, env);
+  if (!auth.ok) return auth.response;
+  const body = await readJson(request);
+  const newPassword = String(body.new_password || body.newPassword || '');
+  if (newPassword.length < 8) return json({ error: 'A senha deve ter pelo menos 8 caracteres.' }, { status: 400 });
+  const sbAnon = getSupabaseAnon(env);
+  const { error } = await sbAnon.auth.updateUser({ password: newPassword });
+  if (error) return json({ error: 'Erro ao alterar senha. Verifique se está autenticado via Supabase.' }, { status: 400 });
+  return json({ success: true });
+}
+
+async function revokeSessions(request, env) {
+  if (request.method !== 'POST') return methodNotAllowed();
+  const auth = await requireAuth(request, env);
+  if (!auth.ok) return auth.response;
+  const sbAnon = getSupabaseAnon(env);
+  await sbAnon.auth.signOut({ scope: 'global' }).catch(() => {});
+  return json({ success: true });
+}
+
 export async function handleAuth(request, env) {
   const url = new URL(request.url);
 
@@ -506,6 +542,9 @@ export async function handleAuth(request, env) {
     if (url.pathname === '/api/auth/confirm') return await confirm(request, env);
     if (url.pathname === '/api/auth/resend-confirmation') return await resendConfirmation(request, env);
     if (url.pathname === '/api/auth/member-login') return await memberLogin(request, env);
+    if (url.pathname === '/api/auth/profile') return await updateProfile(request, env);
+    if (url.pathname === '/api/auth/change-password') return await changePassword(request, env);
+    if (url.pathname === '/api/auth/revoke-sessions') return await revokeSessions(request, env);
     if (url.pathname === '/api/auth/oauth/status') return await oauthStatus(request, env);
     if (url.pathname === '/api/auth/oauth/start') return await oauthStart(request, env);
     if (url.pathname === '/api/auth/oauth/callback') return await oauthCallback(request, env);
