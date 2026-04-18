@@ -28,6 +28,27 @@ async function sha256Base64Url(input) {
   return encodeBase64Url(new Uint8Array(digest));
 }
 
+function decodeBase64UrlSegment(input) {
+  const normalized = input.replace(/-/g, '+').replace(/_/g, '/');
+  const padded = normalized + '='.repeat((4 - (normalized.length % 4 || 4)) % 4);
+  return atob(padded);
+}
+
+function readJwtPayload(token) {
+  if (!token) return null;
+  const parts = String(token).split('.');
+  if (parts.length !== 3) return null;
+  try {
+    return JSON.parse(decodeBase64UrlSegment(parts[1]));
+  } catch {
+    return null;
+  }
+}
+
+function getSupabaseSessionId(accessToken) {
+  return String(readJwtPayload(accessToken)?.session_id || '').trim() || null;
+}
+
 function getAdminEmails(env) {
   return String(env.ADMIN_EMAILS || '')
     .split(',')
@@ -108,7 +129,12 @@ function clearAppSession(response, request, env) {
 }
 
 async function createPortalSessionResponse(request, env, profile, supabaseSession = null, extra = {}) {
-  const portalToken = await signJwt({ userId: profile.id, email: profile.email }, env.JWT_SECRET);
+  const portalToken = await signJwt({
+    userId: profile.id,
+    email: profile.email,
+    session_id: supabaseSession?.access_token ? getSupabaseSessionId(supabaseSession.access_token) : null,
+    supabase_access_token: supabaseSession?.access_token || null,
+  }, env.JWT_SECRET);
   const response = json({
     success: true,
     user: safeUser(profile, env),
@@ -627,7 +653,12 @@ async function oauthCallback(request, env) {
     });
     const returnTo = String(oauthState.return_to || '').trim();
     const target = `${portalLoginUrl}${returnTo && returnTo.startsWith('/') ? '?returnTo=' + encodeURIComponent(returnTo) : ''}#${hash.toString()}`;
-    return withAppSession(Response.redirect(target, 302), request, env, await signJwt({ userId: profile.id, email: profile.email }, env.JWT_SECRET));
+    return withAppSession(Response.redirect(target, 302), request, env, await signJwt({
+      userId: profile.id,
+      email: profile.email,
+      session_id: getSupabaseSessionId(tokenData.access_token),
+      supabase_access_token: tokenData.access_token,
+    }, env.JWT_SECRET));
   } catch (workerError) {
     return Response.redirect(`${portalLoginUrl}?err=oauth&desc=${encodeURIComponent(workerError?.message || 'oauth_callback_failed')}`, 302);
   }

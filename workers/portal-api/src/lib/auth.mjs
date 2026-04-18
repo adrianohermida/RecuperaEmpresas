@@ -1,6 +1,6 @@
 import { json, parseCookies } from './http.mjs';
 import { verifyJwt } from './jwt.mjs';
-import { getSupabase } from './supabase.mjs';
+import { getSupabase, getSupabaseAnon } from './supabase.mjs';
 
 function getAppSessionCookieName(env) {
   return String(env.APP_SESSION_COOKIE_NAME || 're_session').trim() || 're_session';
@@ -45,6 +45,18 @@ export async function requireAuth(request, env) {
   }
 
   const sb = getSupabase(env);
+
+  if (decoded.supabase_access_token) {
+    try {
+      const sbAnon = getSupabaseAnon(env);
+      const { data, error } = await sbAnon.auth.getUser(decoded.supabase_access_token);
+      if (error || !data?.user) {
+        return { ok: false, response: json({ error: 'Sessão encerrada ou revogada.' }, { status: 401 }) };
+      }
+    } catch (error) {
+      return { ok: false, response: json({ error: 'Não foi possível validar a sessão atual.' }, { status: 503 }) };
+    }
+  }
 
   if (decoded.impersonating) {
     const target = await findUserById(sb, decoded.targetId);
