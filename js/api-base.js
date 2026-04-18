@@ -25,10 +25,26 @@
     });
   }
 
+  function reportApiFailure(details) {
+    if (window.REDiagnostics && typeof window.REDiagnostics.reportApiFailure === 'function') {
+      window.REDiagnostics.reportApiFailure(details);
+    }
+  }
+
   // Patch window.fetch
   var _fetch = window.fetch.bind(window);
   window.fetch = function (url, opts) {
-    return _fetch(resolveUrl(url), opts);
+    var resolvedUrl = resolveUrl(url);
+    return _fetch(resolvedUrl, opts).catch(function (error) {
+      reportApiFailure({
+        url: resolvedUrl,
+        originalUrl: url,
+        method: String((opts && opts.method) || 'GET').toUpperCase(),
+        status: 0,
+        reason: error && error.message ? error.message : 'fetch failed'
+      });
+      throw error;
+    });
   };
 
   window.apiJsonRequest = function (url, opts) {
@@ -70,6 +86,16 @@
           }
         }
 
+        if (xhr.status >= 400) {
+          reportApiFailure({
+            url: targetUrl,
+            originalUrl: url,
+            method: method,
+            status: xhr.status,
+            responseSnippet: text
+          });
+        }
+
         resolve({
           ok: xhr.status >= 200 && xhr.status < 300,
           status: xhr.status,
@@ -79,10 +105,24 @@
       };
 
       xhr.onerror = function () {
+        reportApiFailure({
+          url: targetUrl,
+          originalUrl: url,
+          method: method,
+          status: 0,
+          reason: 'xhr network error'
+        });
         reject(new Error('Network request failed'));
       };
 
       xhr.ontimeout = function () {
+        reportApiFailure({
+          url: targetUrl,
+          originalUrl: url,
+          method: method,
+          status: 0,
+          reason: 'xhr timeout'
+        });
         reject(new Error('Request timed out'));
       };
 
