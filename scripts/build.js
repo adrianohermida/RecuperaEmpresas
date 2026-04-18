@@ -49,11 +49,13 @@ if (!fs.existsSync(publicDir)) {
 cleanDir(distDir);
 copyRecursive(publicDir, distDir);
 
-// Production uses same-origin `/api/*` on Render.
-// Only override this explicitly with RE_API_BASE for a deliberate split-origin setup.
+// Static portal deploys on Pages must keep working even if the Pages panel
+// executes a secondary build without custom env vars.
+const defaultWorkerApiBase = 'https://api-edge.recuperaempresas.com.br';
+const defaultWorkerApiRoutes = ['/api'];
 const apiBase = process.env.RE_API_BASE || '';
-const workerApiBase = process.env.RE_API_WORKER_BASE || '';
-const workerApiRoutes = (process.env.RE_API_WORKER_ROUTES || '')
+const workerApiBase = process.env.RE_API_WORKER_BASE || defaultWorkerApiBase;
+const workerApiRoutes = (process.env.RE_API_WORKER_ROUTES || defaultWorkerApiRoutes.join(','))
   .split(',')
   .map((item) => item.trim())
   .filter(Boolean);
