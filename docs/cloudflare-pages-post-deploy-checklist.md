@@ -58,6 +58,7 @@ Resultado esperado:
 
 - Cada URL do apex redireciona para o caminho equivalente em `https://portal.recuperaempresas.com.br`
 - Query string e hash sao preservados
+- Um redirecionamento unico para a variante com barra final, como `/login -> /login/`, e aceitavel desde que a resposta final seja `200` com o HTML correto.
 
 ## 3. Assets e bootstrap do frontend
 

@@ -130,6 +130,7 @@ Abrir:
 Resultado esperado:
 
 - Todas redirecionam para o subdominio `portal.recuperaempresas.com.br`
+- Se o provedor normalizar a URL com barra final antes do HTML final, isso nao e problema por si so. O criterio correto e: sem loop e com resposta final `200` no portal.
 
 Arquivos que implementam isso no repositorio:
 

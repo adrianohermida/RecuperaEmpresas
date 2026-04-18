@@ -54,6 +54,7 @@ Verificacoes no apex:
 - `https://recuperaempresas.com.br/forgot-password` redireciona para `https://portal.recuperaempresas.com.br/forgot-password`
 - `https://recuperaempresas.com.br/reset-password` redireciona para `https://portal.recuperaempresas.com.br/reset-password`
 - `https://recuperaempresas.com.br/oauth/consent` redireciona para `https://portal.recuperaempresas.com.br/oauth/consent`
+- Uma normalizacao intermediaria para a variante com barra final pode ocorrer; o importante e nao haver loop e a pagina final correta responder `200`.
 
 Arquivos envolvidos no repositório:
 
