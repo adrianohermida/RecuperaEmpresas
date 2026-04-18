@@ -312,8 +312,8 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
         }
       }
 
-      localStorage.setItem('re_token', json.token);
-      localStorage.setItem('re_user', JSON.stringify(json.user));
+      if (window.REShared?.storeAuthUser) window.REShared.storeAuthUser(json.user);
+      else localStorage.setItem('re_user', JSON.stringify(json.user || {}));
 
       // If we were redirected here from the OAuth consent page, go back there.
       const returnTo = new URLSearchParams(window.location.search).get('returnTo');
@@ -367,7 +367,7 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
   const hashType    = hash.type         || '';
 
   // Came back from OAuth callback — server already exchanged code, passes portal token in hash
-  if (hash.oauth_token) {
+  if (hash.oauth_user && (hash.oauth === '1' || hash.oauth_token)) {
     try {
       const user = JSON.parse(decodeURIComponent(hash.oauth_user || '{}'));
       if (_sb && hash.oauth_access_token && hash.oauth_refresh_token) {
@@ -388,8 +388,8 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
           });
         }
       }
-      localStorage.setItem('re_token', decodeURIComponent(hash.oauth_token));
-      localStorage.setItem('re_user', JSON.stringify(user));
+      if (window.REShared?.storeAuthUser) window.REShared.storeAuthUser(user);
+      else localStorage.setItem('re_user', JSON.stringify(user || {}));
       history.replaceState(null, '', window.location.pathname + window.location.search);
       const returnTo = params.get('returnTo');
       window.location.href = returnTo && returnTo.startsWith('/')
@@ -428,9 +428,9 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
         }
       });
       const json = result.data || {};
-      if (json.token) {
-        localStorage.setItem('re_token', json.token);
-        localStorage.setItem('re_user', JSON.stringify(json.user));
+      if (json.success && json.user) {
+        if (window.REShared?.storeAuthUser) window.REShared.storeAuthUser(json.user);
+        else localStorage.setItem('re_user', JSON.stringify(json.user || {}));
         window.location.href = json.user?.isAdmin ? 'admin.html' : 'dashboard.html';
         return;
       }
@@ -471,11 +471,9 @@ function showSuccess(msg) {
 
 // Redirect if already logged in
 (async () => {
-  const token = localStorage.getItem('re_token');
-  if (!token) return;
   try {
     const result = await requestApiJson('/api/auth/verify', {
-      headers: { Authorization: 'Bearer ' + token },
+      method: 'GET',
       timeout: 20000,
       diagnostics: {
         operation: 'auth.verify',
@@ -488,6 +486,7 @@ function showSuccess(msg) {
       }
     });
     if (result.ok && result.data && result.data.user) {
+      if (window.REShared?.storeAuthUser) window.REShared.storeAuthUser(result.data.user);
       const user = result.data.user;
       window.location.href = user.isAdmin ? 'admin.html' : 'dashboard.html';
     }

@@ -18,8 +18,8 @@ function authHeaders(extra = {}) {
   return window.REShared.buildAuthHeaders({ extra });
 }
 
-function logout() {
-  window.REShared.clearStoredAuth({ keys: ['re_token', 're_user', LS_KEY] });
+async function logout() {
+  await window.REShared.logoutSession({ keys: ['re_token', 're_user', LS_KEY] });
   window.location.href = 'login.html';
 }
 
@@ -305,8 +305,6 @@ const app = {
 
 // ─── Per-step API notification ────────────────────────────────────────────────
 async function notifyStepComplete(stepNum) {
-  const token = getToken();
-  if (!token) return;
   try {
     await fetch('/api/step-complete', {
       method: 'POST',
@@ -406,14 +404,11 @@ function showSuccessScreen() {
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
 (async function init() {
-  // Auth guard
-  const token = getToken();
-  if (!token) { window.location.href = 'login.html'; return; }
-
-  const res = await fetch('/api/auth/verify', { headers: { Authorization: 'Bearer ' + token } });
+  const res = await fetch('/api/auth/verify', { headers: authHeaders({}) });
   if (!res.ok) { window.location.href = 'login.html'; return; }
 
   const { user } = await res.json();
+  if (window.REShared?.storeAuthUser) window.REShared.storeAuthUser(user);
 
   // Show user info in header
   const userEl   = el('userName');
@@ -430,7 +425,7 @@ function showSuccessScreen() {
 
   // ── Load form configuration ───────────────────────────────────────────────
   try {
-    const cfgRes = await fetch('/api/form-config', { headers: { Authorization: 'Bearer ' + token } });
+    const cfgRes = await fetch('/api/form-config', { headers: authHeaders() });
     if (cfgRes.ok) {
       const cfg = await cfgRes.json();
       window._formCfg = cfg;
@@ -455,7 +450,7 @@ function showSuccessScreen() {
 
   // ── Load server-side progress ─────────────────────────────────────────────
   try {
-    const pRes = await fetch('/api/progress', { headers: { Authorization: 'Bearer ' + token } });
+    const pRes = await fetch('/api/progress', { headers: authHeaders() });
     if (pRes.ok) {
       const serverProgress = await pRes.json();
       // If already completed, go to dashboard

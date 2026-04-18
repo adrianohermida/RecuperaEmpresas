@@ -74,8 +74,7 @@
     if (from) params.set('from', from);
     if (to) params.set('to', to);
 
-    const token = localStorage.getItem('re_admin_token') || localStorage.getItem('re_token') || '';
-    fetch(`/api/admin/audit-log/export?${params}`, { headers: { Authorization: 'Bearer ' + token } })
+    fetch(`/api/admin/audit-log/export?${params}`)
       .then(response => response.blob())
       .then(blob => {
         const url = URL.createObjectURL(blob);

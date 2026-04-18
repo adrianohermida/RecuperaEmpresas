@@ -139,15 +139,12 @@
   };
 
   async function initPerfil() {
-    const token = getToken();
-    if (!token) { location.href = 'login.html'; return; }
-
     let response;
     try {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 55000);
       response = await fetch('/api/auth/verify', {
-        headers: { Authorization: 'Bearer ' + token },
+        headers: authH(),
         signal: controller.signal,
       });
       clearTimeout(timeout);
@@ -163,6 +160,7 @@
       const body = await response.json();
       user = body.user;
       if (!user) throw new Error('missing user');
+      if (window.REShared?.storeAuthUser) window.REShared.storeAuthUser(user);
     } catch {
       location.href = 'login.html?err=parse';
       return;

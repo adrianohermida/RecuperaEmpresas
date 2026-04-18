@@ -155,12 +155,6 @@
     if (_shellInited) { console.warn('[RE:admin-bootstrap] initAdminShell already ran — skipping duplicate call'); return; }
     _shellInited = true;
     console.info('[RE:admin-bootstrap] initAdminShell starting');
-    const token = getToken();
-    if (!token) {
-      console.warn('[RE:admin-bootstrap] no token → redirect login');
-      location.href = 'login.html';
-      return;
-    }
 
     const warmTimer = setTimeout(() => {
       const guard = document.getElementById('authGuard');
@@ -175,7 +169,7 @@
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 55000);
       response = await fetch('/api/auth/verify', {
-        headers: { Authorization: 'Bearer ' + token },
+        headers: authH(),
         signal: controller.signal,
       });
       clearTimeout(timeout);
@@ -198,6 +192,7 @@
       const body = await response.json();
       user = body.user;
       if (!user) throw new Error('user field missing from /api/auth/verify response');
+      if (window.REShared?.storeAuthUser) window.REShared.storeAuthUser(user);
     } catch (err) {
       console.error('[RE:admin-bootstrap] verify JSON parse error:', err.message);
       location.href = 'login.html?err=parse';

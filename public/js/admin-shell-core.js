@@ -38,9 +38,14 @@ function authH() {
   return { 'Content-Type': 'application/json', Authorization: 'Bearer ' + getToken() };
 }
 
-function logout() {
-  if (window.REShared?.clearStoredAuth) window.REShared.clearStoredAuth();
-  else ['re_token', 're_user'].forEach(key => localStorage.removeItem(key));
+async function logout() {
+  if (window.REShared?.logoutSession) {
+    await window.REShared.logoutSession();
+  } else if (window.REShared?.clearStoredAuth) {
+    window.REShared.clearStoredAuth();
+  } else {
+    ['re_token', 're_user'].forEach(key => localStorage.removeItem(key));
+  }
   location.href = 'login.html';
 }
 

@@ -31,13 +31,15 @@
   window.revokeAllSessions = async function () {
     if (!confirm('Isso encerrará sua sessão em todos os dispositivos. Continuar?')) return;
     try {
-      const response = await fetch('/api/auth/revoke-sessions', {
-        method: 'POST',
-        headers: authH(),
-      });
-      if (!response.ok) throw new Error('response not ok');
-      if (window.REShared?.clearStoredAuth) window.REShared.clearStoredAuth();
-      else ['re_token', 're_user'].forEach(key => localStorage.removeItem(key));
+      if (window.REShared?.logoutSession) {
+        await window.REShared.logoutSession({ global: true });
+      } else {
+        const response = await fetch('/api/auth/revoke-sessions', {
+          method: 'POST',
+          headers: authH(),
+        });
+        if (!response.ok) throw new Error('response not ok');
+      }
       location.href = 'login.html';
     } catch {
       showToast('Erro ao encerrar sessões.', 'error');
@@ -56,15 +58,12 @@
   }
 
   async function initConfiguracoes() {
-    const token = getToken();
-    if (!token) { location.href = 'login.html'; return; }
-
     let response;
     try {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 55000);
       response = await fetch('/api/auth/verify', {
-        headers: { Authorization: 'Bearer ' + token },
+        headers: authH(),
         signal: controller.signal,
       });
       clearTimeout(timeout);
@@ -80,6 +79,7 @@
       const body = await response.json();
       user = body.user;
       if (!user) throw new Error('missing user');
+      if (window.REShared?.storeAuthUser) window.REShared.storeAuthUser(user);
     } catch {
       location.href = 'login.html?err=parse';
       return;

@@ -116,7 +116,7 @@
           Esta página só pode ser acessada via fluxo OAuth.<br/>
           Inicie a autorização pelo aplicativo que solicitou acesso.
         </p>
-        <a href="/login.html" class="auth-inline-link">← Voltar ao login</a>
+        <a href="/login" class="auth-inline-link">← Voltar ao login</a>
       </div>`;
     return;
   }
@@ -133,13 +133,13 @@
       },
       identified: {
         session: null,
-        redirectingTo: '/login.html?returnTo=' + encodeURIComponent('/oauth/consent?authorization_id=' + encodeURIComponent(authorizationId))
+        redirectingTo: '/login?returnTo=' + encodeURIComponent('/oauth/consent?authorization_id=' + encodeURIComponent(authorizationId))
       }
     });
     // No Supabase session → send user to login page, then back here.
     // Login page will store the Supabase session and redirect to returnTo.
     const returnTo = '/oauth/consent?authorization_id=' + encodeURIComponent(authorizationId);
-    window.location.href = '/login.html?returnTo=' + encodeURIComponent(returnTo);
+    window.location.href = '/login?returnTo=' + encodeURIComponent(returnTo);
     return;
   }
 
@@ -218,9 +218,9 @@
         try {
           const { data, error } = await supabase.auth.oauth.denyAuthorization(authorizationId);
           if (error) throw error;
-          window.location.href = data?.redirect_to || '/login.html?err=oauth&desc=access_denied';
+          window.location.href = data?.redirect_to || '/login?err=oauth&desc=access_denied';
         } catch {
-          window.location.href = '/login.html?err=oauth&desc=access_denied';
+          window.location.href = '/login?err=oauth&desc=access_denied';
         }
         return;
       }

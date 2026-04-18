@@ -97,13 +97,31 @@
     };
   }
 
+  function shouldIncludeCredentials(url, resolvedUrl) {
+    try {
+      var original = typeof url === 'string' ? url : '';
+      if (original.indexOf('/api/') === 0) return true;
+
+      var parsed = new URL(resolvedUrl, window.location.href);
+      if (parsed.pathname.indexOf('/api/') !== 0) return false;
+
+      return /(^|\.)recuperaempresas\.com\.br$/i.test(parsed.hostname) || /(^|\.)pages\.dev$/i.test(parsed.hostname);
+    } catch (error) {
+      return false;
+    }
+  }
+
   // Patch window.fetch
   var _fetch = window.fetch.bind(window);
   window.fetch = function (url, opts) {
     var resolvedUrl = resolveUrl(url);
     var method = String((opts && opts.method) || 'GET').toUpperCase();
     var trace = captureTrace('fetch:' + resolvedUrl).frames;
-    return _fetch(resolvedUrl, opts).catch(function (error) {
+    var requestOptions = Object.assign({}, opts || {});
+    if (!requestOptions.credentials && shouldIncludeCredentials(url, resolvedUrl)) {
+      requestOptions.credentials = 'include';
+    }
+    return _fetch(resolvedUrl, requestOptions).catch(function (error) {
       reportApiFailure({
         url: resolvedUrl,
         originalUrl: url,
@@ -130,7 +148,7 @@
 
       xhr.open(method, targetUrl, true);
 
-      if (opts.credentials === 'include') {
+      if (opts.credentials === 'include' || shouldIncludeCredentials(url, targetUrl)) {
         xhr.withCredentials = true;
       }
 

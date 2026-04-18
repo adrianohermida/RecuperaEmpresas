@@ -762,13 +762,13 @@ function getToken()  {
 }
 function getUser()   { return window.REShared.getStoredUser(); }
 function authH()     { return window.REShared.buildAuthHeaders({ allowImpersonation: true }); }
-function logout() {
+async function logout() {
   if (sessionStorage.getItem('re_impersonate_token')) {
     sessionStorage.removeItem('re_impersonate_token');
     window.close();
     return;
   }
-  window.REShared.clearStoredAuth({ keys: ['re_token', 're_user', 'recupera_onboarding_v2'] });
+  await window.REShared.logoutSession({ keys: ['re_token', 're_user', 'recupera_onboarding_v2'] });
   location.href='login.html';
 }
 

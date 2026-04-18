@@ -13,11 +13,59 @@
       var impersonationToken = sessionStorage.getItem('re_impersonate_token');
       if (impersonationToken) return impersonationToken;
     }
-    return localStorage.getItem('re_token');
+    return localStorage.getItem('re_token') || '';
   }
 
   function getStoredUser() {
     return parseStoredJson('re_user');
+  }
+
+  function storeAuthUser(user) {
+    localStorage.setItem('re_user', JSON.stringify(user || {}));
+    localStorage.removeItem('re_token');
+  }
+
+  function getSupabaseProjectRef() {
+    try {
+      var url = window.VITE_SUPABASE_URL || window.RE_SUPABASE_URL || '';
+      var hostname = new URL(url).hostname;
+      return hostname.split('.')[0] || '';
+    } catch (error) {
+      return '';
+    }
+  }
+
+  function getSupabaseStorageKeys() {
+    var ref = getSupabaseProjectRef();
+    if (!ref) return [];
+    return [
+      'sb-' + ref + '-auth-token',
+      'sb-' + ref + '-auth-token-code-verifier'
+    ];
+  }
+
+  function getSupabaseSessionTokens() {
+    var keys = getSupabaseStorageKeys();
+    for (var index = 0; index < keys.length; index += 1) {
+      try {
+        var parsed = JSON.parse(localStorage.getItem(keys[index]) || 'null');
+        if (parsed && parsed.access_token && parsed.refresh_token) {
+          return {
+            access_token: parsed.access_token,
+            refresh_token: parsed.refresh_token
+          };
+        }
+      } catch (error) {
+        // Ignore malformed local storage entries.
+      }
+    }
+    return { access_token: '', refresh_token: '' };
+  }
+
+  function clearSupabaseBrowserSession() {
+    getSupabaseStorageKeys().forEach(function (key) {
+      localStorage.removeItem(key);
+    });
   }
 
   function buildAuthHeaders(options) {
@@ -29,7 +77,7 @@
     if (opts.includeContentType !== false) {
       headers['Content-Type'] = 'application/json';
     }
-    if (token) {
+    if (token && token !== 'null' && token !== 'undefined') {
       headers.Authorization = 'Bearer ' + token;
     }
 
@@ -42,9 +90,31 @@
     keys.forEach(function (key) {
       localStorage.removeItem(key);
     });
+    clearSupabaseBrowserSession();
     if (opts.clearImpersonation) {
       sessionStorage.removeItem('re_impersonate_token');
     }
+  }
+
+  async function logoutSession(options) {
+    var opts = options || {};
+    var endpoint = opts.global ? '/api/auth/revoke-sessions' : '/api/auth/logout';
+    var supabaseSession = getSupabaseSessionTokens();
+
+    try {
+      await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(supabaseSession)
+      });
+    } catch (error) {
+      // Best effort: local cleanup still needs to happen.
+    }
+
+    clearStoredAuth({
+      keys: opts.keys || ['re_token', 're_user'],
+      clearImpersonation: opts.clearImpersonation
+    });
   }
 
   function readResponse(response) {
@@ -130,8 +200,11 @@
     formatCurrencyBRL: formatCurrencyBRL,
     formatDateBR: formatDateBR,
     formatDateTimeBR: formatDateTimeBR,
+    getSupabaseSessionTokens: getSupabaseSessionTokens,
     getStoredToken: getStoredToken,
     getStoredUser: getStoredUser,
+    logoutSession: logoutSession,
     readResponse: readResponse,
+    storeAuthUser: storeAuthUser,
   };
 })();
