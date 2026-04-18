@@ -80,8 +80,11 @@ build_portal_env_vars() {
 reconcile_project() {
   local project_name="$1"
   local env_vars_json="${2:-}"
+  local has_env_vars=false
   local project_response
   local project_result
+  local project_file
+  local env_vars_file
   local payload
   local update_response
 
@@ -91,11 +94,36 @@ reconcile_project() {
   save_response "project-${project_name}-before.json" "$project_response"
   project_result=$(jq '.result' <<<"$project_response")
 
+  project_file=$(mktemp)
+  env_vars_file=$(mktemp)
+  trap 'rm -f "$project_file" "$env_vars_file"' RETURN
+
+  printf '%s\n' "$project_result" > "$project_file"
+  if ! jq -e . "$project_file" >/dev/null; then
+    echo "Invalid project JSON for ${project_name}" >&2
+    exit 1
+  fi
+
+  if [[ -n "$env_vars_json" ]]; then
+    has_env_vars=true
+    printf '%s\n' "$env_vars_json" > "$env_vars_file"
+  else
+    printf '{}\n' > "$env_vars_file"
+  fi
+
+  if ! jq -e . "$env_vars_file" >/dev/null; then
+    echo "Invalid env vars JSON for ${project_name}" >&2
+    exit 1
+  fi
+
   payload=$(jq -n \
     --arg branch "$PAGES_PRODUCTION_BRANCH" \
-    --argjson project "$project_result" \
-    --argjson envVars "${env_vars_json:-{}}" \
-    --argjson hasEnvVars "$([[ -n "${env_vars_json:-}" ]] && echo true || echo false)" '
+    --slurpfile project "$project_file" \
+    --slurpfile envVars "$env_vars_file" \
+    --argjson hasEnvVars "$has_env_vars" '
+      ($project[0]) as $project
+      | ($envVars[0]) as $envVars
+      | 
       {
         production_branch: $branch
       }
@@ -124,6 +152,9 @@ reconcile_project() {
   update_response=$(cf_api PATCH "/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects/${project_name}" "$payload")
   require_success "$update_response" "patch-project-${project_name}"
   save_response "project-${project_name}-after.json" "$update_response"
+
+  trap - RETURN
+  rm -f "$project_file" "$env_vars_file"
 }
 
 portal_env_vars="$(build_portal_env_vars)"
