@@ -107,6 +107,31 @@ Impacto:
 - O frontend do portal não pôde ser publicado diretamente deste ambiente.
 - A publicação final deve ocorrer via GitHub Actions configurado no repositório, ou após autenticar o Wrangler na conta correta.
 
+### Segredos do Worker não eram reconciliados pelo pipeline
+
+Antes deste ajuste, o workflow do repositório:
+
+- reconciliava domínios e env vars do Pages
+- publicava o Worker
+- mas não atualizava os segredos críticos do Worker antes do deploy
+
+Impacto provável:
+
+- o endpoint `/api/auth/oauth/status` podia mostrar `authProfileSyncConfigured=true` apenas porque a chave existia no runtime
+- mas `POST /api/auth/login` seguia falhando com `503` se `SUPABASE_SERVICE_ROLE_KEY` estivesse stale, incorreta ou apontando para outro projeto
+
+Correção aplicada no repositório:
+
+- novo script [scripts/reconcile-cloudflare-worker-secrets.sh](../scripts/reconcile-cloudflare-worker-secrets.sh)
+- workflow [deploy-cloudflare.yml](../.github/workflows/deploy-cloudflare.yml) atualizado para reconciliar:
+  - `VITE_SUPABASE_URL`
+  - `VITE_SUPABASE_ANON_KEY`
+  - `SUPABASE_SERVICE_ROLE_KEY`
+  - `JWT_SECRET`
+  - `OAUTH_CLIENT_ID`
+  - `OAUTH_CLIENT_SECRET`
+  - `RESEND_API_KEY` quando existir
+
 ## Conclusão
 
 - O patch de autenticação e sessão está implementado e validado localmente com sucesso.

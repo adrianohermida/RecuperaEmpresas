@@ -222,6 +222,14 @@ jobs:
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      VITE_SUPABASE_URL: https://riiajjmnzgagntiqqshs.supabase.co
+      VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+      # Required repository secrets for Worker auth/session reconciliation.
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      JWT_SECRET: ${{ secrets.JWT_SECRET }}
+      OAUTH_CLIENT_ID: ${{ secrets.OAUTH_CLIENT_ID }}
+      OAUTH_CLIENT_SECRET: ${{ secrets.OAUTH_CLIENT_SECRET }}
+      RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -247,6 +255,10 @@ jobs:
             exit 1
           fi
 
+      - name: Reconcile Worker secrets
+        shell: bash
+        run: bash scripts/reconcile-cloudflare-worker-secrets.sh
+
       - name: Deploy Worker
         shell: bash
         run: |
@@ -265,6 +277,14 @@ jobs:
         with:
           name: worker-deploy-logs
           path: .wrangler-logs/
+          if-no-files-found: warn
+
+      - name: Upload worker secret audit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: worker-secret-audit
+          path: .cloudflare-worker-secrets-audit/
           if-no-files-found: warn
 
   reconcile-bindings-post:
