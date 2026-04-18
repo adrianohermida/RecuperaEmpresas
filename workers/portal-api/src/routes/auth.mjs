@@ -3,7 +3,7 @@ import { getBaseUrl } from '../lib/effects.mjs';
 import { requireAuth } from '../lib/auth.mjs';
 import { json, readJson, methodNotAllowed } from '../lib/http.mjs';
 import { signJwt, verifyJwt } from '../lib/jwt.mjs';
-import { getSupabase, getSupabaseAnon } from '../lib/supabase.mjs';
+import { getSupabase, getSupabaseAnon, getSupabaseAnonKey, getSupabaseUrl } from '../lib/supabase.mjs';
 
 function encodeBase64Url(bytes) {
   let binary = '';
@@ -61,8 +61,8 @@ function getMissingOauthConfig(env) {
   const missing = [];
   if (!getOauthClientId(env)) missing.push('OAUTH_CLIENT_ID');
   if (!env.JWT_SECRET) missing.push('JWT_SECRET');
-  if (!env.SUPABASE_URL) missing.push('SUPABASE_URL');
-  if (!env.SUPABASE_ANON_KEY) missing.push('SUPABASE_ANON_KEY');
+  if (!(env.VITE_SUPABASE_URL || env.SUPABASE_URL)) missing.push('VITE_SUPABASE_URL');
+  if (!(env.VITE_SUPABASE_ANON_KEY || env.SUPABASE_ANON_KEY)) missing.push('VITE_SUPABASE_ANON_KEY');
   return missing;
 }
 
@@ -363,7 +363,7 @@ async function oauthStart(request, env) {
     code_challenge_method: 'S256',
   });
 
-  return Response.redirect(`${env.SUPABASE_URL || 'https://riiajjmnzgagntiqqshs.supabase.co'}/auth/v1/oauth/authorize?${params.toString()}`, 302);
+  return Response.redirect(`${getSupabaseUrl(env)}/auth/v1/oauth/authorize?${params.toString()}`, 302);
 }
 
 async function oauthStatus(request, env) {
@@ -382,7 +382,9 @@ async function oauthStatus(request, env) {
     identified: {
       workerOrigin: getWorkerOrigin(request),
       portalBaseUrl: getBaseUrl(env),
-      oauthClientConfigured: Boolean(getOauthClientId(env))
+      oauthClientConfigured: Boolean(getOauthClientId(env)),
+      supabaseUrlSource: env.VITE_SUPABASE_URL ? 'VITE_SUPABASE_URL' : (env.SUPABASE_URL ? 'SUPABASE_URL' : 'default'),
+      supabaseAnonSource: env.VITE_SUPABASE_ANON_KEY ? 'VITE_SUPABASE_ANON_KEY' : (env.SUPABASE_ANON_KEY ? 'SUPABASE_ANON_KEY' : 'default')
     }
   });
 }
@@ -429,11 +431,11 @@ async function oauthCallback(request, env) {
   try {
     const sb = getSupabase(env);
     const sbAnon = getSupabaseAnon(env);
-    const tokenRes = await fetch(`${env.SUPABASE_URL || 'https://riiajjmnzgagntiqqshs.supabase.co'}/auth/v1/oauth/token`, {
+    const tokenRes = await fetch(`${getSupabaseUrl(env)}/auth/v1/oauth/token`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
-        apikey: String(env.SUPABASE_ANON_KEY || ''),
+        apikey: getSupabaseAnonKey(env),
       },
       body,
     });

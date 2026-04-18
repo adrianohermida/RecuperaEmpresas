@@ -73,8 +73,8 @@ Escopo inicial:
 
 Variaveis esperadas no Worker:
 
-- `SUPABASE_URL`
-- `SUPABASE_ANON_KEY`
+- `VITE_SUPABASE_URL` ou `SUPABASE_URL`
+- `VITE_SUPABASE_ANON_KEY` ou `SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `JWT_SECRET`
 - `ALLOWED_ORIGINS`
@@ -87,7 +87,7 @@ Variaveis esperadas no Worker:
 
 Observacao operacional:
 
-- O workflow de deploy do Worker tenta sincronizar `OAUTH_CLIENT_ID` e `OAUTH_CLIENT_SECRET` a partir dos GitHub Secrets homônimos. Se `OAUTH_CLIENT_ID` estiver ausente, o endpoint `/api/auth/oauth/status` reportará a misconfiguração explicitamente.
+- O endpoint `/api/auth/oauth/status` reporta explicitamente a ausência de `OAUTH_CLIENT_ID` e agora aceita configuração Supabase via `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY` como aliases dos nomes legados.
 
 Binding opcional:
 

@@ -160,8 +160,8 @@ function clearErrors() {
 }
 
 // ── Supabase client (browser-side) — persists session automatically ───────────
-const _sbUrl  = (window.RE_SUPABASE_URL  || 'https://riiajjmnzgagntiqqshs.supabase.co').replace(/\/$/, '');
-const _sbAnon = window.RE_SUPABASE_ANON  || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJpaWFqam1uemdhZ250aXFxc2hzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYxNzY0ODUsImV4cCI6MjA5MTc1MjQ4NX0.zyOFjVFIBJem5FZmXBD-ya78RheD_a-YHetibyVvXcI';
+const _sbUrl  = (window.VITE_SUPABASE_URL || window.RE_SUPABASE_URL || 'https://riiajjmnzgagntiqqshs.supabase.co').replace(/\/$/, '');
+const _sbAnon = window.VITE_SUPABASE_ANON_KEY || window.RE_SUPABASE_ANON || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJpaWFqam1uemdhZ250aXFxc2hzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYxNzY0ODUsImV4cCI6MjA5MTc1MjQ4NX0.zyOFjVFIBJem5FZmXBD-ya78RheD_a-YHetibyVvXcI';
 const _sb     = (_sbUrl && _sbAnon && window.supabase)
   ? window.supabase.createClient(_sbUrl, _sbAnon, { auth: { persistSession: true, autoRefreshToken: true } })
   : null;
@@ -209,7 +209,7 @@ async function diagnoseOauthRuntime() {
       summary: 'O portal entrou ou voltou de um fluxo OAuth, mas o Worker está sem configuração mínima para concluir o Supabase OAuth.',
       expected: payload.expected || {
         route: '/api/auth/oauth/status',
-        required: ['OAUTH_CLIENT_ID', 'JWT_SECRET', 'SUPABASE_URL', 'SUPABASE_ANON_KEY']
+        required: ['OAUTH_CLIENT_ID', 'JWT_SECRET', 'VITE_SUPABASE_URL', 'VITE_SUPABASE_ANON_KEY']
       },
       identified: payload.identified || {
         missing: payload.missing || []

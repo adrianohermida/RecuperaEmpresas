@@ -85,6 +85,8 @@ fs.writeFileSync(
     `window.RE_API_BASE = ${JSON.stringify(apiBase)};`,
     `window.RE_API_WORKER_BASE = ${JSON.stringify(workerApiBase)};`,
     `window.RE_API_WORKER_ROUTES = ${JSON.stringify(workerApiRoutes)};`,
+    `window.VITE_SUPABASE_URL = ${JSON.stringify(supabaseUrl)};`,
+    `window.VITE_SUPABASE_ANON_KEY = ${JSON.stringify(supabaseAnon)};`,
     `window.RE_SUPABASE_URL = ${JSON.stringify(supabaseUrl)};`,
     `window.RE_SUPABASE_ANON = ${JSON.stringify(supabaseAnon)};`,
     `window.RE_ENABLE_FRESHCHAT = ${JSON.stringify(freshchatEnabled)};`,

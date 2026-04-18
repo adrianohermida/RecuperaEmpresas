@@ -4,11 +4,11 @@ const DEFAULT_SUPABASE_URL = 'https://riiajjmnzgagntiqqshs.supabase.co';
 const DEFAULT_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJpaWFqam1uemdhZ250aXFxc2hzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYxNzY0ODUsImV4cCI6MjA5MTc1MjQ4NX0.zyOFjVFIBJem5FZmXBD-ya78RheD_a-YHetibyVvXcI';
 
 export function getSupabaseUrl(env) {
-  return String(env.SUPABASE_URL || DEFAULT_SUPABASE_URL).trim() || DEFAULT_SUPABASE_URL;
+  return String(env.VITE_SUPABASE_URL || env.SUPABASE_URL || DEFAULT_SUPABASE_URL).trim() || DEFAULT_SUPABASE_URL;
 }
 
 export function getSupabaseAnonKey(env) {
-  return String(env.SUPABASE_ANON_KEY || DEFAULT_SUPABASE_ANON_KEY).trim() || DEFAULT_SUPABASE_ANON_KEY;
+  return String(env.VITE_SUPABASE_ANON_KEY || env.SUPABASE_ANON_KEY || DEFAULT_SUPABASE_ANON_KEY).trim() || DEFAULT_SUPABASE_ANON_KEY;
 }
 
 export function getSupabase(env) {
