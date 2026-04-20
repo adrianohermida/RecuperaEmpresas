@@ -136,6 +136,108 @@
     return snapshot;
   }
 
+  function isVisible(element) {
+    if (!element) return false;
+    if (element.classList?.contains('ui-hidden')) return false;
+    if (element.hidden) return false;
+    const style = window.getComputedStyle(element);
+    return style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0';
+  }
+
+  function sanitizeShellOverlays(reason) {
+    const sidebar = document.getElementById('appSidebar');
+    const sidebarBackdrop = document.getElementById('sidebarBackdrop');
+    const drawer = document.getElementById('clientDrawer');
+    const drawerOverlay = document.getElementById('drawerOverlay');
+    const authGuard = document.getElementById('authGuard');
+    const visibleModals = getVisibleModals();
+    const blockers = [];
+
+    if (sidebarBackdrop && !sidebar?.classList.contains('mobile-open')) {
+      sidebarBackdrop.classList.remove('open');
+      if (isVisible(sidebarBackdrop)) blockers.push('sidebarBackdrop');
+    }
+
+    if (drawerOverlay && !drawer?.classList.contains('open')) {
+      drawerOverlay.classList.remove('open');
+      if (isVisible(drawerOverlay)) blockers.push('drawerOverlay');
+    }
+
+    if (visibleModals.length > 1) {
+      enforceSingleVisible();
+      blockers.push('multipleModals');
+    }
+
+    if (authGuard && document.body.dataset.reAdminAuthReady === '1') {
+      authGuard.remove();
+      blockers.push('staleAuthGuard');
+    }
+
+    const snapshot = {
+      reason: reason || 'sanitize',
+      visibleModals: getVisibleModals().map(function (modal) { return modal.id || null; }),
+      drawerOpen: !!drawer?.classList.contains('open'),
+      drawerOverlayOpen: !!drawerOverlay?.classList.contains('open'),
+      sidebarOpen: !!sidebar?.classList.contains('mobile-open'),
+      sidebarBackdropOpen: !!sidebarBackdrop?.classList.contains('open'),
+      authGuardPresent: !!document.getElementById('authGuard'),
+      blockers: blockers,
+    };
+    log('sanitize-shell', snapshot);
+    return snapshot;
+  }
+
+  function collectViewportBlockers(reason) {
+    const centerX = Math.max(0, Math.floor(window.innerWidth / 2));
+    const centerY = Math.max(0, Math.floor(window.innerHeight / 2));
+    const stack = typeof document.elementsFromPoint === 'function'
+      ? document.elementsFromPoint(centerX, centerY)
+      : [];
+
+    const suspects = Array.from(document.querySelectorAll('body *')).filter(function (element) {
+      if (!(element instanceof HTMLElement)) return false;
+      if (!isVisible(element)) return false;
+      const style = window.getComputedStyle(element);
+      if (style.position !== 'fixed') return false;
+      const zIndex = Number(style.zIndex || 0);
+      if (!Number.isFinite(zIndex) || zIndex < 350) return false;
+      return true;
+    }).slice(0, 20).map(function (element) {
+      const style = window.getComputedStyle(element);
+      return {
+        tag: element.tagName,
+        id: element.id || null,
+        className: element.className || null,
+        zIndex: style.zIndex || 'auto',
+        pointerEvents: style.pointerEvents,
+        opacity: style.opacity,
+        source: element.dataset?.reModalSource || null,
+      };
+    });
+
+    const stackSummary = stack.slice(0, 8).map(function (element) {
+      if (!(element instanceof HTMLElement)) return {};
+      const style = window.getComputedStyle(element);
+      return {
+        tag: element.tagName,
+        id: element.id || null,
+        className: element.className || null,
+        zIndex: style.zIndex || 'auto',
+        pointerEvents: style.pointerEvents,
+        position: style.position,
+      };
+    });
+
+    const report = {
+      reason: reason || 'viewport-audit',
+      centerPoint: { x: centerX, y: centerY },
+      stack: stackSummary,
+      fixedHighZ: suspects,
+    };
+    log('viewport-audit', report);
+    return report;
+  }
+
   function observeMutations() {
     if (state.observer || !document.body) return;
     state.observer = new MutationObserver(function (mutations) {
@@ -188,6 +290,12 @@
     observeMutations();
     bindResizeGuard();
     enforceSingleVisible();
+    sanitizeShellOverlays('init');
+    collectViewportBlockers('init');
+    window.addEventListener('pageshow', function () {
+      sanitizeShellOverlays('pageshow');
+      collectViewportBlockers('pageshow');
+    });
     log('init', { breakpoint: BREAKPOINT, modals: getManagedModals().length });
   }
 
@@ -201,6 +309,8 @@
     getVisibleModals: getVisibleModals,
     insertHtml: insertHtml,
     openStatic: openStatic,
+    sanitizeShellOverlays: sanitizeShellOverlays,
+    collectViewportBlockers: collectViewportBlockers,
     tagModal: tagModal,
   };
 

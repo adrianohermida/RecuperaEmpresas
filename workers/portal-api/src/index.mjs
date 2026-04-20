@@ -1,6 +1,6 @@
 import { requireAdmin, requireAuth } from './lib/auth.mjs';
 import { applyCors, json, noContent, notFound } from './lib/http.mjs';
-import { handleAuth } from './routes/auth.mjs';
+import { handleAuth, handleAdminImpersonate } from './routes/auth.mjs';
 import { handleAdminSystem } from './routes/admin-system.mjs';
 import { handleAdminReadModels } from './routes/admin-read-models.mjs';
 import { handleAppointments } from './routes/appointments.mjs';
@@ -76,6 +76,15 @@ async function routeAdmin(request, env, pathname, executionCtx) {
   params = match(pathname, /^\/api\/admin\/client\/(?<clientId>[^/]+)\/bookings$/);
   if (params) return handleAdminReadModels(request, { ...auth, env, executionCtx, params, scope: 'admin' });
 
+  params = match(pathname, /^\/api\/admin\/client\/(?<clientId>[^/]+)\/documents$/);
+  if (params) return handleAdminReadModels(request, { ...auth, env, executionCtx, params, scope: 'admin' });
+
+  params = match(pathname, /^\/api\/admin\/client\/(?<clientId>[^/]+)\/members$/);
+  if (params) return handleAdminReadModels(request, { ...auth, env, executionCtx, params, scope: 'admin' });
+
+  params = match(pathname, /^\/api\/admin\/client\/(?<clientId>[^/]+)\/suppliers$/);
+  if (params) return handleAdminReadModels(request, { ...auth, env, executionCtx, params, scope: 'admin' });
+
   params = match(pathname, /^\/api\/admin\/client\/(?<clientId>[^/]+)\/financial$/);
   if (params) return handleAdminReadModels(request, { ...auth, env, executionCtx, params, scope: 'admin' });
 
@@ -105,6 +114,9 @@ async function routeAdmin(request, env, pathname, executionCtx) {
 
   params = match(pathname, /^\/api\/admin\/agenda\/slots$/);
   if (params) return handleAdminReadModels(request, { ...auth, env, executionCtx, params, scope: 'admin' });
+
+  params = match(pathname, /^\/api\/admin\/impersonate\/(?<clientId>[^/]+)$/);
+  if (params) return handleAdminImpersonate(request, { ...auth, env, executionCtx, params, scope: 'admin' });
 
   params = match(pathname, /^\/api\/admin\/client\/(?<clientId>[^/]+)\/creditors(?:\/(?<creditorId>[^/]+))?$/);
   if (params) return handleCreditors(request, { ...auth, env, executionCtx, params, scope: 'admin' });

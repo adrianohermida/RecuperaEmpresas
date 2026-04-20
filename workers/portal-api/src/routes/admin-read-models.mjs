@@ -44,6 +44,15 @@ async function list(query) {
   return data || [];
 }
 
+async function listSafe(query, fallback = []) {
+  try {
+    return await list(query);
+  } catch (error) {
+    console.warn('[worker:admin-read-models:listSafe]', error?.message || error);
+    return fallback;
+  }
+}
+
 function csvEscape(value) {
   return `"${String(value ?? '').replace(/"/g, '""')}"`;
 }
@@ -134,7 +143,7 @@ async function handleClientDetail(request, context) {
 
 async function handleClientBookings(request, context) {
   if (request.method !== 'GET') return methodNotAllowed();
-  const bookings = await list(
+  let bookings = await listSafe(
     context.sb
       .from('re_bookings')
       .select('id,status,credits_spent,confirmed_at,cancel_reason,cancelled_by,reschedule_reason,notes,created_at,re_agenda_slots(id,starts_at,ends_at,title,location,meeting_link)')
@@ -142,7 +151,69 @@ async function handleClientBookings(request, context) {
       .order('created_at', { ascending: false })
       .limit(30)
   );
+  if (!bookings.length) {
+    bookings = await listSafe(
+      context.sb
+        .from('re_bookings')
+        .select('id,slot_id,status,credits_spent,confirmed_at,cancel_reason,cancelled_by,reschedule_reason,notes,created_at')
+        .eq('user_id', context.params.clientId)
+        .order('created_at', { ascending: false })
+        .limit(30)
+    );
+  }
   return json({ bookings });
+}
+
+async function handleClientDocuments(request, context) {
+  if (request.method !== 'GET') return methodNotAllowed();
+  const documents = await listSafe(
+    context.sb
+      .from('re_documents')
+      .select('*')
+      .eq('user_id', context.params.clientId)
+      .order('created_at', { ascending: false })
+  );
+  return json({ documents });
+}
+
+async function handleClientMembers(request, context) {
+  if (request.method !== 'GET') return methodNotAllowed();
+  const members = await listSafe(
+    context.sb
+      .from('re_company_users')
+      .select('id,name,email,role,active,department_id,job_title,phone,last_login,invited_at,created_at')
+      .eq('company_id', context.params.clientId)
+      .order('created_at', { ascending: false })
+  );
+  return json({
+    members: members.map((member) => ({
+      ...member,
+      name: member.name || member.email || 'Membro',
+      role: member.role || 'visualizador',
+      active: member.active !== false,
+    })),
+  });
+}
+
+async function handleClientSuppliers(request, context) {
+  if (request.method !== 'GET') return methodNotAllowed();
+  const [suppliers, contracts] = await Promise.all([
+    listSafe(
+      context.sb
+        .from('re_suppliers')
+        .select('*')
+        .eq('company_id', context.params.clientId)
+        .order('name', { ascending: true })
+    ),
+    listSafe(
+      context.sb
+        .from('re_supplier_contracts')
+        .select('*,re_suppliers(id,name)')
+        .eq('company_id', context.params.clientId)
+        .order('created_at', { ascending: false })
+    ),
+  ]);
+  return json({ suppliers, contracts });
 }
 
 async function handleClientFinancial(request, context) {
@@ -410,7 +481,7 @@ async function handleAgendaSlots(request, context) {
   const from = url.searchParams.get('from') || new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
   const includeBookings = !['0', 'false', 'no'].includes(String(url.searchParams.get('include_bookings') || '1').toLowerCase());
 
-  const slots = await list(
+  let slots = await listSafe(
     context.sb
       .from('re_agenda_slots')
       .select('id,starts_at,ends_at,title,credits_cost,max_bookings,duration_min,location,meeting_link,description,created_at')
@@ -418,17 +489,36 @@ async function handleAgendaSlots(request, context) {
       .order('starts_at', { ascending: true })
       .limit(100)
   );
+  if (!slots.length) {
+    slots = await listSafe(
+      context.sb
+        .from('re_agenda_slots')
+        .select('id,starts_at,ends_at,title,created_at')
+        .gte('starts_at', from)
+        .order('starts_at', { ascending: true })
+        .limit(100)
+    );
+  }
 
   if (!includeBookings || !slots.length) return json({ slots });
 
   const slotIds = slots.map((slot) => slot.id);
-  const bookings = await list(
+  let bookings = await listSafe(
     context.sb
       .from('re_bookings')
       .select('id,slot_id,user_id,status,credits_spent,confirmed_at,cancel_reason,cancelled_by,reschedule_reason,rescheduled_to_slot_id,external_contact,notes,created_at,re_users(id,name,email,company)')
       .in('slot_id', slotIds)
       .order('created_at', { ascending: true })
   );
+  if (!bookings.length) {
+    bookings = await listSafe(
+      context.sb
+        .from('re_bookings')
+        .select('id,slot_id,user_id,status,credits_spent,confirmed_at,cancel_reason,cancelled_by,reschedule_reason,rescheduled_to_slot_id,external_contact,notes,created_at')
+        .in('slot_id', slotIds)
+        .order('created_at', { ascending: true })
+    );
+  }
   const bySlot = {};
   for (const booking of bookings) {
     if (!bySlot[booking.slot_id]) bySlot[booking.slot_id] = [];
@@ -444,6 +534,9 @@ export async function handleAdminReadModels(request, context) {
   if (pathname === '/api/admin/clients') return handleClients(request, context);
   if (/^\/api\/admin\/client\/[^/]+$/.test(pathname)) return handleClientDetail(request, context);
   if (/^\/api\/admin\/client\/[^/]+\/bookings$/.test(pathname)) return handleClientBookings(request, context);
+  if (/^\/api\/admin\/client\/[^/]+\/documents$/.test(pathname)) return handleClientDocuments(request, context);
+  if (/^\/api\/admin\/client\/[^/]+\/members$/.test(pathname)) return handleClientMembers(request, context);
+  if (/^\/api\/admin\/client\/[^/]+\/suppliers$/.test(pathname)) return handleClientSuppliers(request, context);
   if (/^\/api\/admin\/client\/[^/]+\/financial$/.test(pathname)) return handleClientFinancial(request, context);
   if (pathname === '/api/admin/financial') return handleFinancial(request, context);
   if (pathname === '/api/admin/form-config') return handleFormConfig(request, context);

@@ -213,7 +213,10 @@
     if (userAvatar) userAvatar.textContent = (user.name || user.email || '?')[0].toUpperCase();
     if (dropupUserName) dropupUserName.textContent = user.name || user.email;
     if (dropupUserEmail) dropupUserEmail.textContent = user.email || '';
+    document.body.dataset.reAdminAuthReady = '1';
     document.getElementById('authGuard')?.remove();
+    window.REAdminModal?.sanitizeShellOverlays?.('auth-ready');
+    window.REAdminModal?.collectViewportBlockers?.('auth-ready');
     console.info('[RE:admin-bootstrap] auth guard removed, loading data...');
 
     try {

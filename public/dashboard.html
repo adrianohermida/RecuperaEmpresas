@@ -820,9 +820,6 @@ async function initFreshchat(user) {
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 (async function init() {
-  const token = getToken();
-  if (!token) { location.href='login.html'; return; }
-
   const isImpersonating = !!sessionStorage.getItem('re_impersonate_token');
 
   // Show warming message after 4 s (Render free tier cold start)
@@ -836,7 +833,7 @@ async function initFreshchat(user) {
     const ctrl    = new AbortController();
     const timeout = setTimeout(() => ctrl.abort(), 55000);
     res = await fetch('/api/auth/verify', {
-      headers: { Authorization: 'Bearer ' + token },
+      headers: authH(),
       signal: ctrl.signal,
     });
     clearTimeout(timeout);
@@ -923,7 +920,7 @@ async function initFreshchat(user) {
   startNotifPolling();
 
   // Check journeys silently to show/hide nav button
-  fetch('/api/my-journeys', { headers: { Authorization: 'Bearer ' + getToken() } })
+  fetch('/api/my-journeys', { headers: authH() })
     .then(r => r.ok ? r.json() : [])
     .then(list => {
       const btn = document.getElementById('jornadasSideLink');

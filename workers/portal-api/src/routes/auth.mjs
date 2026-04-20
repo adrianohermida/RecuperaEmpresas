@@ -794,3 +794,20 @@ export async function handleAuth(request, env) {
 
   return null;
 }
+
+export async function handleAdminImpersonate(request, context) {
+  if (request.method !== 'POST') return methodNotAllowed();
+  const target = await findUserById(context.sb, context.params.clientId);
+  if (!target) return json({ error: 'Cliente nao encontrado.' }, { status: 404 });
+  if (target.is_admin) return json({ error: 'Nao e possivel impersonar um administrador.' }, { status: 400 });
+
+  const token = await signJwt({
+    impersonating: true,
+    adminId: context.user.id,
+    targetId: target.id,
+    email: target.email,
+    userId: target.id,
+  }, context.env.JWT_SECRET);
+
+  return json({ success: true, token, user: safeUser(target, context.env) });
+}

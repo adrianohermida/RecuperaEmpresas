@@ -155,12 +155,6 @@
     if (_shellInited) { console.warn('[RE:admin-bootstrap] initAdminShell already ran — skipping duplicate call'); return; }
     _shellInited = true;
     console.info('[RE:admin-bootstrap] initAdminShell starting');
-    const token = getToken();
-    if (!token) {
-      console.warn('[RE:admin-bootstrap] no token → redirect login');
-      location.href = 'login.html';
-      return;
-    }
 
     const warmTimer = setTimeout(() => {
       const guard = document.getElementById('authGuard');
@@ -175,7 +169,7 @@
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 55000);
       response = await fetch('/api/auth/verify', {
-        headers: { Authorization: 'Bearer ' + token },
+        headers: authH(),
         signal: controller.signal,
       });
       clearTimeout(timeout);
@@ -218,7 +212,10 @@
     if (userAvatar) userAvatar.textContent = (user.name || user.email || '?')[0].toUpperCase();
     if (dropupUserName) dropupUserName.textContent = user.name || user.email;
     if (dropupUserEmail) dropupUserEmail.textContent = user.email || '';
+    document.body.dataset.reAdminAuthReady = '1';
     document.getElementById('authGuard')?.remove();
+    window.REAdminModal?.sanitizeShellOverlays?.('auth-ready');
+    window.REAdminModal?.collectViewportBlockers?.('auth-ready');
     console.info('[RE:admin-bootstrap] auth guard removed, loading data...');
 
     try {
