@@ -105,6 +105,8 @@ if (fs.existsSync(loginPath)) {
 
 fs.writeFileSync(path.join(distDir, '.nojekyll'), '', 'utf8');
 
+// Aliases de rotas HTML para Cloudflare Pages
+// Use apenas uma chamada por alias para evitar duplicidade.
 createHtmlRouteAlias('login.html', path.join('login', 'index.html'));
 createHtmlRouteAlias('register.html', path.join('register', 'index.html'));
 createHtmlRouteAlias('forgot-password.html', path.join('forgot-password', 'index.html'));
@@ -112,6 +114,7 @@ createHtmlRouteAlias('reset-password.html', path.join('reset-password', 'index.h
 createHtmlRouteAlias('oauth-consent.html', path.join('oauth', 'consent', 'index.html'));
 createHtmlRouteAlias('dashboard.html', path.join('dashboard', 'index.html'));
 createHtmlRouteAlias('admin.html', path.join('admin', 'index.html'));
+// Sempre mantenha aliases únicos e documente a decisão para evitar regressão.
 
 // Root files are now reserved for the marketing/landing experience on GitHub Pages.
 // Only sync portal mirrors to the repository root when explicitly requested.
