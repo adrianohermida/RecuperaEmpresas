@@ -256,8 +256,7 @@ jobs:
           fi
 
       - name: Reconcile Worker secrets
-        shell: bash
-        run: bash scripts/reconcile-cloudflare-worker-secrets.sh
+        run: node scripts/reconcile-cloudflare-worker-secrets.js
 
       - name: Deploy Worker
         shell: bash

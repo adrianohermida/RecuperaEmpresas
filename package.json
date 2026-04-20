@@ -12,6 +12,8 @@
     "deploy:landing": "npx --yes wrangler@4.12.0 pages deploy landing --project-name=recuperaempresas-landing --branch=gh-pages",
     "deploy:worker": "npx --yes wrangler@4.12.0 deploy -c workers/portal-api/wrangler.toml",
     "test:auth-worker": "node scripts/test-auth-worker.js",
+    "test:auth-worker:published": "node scripts/test-auth-worker.js published",
+    "reconcile:worker-secrets": "node scripts/reconcile-cloudflare-worker-secrets.js",
     "test:smoke": "node scripts/smoke-test.js",
     "test:worker-canary": "node scripts/smoke-test-worker-canary.js"
   },

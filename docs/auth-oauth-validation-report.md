@@ -122,7 +122,7 @@ Impacto provável:
 
 Correção aplicada no repositório:
 
-- novo script [scripts/reconcile-cloudflare-worker-secrets.sh](../scripts/reconcile-cloudflare-worker-secrets.sh)
+- novo script cross-platform [scripts/reconcile-cloudflare-worker-secrets.js](../scripts/reconcile-cloudflare-worker-secrets.js)
 - workflow [deploy-cloudflare.yml](../.github/workflows/deploy-cloudflare.yml) atualizado para reconciliar:
   - `VITE_SUPABASE_URL`
   - `VITE_SUPABASE_ANON_KEY`
@@ -131,6 +131,11 @@ Correção aplicada no repositório:
   - `OAUTH_CLIENT_ID`
   - `OAUTH_CLIENT_SECRET`
   - `RESEND_API_KEY` quando existir
+
+Observação operacional:
+
+- a reconciliação manual dos secrets do Worker agora funciona também em Windows sem depender de `bash`
+- o teste publicado pode ser executado com `npm run test:auth-worker:published`
 
 ## Conclusão
 
