@@ -1,5 +1,13 @@
 // scripts/diagnose-auth-config.js
-const fetch = require('node-fetch');
+let fetchFn = global.fetch;
+if (!fetchFn) {
+  try {
+    fetchFn = require('node-fetch');
+  } catch (e) {
+    console.error('node-fetch não encontrado e fetch global não disponível. Use Node.js 18+ ou instale node-fetch.');
+    process.exit(1);
+  }
+}
 const fs = require('fs');
 const path = require('path');
 
@@ -20,7 +28,7 @@ function loadEnv() {
 
 async function checkWorkerStatus(workerUrl) {
   try {
-    const res = await fetch(workerUrl + '/api/auth/oauth/status');
+    const res = await fetchFn(workerUrl + '/api/auth/oauth/status');
     const json = await res.json();
     return { ok: res.ok, ...json };
   } catch (e) {
@@ -30,7 +38,7 @@ async function checkWorkerStatus(workerUrl) {
 
 async function checkPagesVars(pagesUrl) {
   try {
-    const res = await fetch(pagesUrl + '/api/auth/oauth/status');
+    const res = await fetchFn(pagesUrl + '/api/auth/oauth/status');
     const json = await res.json();
     return { ok: res.ok, ...json };
   } catch (e) {
@@ -40,7 +48,7 @@ async function checkPagesVars(pagesUrl) {
 
 async function checkSupabaseRedirects(supabaseUrl, anonKey) {
   try {
-    const res = await fetch(`${supabaseUrl}/auth/v1/settings`, {
+    const res = await fetchFn(`${supabaseUrl}/auth/v1/settings`, {
       headers: { apikey: anonKey }
     });
     const json = await res.json();
