@@ -110,6 +110,8 @@ createHtmlRouteAlias('register.html', path.join('register', 'index.html'));
 createHtmlRouteAlias('forgot-password.html', path.join('forgot-password', 'index.html'));
 createHtmlRouteAlias('reset-password.html', path.join('reset-password', 'index.html'));
 createHtmlRouteAlias('oauth-consent.html', path.join('oauth', 'consent', 'index.html'));
+createHtmlRouteAlias('dashboard.html', path.join('dashboard', 'index.html'));
+createHtmlRouteAlias('admin.html', path.join('admin', 'index.html'));
 
 // Root files are now reserved for the marketing/landing experience on GitHub Pages.
 // Only sync portal mirrors to the repository root when explicitly requested.
