@@ -10,6 +10,14 @@
     return String(value || '').trim();
   }
 
+  function cleanHost(url) {
+    try {
+      return new URL(url, window.location.href).host;
+    } catch (error) {
+      return '';
+    }
+  }
+
   function limitText(value, maxLength) {
     var text = String(value || '');
     if (!maxLength || text.length <= maxLength) return text;
@@ -62,6 +70,51 @@
     };
   }
 
+  function getCookieNames() {
+    return document.cookie
+      .split(';')
+      .map(function (entry) { return entry.trim(); })
+      .filter(Boolean)
+      .map(function (entry) { return entry.split('=')[0]; });
+  }
+
+  function getStorageFlag(key) {
+    try {
+      return window.localStorage.getItem(key);
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function getAuthSnapshot() {
+    var hashParams = {};
+    try {
+      hashParams = Object.fromEntries(new URLSearchParams(window.location.hash.slice(1)));
+    } catch (error) {}
+
+    return {
+      cookies: {
+        names: getCookieNames(),
+        hasPortalCookie: getCookieNames().indexOf('re_session') !== -1
+      },
+      storage: {
+        hasReToken: Boolean(getStorageFlag('re_token')),
+        hasReUser: Boolean(getStorageFlag('re_user')),
+        hasImpersonation: Boolean(sessionStorage.getItem('re_impersonate_token'))
+      },
+      supabase: {
+        configuredUrl: cleanUrl(window.VITE_SUPABASE_URL || window.RE_SUPABASE_URL),
+        hasAnonKey: Boolean(window.VITE_SUPABASE_ANON_KEY || window.RE_SUPABASE_ANON)
+      },
+      navigation: {
+        search: window.location.search || '',
+        hashKeys: Object.keys(hashParams),
+        hasOauthHash: Boolean(hashParams.oauth || hashParams.oauth_token || hashParams.oauth_access_token),
+        hasRecoveryHash: Boolean(hashParams.access_token && hashParams.type)
+      }
+    };
+  }
+
   function shouldLog(signature) {
     if (!signature) return true;
     if (seen[signature]) return false;
@@ -83,6 +136,16 @@
 
   function classifyResourceFailure(url) {
     var targetUrl = cleanUrl(url);
+    if (/\/favicon\.ico(?:[?#].*)?$/i.test(targetUrl)) {
+      return {
+        code: 'favicon-ico-missing',
+        level: 'info',
+        summary: 'O navegador tentou buscar /favicon.ico, mas o projeto usa favicon.svg.',
+        impact: 'Ruído visual no console. Não bloqueia autenticação, OAuth, Worker ou Supabase.',
+        recommendedAction: 'Opcionalmente publicar um alias /favicon.ico -> /favicon.svg para reduzir o ruído.'
+      };
+    }
+
     if (/static\.cloudflareinsights\.com\/beacon\.min\.js/i.test(targetUrl)) {
       return {
         code: 'cloudflare-insights-blocked',
@@ -102,6 +165,56 @@
       impact: 'Pode afetar comportamento da página se o recurso for essencial.',
       recommendedAction: 'Validar URL, cache, política do navegador e publicação no Pages.'
     };
+  }
+
+  function classifyObservedHttp(details) {
+    var url = cleanUrl(details && details.url);
+    var status = Number(details && details.status) || 0;
+    var host = cleanHost(url);
+
+    if (!url || !status || status < 400) return null;
+
+    if (/amcdn\.msftauth\.net$/i.test(host) || /aadcdn\.msauth\.net$/i.test(host)) {
+      if (status === 429) {
+        return {
+          code: 'microsoft-session-probe-rate-limited',
+          level: 'info',
+          summary: 'A Microsoft limitou uma sondagem de sessão feita pelo próprio fluxo de login hospedado.',
+          impact: 'Normalmente isso não impede o auth do Supabase no portal. É ruído do provedor externo.',
+          recommendedAction: 'Priorize erros do domínio recuperaempresas.com.br e do projeto Supabase. Ignore este 429 ao depurar o portal.'
+        };
+      }
+
+      return {
+        code: 'microsoft-identity-http-issue',
+        level: 'info',
+        summary: 'O provedor externo Microsoft respondeu com erro durante uma checagem auxiliar.',
+        impact: 'Pode ou não afetar login social, mas não explica sozinho falhas do portal/Worker.',
+        recommendedAction: 'Cruze com erros do Supabase Auth e com os redirects finais do portal antes de agir.'
+      };
+    }
+
+    if (/supabase\.co$/i.test(host) && /\/auth\/v1\//i.test(url)) {
+      return {
+        code: 'supabase-auth-http-issue',
+        level: status >= 500 ? 'error' : 'warn',
+        summary: 'O endpoint hospedado do Supabase Auth respondeu com erro.',
+        impact: 'Pode afetar login, confirmação de e-mail, reset de senha ou OAuth.',
+        recommendedAction: 'Validar redirect URLs, OAuth client, sessão Supabase do navegador e payload exato retornado por /auth/v1.'
+      };
+    }
+
+    if (/recuperaempresas\.com\.br$/i.test(host) && /\/api\/auth\//i.test(url)) {
+      return {
+        code: 'portal-auth-http-issue',
+        level: status >= 500 ? 'error' : 'warn',
+        summary: 'A API de autenticação do portal respondeu com status inesperado.',
+        impact: 'Pode bloquear login, verify, reset ou consentimento OAuth.',
+        recommendedAction: 'Comparar request, cookies re_session, resposta JSON e logs do Worker correspondente.'
+      };
+    }
+
+    return null;
   }
 
   function classifyApiFailure(details) {
@@ -195,9 +308,69 @@
     });
   }
 
+  function observeFetch() {
+    if (typeof window.fetch !== 'function') return;
+    var originalFetch = window.fetch.bind(window);
+    window.fetch = function (input, init) {
+      return originalFetch(input, init).then(function (response) {
+        try {
+          var info = classifyObservedHttp({
+            url: typeof input === 'string' ? input : (input && input.url) || '',
+            status: response.status
+          });
+          if (info) {
+            emit(info.level, info.code, {
+              url: response.url || (typeof input === 'string' ? input : (input && input.url) || ''),
+              status: response.status,
+              method: String((init && init.method) || (input && input.method) || 'GET').toUpperCase(),
+              summary: info.summary,
+              impact: info.impact,
+              recommendedAction: info.recommendedAction
+            });
+          }
+        } catch (error) {}
+        return response;
+      });
+    };
+  }
+
+  function observeXhr() {
+    if (typeof XMLHttpRequest === 'undefined') return;
+    var open = XMLHttpRequest.prototype.open;
+    XMLHttpRequest.prototype.open = function (method, url) {
+      this.__reDiagMethod = String(method || 'GET').toUpperCase();
+      this.__reDiagUrl = url;
+      this.addEventListener('loadend', function () {
+        try {
+          var info = classifyObservedHttp({
+            url: this.responseURL || this.__reDiagUrl || '',
+            status: this.status
+          });
+          if (info) {
+            emit(info.level, info.code, {
+              url: this.responseURL || this.__reDiagUrl || '',
+              status: this.status,
+              method: this.__reDiagMethod || 'GET',
+              summary: info.summary,
+              impact: info.impact,
+              recommendedAction: info.recommendedAction
+            });
+          }
+        } catch (error) {}
+      });
+      return open.apply(this, arguments);
+    };
+  }
+
   window.REDiagnostics = {
     captureTrace: captureTrace,
     report: emit,
+    dumpAuthState: function (label, extra) {
+      emit('info', 'auth-state-snapshot', Object.assign({
+        label: label || 'auth-state',
+        snapshot: getAuthSnapshot()
+      }, extra || {}));
+    },
     reportApiFailure: function (details) {
       var info = classifyApiFailure(details || {});
       emit(info.level, info.code, Object.assign({
@@ -235,4 +408,6 @@
   window.addEventListener('error', onResourceError, true);
   window.addEventListener('error', onRuntimeError, false);
   window.addEventListener('unhandledrejection', onUnhandledRejection);
+  observeFetch();
+  observeXhr();
 })();

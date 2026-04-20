@@ -79,6 +79,11 @@
     if (!window.REDiagnostics || typeof window.REDiagnostics.reportIssue !== 'function') return;
     window.REDiagnostics.reportIssue('error', code, details || {});
   }
+  if (window.REDiagnostics && typeof window.REDiagnostics.dumpAuthState === 'function') {
+    window.REDiagnostics.dumpAuthState('oauth-consent-load', {
+      sourceFile: 'public/oauth-consent.html'
+    });
+  }
 
   const SUPA_URL  = (window.VITE_SUPABASE_URL || window.RE_SUPABASE_URL || 'https://riiajjmnzgagntiqqshs.supabase.co').replace(/\/$/, '');
   const SUPA_ANON = window.VITE_SUPABASE_ANON_KEY || window.RE_SUPABASE_ANON || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJpaWFqam1uemdhZ250aXFxc2hzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYxNzY0ODUsImV4cCI6MjA5MTc1MjQ4NX0.zyOFjVFIBJem5FZmXBD-ya78RheD_a-YHetibyVvXcI';

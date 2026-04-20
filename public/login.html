@@ -462,6 +462,11 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
 })();
 
 diagnoseOauthRuntime().catch(function () {});
+if (window.REDiagnostics && typeof window.REDiagnostics.dumpAuthState === 'function') {
+  window.REDiagnostics.dumpAuthState('login-load', {
+    sourceFile: 'public/login.html'
+  });
+}
 
 function showSuccess(msg) {
   const el = document.getElementById('alertSuccess');
@@ -486,6 +491,19 @@ function showSuccess(msg) {
         }
       }
     });
+    if (window.REDiagnostics && typeof window.REDiagnostics.reportIssue === 'function') {
+      window.REDiagnostics.reportIssue(result.ok ? 'info' : 'warn', 'login-verify-probe-result', {
+        sourceFile: 'public/login.html',
+        summary: result.ok && result.data && result.data.user
+          ? 'A página de login encontrou uma sessão válida e vai redirecionar o usuário.'
+          : 'A página de login não encontrou sessão ativa, então continuará exibindo o formulário.',
+        identified: {
+          status: result.status,
+          valid: result.data && result.data.valid,
+          authenticated: result.data && result.data.authenticated
+        }
+      });
+    }
     if (result.ok && result.data && result.data.user) {
       if (window.REShared?.storeAuthUser) window.REShared.storeAuthUser(result.data.user);
       const user = result.data.user;
