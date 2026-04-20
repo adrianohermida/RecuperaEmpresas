@@ -68,7 +68,7 @@ async function readJsonSafe(response) {
 async function main() {
   const env = loadEnv();
   const mode = process.argv[2] || 'local';
-  const targetBase = process.env.TARGET_BASE || 'https://api-edge.recuperaempresas.com.br';
+  const targetBase = process.argv[3] || process.env.TARGET_BASE || 'https://api-edge.recuperaempresas.com.br';
 
   const url = env.VITE_SUPABASE_URL || env.SUPABASE_URL;
   const serviceRole = env.VITE_SUPABASE_SERVICE_ROLE || env.SUPABASE_SERVICE_ROLE_KEY || env.SUPABASE_SERVICE_KEY;
