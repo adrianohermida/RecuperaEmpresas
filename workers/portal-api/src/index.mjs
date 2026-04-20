@@ -2,6 +2,7 @@ import { requireAdmin, requireAuth } from './lib/auth.mjs';
 import { applyCors, json, noContent, notFound } from './lib/http.mjs';
 import { handleAuth } from './routes/auth.mjs';
 import { handleAdminSystem } from './routes/admin-system.mjs';
+import { handleAdminReadModels } from './routes/admin-read-models.mjs';
 import { handleAppointments } from './routes/appointments.mjs';
 import { handleCreditors } from './routes/creditors.mjs';
 import { handleDataChangeRequests } from './routes/data-change-requests.mjs';
@@ -65,6 +66,45 @@ async function routeAdmin(request, env, pathname, executionCtx) {
 
   let params = match(pathname, /^\/api\/admin\/appointments(?:\/(?<id>[^/]+))?$/);
   if (params) return handleAppointments(request, { ...auth, env, executionCtx, params, scope: 'admin' });
+
+  params = match(pathname, /^\/api\/admin\/clients$/);
+  if (params) return handleAdminReadModels(request, { ...auth, env, executionCtx, params, scope: 'admin' });
+
+  params = match(pathname, /^\/api\/admin\/client\/(?<clientId>[^/]+)$/);
+  if (params) return handleAdminReadModels(request, { ...auth, env, executionCtx, params, scope: 'admin' });
+
+  params = match(pathname, /^\/api\/admin\/client\/(?<clientId>[^/]+)\/bookings$/);
+  if (params) return handleAdminReadModels(request, { ...auth, env, executionCtx, params, scope: 'admin' });
+
+  params = match(pathname, /^\/api\/admin\/client\/(?<clientId>[^/]+)\/financial$/);
+  if (params) return handleAdminReadModels(request, { ...auth, env, executionCtx, params, scope: 'admin' });
+
+  params = match(pathname, /^\/api\/admin\/financial$/);
+  if (params) return handleAdminReadModels(request, { ...auth, env, executionCtx, params, scope: 'admin' });
+
+  params = match(pathname, /^\/api\/admin\/form-config$/);
+  if (params) return handleAdminReadModels(request, { ...auth, env, executionCtx, params, scope: 'admin' });
+
+  params = match(pathname, /^\/api\/admin\/audit-log(?:\/(?<action>export))?$/);
+  if (params) return handleAdminReadModels(request, { ...auth, env, executionCtx, params, scope: 'admin' });
+
+  params = match(pathname, /^\/api\/admin\/invoices(?:\/(?<id>[^/]+)\/(?<action>pdf))?$/);
+  if (params) return handleAdminReadModels(request, { ...auth, env, executionCtx, params, scope: 'admin' });
+
+  params = match(pathname, /^\/api\/admin\/services$/);
+  if (params) return handleAdminReadModels(request, { ...auth, env, executionCtx, params, scope: 'admin' });
+
+  params = match(pathname, /^\/api\/admin\/service-orders$/);
+  if (params) return handleAdminReadModels(request, { ...auth, env, executionCtx, params, scope: 'admin' });
+
+  params = match(pathname, /^\/api\/admin\/forms(?:\/(?<id>[^/]+))?$/);
+  if (params) return handleAdminReadModels(request, { ...auth, env, executionCtx, params, scope: 'admin' });
+
+  params = match(pathname, /^\/api\/admin\/journeys(?:\/(?<id>[^/]+)(?:\/(?<action>assignments)(?:\/(?<asnId>[^/]+)\/progress)?)?)?$/);
+  if (params) return handleAdminReadModels(request, { ...auth, env, executionCtx, params, scope: 'admin' });
+
+  params = match(pathname, /^\/api\/admin\/agenda\/slots$/);
+  if (params) return handleAdminReadModels(request, { ...auth, env, executionCtx, params, scope: 'admin' });
 
   params = match(pathname, /^\/api\/admin\/client\/(?<clientId>[^/]+)\/creditors(?:\/(?<creditorId>[^/]+))?$/);
   if (params) return handleCreditors(request, { ...auth, env, executionCtx, params, scope: 'admin' });
