@@ -3,7 +3,7 @@
 
   // Reconstruct the path from params.slug (array)
   const path = params.slug ? params.slug.join('/') : '';
-  const workerUrl = https://api-edge.recuperaempresas.com.br/api/;
+  const workerUrl = `https://api-edge.recuperaempresas.com.br/api/${path}`/${path}`;
 
   // Clone the request with the new URL
   const newRequest = new Request(workerUrl, {
