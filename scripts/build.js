@@ -59,10 +59,11 @@ copyIfExists(
   path.join(distDir, 'vendor', 'supabase', 'supabase.js')
 );
 
-// Static portal deploys on Pages must keep working even if the Pages panel
-// executes a secondary build without custom env vars.
-const defaultWorkerApiBase = 'https://api-edge.recuperaempresas.com.br';
-const defaultWorkerApiRoutes = ['/api'];
+// Portal production should prefer same-origin `/api/*` through Cloudflare Pages
+// Functions. Only set Worker overrides explicitly for diagnostics or a controlled
+// split-origin environment.
+const defaultWorkerApiBase = '';
+const defaultWorkerApiRoutes = [];
 const apiBase = process.env.RE_API_BASE || '';
 const workerApiBase = process.env.RE_API_WORKER_BASE || defaultWorkerApiBase;
 const workerApiRoutes = (process.env.RE_API_WORKER_ROUTES || defaultWorkerApiRoutes.join(','))
