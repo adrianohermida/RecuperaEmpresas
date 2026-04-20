@@ -4,9 +4,12 @@
 let _logicSourceQId = null;
 
 const FB_TRANSIENT_MODAL_IDS = ['fb-modal-new', 'fb-logic-modal', 'fb-assign-modal', 'fb-resp-detail-modal'];
-// Estado isolado por modal
-const modalState = {};
-FB_TRANSIENT_MODAL_IDS.forEach(id => { modalState[id] = false; });
+const FB_MODAL_DESKTOP_BREAKPOINT = 900;
+const fbTransientModalState = {
+  activeModalId: null,
+  initialized: false,
+  resizeHandler: null,
+};
 
 // Debounce helper
 function debounce(fn, ms) {
@@ -17,55 +20,98 @@ function debounce(fn, ms) {
   };
 }
 
-// Proteção contra múltiplas execuções
-let lastWidth = window.innerWidth;
-const handleResize = debounce(() => {
-  if (window.innerWidth !== lastWidth) {
-    lastWidth = window.innerWidth;
-    // Só executa lógica de modal se necessário
-    FB_TRANSIENT_MODAL_IDS.forEach(id => {
-      if (modalState[id] && window.innerWidth > 900) {
-        closeModal(id);
-      }
-    });
+function fbGetTransientModal(id) {
+  return document.getElementById(id);
+}
+
+function fbGetVisibleTransientModals() {
+  return FB_TRANSIENT_MODAL_IDS
+    .map(fbGetTransientModal)
+    .filter(modal => modal && !modal.classList.contains('ui-hidden'));
+}
+
+function fbSyncTransientModalState() {
+  const visible = fbGetVisibleTransientModals();
+  if (!visible.length) {
+    fbTransientModalState.activeModalId = null;
+    return;
   }
-}, 200);
 
-window.addEventListener('resize', handleResize);
+  const activeModal = visible[visible.length - 1];
+  fbTransientModalState.activeModalId = activeModal.id;
+}
 
+function fbEnforceSingleVisibleModal() {
+  const visible = fbGetVisibleTransientModals();
+  if (visible.length <= 1) {
+    fbSyncTransientModalState();
+    return;
+  }
 
-function fbCloseTransientModals(exceptId) {
+  const activeId = fbTransientModalState.activeModalId;
+  const keep = visible.find(modal => modal.id === activeId) || visible[visible.length - 1];
+  visible.forEach(modal => {
+    if (modal.id !== keep.id) modal.classList.add('ui-hidden');
+  });
+  fbTransientModalState.activeModalId = keep.id;
+}
+
+function fbCloseAllTransientModals(exceptId) {
   FB_TRANSIENT_MODAL_IDS.forEach(id => {
     if (id === exceptId) return;
-    document.getElementById(id)?.classList.add('ui-hidden');
-    modalState[id] = false;
+    fbGetTransientModal(id)?.classList.add('ui-hidden');
   });
+  fbTransientModalState.activeModalId = exceptId || null;
 }
 
-function openModal(id) {
-  FB_TRANSIENT_MODAL_IDS.forEach(mid => {
-    if (mid !== id) {
-      document.getElementById(mid)?.classList.add('ui-hidden');
-      modalState[mid] = false;
+function fbCloseTransientModals(exceptId) {
+  fbCloseAllTransientModals(exceptId);
+}
+
+function fbOpenTransientModal(id) {
+  if (!FB_TRANSIENT_MODAL_IDS.includes(id)) return;
+  fbCloseAllTransientModals(id);
+  fbGetTransientModal(id)?.classList.remove('ui-hidden');
+  fbTransientModalState.activeModalId = id;
+}
+
+function fbCloseTransientModal(id) {
+  if (!FB_TRANSIENT_MODAL_IDS.includes(id)) return;
+  fbGetTransientModal(id)?.classList.add('ui-hidden');
+  if (fbTransientModalState.activeModalId === id) {
+    fbTransientModalState.activeModalId = null;
+  }
+}
+
+function fbEnsureTransientModalController() {
+  if (fbTransientModalState.initialized) return;
+  fbTransientModalState.initialized = true;
+
+  let lastWidth = window.innerWidth;
+  fbTransientModalState.resizeHandler = debounce(() => {
+    if (window.innerWidth === lastWidth) return;
+    const previousWidth = lastWidth;
+    lastWidth = window.innerWidth;
+
+    // Em desktop, garante que apenas um modal transiente permaneça visível.
+    if (window.innerWidth > FB_MODAL_DESKTOP_BREAKPOINT || previousWidth > FB_MODAL_DESKTOP_BREAKPOINT) {
+      fbEnforceSingleVisibleModal();
     }
-  });
-  document.getElementById(id)?.classList.remove('ui-hidden');
-  modalState[id] = true;
-}
+  }, 150);
 
-function closeModal(id) {
-  document.getElementById(id)?.classList.add('ui-hidden');
-  modalState[id] = false;
+  window.addEventListener('resize', fbTransientModalState.resizeHandler);
 }
 
 function fbBindTransientModalBehavior() {
+  fbEnsureTransientModalController();
+
   FB_TRANSIENT_MODAL_IDS.forEach(id => {
-    const modal = document.getElementById(id);
+    const modal = fbGetTransientModal(id);
     if (!modal || modal.dataset.boundBackdrop === '1') return;
     modal.dataset.boundBackdrop = '1';
     modal.addEventListener('click', event => {
       if (event.target !== modal) return;
-      modal.classList.add('ui-hidden');
+      fbCloseTransientModal(id);
     });
   });
 
@@ -74,10 +120,12 @@ function fbBindTransientModalBehavior() {
 
   document.addEventListener('keydown', event => {
     if (event.key !== 'Escape') return;
-    const openModal = [...FB_TRANSIENT_MODAL_IDS].reverse()
-      .map(id => document.getElementById(id))
-      .find(modal => modal && !modal.classList.contains('ui-hidden'));
-    if (openModal) openModal.classList.add('ui-hidden');
+    if (fbTransientModalState.activeModalId) {
+      fbCloseTransientModal(fbTransientModalState.activeModalId);
+      return;
+    }
+    const activeModal = [...fbGetVisibleTransientModals()].pop();
+    if (activeModal) fbCloseTransientModal(activeModal.id);
   });
 }
 
@@ -86,15 +134,14 @@ function fbBindTransientModalBehavior() {
 ──────────────────────────────────────────────────────────────────────────────*/
 async function fbOpenLogicEditor(qId) {
   _logicSourceQId = qId;
-  const modal = document.getElementById('fb-logic-modal');
+  const modal = fbGetTransientModal('fb-logic-modal');
   if (!modal) return;
-  fbCloseTransientModals('fb-logic-modal');
-  modal.classList.remove('ui-hidden');
+  fbOpenTransientModal('fb-logic-modal');
   await fbLoadLogicRules(qId);
 }
 
 function fbCloseLogicModal() {
-  document.getElementById('fb-logic-modal').classList.add('ui-hidden');
+  fbCloseTransientModal('fb-logic-modal');
 }
 
 async function fbLoadLogicRules(qId) {
@@ -160,15 +207,14 @@ async function fbDeleteLogicRule(ruleId) {
    Assignments modal
 ──────────────────────────────────────────────────────────────────────────────*/
 async function fbOpenAssignModal() {
-  const modal = document.getElementById('fb-assign-modal');
+  const modal = fbGetTransientModal('fb-assign-modal');
   if (!modal) return;
-  fbCloseTransientModals('fb-assign-modal');
-  modal.classList.remove('ui-hidden');
+  fbOpenTransientModal('fb-assign-modal');
   await fbLoadAssignments();
 }
 
 function fbCloseAssignModal() {
-  document.getElementById('fb-assign-modal').classList.add('ui-hidden');
+  fbCloseTransientModal('fb-assign-modal');
 }
 
 async function fbLoadAssignments() {
@@ -212,3 +258,8 @@ async function fbRemoveAssignment(userId) {
   if (res.ok) { fbToast('Removido.','success'); fbLoadAssignments(); }
   else fbToast('Erro.','error');
 }
+
+window.fbOpenTransientModal = fbOpenTransientModal;
+window.fbCloseTransientModal = fbCloseTransientModal;
+window.fbCloseTransientModals = fbCloseTransientModals;
+window.fbEnsureTransientModalController = fbEnsureTransientModalController;

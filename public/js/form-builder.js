@@ -78,6 +78,7 @@ const QB_TYPES = [
    Entry point — called by showSection('formularios')
 ──────────────────────────────────────────────────────────────────────────────*/
 function loadFormBuilder() {
+  fbEnsureTransientModalController();
   fbBindTransientModalBehavior();
   fbShowView('list');
   fbLoadFormsList();
@@ -249,15 +250,14 @@ async function fbOpenStatsPanel(formIdOverride) {
    New form modal
 ──────────────────────────────────────────────────────────────────────────────*/
 function fbOpenNewFormModal() {
-  fbCloseTransientModals('fb-modal-new');
-  document.getElementById('fb-modal-new').classList.remove('ui-hidden');
+  fbOpenTransientModal('fb-modal-new');
   document.getElementById('fb-new-title').value = '';
   document.getElementById('fb-new-desc').value  = '';
   document.getElementById('fb-new-type').value  = 'diagnostico';
 }
 
 function fbCloseNewModal() {
-  document.getElementById('fb-modal-new').classList.add('ui-hidden');
+  fbCloseTransientModal('fb-modal-new');
 }
 
 async function fbSubmitNewForm() {

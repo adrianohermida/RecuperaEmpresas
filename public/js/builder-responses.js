@@ -73,8 +73,7 @@ async function fbOpenResponses(formId, formTitle) {
 async function fbOpenResponseDetail(respId) {
   const modal = document.getElementById('fb-resp-detail-modal');
   if (!modal) return;
-  fbCloseTransientModals('fb-resp-detail-modal');
-  modal.classList.remove('ui-hidden');
+  fbOpenTransientModal('fb-resp-detail-modal');
 
   const body = document.getElementById('fb-resp-detail-body');
   if (body) body.innerHTML = '<div class="admin-empty-state-soft">Carregando detalhes...</div>';
@@ -121,7 +120,7 @@ async function fbOpenResponseDetail(respId) {
 }
 
 function fbCloseRespDetailModal() {
-  document.getElementById('fb-resp-detail-modal').classList.add('ui-hidden');
+  fbCloseTransientModal('fb-resp-detail-modal');
 }
 
 function fbExportResponsesCSV() {
