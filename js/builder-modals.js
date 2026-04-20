@@ -2,13 +2,60 @@
 /* builder-modals.js — Form Builder: modais transientes (lógica + atribuições) */
 
 let _logicSourceQId = null;
+
 const FB_TRANSIENT_MODAL_IDS = ['fb-modal-new', 'fb-logic-modal', 'fb-assign-modal', 'fb-resp-detail-modal'];
+// Estado isolado por modal
+const modalState = {};
+FB_TRANSIENT_MODAL_IDS.forEach(id => { modalState[id] = false; });
+
+// Debounce helper
+function debounce(fn, ms) {
+  let timer;
+  return function(...args) {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn.apply(this, args), ms);
+  };
+}
+
+// Proteção contra múltiplas execuções
+let lastWidth = window.innerWidth;
+const handleResize = debounce(() => {
+  if (window.innerWidth !== lastWidth) {
+    lastWidth = window.innerWidth;
+    // Só executa lógica de modal se necessário
+    FB_TRANSIENT_MODAL_IDS.forEach(id => {
+      if (modalState[id] && window.innerWidth > 900) {
+        closeModal(id);
+      }
+    });
+  }
+}, 200);
+
+window.addEventListener('resize', handleResize);
+
 
 function fbCloseTransientModals(exceptId) {
   FB_TRANSIENT_MODAL_IDS.forEach(id => {
     if (id === exceptId) return;
     document.getElementById(id)?.classList.add('ui-hidden');
+    modalState[id] = false;
   });
+}
+
+function openModal(id) {
+  FB_TRANSIENT_MODAL_IDS.forEach(mid => {
+    if (mid !== id) {
+      document.getElementById(mid)?.classList.add('ui-hidden');
+      modalState[mid] = false;
+    }
+  });
+  document.getElementById(id)?.classList.remove('ui-hidden');
+  modalState[id] = true;
+}
+
+function closeModal(id) {
+  document.getElementById(id)?.classList.add('ui-hidden');
+  modalState[id] = false;
 }
 
 function fbBindTransientModalBehavior() {
