@@ -4,7 +4,13 @@
 (function () {
   function esc(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
-  function closeModal(id) { document.getElementById(id)?.remove(); }
+  function closeModal(id) {
+    if (window.REAdminModal?.closeById) {
+      window.REAdminModal.closeById(id, 'admin-client-actions:close');
+      return;
+    }
+    document.getElementById(id)?.remove();
+  }
 
   function openModal(id, title, bodyHtml, footerHtml, size) {
     closeModal(id);
@@ -23,7 +29,11 @@
         <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:20px">${footerHtml}</div>
       </div>`;
     el.addEventListener('mousedown', e => { if (e.target === el) el.remove(); });
-    document.body.appendChild(el);
+    if (window.REAdminModal?.append) {
+      window.REAdminModal.append(el, 'admin-client-actions:open:' + id);
+    } else {
+      document.body.appendChild(el);
+    }
     el.querySelector('input,select,textarea')?.focus();
   }
 

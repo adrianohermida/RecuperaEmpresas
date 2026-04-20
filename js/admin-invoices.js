@@ -100,7 +100,7 @@
         </div>
       </div>
     </div>`;
-    document.body.insertAdjacentHTML('beforeend', html);
+    window.REAdminModal?.insertHtml?.('createInvoiceModal', html, 'admin-invoices:create');
   }
 
   async function submitCreateInvoice() {
@@ -122,7 +122,7 @@
     const response = await fetch('/api/admin/invoices', { method: 'POST', headers: authH(), body: JSON.stringify(body) });
     const payload = await readAdminResponse(response);
     if (response.ok) {
-      document.getElementById('createInvoiceModal')?.remove();
+      window.REAdminModal?.closeById?.('createInvoiceModal', 'admin-invoices:submit');
       showToast('Cobrança criada com sucesso!', 'success');
       loadAdminInvoices();
       return;

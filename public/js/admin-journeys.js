@@ -245,7 +245,7 @@
     document.getElementById('jrn-f-name').value = '';
     document.getElementById('jrn-f-desc').value = '';
     document.getElementById('jrn-f-status').value = 'draft';
-    document.getElementById('jrn-modal-form').classList.remove('ui-hidden');
+    window.REAdminModal?.openStatic?.('jrn-modal-form', 'admin-journeys:new');
   }
 
   function jrnOpenEditModal() {
@@ -256,11 +256,11 @@
     document.getElementById('jrn-f-name').value = JRN.current.name || '';
     document.getElementById('jrn-f-desc').value = JRN.current.description || '';
     document.getElementById('jrn-f-status').value = JRN.current.status || 'draft';
-    document.getElementById('jrn-modal-form').classList.remove('ui-hidden');
+    window.REAdminModal?.openStatic?.('jrn-modal-form', 'admin-journeys:edit');
   }
 
   function jrnCloseFormModal() {
-    document.getElementById('jrn-modal-form').classList.add('ui-hidden');
+    window.REAdminModal?.closeById?.('jrn-modal-form', 'admin-journeys:close-form');
   }
 
   async function jrnSaveForm() {
@@ -301,7 +301,7 @@
     document.getElementById('jrn-step-desc').value = '';
     document.getElementById('jrn-step-form').value = '';
     document.getElementById('jrn-step-optional').checked = false;
-    document.getElementById('jrn-modal-step').classList.remove('ui-hidden');
+    window.REAdminModal?.openStatic?.('jrn-modal-step', 'admin-journeys:add-step');
   }
 
   function jrnEditStep(id, title, desc, formId, isOptional) {
@@ -311,11 +311,11 @@
     document.getElementById('jrn-step-desc').value = desc;
     document.getElementById('jrn-step-form').value = formId || '';
     document.getElementById('jrn-step-optional').checked = !!isOptional;
-    document.getElementById('jrn-modal-step').classList.remove('ui-hidden');
+    window.REAdminModal?.openStatic?.('jrn-modal-step', 'admin-journeys:edit-step');
   }
 
   function jrnCloseStepModal() {
-    document.getElementById('jrn-modal-step').classList.add('ui-hidden');
+    window.REAdminModal?.closeById?.('jrn-modal-step', 'admin-journeys:close-step');
   }
 
   async function jrnSaveStep() {
@@ -376,11 +376,11 @@
   async function jrnOpenAssignModal() {
     await jrnLoadClients();
     document.getElementById('jrn-assign-notes').value = '';
-    document.getElementById('jrn-modal-assign').classList.remove('ui-hidden');
+    window.REAdminModal?.openStatic?.('jrn-modal-assign', 'admin-journeys:assign');
   }
 
   function jrnCloseAssignModal() {
-    document.getElementById('jrn-modal-assign').classList.add('ui-hidden');
+    window.REAdminModal?.closeById?.('jrn-modal-assign', 'admin-journeys:close-assign');
   }
 
   async function jrnSaveAssign() {

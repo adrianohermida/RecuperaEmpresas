@@ -26,6 +26,7 @@
   }
 
   initFreshchatBoot();
+  window.REAdminModal?.init?.();
   if (document.readyState === 'complete') {
     initAdminShell();
   } else {

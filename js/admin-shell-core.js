@@ -97,6 +97,8 @@ document.addEventListener('click', function (e) {
 });
 
 function showSection(name, el) {
+  window.REAdminModal?.init?.();
+  window.REAdminModal?.closeAll?.({ reason: 'show-section:' + name });
   // Close any open overlay modals before switching sections
   document.querySelectorAll('.admin-modal-overlay').forEach(function (m) {
     m.classList.add('ui-hidden');

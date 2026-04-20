@@ -152,13 +152,11 @@
       const response = await fetch('/api/admin/journeys', { headers: authH() });
       window._mktJourneys = response.ok ? await response.json() : [];
     }
-    document.getElementById('svcModal')?.remove();
-    document.body.insertAdjacentHTML('beforeend', buildServiceModalHtml(null, '', 'consultoria', '', 0, ''));
+    window.REAdminModal?.insertHtml?.('svcModal', buildServiceModalHtml(null, '', 'consultoria', '', 0, ''), 'admin-marketplace:create');
   }
 
   function openEditServiceModal(id, name, category, description, priceCents, journeyId) {
-    document.getElementById('svcModal')?.remove();
-    document.body.insertAdjacentHTML('beforeend', buildServiceModalHtml(id, name, category, description, priceCents, journeyId));
+    window.REAdminModal?.insertHtml?.('svcModal', buildServiceModalHtml(id, name, category, description, priceCents, journeyId), 'admin-marketplace:edit');
   }
 
   async function submitServiceForm() {
@@ -187,7 +185,7 @@
     const response = await fetch(url, { method, headers: authH(), body: JSON.stringify(payload) });
     const payloadResponse = await readAdminResponse(response);
     if (response.ok) {
-      document.getElementById('svcModal')?.remove();
+      window.REAdminModal?.closeById?.('svcModal', 'admin-marketplace:submit');
       showToast(editId ? 'Serviço atualizado!' : 'Serviço criado!', 'success');
       loadAdminMarketplace();
       return;

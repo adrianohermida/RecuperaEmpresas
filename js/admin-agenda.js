@@ -263,7 +263,7 @@
           <button onclick="_submitReschedule('${bookingId}')" class="btn-primary admin-modal-btn">Remarcar</button>
         </div>
       </div>`;
-    document.body.appendChild(modal);
+    window.REAdminModal?.append?.(modal, 'admin-agenda:reschedule');
   }
 
   async function submitReschedule(bookingId) {
@@ -280,7 +280,7 @@
     });
     const payload = await readAdminResponse(response);
     if (response.ok) {
-      document.getElementById('rescheduleModal')?.remove();
+      window.REAdminModal?.closeById?.('rescheduleModal', 'admin-agenda:reschedule-submit');
       showToast('Agendamento remarcado e cliente notificado.', 'success');
       loadAdminAgenda();
       return;
@@ -345,7 +345,7 @@
           <button onclick="_submitBookForClient('${slotId}')" class="btn-primary admin-modal-btn">Confirmar agendamento</button>
         </div>
       </div>`;
-    document.body.appendChild(modal);
+    window.REAdminModal?.append?.(modal, 'admin-agenda:book-for-client');
     window._bfcMode = 'existing';
   }
 
@@ -387,7 +387,7 @@
     });
     const payload = await readAdminResponse(response);
     if (response.ok) {
-      document.getElementById('bookForClientModal')?.remove();
+      window.REAdminModal?.closeById?.('bookForClientModal', 'admin-agenda:book-for-client-submit');
       showToast('Agendamento criado e confirmado!', 'success');
       loadAdminAgenda();
       return;
@@ -429,7 +429,7 @@
           <button onclick="_submitBookFromDrawer('${clientId}')" class="btn-primary admin-modal-btn">Agendar</button>
         </div>
       </div>`;
-    document.body.appendChild(modal);
+    window.REAdminModal?.append?.(modal, 'admin-agenda:book-drawer');
   }
 
   async function submitBookFromDrawer(clientId) {
@@ -442,7 +442,7 @@
     });
     const payload = await readAdminResponse(response);
     if (response.ok) {
-      document.getElementById('bookDrawerModal')?.remove();
+      window.REAdminModal?.closeById?.('bookDrawerModal', 'admin-agenda:book-drawer-submit');
       showToast('Agendamento criado!', 'success');
       renderDrawerTab('agenda');
       return;
