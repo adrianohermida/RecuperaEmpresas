@@ -406,12 +406,19 @@ async function login(request, env) {
 
 async function verify(request, env) {
   if (request.method !== 'GET') return methodNotAllowed();
+  const url = new URL(request.url);
+  const allowAnonymous = ['1', 'true', 'yes'].includes(String(url.searchParams.get('allowAnonymous') || '').toLowerCase());
   const auth = await requireAuth(request, env);
-  if (!auth.ok) return auth.response;
+  if (!auth.ok) {
+    if (allowAnonymous && auth.response.status === 401) {
+      return json({ valid: false, authenticated: false });
+    }
+    return auth.response;
+  }
   await logAccess(auth.sb, auth.user.id, auth.user.email, 'verify', getIp(request));
   const user = safeUser(auth.user, env);
   if (auth.auth?.impersonating) user._impersonating = true;
-  return json({ valid: true, user });
+  return json({ valid: true, authenticated: true, user });
 }
 
 async function forgotPassword(request, env) {

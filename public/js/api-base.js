@@ -97,6 +97,19 @@
     };
   }
 
+  function getExpectedStatuses(opts) {
+    var diagnostics = opts && opts.diagnostics;
+    var statuses = diagnostics && diagnostics.expectedStatuses;
+    if (!Array.isArray(statuses)) return [];
+    return statuses
+      .map(function (status) { return Number(status); })
+      .filter(function (status) { return Number.isFinite(status); });
+  }
+
+  function isExpectedStatus(opts, status) {
+    return getExpectedStatuses(opts).indexOf(Number(status)) !== -1;
+  }
+
   function shouldIncludeCredentials(url, resolvedUrl) {
     try {
       var original = typeof url === 'string' ? url : '';
@@ -177,7 +190,7 @@
           }
         }
 
-        if (xhr.status >= 400) {
+        if (xhr.status >= 400 && !isExpectedStatus(opts, xhr.status)) {
           reportApiFailure({
             url: targetUrl,
             originalUrl: url,

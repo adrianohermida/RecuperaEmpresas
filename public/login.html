@@ -472,15 +472,16 @@ function showSuccess(msg) {
 // Redirect if already logged in
 (async () => {
   try {
-    const result = await requestApiJson('/api/auth/verify', {
+    const result = await requestApiJson('/api/auth/verify?allowAnonymous=1', {
       method: 'GET',
       timeout: 20000,
       diagnostics: {
         operation: 'auth.verify',
+        expectedStatuses: [200],
         expected: {
           method: 'GET',
-          route: '/api/auth/verify',
-          expectedResponse: '200 com user autenticado ou 401 quando o token expira',
+          route: '/api/auth/verify?allowAnonymous=1',
+          expectedResponse: '200 com user autenticado ou valid=false quando ainda não há sessão',
           sourceFile: 'public/login.html'
         }
       }
