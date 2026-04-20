@@ -2,7 +2,9 @@
 // Diagnóstico avançado das configs sensíveis do Supabase via API Admin
 // Uso: node scripts/diagnose-supabase-admin.js
 
-const fetch = require('node-fetch');
+
+// Node.js 18+ já possui fetch global
+const fetchFn = global.fetch || fetch;
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || 'https://riiajjmnzgagntiqqshs.supabase.co';
 const SERVICE_ROLE_KEY = process.env.VITE_SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -15,7 +17,7 @@ if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
 async function getAuthConfig() {
   // Endpoint privado da API Admin do Supabase
   const url = `${SUPABASE_URL}/auth/v1/admin/settings`;
-  const res = await fetch(url, {
+  const res = await fetchFn(url, {
     headers: {
       'apikey': SERVICE_ROLE_KEY,
       'Authorization': `Bearer ${SERVICE_ROLE_KEY}`,
