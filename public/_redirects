@@ -1,2 +1,3 @@
+/api/* https://api-edge.recuperaempresas.com.br/api/:splat 200
 /dashboard /dashboard.html 200
 /admin /admin.html 200
