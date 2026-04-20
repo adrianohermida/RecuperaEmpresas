@@ -92,6 +92,7 @@ function buildAppSessionCookie(request, env, token, maxAgeSeconds) {
     'HttpOnly',
     'SameSite=Lax',
     `Max-Age=${maxAgeSeconds}`,
+    'Domain=.recuperaempresas.com.br',
   ];
   if (new URL(request.url).protocol === 'https:') parts.push('Secure');
   return parts.join('; ');
@@ -105,6 +106,7 @@ function buildClearedAppSessionCookie(request, env) {
     'SameSite=Lax',
     'Max-Age=0',
     'Expires=Thu, 01 Jan 1970 00:00:00 GMT',
+    'Domain=.recuperaempresas.com.br',
   ];
   if (new URL(request.url).protocol === 'https:') parts.push('Secure');
   return parts.join('; ');
