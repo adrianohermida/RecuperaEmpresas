@@ -56,26 +56,31 @@
   function applyMsgTemplate(index) {
     const template = (window._msgTemplates || [])[index];
     if (!template) return;
-    const input = document.getElementById('adminMsgInput');
-    if (input) {
-      input.value = template.text;
-      input.focus();
+    const ta = document.getElementById('adminMsgInput');
+    if (ta) {
+      ta.value = template.text;
+      ta.style.height = 'auto';
+      ta.style.height = Math.min(ta.scrollHeight, 120) + 'px';
+      ta.focus();
     }
   }
 
   async function sendAdminMessage() {
-    const input = document.getElementById('adminMsgInput');
-    const text = input.value.trim();
+    const ta = document.getElementById('adminMsgInput');
+    const text = ta.value.trim();
     if (!text) return;
 
-    input.value = '';
+    ta.value = '';
+    ta.style.height = 'auto';
     const clientId = window.REClientDetailState?.currentClientId || _currentClientId;
     const response = await fetch(`/api/admin/client/${clientId}/message`, {
       method: 'POST',
       headers: authH(),
       body: JSON.stringify({ text }),
     });
-    if (response.ok && await refreshCurrentClient()) (window.renderClientDetailTab || renderDrawerTab)('messages');
+    if (response.ok && await refreshCurrentClient()) {
+      (window.renderClientDetailTab || renderDrawerTab)('messages');
+    }
   }
 
   async function updateDocStatus(docId) {

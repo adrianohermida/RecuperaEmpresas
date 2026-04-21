@@ -237,25 +237,112 @@ function renderTasks(tasks) {
   }
 }
 
+// ── Chat helpers ─────────────────────────────────────────────────────────────
+function _chatDateLabel(iso) {
+  const d = new Date(iso);
+  const today = new Date();
+  const yesterday = new Date(); yesterday.setDate(today.getDate() - 1);
+  if (d.toDateString() === today.toDateString()) return 'Hoje';
+  if (d.toDateString() === yesterday.toDateString()) return 'Ontem';
+  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
+}
+
+function _esc(str) {
+  return String(str || '')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function _initials(name) {
+  const parts = String(name || 'U').trim().split(' ');
+  return (parts[0][0] + (parts[1]?.[0] || '')).toUpperCase();
+}
+
+function _buildChatHTML(messages, myRole) {
+  if (!messages.length) return '<div class="empty-state"><p>Nenhuma mensagem ainda. Dúvidas? Escreva para nós.</p></div>';
+
+  let html = '';
+  let lastDate = '';
+  let lastSender = '';
+
+  messages.forEach((m, i) => {
+    const role = m.from_role || m.from || 'client';
+    const isMe = role === myRole;
+    const isSystem = role === 'system';
+    const rowClass = isSystem ? 'from-system' : isMe ? 'from-me' : 'from-them';
+    const dateLabel = _chatDateLabel(m.ts);
+    const time = new Date(m.ts).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    const senderName = isMe ? '' : _esc(m.from_name || (role === 'admin' ? 'Recupera Empresas' : 'Cliente'));
+    const avatarInitials = _initials(m.from_name || (role === 'admin' ? 'RE' : 'CL'));
+    const avatarClass = role === 'admin' ? 'role-admin' : 'role-client';
+    const sameAsPrev = lastSender === role && lastDate === dateLabel;
+    const nextMsg = messages[i + 1];
+    const sameAsNext = nextMsg && (nextMsg.from_role || nextMsg.from) === role && _chatDateLabel(nextMsg.ts) === dateLabel;
+
+    if (dateLabel !== lastDate) {
+      html += `<div class="chat-date-sep"><span>${_esc(dateLabel)}</span></div>`;
+      lastDate = dateLabel;
+      lastSender = '';
+    }
+
+    if (isSystem) {
+      html += `<div class="chat-msg-row from-system"><div class="chat-bubble">⚙️ <span class="chat-bubble-text">${_esc(m.text)}</span></div></div>`;
+      lastSender = role;
+      return;
+    }
+
+    const showAvatar = !isMe && !sameAsNext;
+    const avatarHtml = !isMe
+      ? `<div class="chat-avatar ${avatarClass}${showAvatar ? '' : ' hidden'}">${_esc(avatarInitials)}</div>`
+      : '';
+
+    html += `<div class="chat-msg-row ${rowClass}">${avatarHtml}<div class="chat-bubble">${(!isMe && !sameAsPrev) ? `<div class="chat-bubble-name">${senderName || 'Recupera Empresas'}</div>` : ''}<div class="chat-bubble-text">${_esc(m.text)}</div><div class="chat-bubble-meta"><span>${time}</span>${isMe ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>' : ''}</div></div></div>`;
+    lastSender = role;
+  });
+
+  return html;
+}
+
 function renderMessages(messages) {
   const thread = document.getElementById('messageThread');
   const stat   = document.getElementById('statMsgs');
   if (stat) stat.textContent = messages.length;
+  if (!thread) return;
 
-  if (!messages.length) {
-    thread.innerHTML = '<div class="empty-state"><p>Nenhuma mensagem ainda. Dúvidas? Escreva para nós.</p></div>';
-    return;
+  const atBottom = thread.scrollHeight - thread.scrollTop - thread.clientHeight < 60;
+  thread.innerHTML = _buildChatHTML(messages, 'client');
+
+  if (atBottom) {
+    thread.scrollTop = thread.scrollHeight;
+    const badge = document.getElementById('chatNewMsgsBtn');
+    if (badge) badge.style.display = 'none';
+  } else {
+    const badge = document.getElementById('chatNewMsgsBtn');
+    if (badge && messages.length) badge.style.display = '';
   }
-  thread.innerHTML = messages.map(m => `
-    <div>
-      <div class="message-bubble from-${m.from}">
-        <div class="message-from">${m.from === 'admin' ? 'Recupera Empresas' : m.fromName || 'Você'}</div>
-        ${m.text}
-        <div class="message-ts">${new Date(m.ts).toLocaleString('pt-BR')}</div>
-      </div>
-    </div>
-  `).join('');
-  thread.scrollTop = thread.scrollHeight;
+}
+
+function scrollChatToBottom(force) {
+  const thread = document.getElementById('messageThread');
+  if (thread) thread.scrollTop = thread.scrollHeight;
+  const badge = document.getElementById('chatNewMsgsBtn');
+  if (badge) badge.style.display = 'none';
+}
+
+function autoResizeChatTextarea(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+}
+
+function handleChatKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+}
+
+function applyChatTpl(text) {
+  const ta = document.getElementById('msgInput');
+  if (ta) { ta.value = text; ta.focus(); autoResizeChatTextarea(ta); }
 }
 
 // ── Load data ─────────────────────────────────────────────────────────────────
@@ -307,8 +394,12 @@ async function sendMessage() {
   const text  = input.value.trim();
   if (!text) return;
   input.value = '';
-  await fetch('/api/messages', { method: 'POST', headers: authH(), body: JSON.stringify({ text }) });
+  autoResizeChatTextarea(input);
+  try {
+    await fetch('/api/messages', { method: 'POST', headers: authH(), body: JSON.stringify({ text }) });
+  } catch {}
   await loadMessages();
+  scrollChatToBottom();
 }
 
 // ── Mensagens polling ─────────────────────────────────────────────────────────
@@ -326,8 +417,18 @@ function startMsgPolling() {
       const { messages } = await res.json();
       if (!messages.length) return;
       _lastMsgTs = messages[messages.length - 1].ts;
+      const thread = document.getElementById('messageThread');
+      const atBottom = thread ? thread.scrollHeight - thread.scrollTop - thread.clientHeight < 60 : true;
       const full = await fetch('/api/messages', { headers: authH() });
-      if (full.ok) { const m = await full.json(); renderMessages(m.messages || []); }
+      if (full.ok) {
+        const m = await full.json();
+        renderMessages(m.messages || []);
+        if (atBottom) scrollChatToBottom();
+        else {
+          const badge = document.getElementById('chatNewMsgsBtn');
+          if (badge) badge.style.display = '';
+        }
+      }
     } catch {}
   }, 8000);
 }

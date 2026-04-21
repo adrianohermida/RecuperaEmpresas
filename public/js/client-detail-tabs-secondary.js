@@ -33,45 +33,74 @@
     }
 
     const messageTemplates = [
-      { label: 'Solicitar dados pendentes', icon: '📌', text: 'Identificamos que algumas informações estão pendentes no seu cadastro. Para avançarmos na elaboração do Business Plan, precisamos que você complemente os dados do formulário de onboarding. Caso tenha dúvidas, estamos à disposição.' },
-      { label: 'Ajuste de documento', icon: '📄', text: 'O documento enviado apresenta algumas inconsistências. Solicitamos o reenvio com as seguintes correções:\n- Verificar período das informações\n- Incluir detalhamento solicitado\n\nAssim que o ajuste for realizado, daremos continuidade à análise.' },
-      { label: 'Atualização de etapa', icon: '🔄', text: 'Informamos que estamos avançando na análise do seu processo. Atualmente, estamos na fase de estruturação do Business Plan. Caso haja qualquer atualização relevante sobre a situação da empresa, por favor nos comunique.' },
-      { label: 'Etapa aprovada', icon: '✅', text: 'Temos uma boa notícia! A etapa de diagnóstico foi concluída com sucesso. A partir de agora, seguiremos para a estruturação da estratégia de recuperação. Em breve entraremos em contato com os próximos passos.' },
-      { label: 'Agendar reunião', icon: '📅', text: 'Gostaríamos de agendar uma reunião para discutir o andamento do seu processo. Por favor, acesse a seção "Agenda" no portal e selecione um horário de sua preferência. Aguardamos sua confirmação.' },
+      { label: 'Solicitar dados pendentes', text: 'Identificamos que algumas informações estão pendentes no seu cadastro. Para avançarmos na elaboração do Business Plan, precisamos que você complemente os dados do formulário de onboarding. Caso tenha dúvidas, estamos à disposição.' },
+      { label: 'Ajuste de documento', text: 'O documento enviado apresenta algumas inconsistências. Solicitamos o reenvio com as seguintes correções:\n- Verificar período das informações\n- Incluir detalhamento solicitado\n\nAssim que o ajuste for realizado, daremos continuidade à análise.' },
+      { label: 'Atualização de etapa', text: 'Informamos que estamos avançando na análise do seu processo. Atualmente, estamos na fase de estruturação do Business Plan. Caso haja qualquer atualização relevante sobre a situação da empresa, por favor nos comunique.' },
+      { label: 'Etapa aprovada', text: 'Temos uma boa notícia! A etapa de diagnóstico foi concluída com sucesso. A partir de agora, seguiremos para a estruturação da estratégia de recuperação. Em breve entraremos em contato com os próximos passos.' },
+      { label: 'Agendar reunião', text: 'Gostaríamos de agendar uma reunião para discutir o andamento do seu processo. Por favor, acesse a seção "Agenda" no portal e selecione um horário de sua preferência. Aguardamos sua confirmação.' },
     ];
+    window._msgTemplates = messageTemplates;
+
+    function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+    function initials(name) { const p = String(name||'U').trim().split(' '); return (p[0][0]+(p[1]?.[0]||'')).toUpperCase(); }
+    function dateLabel(iso) {
+      const d = new Date(iso), today = new Date(), yest = new Date();
+      yest.setDate(today.getDate()-1);
+      if (d.toDateString()===today.toDateString()) return 'Hoje';
+      if (d.toDateString()===yest.toDateString()) return 'Ontem';
+      return d.toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
+    }
+    function buildThread(msgs) {
+      if (!msgs.length) return '<div class="empty-state"><p>Nenhuma mensagem ainda.</p></div>';
+      let html='', lastDate='', lastSender='';
+      msgs.forEach((m, i) => {
+        const role = m.from_role || m.from || 'client';
+        const isMe = role === 'admin';
+        const isSystem = role === 'system';
+        const dl = dateLabel(m.ts);
+        const time = new Date(m.ts).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+        const senderName = isMe ? '' : esc(m.from_name || 'Cliente');
+        const avInit = initials(m.from_name || (role==='admin'?'RE':'CL'));
+        const avClass = role==='admin' ? 'role-admin' : 'role-client';
+        const sameAsPrev = lastSender===role && lastDate===dl;
+        const next = msgs[i+1];
+        const sameAsNext = next && (next.from_role||next.from)===role && dateLabel(next.ts)===dl;
+        if (dl!==lastDate) { html+=`<div class="chat-date-sep"><span>${esc(dl)}</span></div>`; lastDate=dl; lastSender=''; }
+        if (isSystem) { html+=`<div class="chat-msg-row from-system"><div class="chat-bubble">⚙️ <span class="chat-bubble-text">${esc(m.text)}</span></div></div>`; lastSender=role; return; }
+        const rowClass = isMe?'from-me':'from-them';
+        const showAv = !isMe && !sameAsNext;
+        const avHtml = !isMe ? `<div class="chat-avatar ${avClass}${showAv?'':' hidden'}">${esc(avInit)}</div>` : '';
+        html+=`<div class="chat-msg-row ${rowClass}">${avHtml}<div class="chat-bubble">${(!isMe&&!sameAsPrev)?`<div class="chat-bubble-name">${senderName||'Cliente'}</div>`:''}<div class="chat-bubble-text">${esc(m.text)}</div><div class="chat-bubble-meta"><span>${time}</span>${isMe?'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>':''}</div></div></div>`;
+        lastSender=role;
+      });
+      return html;
+    }
 
     body.innerHTML = `
-      <div class="msg-templates-label">Mensagens rápidas</div>
-      <div class="msg-templates">
-        ${messageTemplates.map((template, index) => `
-          <button class="msg-template-btn" onclick="applyMsgTemplate(${index})">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-            ${template.label}
-          </button>`).join('')}
-      </div>
-      <div class="message-thread cds-message-thread" id="adminMsgThread">
-        ${!messages.length
-          ? '<div class="empty-state"><p>Nenhuma mensagem.</p></div>'
-          : messages.map(message => `<div>
-              <div class="message-bubble from-${message.fromRole || message.from}">
-                <div class="message-from">${(message.fromRole || message.from) === 'admin' ? 'Recupera Empresas' : message.fromName || 'Cliente'}</div>
-                ${message.text}
-                <div class="message-ts">${new Date(message.ts).toLocaleString('pt-BR')}</div>
-              </div>
-            </div>`).join('')}
-      </div>
-      <div class="message-input-row cds-message-input-row">
-        <input type="text" class="message-input" id="adminMsgInput" placeholder="Escrever mensagem ao cliente..."
-               onkeydown="if(event.key==='Enter')sendAdminMessage()"/>
-        <button class="btn-send" onclick="sendAdminMessage()">Enviar</button>
+      <div class="chat-container" id="adminChatBox" style="height:460px">
+        <div class="chat-thread" id="adminMsgThread">${buildThread(messages||[])}</div>
+        <div class="chat-admin-tpl-section">
+          <div class="chat-admin-tpl-label">Mensagens rápidas</div>
+          <div class="chat-admin-tpl-list">
+            ${messageTemplates.map((t,i)=>`<button class="chat-tpl-btn" onclick="applyMsgTemplate(${i})">${esc(t.label)}</button>`).join('')}
+          </div>
+        </div>
+        <div class="chat-footer">
+          <div class="chat-input-row">
+            <textarea class="chat-textarea" id="adminMsgInput" placeholder="Escrever mensagem ao cliente..." rows="1"
+              onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendAdminMessage();}"
+              oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px'"></textarea>
+            <button class="chat-btn-send" onclick="sendAdminMessage()" title="Enviar">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            </button>
+          </div>
+        </div>
       </div>`;
 
     setTimeout(() => {
       const thread = document.getElementById('adminMsgThread');
       if (thread) thread.scrollTop = thread.scrollHeight;
     }, 50);
-
-    window._msgTemplates = messageTemplates;
   }
 
   async function renderAgenda(context) {

@@ -6,7 +6,7 @@
   <meta name="robots" content="noindex, nofollow"/>
   <title>Portal do Cliente — Recupera Empresas</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
-  <link rel="stylesheet" href="/css/portal.css?v=20260421s"/>
+  <link rel="stylesheet" href="/css/portal.css?v=20260421v"/>
   <script src="/js/config.js?v=20260421s"></script>
   <script src="/js/runtime-diagnostics.js?v=20260421s"></script>
   <script src="/js/api-base.js?v=20260421s"></script>
@@ -289,14 +289,27 @@
           <div class="section-sub">Comunicação com a equipe Recupera Empresas</div>
         </div>
       </div>
-      <div class="portal-card">
-        <div class="portal-card-body">
-          <div class="message-thread" id="messageThread">
+      <div class="portal-card" style="padding:0;overflow:hidden;">
+        <div class="chat-container" id="chatBox">
+          <div class="chat-thread" id="messageThread">
             <div class="empty-state"><p>Nenhuma mensagem ainda. Dúvidas? Escreva para nós.</p></div>
           </div>
-          <div class="message-input-row">
-            <input type="text" class="message-input" id="msgInput" placeholder="Escreva sua mensagem..." onkeydown="if(event.key==='Enter')sendMessage()"/>
-            <button class="btn-send" onclick="sendMessage()">Enviar</button>
+          <button class="chat-new-msgs-btn" id="chatNewMsgsBtn" onclick="scrollChatToBottom(true)">↓ Novas mensagens</button>
+          <div class="chat-footer">
+            <div class="chat-templates" id="chatTemplates">
+              <button class="chat-tpl-btn" onclick="applyChatTpl('Olá! Gostaria de saber como está o andamento do meu processo.')">📋 Status do processo</button>
+              <button class="chat-tpl-btn" onclick="applyChatTpl('Tenho uma dúvida sobre o Business Plan.')">❓ Dúvida sobre BP</button>
+              <button class="chat-tpl-btn" onclick="applyChatTpl('Preciso agendar uma reunião.')">📅 Agendar reunião</button>
+              <button class="chat-tpl-btn" onclick="applyChatTpl('Enviei um documento para análise.')">📎 Documento enviado</button>
+            </div>
+            <div class="chat-input-row">
+              <textarea class="chat-textarea" id="msgInput" placeholder="Escreva sua mensagem..." rows="1"
+                onkeydown="handleChatKey(event)"
+                oninput="autoResizeChatTextarea(this)"></textarea>
+              <button class="chat-btn-send" onclick="sendMessage()" title="Enviar">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -710,7 +723,7 @@
 <div class="toast" id="toast"></div>
 
 <!-- Dashboard modules -->
-<script src="/js/dashboard-core.js?v=20260421s"></script>
+<script src="/js/dashboard-core.js?v=20260421v"></script>
 <script src="/js/dashboard-support.js?v=20260421s"></script>
 <script src="/js/dashboard-appointments.js?v=20260421s"></script>
 <script src="/js/dashboard-finance.js?v=20260421s"></script>
