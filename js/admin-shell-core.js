@@ -120,15 +120,75 @@ function showSection(name, el) {
 }
 
 var _allClients = [];
+var _clientSelection = new Set();
+var _clientFilters = {
+  query: '',
+  status: 'all',
+  step: 'all',
+  hasPendingTasks: false,
+  hasUnread: false,
+};
 
-function filterClients() {
-  var query = (document.getElementById('clientSearch')?.value || '').toLowerCase();
-  var filtered = _allClients.filter(function (client) {
-    return (client.company || '').toLowerCase().includes(query)
+function getFilteredClients() {
+  var query = String(_clientFilters.query || '').toLowerCase();
+  return _allClients.filter(function (client) {
+    var matchesQuery = !query
+      || (client.company || '').toLowerCase().includes(query)
       || (client.name || '').toLowerCase().includes(query)
       || (client.email || '').toLowerCase().includes(query);
+    var matchesStatus = _clientFilters.status === 'all' || String(client.status || '') === _clientFilters.status;
+    var matchesStep = _clientFilters.step === 'all' || String(client.step || '') === _clientFilters.step;
+    var matchesTasks = !_clientFilters.hasPendingTasks || Number(client.pendingTasks || 0) > 0;
+    var matchesUnread = !_clientFilters.hasUnread || Number(_unreadMsgs[client.id] || 0) > 0;
+    return matchesQuery && matchesStatus && matchesStep && matchesTasks && matchesUnread;
   });
+}
+
+function updateClientSelectAllState(visibleClients) {
+  var selectAll = document.getElementById('clientSelectAll');
+  if (!selectAll) return;
+  if (!visibleClients.length) {
+    selectAll.checked = false;
+    selectAll.indeterminate = false;
+    return;
+  }
+  var selectedVisible = visibleClients.filter(function (client) { return _clientSelection.has(client.id); }).length;
+  selectAll.checked = selectedVisible > 0 && selectedVisible === visibleClients.length;
+  selectAll.indeterminate = selectedVisible > 0 && selectedVisible < visibleClients.length;
+}
+
+function updateClientBulkToolbar(visibleClients) {
+  var selected = Array.from(_clientSelection);
+  var summary = document.getElementById('clientBulkSummary');
+  var toolbar = document.getElementById('clientBulkToolbar');
+  if (toolbar) toolbar.classList.toggle('has-selection', selected.length > 0);
+  if (summary) {
+    if (!selected.length) {
+      summary.textContent = visibleClients.length
+        ? visibleClients.length + ' cliente(s) visível(is).'
+        : 'Nenhum cliente corresponde aos filtros atuais.';
+    } else {
+      summary.textContent = selected.length + ' cliente(s) selecionado(s) para ações em lote.';
+    }
+  }
+  updateClientSelectAllState(visibleClients);
+}
+
+function refreshClientsView() {
+  var filtered = getFilteredClients();
   renderClientTable(filtered);
+  var clientsSub = document.getElementById('clientsSub');
+  if (clientsSub) {
+    clientsSub.textContent = filtered.length === _allClients.length
+      ? _allClients.length + ' cliente' + (_allClients.length !== 1 ? 's' : '') + ' cadastrado' + (_allClients.length !== 1 ? 's' : '')
+      : filtered.length + ' de ' + _allClients.length + ' clientes visíveis';
+  }
+  updateClientBulkToolbar(filtered);
+}
+
+function filterClients() {
+  _clientFilters.query = document.getElementById('clientSearch')?.value || '';
+  refreshClientsView();
 }
 
 var _unreadMsgs = {};
@@ -137,7 +197,8 @@ function renderClientTable(clients) {
   var tbody = document.getElementById('clientTableBody');
   if (!tbody) return;
   if (!clients.length) {
-    tbody.innerHTML = '<tr><td colspan="7" class="admin-client-empty-cell">Nenhum cliente encontrado.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" class="admin-client-empty-cell">Nenhum cliente encontrado.</td></tr>';
+    updateClientBulkToolbar(clients);
     return;
   }
 
@@ -149,10 +210,16 @@ function renderClientTable(clients) {
     var msgBadge = unread
       ? '<span class="badge badge-red admin-unread-pulse">' + unread + '</span>'
       : '<span class="admin-client-empty-dash">—</span>';
-    return `<tr onclick="openClient('${client.id}')">
+    var checked = _clientSelection.has(client.id) ? ' checked' : '';
+    return `<tr class="admin-client-row${checked ? ' is-selected' : ''}" data-client-id="${client.id}">
+      <td class="admin-client-check-col" onclick="event.stopPropagation()">
+        <input type="checkbox" aria-label="Selecionar ${client.company || client.name || client.email}"${checked} onchange="toggleClientSelection('${client.id}', this.checked)"/>
+      </td>
       <td>
-        <div class="company-cell">${client.company || client.name}</div>
-        <div class="email-cell">${client.email}</div>
+        <button class="admin-client-primary-link" type="button" onclick="openClient('${client.id}')">
+          <div class="company-cell">${client.company || client.name}</div>
+          <div class="email-cell">${client.email}</div>
+        </button>
       </td>
       <td><span class="badge ${status.cls}">${status.label}</span></td>
       <td>
@@ -165,13 +232,183 @@ function renderClientTable(clients) {
       <td class="admin-client-meta">${lastActivity}</td>
       <td>${client.pendingTasks ? `<span class="badge badge-amber">${client.pendingTasks}</span>` : '<span class="admin-client-empty-dash">—</span>'}</td>
       <td>${msgBadge}</td>
+      <td class="admin-client-actions-col" onclick="event.stopPropagation()">
+        <div class="admin-client-row-actions">
+          <button class="btn btn-secondary btn-sm" type="button" onclick="window.location.href='/suporte-admin?ids=${client.id}'">Suporte</button>
+          <button class="btn btn-secondary btn-sm" type="button" onclick="window.location.href='/tarefas-admin?ids=${client.id}'">Tarefas</button>
+          <button class="btn btn-secondary btn-sm" type="button" onclick="window.location.href='/documentos-admin?ids=${client.id}'">Docs</button>
+        </div>
+      </td>
     </tr>`;
   }).join('');
 
   tbody.querySelectorAll('.mini-progress-fill').forEach(function (bar) {
     window.REShared.applyPercentClass(bar, bar.dataset.progress || 0);
   });
+  updateClientBulkToolbar(clients);
 }
+
+function toggleClientSelection(clientId, checked) {
+  if (checked) _clientSelection.add(clientId);
+  else _clientSelection.delete(clientId);
+  refreshClientsView();
+}
+
+function toggleAllVisibleClients(checked) {
+  getFilteredClients().forEach(function (client) {
+    if (checked) _clientSelection.add(client.id);
+    else _clientSelection.delete(client.id);
+  });
+  refreshClientsView();
+}
+
+function clearSelectedClients() {
+  _clientSelection.clear();
+  refreshClientsView();
+}
+
+function getSelectedClients() {
+  return _allClients.filter(function (client) { return _clientSelection.has(client.id); });
+}
+
+function openBulkClientPage(kind) {
+  var selected = getSelectedClients();
+  if (!selected.length) {
+    showToast('Selecione ao menos um cliente.', 'error');
+    return;
+  }
+  var pathMap = {
+    support: '/suporte-admin',
+    tasks: '/tarefas-admin',
+    documents: '/documentos-admin',
+  };
+  window.location.href = pathMap[kind] + '?ids=' + encodeURIComponent(selected.map(function (client) { return client.id; }).join(','));
+}
+
+function copySelectedClientEmails() {
+  var emails = getSelectedClients().map(function (client) { return client.email; }).filter(Boolean);
+  if (!emails.length) {
+    showToast('Nenhum e-mail disponível para copiar.', 'error');
+    return;
+  }
+  var payload = emails.join(', ');
+  var copyPromise = navigator.clipboard && navigator.clipboard.writeText
+    ? navigator.clipboard.writeText(payload)
+    : Promise.reject(new Error('clipboard_unavailable'));
+  copyPromise
+    .then(function () { showToast('E-mails copiados.', 'success'); })
+    .catch(function () {
+      var input = document.createElement('textarea');
+      input.value = payload;
+      document.body.appendChild(input);
+      input.select();
+      document.execCommand('copy');
+      input.remove();
+      showToast('E-mails copiados.', 'success');
+    });
+}
+
+function exportSelectedClients(format) {
+  var selected = getSelectedClients();
+  if (!selected.length) {
+    showToast('Selecione ao menos um cliente.', 'error');
+    return;
+  }
+  selected.forEach(function (client, index) {
+    setTimeout(function () {
+      if (format === 'pdf') exportClientPDF(client.id);
+      else exportClientXLS(client.id);
+    }, index * 250);
+  });
+  showToast('Exportação em lote iniciada.', 'success');
+}
+
+function openClientFilters() {
+  var wrapper = document.createElement('div');
+  wrapper.innerHTML = `
+    <div class="page-field-row">
+      <div class="form-group">
+        <label class="form-label" for="clientFilterStatus">Status</label>
+        <select class="form-input" id="clientFilterStatus">
+          <option value="all">Todos</option>
+          <option value="nao_iniciado">Não iniciado</option>
+          <option value="em_andamento">Em andamento</option>
+          <option value="concluido">Concluído</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="clientFilterStep">Etapa</label>
+        <select class="form-input" id="clientFilterStep">
+          <option value="all">Todas</option>
+          ${Array.from({ length: 14 }).map(function (_, index) {
+            var step = index + 1;
+            return '<option value="' + step + '">Etapa ' + step + ' · ' + (STEP_TITLES[step] || 'Etapa') + '</option>';
+          }).join('')}
+        </select>
+      </div>
+    </div>
+    <div class="page-toggle-row">
+      <div>
+        <div class="page-toggle-label">Somente com tarefas pendentes</div>
+        <div class="page-toggle-desc">Foca clientes com demanda operacional em aberto.</div>
+      </div>
+      <label class="page-toggle">
+        <input type="checkbox" id="clientFilterPendingTasks"/>
+        <span class="page-toggle-track"></span>
+      </label>
+    </div>
+    <div class="page-toggle-row">
+      <div>
+        <div class="page-toggle-label">Somente com mensagens não lidas</div>
+        <div class="page-toggle-desc">Destaca clientes com retorno pendente da equipe.</div>
+      </div>
+      <label class="page-toggle">
+        <input type="checkbox" id="clientFilterUnread"/>
+        <span class="page-toggle-track"></span>
+      </label>
+    </div>`;
+
+  wrapper.querySelector('#clientFilterStatus').value = _clientFilters.status;
+  wrapper.querySelector('#clientFilterStep').value = _clientFilters.step;
+  wrapper.querySelector('#clientFilterPendingTasks').checked = !!_clientFilters.hasPendingTasks;
+  wrapper.querySelector('#clientFilterUnread').checked = !!_clientFilters.hasUnread;
+
+  window.REPortalUI.useDrawer({
+    title: 'Filtros de clientes',
+    subtitle: 'Refine a lista antes de aplicar ações em lote.',
+    content: wrapper,
+    actions: [{
+      label: 'Limpar filtros',
+      onClick: function () {
+        _clientFilters.status = 'all';
+        _clientFilters.step = 'all';
+        _clientFilters.hasPendingTasks = false;
+        _clientFilters.hasUnread = false;
+        refreshClientsView();
+        return true;
+      }
+    }, {
+      label: 'Aplicar filtros',
+      tone: 'primary',
+      onClick: function () {
+        _clientFilters.status = wrapper.querySelector('#clientFilterStatus').value;
+        _clientFilters.step = wrapper.querySelector('#clientFilterStep').value;
+        _clientFilters.hasPendingTasks = wrapper.querySelector('#clientFilterPendingTasks').checked;
+        _clientFilters.hasUnread = wrapper.querySelector('#clientFilterUnread').checked;
+        refreshClientsView();
+        return true;
+      }
+    }]
+  });
+}
+
+window.toggleClientSelection = toggleClientSelection;
+window.toggleAllVisibleClients = toggleAllVisibleClients;
+window.clearSelectedClients = clearSelectedClients;
+window.copySelectedClientEmails = copySelectedClientEmails;
+window.exportSelectedClients = exportSelectedClients;
+window.openBulkClientPage = openBulkClientPage;
+window.openClientFilters = openClientFilters;
 
 console.info('[RE:admin-shell-core] loaded');
 

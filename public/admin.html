@@ -171,9 +171,15 @@
           <div class="section-title">Clientes</div>
           <div class="section-sub" id="clientsSub">Carregando...</div>
         </div>
-        <div class="search-wrap">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input type="text" class="search-input" id="clientSearch" placeholder="Buscar cliente..." oninput="filterClients()"/>
+        <div class="admin-clients-toolbar-actions">
+          <div class="search-wrap admin-clients-search-wrap">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" class="search-input" id="clientSearch" placeholder="Buscar cliente..." oninput="filterClients()"/>
+          </div>
+          <button class="btn btn-secondary admin-clients-filter-btn" type="button" onclick="openClientFilters()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+            Filtros
+          </button>
         </div>
       </div>
 
@@ -209,11 +215,45 @@
         </div>
       </div>
 
+      <div class="admin-bulk-toolbar" id="clientBulkToolbar">
+        <div class="admin-bulk-toolbar-copy">
+          <div class="admin-bulk-toolbar-title">Ações em lote</div>
+          <div class="admin-bulk-toolbar-sub" id="clientBulkSummary">Nenhum cliente selecionado.</div>
+        </div>
+        <div class="admin-bulk-toolbar-actions">
+          <button class="btn btn-secondary btn-sm" type="button" onclick="openBulkClientPage('support')">Suporte</button>
+          <button class="btn btn-secondary btn-sm" type="button" onclick="openBulkClientPage('tasks')">Tarefas</button>
+          <button class="btn btn-secondary btn-sm" type="button" onclick="openBulkClientPage('documents')">Documentos</button>
+          <button class="btn btn-secondary btn-sm" type="button" onclick="copySelectedClientEmails()">Copiar e-mails</button>
+          <button class="btn btn-secondary btn-sm" type="button" onclick="exportSelectedClients('xlsx')">Exportar XLS</button>
+          <button class="btn btn-secondary btn-sm" type="button" onclick="exportSelectedClients('pdf')">Exportar PDF</button>
+          <button class="btn btn-ghost btn-sm" type="button" onclick="clearSelectedClients()">Limpar</button>
+        </div>
+      </div>
+
+      <div class="admin-clients-module-grid">
+        <a class="admin-clients-module-card" href="/suporte-admin">
+          <div class="admin-clients-module-title">Suporte</div>
+          <div class="admin-clients-module-sub">Mensagens administrativas, ticket Freshdesk e contexto do atendimento.</div>
+        </a>
+        <a class="admin-clients-module-card" href="/tarefas-admin">
+          <div class="admin-clients-module-title">Tarefas</div>
+          <div class="admin-clients-module-sub">Fila operacional por cliente com criação rápida a partir do admin.</div>
+        </a>
+        <a class="admin-clients-module-card" href="/documentos-admin">
+          <div class="admin-clients-module-title">Documentos</div>
+          <div class="admin-clients-module-sub">Revisão, status e pendências documentais em páginas dedicadas.</div>
+        </a>
+      </div>
+
       <div class="portal-card">
         <div class="admin-table-wrap">
           <table class="client-table" id="clientTable">
             <thead>
               <tr>
+                <th class="admin-client-check-col">
+                  <input type="checkbox" id="clientSelectAll" aria-label="Selecionar clientes visíveis" onchange="toggleAllVisibleClients(this.checked)"/>
+                </th>
                 <th>Empresa / Cliente</th>
                 <th>Status</th>
                 <th>Progresso</th>
@@ -221,10 +261,11 @@
                 <th>Última atividade</th>
                 <th>Tarefas</th>
                 <th>Msgs</th>
+                <th class="admin-client-actions-col">Ações</th>
               </tr>
             </thead>
             <tbody id="clientTableBody">
-              <tr><td colspan="7" class="admin-client-empty-cell">Carregando...</td></tr>
+              <tr><td colspan="9" class="admin-client-empty-cell">Carregando...</td></tr>
             </tbody>
           </table>
         </div>

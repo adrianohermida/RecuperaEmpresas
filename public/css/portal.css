@@ -6159,3 +6159,227 @@ body {
     border-radius: 18px;
   }
 }
+
+.admin-clients-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.admin-clients-search-wrap {
+  min-width: min(360px, 100%);
+}
+
+.admin-bulk-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 18px 0;
+  padding: 16px 18px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 18px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+}
+
+.admin-bulk-toolbar.has-selection {
+  border-color: rgba(37, 99, 235, 0.28);
+  box-shadow: 0 18px 38px rgba(37, 99, 235, 0.08);
+}
+
+.admin-bulk-toolbar-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--dark);
+}
+
+.admin-bulk-toolbar-sub {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+.admin-bulk-toolbar-actions,
+.admin-client-row-actions,
+.ops-hero-grid,
+.ops-message-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.admin-clients-module-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.admin-clients-module-card {
+  display: block;
+  padding: 18px;
+  border-radius: 18px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+  text-decoration: none;
+  color: inherit;
+}
+
+.admin-clients-module-title,
+.ops-client-card-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--dark);
+}
+
+.admin-clients-module-sub,
+.ops-client-card-meta,
+.ops-client-card-foot,
+.ops-message-head span {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-top: 6px;
+}
+
+.admin-client-check-col {
+  width: 48px;
+  text-align: center;
+}
+
+.admin-client-actions-col {
+  width: 220px;
+}
+
+.admin-client-primary-link {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.admin-client-row.is-selected {
+  background: rgba(37, 99, 235, 0.05);
+}
+
+.ops-page-shell {
+  max-width: 1380px;
+}
+
+.ops-workspace {
+  display: grid;
+  grid-template-columns: minmax(280px, 340px) minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.ops-client-rail,
+.ops-main-panel {
+  min-height: 420px;
+}
+
+.ops-client-rail {
+  position: sticky;
+  top: 88px;
+  padding: 22px;
+}
+
+.ops-client-search {
+  margin: 14px 0 18px;
+}
+
+.ops-client-list,
+.ops-panel-stack,
+.ops-message-list {
+  display: grid;
+  gap: 12px;
+}
+
+.ops-client-card {
+  display: block;
+  width: 100%;
+  padding: 14px 16px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.92);
+  text-align: left;
+  cursor: pointer;
+}
+
+.ops-client-card.active {
+  border-color: rgba(37, 99, 235, 0.4);
+  box-shadow: 0 18px 30px rgba(37, 99, 235, 0.08);
+}
+
+.ops-client-card-top,
+.ops-document-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ops-main-panel {
+  padding: 22px;
+}
+
+.ops-hero-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.ops-message-card,
+.ops-document-card {
+  padding: 16px 18px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.94);
+}
+
+.ops-message-head {
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+@media (max-width: 1120px) {
+  .admin-clients-module-grid,
+  .ops-hero-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ops-workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .ops-client-rail {
+    position: static;
+  }
+}
+
+@media (max-width: 768px) {
+  .admin-bulk-toolbar,
+  .admin-clients-toolbar-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .admin-bulk-toolbar-actions,
+  .admin-client-row-actions {
+    width: 100%;
+  }
+
+  .admin-bulk-toolbar-actions .btn,
+  .admin-client-row-actions .btn {
+    flex: 1;
+    justify-content: center;
+  }
+
+  .admin-client-actions-col {
+    width: auto;
+  }
+}
