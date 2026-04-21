@@ -414,6 +414,7 @@ async function fbSaveFormSettings() {
   const publicEnabled = document.getElementById('fb-settings-public-enabled')?.checked || false;
   const publicResume = document.getElementById('fb-settings-public-resume')?.checked !== false;
   const publicCapture = document.getElementById('fb-settings-public-capture')?.checked !== false;
+  const publicCaptcha = document.getElementById('fb-settings-public-captcha')?.checked === true;
   const publicSlugInput = document.getElementById('fb-settings-public-slug');
   const publicSlug = fbSlugify(publicSlugInput?.value || title || 'formulario');
   const publicLayout = document.getElementById('fb-settings-public-layout')?.value || 'focus';
@@ -428,6 +429,7 @@ async function fbSaveFormSettings() {
       slug: publicSlug,
       allow_resume: publicResume,
       capture_lead: publicCapture,
+      require_captcha: publicCaptcha,
       layout: publicLayout,
       title,
       description: desc,
@@ -458,6 +460,7 @@ function fbToggleSettings() {
     document.getElementById('fb-settings-public-enabled').checked = publicConfig.enabled === true;
     document.getElementById('fb-settings-public-resume').checked = publicConfig.allow_resume !== false;
     document.getElementById('fb-settings-public-capture').checked = publicConfig.capture_lead !== false;
+    document.getElementById('fb-settings-public-captcha').checked = publicConfig.require_captcha === true;
     document.getElementById('fb-settings-public-slug').value = publicConfig.slug || fbSlugify(FB.currentForm.title || 'formulario');
     document.getElementById('fb-settings-public-layout').value = publicConfig.layout || 'focus';
     const publicUrl = `${location.origin}/formulario/${document.getElementById('fb-settings-public-slug').value}`;

@@ -58,6 +58,7 @@
     const op = String(operator || 'equals').toLowerCase();
     const actual = toComparable(answer);
     const expected = toComparable(expectedValue);
+    if (op === 'else') return false;
     if (Array.isArray(actual)) {
       if (op === 'contains') return actual.includes(expected);
       if (op === 'not_contains') return !actual.includes(expected);
@@ -82,6 +83,29 @@
       if (op === 'less_or_equal') return actualNum <= expectedNum;
     }
     return false;
+  }
+
+  function resolveConditionalRules(rules, answers) {
+    const groups = new Map();
+    for (const rule of (rules || [])) {
+      const sourceId = String(rule?.source_question_id || '');
+      if (!sourceId) continue;
+      if (!groups.has(sourceId)) groups.set(sourceId, []);
+      groups.get(sourceId).push(rule);
+    }
+    const resolved = [];
+    for (const [sourceId, sourceRules] of groups.entries()) {
+      const answer = answers?.[sourceId];
+      const primary = sourceRules.filter((rule) => String(rule?.operator || '').toLowerCase() !== 'else');
+      const fallback = sourceRules.filter((rule) => String(rule?.operator || '').toLowerCase() === 'else');
+      const matched = primary.filter((rule) => evalCondition(answer, rule.operator, rule.condition_value));
+      if (matched.length) {
+        resolved.push(...matched);
+      } else if (fallback.length) {
+        resolved.push(...fallback);
+      }
+    }
+    return resolved;
   }
 
   function computeQuestionScore(question, answerValue) {
@@ -123,6 +147,7 @@
       onReady: typeof options.onReady === 'function' ? options.onReady : null,
       onStateChange: typeof options.onStateChange === 'function' ? options.onStateChange : null,
       resolveLead: typeof options.resolveLead === 'function' ? options.resolveLead : null,
+      resolveCaptchaToken: typeof options.resolveCaptchaToken === 'function' ? options.resolveCaptchaToken : null,
     };
 
     const state = {
@@ -208,13 +233,9 @@
     function isQuestionHidden(questionId) {
       const question = getQuestion(questionId);
       if (!question) return true;
-      const ruleList = state.form?.logic || [];
+      const ruleList = resolveConditionalRules((state.form?.logic || []).filter((rule) => String(rule.target_question_id || '') === String(questionId)), state.answers);
       let hidden = false;
       for (const rule of ruleList) {
-        if (String(rule.target_question_id || '') !== String(questionId)) continue;
-        const sourceAnswer = state.answers[String(rule.source_question_id)];
-        const matched = evalCondition(sourceAnswer, rule.operator, rule.condition_value);
-        if (!matched) continue;
         const action = String(rule.action || '').toLowerCase();
         if (action === 'hide_question') hidden = true;
         if (action === 'show_question') hidden = false;
@@ -223,13 +244,9 @@
     }
 
     function isPageHidden(pageId) {
-      const rules = state.form?.logic || [];
+      const rules = resolveConditionalRules((state.form?.logic || []).filter((rule) => String(rule.target_page_id || '') === String(pageId)), state.answers);
       let hidden = false;
       for (const rule of rules) {
-        if (String(rule.target_page_id || '') !== String(pageId)) continue;
-        const sourceAnswer = state.answers[String(rule.source_question_id)];
-        const matched = evalCondition(sourceAnswer, rule.operator, rule.condition_value);
-        if (!matched) continue;
         const action = String(rule.action || '').toLowerCase();
         if (action === 'hide_page') hidden = true;
         if (action === 'show_page') hidden = false;
@@ -266,13 +283,11 @@
     function getJumpTargetIndex(step) {
       const questions = step?.questions || [];
       for (const question of questions) {
-        const answer = state.answers[String(question.id)];
-        const matchingRule = (state.form?.logic || []).find((rule) => {
+        const matchingRule = resolveConditionalRules((state.form?.logic || []).filter((rule) => {
           if (String(rule.source_question_id || '') !== String(question.id)) return false;
           const action = String(rule.action || '').toLowerCase();
-          if (!['skip_to_page', 'go_to_page'].includes(action)) return false;
-          return evalCondition(answer, rule.operator, rule.condition_value);
-        });
+          return ['skip_to_page', 'go_to_page'].includes(action);
+        }), state.answers)[0];
         if (matchingRule?.target_page_id) {
           const index = state.sequence.findIndex((entry) => String(entry.page?.id) === String(matchingRule.target_page_id));
           if (index >= 0) return index;
@@ -311,6 +326,12 @@
       return `<div class="fp-media-image-wrap"><img class="fp-media-image" src="${esc(mediaUrl)}" alt="${esc(settings.alt || settings.caption || 'Mídia do formulário')}"></div>${caption}`;
     }
 
+    function getInputPrivacyAttrs(questionId, fieldType) {
+      if (config.mode !== 'authenticated') return '';
+      const token = fieldType || 'field';
+      return ` autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" name="fp-auth-${token}-${questionId || 'lead'}"`;
+    }
+
     function renderInput(question) {
       const questionId = String(question.id);
       const answer = state.answers[questionId];
@@ -327,19 +348,19 @@
         return `<div class="fp-media-block">${renderMedia(settings)}</div>`;
       }
       if (question.type === 'short_text') {
-        return `<input class="portal-input fp-text-input" data-question-id="${questionId}" type="text" value="${esc(answer || '')}" placeholder="${placeholder}">`;
+        return `<input class="portal-input fp-text-input" data-question-id="${questionId}" type="text" value="${esc(answer || '')}" placeholder="${placeholder}"${getInputPrivacyAttrs(questionId, 'text')}>`;
       }
       if (question.type === 'long_text') {
-        return `<textarea class="portal-input fp-textarea-input" data-question-id="${questionId}" rows="5" placeholder="${placeholder}">${esc(answer || '')}</textarea>`;
+        return `<textarea class="portal-input fp-textarea-input" data-question-id="${questionId}" rows="5" placeholder="${placeholder}"${getInputPrivacyAttrs(questionId, 'textarea')}>${esc(answer || '')}</textarea>`;
       }
       if (['number', 'currency', 'percentage'].includes(question.type)) {
-        return `<input class="portal-input fp-text-input" data-question-id="${questionId}" type="number" value="${esc(answer || '')}" placeholder="${placeholder || '0'}">`;
+        return `<input class="portal-input fp-text-input" data-question-id="${questionId}" type="number" value="${esc(answer || '')}" placeholder="${placeholder || '0'}"${getInputPrivacyAttrs(questionId, 'number')}>`;
       }
       if (question.type === 'date') {
-        return `<input class="portal-input fp-text-input" data-question-id="${questionId}" type="date" value="${esc(answer || '')}">`;
+        return `<input class="portal-input fp-text-input" data-question-id="${questionId}" type="date" value="${esc(answer || '')}"${getInputPrivacyAttrs(questionId, 'date')}>`;
       }
       if (question.type === 'dropdown') {
-        return `<select class="portal-input fp-select-input" data-question-id="${questionId}">
+        return `<select class="portal-input fp-select-input" data-question-id="${questionId}"${getInputPrivacyAttrs(questionId, 'select')}>
           <option value="">Selecione...</option>
           ${options.map((option) => `<option value="${esc(option.value)}" ${String(answer || '') === String(option.value) ? 'selected' : ''}>${esc(option.label)}</option>`).join('')}
         </select>`;
@@ -406,7 +427,7 @@
         const score = computeScoreSnapshot();
         return `<div class="fp-score-card"><div class="fp-score-value">${score.pct == null ? '—' : `${Math.round(score.pct)}%`}</div><div class="fp-score-meta">${score.total.toFixed(1)} / ${score.max} pontos</div></div>`;
       }
-      return `<input class="portal-input fp-text-input" data-question-id="${questionId}" type="text" value="${esc(answer || '')}" placeholder="${placeholder}">`;
+      return `<input class="portal-input fp-text-input" data-question-id="${questionId}" type="text" value="${esc(answer || '')}" placeholder="${placeholder}"${getInputPrivacyAttrs(questionId, 'text')}>`;
     }
 
     function renderQuestion(question) {
@@ -427,10 +448,10 @@
       return `<section class="fp-lead-card">
         <div class="fp-lead-title">Identificação</div>
         <div class="fp-lead-grid">
-          <input class="portal-input" data-lead-field="name" placeholder="Nome" value="${esc(lead.name || '')}">
-          <input class="portal-input" data-lead-field="email" placeholder="E-mail" value="${esc(lead.email || '')}">
-          <input class="portal-input" data-lead-field="company" placeholder="Empresa" value="${esc(lead.company || '')}">
-          <input class="portal-input" data-lead-field="phone" placeholder="Telefone" value="${esc(lead.phone || '')}">
+          <input class="portal-input" data-lead-field="name" placeholder="Nome" value="${esc(lead.name || '')}"${getInputPrivacyAttrs('lead-name', 'text')}>
+          <input class="portal-input" data-lead-field="email" placeholder="E-mail" value="${esc(lead.email || '')}"${getInputPrivacyAttrs('lead-email', 'email')}>
+          <input class="portal-input" data-lead-field="company" placeholder="Empresa" value="${esc(lead.company || '')}"${getInputPrivacyAttrs('lead-company', 'text')}>
+          <input class="portal-input" data-lead-field="phone" placeholder="Telefone" value="${esc(lead.phone || '')}"${getInputPrivacyAttrs('lead-phone', 'tel')}>
         </div>
       </section>`;
     }
@@ -523,10 +544,16 @@
       state.saving = true;
       setStatus(status === 'concluido' ? 'Enviando respostas...' : 'Salvando progresso...', 'info');
       try {
+        let captchaToken = null;
+        if (status === 'concluido' && config.resolveCaptchaToken) {
+          captchaToken = await config.resolveCaptchaToken(getSnapshot());
+          if (!captchaToken) throw new Error('Não foi possível validar o captcha.');
+        }
         const payload = {
           ...getSnapshot(),
           status,
           visitor: config.resolveLead ? config.resolveLead(getSnapshot()) : null,
+          captcha_token: captchaToken,
         };
         const result = await config.onPersist(payload);
         if (result?.response_id) state.responseId = result.response_id;

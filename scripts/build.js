@@ -74,6 +74,7 @@ const supabaseAnon = process.env.VITE_SUPABASE_ANON_KEY || process.env.NEXT_PUBL
 const freshchatEnabled = process.env.RE_ENABLE_FRESHCHAT === 'true';
 const freshchatToken = process.env.RE_FRESHCHAT_TOKEN || '';
 const freshchatSiteId = process.env.RE_FRESHCHAT_SITE_ID || '';
+const recaptchaSiteKey = process.env.GOOGLE_RECAPTCHA_SITE_KEY || process.env.RECAPTCHA_SITE_KEY || '';
 const configPath = path.join(distDir, 'js', 'config.js');
 ensureDir(path.dirname(configPath));
 fs.writeFileSync(
@@ -92,6 +93,7 @@ fs.writeFileSync(
     `window.RE_ENABLE_FRESHCHAT = ${JSON.stringify(freshchatEnabled)};`,
     `window.RE_FRESHCHAT_TOKEN = ${JSON.stringify(freshchatToken)};`,
     `window.RE_FRESHCHAT_SITE_ID = ${JSON.stringify(freshchatSiteId)};`,
+    `window.RE_GOOGLE_RECAPTCHA_SITE_KEY = ${JSON.stringify(recaptchaSiteKey)};`,
     ''
   ].join('\n'),
   'utf8'

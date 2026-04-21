@@ -2,6 +2,7 @@
 const router = require('express').Router();
 const crypto = require('crypto');
 const { sb } = require('../lib/config');
+const { GOOGLE_RECAPTCHA_SECRET_KEY, GOOGLE_RECAPTCHA_MIN_SCORE } = require('../lib/config');
 const { requireAuth, requireAdmin } = require('../lib/auth');
 const { auditLog, pushNotification } = require('../lib/logging');
 const { syncFreshsalesContact, createFreshsalesDeal } = require('../lib/crm');
@@ -159,6 +160,45 @@ function decorateResponseActor(response) {
     user_name: response?.user_name || response?.['re_users!re_form_responses_user_id_fkey']?.name || visitor.name || 'Visitante',
     user_email: response?.user_email || response?.['re_users!re_form_responses_user_id_fkey']?.email || visitor.email || '—',
     user_company: response?.user_company || response?.['re_users!re_form_responses_user_id_fkey']?.company || visitor.company || '',
+  };
+}
+
+async function verifyGoogleRecaptcha(token, remoteIp) {
+  if (!GOOGLE_RECAPTCHA_SECRET_KEY) {
+    throw new Error('Google reCAPTCHA não configurado no servidor. Defina o secret antes de publicar o formulário.');
+  }
+  const payload = new URLSearchParams({
+    secret: GOOGLE_RECAPTCHA_SECRET_KEY,
+    response: String(token || ''),
+  });
+  if (remoteIp) payload.set('remoteip', remoteIp);
+  const response = await fetch('https://www.google.com/recaptcha/api/siteverify', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: payload,
+  });
+  const result = await response.json();
+  if (!response.ok || result?.success !== true) {
+    return { ok: false, reason: 'Captcha inválido.' };
+  }
+  if (result.action && result.action !== 'public_form_submit') {
+    return { ok: false, reason: 'Ação do captcha inválida.' };
+  }
+  if (typeof result.score === 'number' && result.score < GOOGLE_RECAPTCHA_MIN_SCORE) {
+    return { ok: false, reason: 'Captcha reprovado pela pontuação mínima.' };
+  }
+  return { ok: true, result };
+}
+
+function normalizeLogicRuleInput(rule) {
+  if (!rule || typeof rule !== 'object') return null;
+  return {
+    source_question_id: rule.source_question_id ? Number(rule.source_question_id) : null,
+    operator: String(rule.operator || 'equals').trim().toLowerCase(),
+    condition_value: rule.condition_value ?? null,
+    action: String(rule.action || '').trim().toLowerCase(),
+    target_question_id: rule.target_question_id ? Number(rule.target_question_id) : null,
+    target_page_id: rule.target_page_id ? Number(rule.target_page_id) : null,
   };
 }
 
@@ -538,20 +578,55 @@ router.get('/api/admin/forms/:id/logic', requireAdmin, async (req, res) => {
 
 router.post('/api/admin/forms/:id/logic', requireAdmin, async (req, res) => {
   try {
-    const { source_question_id, operator, condition_value, action, target_question_id, target_page_id } = req.body;
-    if (!source_question_id || !action) {
+    const ruleInput = normalizeLogicRuleInput(req.body);
+    if (!ruleInput?.source_question_id || !ruleInput?.action) {
       return res.status(400).json({ error: 'source_question_id e action são obrigatórios.' });
     }
     const { data: rule } = await sb.from('re_form_logic').insert({
       form_id: req.params.id,
-      source_question_id,
-      operator: operator || 'equals',
-      condition_value: condition_value ?? null,
-      action,
-      target_question_id: target_question_id || null,
-      target_page_id: target_page_id || null,
+      source_question_id: ruleInput.source_question_id,
+      operator: ruleInput.operator || 'equals',
+      condition_value: ruleInput.condition_value,
+      action: ruleInput.action,
+      target_question_id: ruleInput.target_question_id,
+      target_page_id: ruleInput.target_page_id,
     }).select().single();
     res.json({ success: true, rule });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.put('/api/admin/forms/:id/logic', requireAdmin, async (req, res) => {
+  try {
+    const sourceQuestionId = Number(req.body?.source_question_id);
+    const ruleList = Array.isArray(req.body?.rules) ? req.body.rules.map(normalizeLogicRuleInput).filter(Boolean) : [];
+    if (!sourceQuestionId) {
+      return res.status(400).json({ error: 'source_question_id é obrigatório.' });
+    }
+
+    await sb.from('re_form_logic')
+      .delete()
+      .eq('form_id', req.params.id)
+      .eq('source_question_id', sourceQuestionId);
+
+    const validRules = ruleList.filter((rule) => rule.source_question_id === sourceQuestionId && rule.action);
+    if (!validRules.length) {
+      return res.json({ success: true, rules: [] });
+    }
+
+    const { data: inserted, error } = await sb.from('re_form_logic').insert(validRules.map((rule) => ({
+      form_id: req.params.id,
+      source_question_id: rule.source_question_id,
+      operator: rule.operator || 'equals',
+      condition_value: rule.condition_value,
+      action: rule.action,
+      target_question_id: rule.target_question_id,
+      target_page_id: rule.target_page_id,
+    }))).select('*');
+    if (error) throw error;
+
+    res.json({ success: true, rules: inserted || [] });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -655,6 +730,12 @@ router.post('/api/public/forms/:slug/response', async (req, res) => {
     }
     if (publicConfig.requireCaptcha && !req.body?.captcha_token) {
       return res.status(400).json({ error: 'Captcha obrigatório.' });
+    }
+    if (publicConfig.requireCaptcha && req.body?.status === 'concluido') {
+      const captchaCheck = await verifyGoogleRecaptcha(req.body.captcha_token, req.ip);
+      if (!captchaCheck.ok) {
+        return res.status(400).json({ error: captchaCheck.reason || 'Captcha inválido.' });
+      }
     }
 
     const answers = req.body?.answers && typeof req.body.answers === 'object' ? req.body.answers : {};

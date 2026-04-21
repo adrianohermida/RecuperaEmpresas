@@ -4,6 +4,46 @@
   const storageKey = () => `re_public_form_${location.pathname}`;
   let runner = null;
   let currentSlug = '';
+  let recaptchaPromise = null;
+
+  function getRecaptchaSiteKey() {
+    return String(window.RE_GOOGLE_RECAPTCHA_SITE_KEY || '').trim();
+  }
+
+  function ensureRecaptcha() {
+    const siteKey = getRecaptchaSiteKey();
+    if (!siteKey) {
+      return Promise.reject(new Error('Google reCAPTCHA não configurado para este ambiente.'));
+    }
+    if (window.grecaptcha?.ready) {
+      return Promise.resolve(window.grecaptcha);
+    }
+    if (recaptchaPromise) return recaptchaPromise;
+    recaptchaPromise = new Promise((resolve, reject) => {
+      const existing = document.querySelector('script[data-recaptcha-script="1"]');
+      if (existing) {
+        existing.addEventListener('load', () => resolve(window.grecaptcha));
+        existing.addEventListener('error', () => reject(new Error('Falha ao carregar o Google reCAPTCHA.')));
+        return;
+      }
+      const script = document.createElement('script');
+      script.src = `https://www.google.com/recaptcha/api.js?render=${encodeURIComponent(siteKey)}`;
+      script.async = true;
+      script.defer = true;
+      script.dataset.recaptchaScript = '1';
+      script.onload = () => resolve(window.grecaptcha);
+      script.onerror = () => reject(new Error('Falha ao carregar o Google reCAPTCHA.'));
+      document.head.appendChild(script);
+    });
+    return recaptchaPromise;
+  }
+
+  async function executeRecaptcha(action) {
+    const siteKey = getRecaptchaSiteKey();
+    const grecaptcha = await ensureRecaptcha();
+    await new Promise((resolve) => grecaptcha.ready(resolve));
+    return grecaptcha.execute(siteKey, { action: action || 'public_form_submit' });
+  }
 
   function readResume() {
     try {
@@ -65,6 +105,15 @@
 
     const ui = els();
     const publicConfig = data.form?.settings?.public || {};
+    if (publicConfig.requireCaptcha) {
+      try {
+        await ensureRecaptcha();
+      } catch (error) {
+        ui.status.textContent = error.message || 'Captcha indisponível.';
+        ui.status.dataset.tone = 'error';
+        ui.status.classList.remove('ui-hidden');
+      }
+    }
     ui.title.textContent = publicConfig.title || data.form?.title || 'Formulário';
     ui.description.textContent = publicConfig.description || data.form?.description || 'Preencha as etapas abaixo.';
 
@@ -81,6 +130,7 @@
       resolveLead(snapshot) {
         return snapshot.lead || {};
       },
+      resolveCaptchaToken: publicConfig.requireCaptcha ? () => executeRecaptcha('public_form_submit') : null,
       onPersist: async (snapshot) => {
         const response = await fetch(`/api/public/forms/${encodeURIComponent(currentSlug)}/response`, {
           method: 'POST',
@@ -91,6 +141,7 @@
             current_page_id: snapshot.current_page_id,
             status: snapshot.status,
             visitor: snapshot.lead,
+            captcha_token: snapshot.captcha_token,
           }),
         });
         const result = await readApi(response);

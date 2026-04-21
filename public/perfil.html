@@ -82,17 +82,33 @@
     </div>
 
     <div class="sidebar-footer">
-      <div class="user-dropup" id="userDropup" role="menu">
+      <div class="user-dropup" id="userDropup" role="menu" aria-labelledby="userMenuBtn">
         <div class="user-dropup-header">
+          <div class="user-dropup-kicker">Conta do consultor</div>
           <div class="user-dropup-name" id="dropupUserName">—</div>
           <div class="user-dropup-email" id="dropupUserEmail">—</div>
         </div>
-        <a href="/perfil" class="user-dropup-item" role="menuitem">Meu Perfil</a>
-        <a href="/configuracoes" class="user-dropup-item" role="menuitem">Configurações</a>
+        <a href="/perfil" class="user-dropup-item" role="menuitem">
+          <span class="user-dropup-item-copy">
+            <span class="user-dropup-item-label">Meu Perfil</span>
+            <span class="user-dropup-item-meta">Dados públicos, bio e assinatura</span>
+          </span>
+        </a>
+        <a href="/configuracoes" class="user-dropup-item" role="menuitem">
+          <span class="user-dropup-item-copy">
+            <span class="user-dropup-item-label">Configurações</span>
+            <span class="user-dropup-item-meta">Preferências e segurança da conta</span>
+          </span>
+        </a>
         <hr class="user-dropup-divider"/>
-        <button class="user-dropup-item danger" onclick="logout()" role="menuitem">Sair</button>
+        <button class="user-dropup-item danger" onclick="logout()" role="menuitem">
+          <span class="user-dropup-item-copy">
+            <span class="user-dropup-item-label">Sair</span>
+            <span class="user-dropup-item-meta">Encerrar a sessão atual</span>
+          </span>
+        </button>
       </div>
-      <button class="user-menu-btn" id="userMenuBtn" onclick="toggleUserDropup()" aria-expanded="false" aria-haspopup="true">
+      <button class="user-menu-btn" id="userMenuBtn" onclick="toggleUserDropup(event)" aria-expanded="false" aria-haspopup="true" aria-controls="userDropup">
         <div class="user-menu-avatar" id="userAvatar">?</div>
         <div class="user-menu-info">
           <div class="user-menu-name" id="userName">Carregando...</div>
@@ -159,72 +175,94 @@
             <div class="page-section-title">Identidade profissional</div>
             <div class="page-section-sub">Dados públicos do seu usuário, bio curta e canais de contato.</div>
             <form id="profileForm" onsubmit="saveProfile(event)">
-              <div class="page-field-row">
-                <div class="form-group">
-                  <label class="form-label" for="profileName">Nome completo</label>
-                  <input class="form-input" type="text" id="profileName" placeholder="Seu nome" autocomplete="name"/>
+              <div class="account-form-block">
+                <div class="account-form-block-header">
+                  <div class="account-form-block-title">Base da conta</div>
+                  <div class="account-form-block-sub">Informações principais exibidas no shell e nos pontos de contato.</div>
                 </div>
-                <div class="form-group">
-                  <label class="form-label" for="profilePhone">Telefone</label>
-                  <input class="form-input" type="tel" id="profilePhone" placeholder="(11) 99999-9999" autocomplete="tel"/>
-                </div>
-              </div>
-              <div class="page-field-row">
-                <div class="form-group">
-                  <label class="form-label" for="profileEmail">E-mail</label>
-                  <input class="form-input" type="email" id="profileEmail" placeholder="seu@email.com" autocomplete="email" readonly/>
-                </div>
-                <div class="form-group">
-                  <label class="form-label" for="profileQualifications">Qualificações</label>
-                  <input class="form-input" type="text" id="profileQualifications" placeholder="Ex.: Contador consultivo, especialista fiscal"/>
-                </div>
-              </div>
-              <div class="page-field-row full">
-                <div class="form-group">
-                  <label class="form-label" for="profileBio">Mini-biografia</label>
-                  <textarea class="form-input account-textarea" id="profileBio" placeholder="Apresente seu foco de atuação, segmentos atendidos e estilo de atendimento."></textarea>
-                </div>
-              </div>
-              <div class="page-field-row full">
-                <div class="form-group">
-                  <label class="form-label" for="profileCompetencies">Competências</label>
-                  <input class="form-input" type="text" id="profileCompetencies" placeholder="Separe por vírgula: fiscal, societário, onboarding, cobrança"/>
-                  <div class="field-hint">As competências são exibidas como tags e ajudam a identificar contexto operacional.</div>
-                  <div class="account-chip-list account-form-chip-list" id="profileCompetencyPreview"></div>
-                </div>
-              </div>
-              <div class="page-field-row">
-                <div class="form-group">
-                  <label class="form-label" for="socialLinkedin">LinkedIn</label>
-                  <input class="form-input" type="url" id="socialLinkedin" placeholder="https://linkedin.com/in/..."/>
-                </div>
-                <div class="form-group">
-                  <label class="form-label" for="socialInstagram">Instagram</label>
-                  <input class="form-input" type="url" id="socialInstagram" placeholder="https://instagram.com/..."/>
-                </div>
-              </div>
-              <div class="page-field-row">
-                <div class="form-group">
-                  <label class="form-label" for="socialWebsite">Site</label>
-                  <input class="form-input" type="url" id="socialWebsite" placeholder="https://suaempresa.com.br"/>
-                </div>
-                <div class="form-group">
-                  <label class="form-label" for="socialWhatsapp">WhatsApp</label>
-                  <input class="form-input" type="text" id="socialWhatsapp" placeholder="5511999999999"/>
-                </div>
-              </div>
-              <div class="page-field-row full">
-                <div class="form-group">
-                  <label class="form-label">Assinatura de e-mail</label>
-                  <div class="signature-toolbar" id="signatureToolbar">
-                    <button type="button" class="btn btn-secondary btn-sm" data-cmd="bold">Negrito</button>
-                    <button type="button" class="btn btn-secondary btn-sm" data-cmd="italic">Itálico</button>
-                    <button type="button" class="btn btn-secondary btn-sm" data-cmd="insertUnorderedList">Lista</button>
+                <div class="page-field-row">
+                  <div class="form-group">
+                    <label class="form-label" for="profileName">Nome completo</label>
+                    <input class="form-input" type="text" id="profileName" placeholder="Seu nome" autocomplete="name"/>
                   </div>
-                  <div class="signature-editor" id="profileSignatureEditor" contenteditable="true"></div>
+                  <div class="form-group">
+                    <label class="form-label" for="profilePhone">Telefone</label>
+                    <input class="form-input" type="tel" id="profilePhone" placeholder="(11) 99999-9999" autocomplete="tel"/>
+                  </div>
+                </div>
+                <div class="page-field-row">
+                  <div class="form-group">
+                    <label class="form-label" for="profileEmail">E-mail</label>
+                    <input class="form-input" type="email" id="profileEmail" placeholder="seu@email.com" autocomplete="email" readonly/>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="profileQualifications">Qualificações</label>
+                    <input class="form-input" type="text" id="profileQualifications" placeholder="Ex.: Contador consultivo, especialista fiscal"/>
+                  </div>
                 </div>
               </div>
-              <div class="account-form-actions">
+
+              <div class="account-form-block">
+                <div class="account-form-block-header">
+                  <div class="account-form-block-title">Posicionamento profissional</div>
+                  <div class="account-form-block-sub">Resumo de atuação e especialidades para contexto operacional e relacionamento.</div>
+                </div>
+                <div class="page-field-row full">
+                  <div class="form-group">
+                    <label class="form-label" for="profileBio">Mini-biografia</label>
+                    <textarea class="form-input account-textarea" id="profileBio" placeholder="Apresente seu foco de atuação, segmentos atendidos e estilo de atendimento."></textarea>
+                  </div>
+                </div>
+                <div class="page-field-row full">
+                  <div class="form-group">
+                    <label class="form-label" for="profileCompetencies">Competências</label>
+                    <input class="form-input" type="text" id="profileCompetencies" placeholder="Separe por vírgula: fiscal, societário, onboarding, cobrança"/>
+                    <div class="field-hint">As competências são exibidas como tags e ajudam a identificar contexto operacional.</div>
+                    <div class="account-chip-list account-form-chip-list" id="profileCompetencyPreview"></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="account-form-block">
+                <div class="account-form-block-header">
+                  <div class="account-form-block-title">Canais e assinatura</div>
+                  <div class="account-form-block-sub">Links de presença digital e assinatura usada nos contatos da operação.</div>
+                </div>
+                <div class="page-field-row">
+                  <div class="form-group">
+                    <label class="form-label" for="socialLinkedin">LinkedIn</label>
+                    <input class="form-input" type="url" id="socialLinkedin" placeholder="https://linkedin.com/in/..."/>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="socialInstagram">Instagram</label>
+                    <input class="form-input" type="url" id="socialInstagram" placeholder="https://instagram.com/..."/>
+                  </div>
+                </div>
+                <div class="page-field-row">
+                  <div class="form-group">
+                    <label class="form-label" for="socialWebsite">Site</label>
+                    <input class="form-input" type="url" id="socialWebsite" placeholder="https://suaempresa.com.br"/>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="socialWhatsapp">WhatsApp</label>
+                    <input class="form-input" type="text" id="socialWhatsapp" placeholder="5511999999999"/>
+                  </div>
+                </div>
+                <div class="page-field-row full">
+                  <div class="form-group">
+                    <label class="form-label">Assinatura de e-mail</label>
+                    <div class="signature-toolbar" id="signatureToolbar">
+                      <button type="button" class="btn btn-secondary btn-sm" data-cmd="bold">Negrito</button>
+                      <button type="button" class="btn btn-secondary btn-sm" data-cmd="italic">Itálico</button>
+                      <button type="button" class="btn btn-secondary btn-sm" data-cmd="insertUnorderedList">Lista</button>
+                    </div>
+                    <div class="signature-editor" id="profileSignatureEditor" contenteditable="true"></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="account-form-actions account-submit-bar">
+                <div class="account-action-note">As alterações refletem seu posicionamento no portal e nos fluxos de atendimento.</div>
                 <button class="btn btn-primary" type="submit" id="saveProfileBtn">Salvar perfil</button>
               </div>
             </form>
@@ -250,7 +288,8 @@
                   <input class="form-input" type="password" id="confirmPassword" placeholder="••••••••" autocomplete="new-password"/>
                 </div>
               </div>
-              <div class="account-form-actions">
+              <div class="account-form-actions account-submit-bar compact">
+                <div class="account-action-note">Use uma senha exclusiva para manter o acesso administrativo protegido.</div>
                 <button class="btn btn-primary" type="submit" id="savePasswordBtn">Atualizar senha</button>
               </div>
             </form>

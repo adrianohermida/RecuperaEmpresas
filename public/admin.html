@@ -127,27 +127,37 @@
     <!-- Sidebar footer: user avatar + dropup -->
     <div class="sidebar-footer">
       <!-- Dropup menu (renders upward) -->
-      <div class="user-dropup" id="userDropup" role="menu">
+      <div class="user-dropup" id="userDropup" role="menu" aria-labelledby="userMenuBtn">
         <div class="user-dropup-header">
+          <div class="user-dropup-kicker">Conta do consultor</div>
           <div class="user-dropup-name" id="dropupUserName">—</div>
           <div class="user-dropup-email" id="dropupUserEmail">—</div>
         </div>
         <a href="perfil.html" class="user-dropup-item" role="menuitem">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-          Meu Perfil
+          <span class="user-dropup-item-copy">
+            <span class="user-dropup-item-label">Meu Perfil</span>
+            <span class="user-dropup-item-meta">Dados públicos, bio e assinatura</span>
+          </span>
         </a>
         <a href="configuracoes.html" class="user-dropup-item" role="menuitem">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-          Configurações
+          <span class="user-dropup-item-copy">
+            <span class="user-dropup-item-label">Configurações</span>
+            <span class="user-dropup-item-meta">Preferências e segurança da conta</span>
+          </span>
         </a>
         <hr class="user-dropup-divider"/>
         <button class="user-dropup-item danger" onclick="logout()" role="menuitem">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-          Sair
+          <span class="user-dropup-item-copy">
+            <span class="user-dropup-item-label">Sair</span>
+            <span class="user-dropup-item-meta">Encerrar a sessão atual</span>
+          </span>
         </button>
       </div>
       <!-- Trigger button -->
-      <button class="user-menu-btn" id="userMenuBtn" onclick="toggleUserDropup()" aria-expanded="false" aria-haspopup="true">
+      <button class="user-menu-btn" id="userMenuBtn" onclick="toggleUserDropup(event)" aria-expanded="false" aria-haspopup="true" aria-controls="userDropup">
         <div class="user-menu-avatar" id="userAvatar">?</div>
         <div class="user-menu-info">
           <div class="user-menu-name" id="userName">Carregando...</div>
@@ -447,6 +457,10 @@
               <input id="fb-settings-public-capture" type="checkbox" checked>
               <span>Capturar lead</span>
             </label>
+            <label class="form-builder-checkbox-row">
+              <input id="fb-settings-public-captcha" type="checkbox">
+              <span>Exigir Google reCAPTCHA</span>
+            </label>
           </div>
           <div class="form-builder-settings-grid form-builder-settings-grid-public">
             <div>
@@ -735,39 +749,57 @@
           <div class="form-builder-modal-title">Lógica Condicional</div>
           <button onclick="fbCloseLogicModal()" class="form-builder-modal-close">×</button>
         </div>
+        <div id="fb-logic-source-hint" class="form-builder-logic-source-hint"></div>
         <div id="fb-logic-rules" class="form-builder-logic-rules"></div>
         <div class="form-builder-logic-box">
-          <div class="form-builder-logic-box-title">Nova Regra</div>
-          <div class="form-builder-logic-grid">
+          <div class="form-builder-logic-box-title">Condição IF</div>
+          <div class="form-builder-logic-grid form-builder-logic-grid-condition">
             <div>
               <label class="form-builder-logic-label">Operador</label>
               <select id="fb-logic-op" class="portal-input form-builder-logic-control" aria-label="Operador lógico">
                 <option value="equals">É igual a</option>
                 <option value="not_equals">Diferente de</option>
                 <option value="contains">Contém</option>
+                <option value="not_contains">Não contém</option>
                 <option value="greater_than">Maior que</option>
+                <option value="greater_or_equal">Maior ou igual a</option>
                 <option value="less_than">Menor que</option>
-                <option value="is_answered">Foi respondida</option>
-                <option value="is_empty">Não foi respondida</option>
+                <option value="less_or_equal">Menor ou igual a</option>
+                <option value="not_empty">Foi respondida</option>
+                <option value="empty">Não foi respondida</option>
               </select>
             </div>
             <div>
               <label class="form-builder-logic-label">Valor</label>
               <input id="fb-logic-val" class="portal-input form-builder-logic-control" placeholder="Ex: Sim">
             </div>
-            <div>
-              <label class="form-builder-logic-label">Ação</label>
-              <select id="fb-logic-action" class="portal-input form-builder-logic-control" aria-label="Ação da regra">
-                <option value="skip_to_page">Ir para página</option>
-                <option value="hide_question">Ocultar questão</option>
-              </select>
-            </div>
           </div>
-          <div class="form-builder-logic-target-wrap">
-            <label class="form-builder-logic-label">Página de destino (ID)</label>
-            <input id="fb-logic-target-page" type="number" class="portal-input form-builder-logic-control form-builder-logic-target" placeholder="ID da página">
+          <div class="form-builder-logic-branches">
+            <section class="form-builder-logic-branch">
+              <div class="form-builder-logic-branch-head">
+                <div>
+                  <div class="form-builder-logic-branch-title">Então</div>
+                  <div class="form-builder-logic-branch-sub">Ações executadas quando a condição for verdadeira.</div>
+                </div>
+                <button class="btn-ghost form-builder-logic-branch-btn" type="button" onclick="fbAddLogicActionRow('if')">+ ação</button>
+              </div>
+              <div id="fb-logic-if-actions" class="form-builder-logic-action-list"></div>
+            </section>
+            <section class="form-builder-logic-branch form-builder-logic-branch-else">
+              <div class="form-builder-logic-branch-head">
+                <div>
+                  <div class="form-builder-logic-branch-title">Caso contrário</div>
+                  <div class="form-builder-logic-branch-sub">Fallback quando o IF não for satisfeito.</div>
+                </div>
+                <button class="btn-ghost form-builder-logic-branch-btn" type="button" onclick="fbAddLogicActionRow('else')">+ ação</button>
+              </div>
+              <div id="fb-logic-else-actions" class="form-builder-logic-action-list"></div>
+            </section>
           </div>
-          <button class="btn-primary form-builder-logic-add-btn" onclick="fbAddLogicRule()">+ Adicionar regra</button>
+          <div class="admin-modal-actions journey-modal-actions">
+            <button class="btn-ghost admin-modal-btn" type="button" onclick="fbCloseLogicModal()">Cancelar</button>
+            <button class="btn-primary admin-modal-btn form-builder-logic-add-btn" type="button" onclick="fbSaveLogicRules()">Salvar lógica</button>
+          </div>
         </div>
       </div>
     </div>

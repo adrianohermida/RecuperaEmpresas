@@ -11,3 +11,4 @@ window.RE_SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 window.RE_ENABLE_FRESHCHAT = false;
 window.RE_FRESHCHAT_TOKEN = "";
 window.RE_FRESHCHAT_SITE_ID = "";
+window.RE_GOOGLE_RECAPTCHA_SITE_KEY = "";

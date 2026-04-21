@@ -81,23 +81,37 @@ function closeSidebar() {
   document.getElementById('sidebarBackdrop')?.classList.remove('open');
 }
 
-function toggleUserDropup() {
+function setUserDropupState(open, options) {
   var dropup = document.getElementById('userDropup');
   var btn = document.getElementById('userMenuBtn');
+  var footer = document.querySelector('.sidebar-footer');
+  dropup?.classList.toggle('open', !!open);
+  btn?.setAttribute('aria-expanded', String(!!open));
+  footer?.classList.toggle('menu-open', !!open);
+  if (open && options?.focusFirst) {
+    dropup?.querySelector('.user-dropup-item')?.focus();
+  }
+}
+
+function toggleUserDropup(event) {
+  event?.preventDefault?.();
+  event?.stopPropagation?.();
+  var dropup = document.getElementById('userDropup');
   var isOpen = dropup?.classList.contains('open');
-  dropup?.classList.toggle('open', !isOpen);
-  btn?.setAttribute('aria-expanded', String(!isOpen));
+  setUserDropupState(!isOpen, { focusFirst: !isOpen });
 }
 
 document.addEventListener('click', function (e) {
   var footer = document.querySelector('.sidebar-footer');
   if (footer && !footer.contains(e.target)) {
-    var dropup = document.getElementById('userDropup');
-    var btn = document.getElementById('userMenuBtn');
-    if (dropup?.classList.contains('open')) {
-      dropup.classList.remove('open');
-      btn?.setAttribute('aria-expanded', 'false');
-    }
+    setUserDropupState(false);
+  }
+});
+
+document.addEventListener('keydown', function (event) {
+  if (event.key === 'Escape') {
+    setUserDropupState(false);
+    closeAllClientActionMenus();
   }
 });
 
@@ -154,6 +168,9 @@ function closeAllClientActionMenus() {
   document.querySelectorAll('.admin-client-menu.open').forEach(function (menu) {
     menu.classList.remove('open');
   });
+  document.querySelectorAll('.admin-client-menu-trigger[aria-expanded="true"]').forEach(function (trigger) {
+    trigger.setAttribute('aria-expanded', 'false');
+  });
   _openClientActionMenuId = null;
 }
 
@@ -161,11 +178,13 @@ function toggleClientActionMenu(event, clientId) {
   event.preventDefault();
   event.stopPropagation();
   var target = document.getElementById('clientActionMenu_' + clientId);
+  var trigger = event.currentTarget;
   if (!target) return;
   var willOpen = _openClientActionMenuId !== clientId || !target.classList.contains('open');
   closeAllClientActionMenus();
   if (willOpen) {
     target.classList.add('open');
+    trigger?.setAttribute('aria-expanded', 'true');
     _openClientActionMenuId = clientId;
   }
 }
@@ -284,7 +303,7 @@ function renderClientTable(clients) {
           <button class="btn btn-secondary btn-sm" type="button" onclick="window.location.href='/tarefas-admin?ids=${client.id}'">Tarefas</button>
           <button class="btn btn-secondary btn-sm" type="button" onclick="window.location.href='/documentos-admin?ids=${client.id}'">Docs</button>
           <div class="admin-client-menu-wrap">
-            <button class="btn btn-ghost btn-sm admin-client-menu-trigger" type="button" aria-label="Abrir menu de ações" onclick="toggleClientActionMenu(event, '${client.id}')">
+            <button class="btn btn-ghost btn-sm admin-client-menu-trigger" type="button" aria-label="Abrir menu de ações" aria-expanded="false" aria-controls="clientActionMenu_${client.id}" onclick="toggleClientActionMenu(event, '${client.id}')">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
             </button>
             <div class="admin-client-menu" id="clientActionMenu_${client.id}">

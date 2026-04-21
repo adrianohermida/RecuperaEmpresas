@@ -39,6 +39,7 @@ const {
   PORT,
   SUPABASE_URL,
   SUPABASE_ANON_KEY,
+  GOOGLE_RECAPTCHA_SITE_KEY,
 } = require('./lib/config');
 const { seedAdminAccounts } = require('./lib/startup');
 const { seedDefaultContent } = require('./lib/seed');
@@ -149,6 +150,7 @@ window.RE_OAUTH_CLIENT_ID = ${JSON.stringify(process.env.OAUTH_CLIENT_ID || '')}
 window.RE_ENABLE_FRESHCHAT = ${JSON.stringify(process.env.RE_ENABLE_FRESHCHAT === 'true')};
 window.RE_FRESHCHAT_TOKEN  = ${JSON.stringify(process.env.RE_FRESHCHAT_TOKEN || '')};
 window.RE_FRESHCHAT_SITE_ID = ${JSON.stringify(process.env.RE_FRESHCHAT_SITE_ID || '')};
+window.RE_GOOGLE_RECAPTCHA_SITE_KEY = ${JSON.stringify(GOOGLE_RECAPTCHA_SITE_KEY)};
 `);
 });
 
