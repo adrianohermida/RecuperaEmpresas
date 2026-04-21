@@ -114,6 +114,78 @@
     redirectToRoute('dashboard');
   }
 
+  function getPortalView(user, options) {
+    if (user && user.isAdmin && !(options && options.allowImpersonation)) {
+      return 'admin';
+    }
+    return 'client';
+  }
+
+  function buildPortalSectionUrl(user, section, options) {
+    var route = getPortalView(user, options) === 'admin' ? getRoute('admin') : getRoute('dashboard');
+    if (!section) return route;
+    return route + '?section=' + encodeURIComponent(section);
+  }
+
+  function applyText(target, value) {
+    if (!target || typeof value !== 'string') return;
+    target.textContent = value;
+  }
+
+  function setLink(target, href, label, isActive) {
+    if (!target) return;
+    if (typeof href === 'string' && href) target.href = href;
+    if (typeof label === 'string') {
+      var labelNode = target.querySelector('[data-shell-label]') || target;
+      labelNode.textContent = label;
+    }
+    if (typeof isActive === 'boolean') {
+      target.classList.toggle('active', isActive);
+    }
+  }
+
+  function applyPortalAccountShell(user, options) {
+    var opts = options || {};
+    var view = getPortalView(user, opts);
+    var isAdmin = view === 'admin';
+    var config = isAdmin
+      ? {
+          logoSub: 'Painel do Consultor',
+          badge: 'Admin',
+          role: 'Consultor Admin',
+          navLabel: 'Visão Geral',
+          primaryLinks: [
+            { href: getRoute('admin'), label: 'Clientes', active: opts.section === 'home' },
+            { href: buildPortalSectionUrl(user, 'agenda', opts), label: 'Agenda', active: opts.section === 'agenda' }
+          ],
+          homeHref: getRoute('admin'),
+          homeLabel: 'Voltar ao painel'
+        }
+      : {
+          logoSub: 'Portal do Cliente',
+          badge: 'Cliente',
+          role: 'Cliente Empresa',
+          navLabel: 'Meu Portal',
+          primaryLinks: [
+            { href: getRoute('dashboard'), label: 'Dashboard', active: opts.section === 'home' },
+            { href: buildPortalSectionUrl(user, 'agenda', opts), label: 'Agenda', active: opts.section === 'agenda' }
+          ],
+          homeHref: getRoute('dashboard'),
+          homeLabel: 'Voltar ao portal'
+        };
+
+    applyText(document.getElementById('shellLogoSub'), config.logoSub);
+    applyText(document.getElementById('shellRoleBadge'), config.badge);
+    applyText(document.getElementById('userMenuRole'), config.role);
+    applyText(document.getElementById('shellNavLabel'), config.navLabel);
+    setLink(document.getElementById('shellPrimaryLinkOne'), config.primaryLinks[0].href, config.primaryLinks[0].label, !!config.primaryLinks[0].active);
+    setLink(document.getElementById('shellPrimaryLinkTwo'), config.primaryLinks[1].href, config.primaryLinks[1].label, !!config.primaryLinks[1].active);
+    setLink(document.getElementById('accountBackLink'), config.homeHref, config.homeLabel, false);
+
+    document.body.dataset.portalView = view;
+    return config;
+  }
+
   async function verifySession(options) {
     var opts = options || {};
     var allowAnonymous = !!opts.allowAnonymous;
@@ -263,6 +335,9 @@
     formatCurrencyBRL: formatCurrencyBRL,
     formatDateBR: formatDateBR,
     formatDateTimeBR: formatDateTimeBR,
+    applyPortalAccountShell: applyPortalAccountShell,
+    buildPortalSectionUrl: buildPortalSectionUrl,
+    getPortalView: getPortalView,
     getSupabaseSessionTokens: getSupabaseSessionTokens,
     getRoute: getRoute,
     getStoredToken: getStoredToken,
