@@ -61,6 +61,13 @@
       if (inProgress) inProgress.textContent = stats.emAndamento;
       if (notStarted) notStarted.textContent = stats.naoIniciado;
     }
+
+    const requestedQuery = new URLSearchParams(window.location.search).get('q');
+    const clientSearch = document.getElementById('clientSearch');
+    if (requestedQuery && clientSearch) {
+      clientSearch.value = requestedQuery;
+      filterClients();
+    }
   }
 
   function downloadBlob(blob, fileName) {

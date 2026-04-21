@@ -14,6 +14,27 @@ const INVOICE_STATUS_LABEL = {
   cancelled: 'void',
 };
 
+const FORM_CONFIG_DEFAULTS = {
+  steps: [
+    { id: 1, title: 'Consentimento LGPD', description: '', enabled: true, required: true },
+    { id: 2, title: 'Dados da Empresa', description: '', enabled: true, required: true },
+    { id: 3, title: 'Sócios', description: '', enabled: true, required: true },
+    { id: 4, title: 'Estrutura Operacional', description: '', enabled: true, required: false },
+    { id: 5, title: 'Quadro de Funcionários', description: '', enabled: true, required: false },
+    { id: 6, title: 'Ativos', description: '', enabled: true, required: false },
+    { id: 7, title: 'Dados Financeiros', description: '', enabled: true, required: true },
+    { id: 8, title: 'Dívidas e Credores', description: '', enabled: true, required: true },
+    { id: 9, title: 'Histórico da Crise', description: '', enabled: true, required: false },
+    { id: 10, title: 'Diagnóstico Estratégico', description: '', enabled: true, required: false },
+    { id: 11, title: 'Mercado e Operação', description: '', enabled: true, required: false },
+    { id: 12, title: 'Expectativas e Estratégia', description: '', enabled: true, required: false },
+    { id: 13, title: 'Documentos', description: '', enabled: true, required: false },
+    { id: 14, title: 'Confirmação e Envio', description: '', enabled: true, required: true },
+  ],
+  welcomeMessage: 'Preencha as informações da sua empresa para que possamos elaborar o Business Plan de recuperação.',
+  lastUpdated: null,
+};
+
 async function maybeSingle(query) {
   const { data, error } = await query.maybeSingle();
   if (error) throw error;
@@ -86,6 +107,45 @@ async function readOnboarding(sb, userId) {
   };
 }
 
+function normalizeOnboardingStatus(step, completed, preferredStatus) {
+  if (completed || step >= 14) return 'concluido';
+  if (preferredStatus) return String(preferredStatus).trim() || 'nao_iniciado';
+  return step > 1 ? 'em_andamento' : 'nao_iniciado';
+}
+
+function normalizeOnboardingPayload(onboarding) {
+  return {
+    step: Number(onboarding.step || 1),
+    status: onboarding.status || 'nao_iniciado',
+    completed: Boolean(onboarding.completed),
+    data: onboarding.data && typeof onboarding.data === 'object' ? onboarding.data : {},
+    last_activity: onboarding.last_activity || onboarding.updated_at || null,
+    completed_at: onboarding.completed_at || null,
+  };
+}
+
+async function upsertOnboarding(sb, userId, payload) {
+  const step = Math.max(1, Math.min(14, Number(payload.step || 1)));
+  const completed = Boolean(payload.completed) || step >= 14;
+  const data = payload.data && typeof payload.data === 'object' ? payload.data : {};
+  const record = {
+    user_id: userId,
+    step,
+    status: normalizeOnboardingStatus(step, completed, payload.status),
+    completed,
+    data,
+    last_activity: payload.last_activity || new Date().toISOString(),
+    completed_at: completed ? (payload.completed_at || new Date().toISOString()) : null,
+  };
+  const { data: saved, error } = await sb
+    .from('re_onboarding')
+    .upsert(record, { onConflict: 'user_id' })
+    .select()
+    .maybeSingle();
+  if (error) throw error;
+  return saved || record;
+}
+
 async function loadFullForm(sb, formId) {
   const form = await maybeSingle(sb.from('re_forms').select('*').eq('id', formId));
   if (!form) return null;
@@ -108,14 +168,141 @@ async function loadFullForm(sb, formId) {
 }
 
 async function handleProgress(request, context) {
-  if (request.method !== 'GET') return methodNotAllowed();
-  const onboarding = await readOnboarding(context.sb, companyId(context));
-  return json({
-    step: onboarding.step || 1,
-    status: onboarding.status || 'nao_iniciado',
-    completed: Boolean(onboarding.completed),
-    last_activity: onboarding.last_activity || onboarding.updated_at || null,
+  const ownerId = companyId(context);
+  if (request.method === 'GET') {
+    const onboarding = await readOnboarding(context.sb, ownerId);
+    return json(normalizeOnboardingPayload(onboarding));
+  }
+
+  if (!['PUT', 'PATCH', 'POST'].includes(request.method)) return methodNotAllowed();
+
+  const body = await readJson(request);
+  const current = await readOnboarding(context.sb, ownerId);
+  const incomingData = body.data && typeof body.data === 'object'
+    ? body.data
+    : (body.allData && typeof body.allData === 'object' ? body.allData : {});
+  const mergedData = Object.assign({}, current.data || {}, incomingData);
+  const nextStep = Number(body.step || current.step || 1);
+  const saved = await upsertOnboarding(context.sb, ownerId, {
+    step: nextStep,
+    status: body.status || current.status,
+    completed: body.completed ?? current.completed,
+    data: mergedData,
+    last_activity: new Date().toISOString(),
+    completed_at: body.completed ? new Date().toISOString() : current.completed_at,
   });
+
+  return json({ success: true, progress: normalizeOnboardingPayload(saved) });
+}
+
+async function handleFormConfig(request) {
+  if (request.method !== 'GET') return methodNotAllowed();
+  return json(FORM_CONFIG_DEFAULTS);
+}
+
+async function handleStepComplete(request, context) {
+  if (request.method !== 'POST') return methodNotAllowed();
+  const ownerId = companyId(context);
+  const body = await readJson(request);
+  const current = await readOnboarding(context.sb, ownerId);
+  const stepNum = Math.max(1, Math.min(14, Number(body.stepNum || current.step || 1)));
+  const nextStep = Math.max(stepNum, Math.min(14, Number(body.nextStep || stepNum)));
+  const mergedData = Object.assign({}, current.data || {}, body.allData && typeof body.allData === 'object' ? body.allData : {});
+  const completed = Boolean(body.completed) || nextStep >= 14;
+  const saved = await upsertOnboarding(context.sb, ownerId, {
+    step: nextStep,
+    status: completed ? 'concluido' : 'em_andamento',
+    completed,
+    data: mergedData,
+    last_activity: new Date().toISOString(),
+    completed_at: completed ? new Date().toISOString() : current.completed_at,
+  });
+
+  queueSideEffect(context, () => auditLog(context.sb, {
+    actorId: context.user.member_id || context.user.id,
+    actorEmail: context.user.email,
+    actorRole: context.user.company_id ? 'company_member' : 'client',
+    entityType: 'onboarding',
+    entityId: ownerId,
+    action: 'step_complete',
+    after: { stepNum, nextStep, completed },
+  }), 'onboarding-step-complete-audit');
+
+  return json({ success: true, progress: normalizeOnboardingPayload(saved) });
+}
+
+async function handleSubmit(request, context) {
+  if (request.method !== 'POST') return methodNotAllowed();
+  const ownerId = companyId(context);
+  const form = await request.formData();
+  let allData = {};
+  try {
+    allData = JSON.parse(String(form.get('formData') || '{}'));
+  } catch (error) {
+    return json({ success: false, message: 'Payload de formulário inválido.' }, { status: 400 });
+  }
+
+  const files = [];
+  for (const [field, value] of form.entries()) {
+    if (field === 'formData' || !value || typeof value === 'string') continue;
+    files.push({ field, file: value });
+  }
+
+  const saved = await upsertOnboarding(context.sb, ownerId, {
+    step: 14,
+    status: 'concluido',
+    completed: true,
+    data: allData,
+    last_activity: new Date().toISOString(),
+    completed_at: new Date().toISOString(),
+  });
+
+  for (const entry of files) {
+    await context.sb.from('re_documents').insert({
+      user_id: ownerId,
+      name: (entry.file.name || entry.field || 'Documento').slice(0, 120),
+      original_name: entry.file.name || null,
+      file_path: null,
+      file_size: Number(entry.file.size || 0),
+      mime_type: entry.file.type || null,
+      doc_type: entry.field,
+      status: 'pendente',
+      comments: [],
+    });
+  }
+
+  queueSideEffect(context, () => auditLog(context.sb, {
+    actorId: context.user.member_id || context.user.id,
+    actorEmail: context.user.email,
+    actorRole: context.user.company_id ? 'company_member' : 'client',
+    entityType: 'onboarding',
+    entityId: ownerId,
+    action: 'submit',
+    after: {
+      completed: true,
+      uploadedFiles: files.map((entry) => ({ field: entry.field, name: entry.file.name || null })),
+    },
+  }), 'onboarding-submit-audit');
+
+  queueSideEffect(context, () => pushNotification(context.sb, {
+    user_id: ownerId,
+    title: 'Onboarding concluído',
+    body: 'Recebemos o envio final do formulário e vamos seguir com a análise.',
+    type: 'info',
+    entity_type: 'onboarding',
+    entity_id: ownerId,
+  }), 'onboarding-submit-notification');
+
+  queueSideEffect(context, () => sendMail(context.env, {
+    to: context.user.email,
+    subject: 'Onboarding concluído — Recupera Empresas',
+    html: emailWrapper('Onboarding concluído', `
+      <p>Recebemos o envio final do seu onboarding.</p>
+      <p>Nossa equipe seguirá com a análise e com os próximos passos do atendimento.</p>
+    `),
+  }), 'onboarding-submit-email');
+
+  return json({ success: true, message: 'Formulário enviado com sucesso.', progress: normalizeOnboardingPayload(saved) });
 }
 
 async function handleSupport(request, context) {
@@ -926,7 +1113,10 @@ async function handleMyJourneys(request, context) {
 export async function handleClientPortal(request, context) {
   const pathname = new URL(request.url).pathname;
 
+  if (pathname === '/api/form-config') return handleFormConfig(request, context);
   if (pathname === '/api/progress') return handleProgress(request, context);
+  if (pathname === '/api/step-complete') return handleStepComplete(request, context);
+  if (pathname === '/api/submit') return handleSubmit(request, context);
   if (/^\/api\/support\/tickets$/.test(pathname) || /^\/api\/support\/ticket$/.test(pathname)) return handleSupport(request, context);
   if (/^\/api\/agenda\/slots$/.test(pathname) || /^\/api\/agenda\/book\/[^/]+$/.test(pathname) || /^\/api\/agenda\/cancel-slot\/[^/]+$/.test(pathname)) return handleAgenda(request, context);
   if (/^\/api\/credits\/history$/.test(pathname) || /^\/api\/credits\/checkout$/.test(pathname)) return handleCredits(request, context);
