@@ -1,3 +1,5 @@
+const DEFAULT_LEGACY_API_BASE = 'https://api.recuperaempresas.com.br';
+
 function trimBase(value) {
   return String(value || '').replace(/\/+$/, '');
 }
@@ -23,7 +25,7 @@ function matchesWorkerRoute(pathname, patterns) {
 }
 
 function resolveTargetBase(pathname, env) {
-  const legacyBase = trimBase(env.RE_API_BASE);
+  const legacyBase = trimBase(env.RE_API_BASE || DEFAULT_LEGACY_API_BASE);
   const workerBase = trimBase(env.RE_API_WORKER_BASE);
   const workerRoutes = parseWorkerRoutes(env.RE_API_WORKER_ROUTES);
 
@@ -37,16 +39,6 @@ export async function onRequest(context) {
   const { request, env } = context;
   const incomingUrl = new URL(request.url);
   const targetBase = resolveTargetBase(incomingUrl.pathname, env);
-
-  if (!targetBase) {
-    return Response.json(
-      {
-        error: 'API origin not configured for Cloudflare Pages.',
-        expected: ['RE_API_BASE', 'RE_API_WORKER_BASE'],
-      },
-      { status: 503 }
-    );
-  }
 
   const targetUrl = new URL(`${incomingUrl.pathname}${incomingUrl.search}`, `${targetBase}/`);
 
