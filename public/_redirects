@@ -1,1 +1,3 @@
 /favicon.ico /favicon.svg 200
+/formulario /formulario.html 200
+/formulario/* /formulario.html 200

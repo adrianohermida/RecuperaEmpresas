@@ -69,7 +69,7 @@ function fbRenderPropertiesPanel(qId) {
       <button class="btn-primary fb-props-action-btn" onclick="fbSaveQuestion(${q.id})">
         💾 Salvar questão
       </button>
-      ${['single_choice','multi_choice','dropdown','scale','nps','rating'].includes(q.type) ? `
+      ${['single_choice','multi_choice','checklist','dropdown','scale','nps','rating'].includes(q.type) ? `
       <button class="btn-ghost fb-props-action-btn" onclick="fbOpenLogicEditor(${q.id})">
         🔀 Editar lógica condicional
       </button>` : ''}
@@ -78,7 +78,7 @@ function fbRenderPropertiesPanel(qId) {
 }
 
 function fbRenderTypeSpecificProps(q) {
-  if (['single_choice','multi_choice','dropdown'].includes(q.type)) {
+  if (['single_choice','multi_choice','checklist','dropdown'].includes(q.type)) {
     const opts = Array.isArray(q.options) ? q.options : [];
     return `
     <div class="fb-prop-group">
@@ -118,6 +118,46 @@ function fbRenderTypeSpecificProps(q) {
       <textarea id="fp-formula" class="fb-prop-input" rows="3"
         oninput="fbSavePropDebounced(${q.id})"
         placeholder="Ex: {q1} * {q2} / 100">${fbEsc(q.formula||'')}</textarea>
+    </div>`;
+  }
+  if (q.type === 'content') {
+    const s = q.settings || {};
+    return `
+    <div class="fb-props-grid-2">
+      <div class="fb-prop-group">
+        <label class="fb-prop-label">Estilo</label>
+        <select id="fp-content-variant" class="fb-prop-input" onchange="fbSavePropDebounced(${q.id})">
+          <option value="text" ${s.variant === 'text' || !s.variant ? 'selected' : ''}>Texto</option>
+          <option value="hero" ${s.variant === 'hero' ? 'selected' : ''}>Destaque</option>
+        </select>
+      </div>
+    </div>
+    <div class="fb-prop-group">
+      <label class="fb-prop-label">Conteúdo</label>
+      <textarea id="fp-content-body" class="fb-prop-input" rows="5" oninput="fbSavePropDebounced(${q.id})">${fbEsc(s.body || q.description || '')}</textarea>
+    </div>`;
+  }
+  if (q.type === 'media') {
+    const s = q.settings || {};
+    return `
+    <div class="fb-props-grid-2">
+      <div class="fb-prop-group">
+        <label class="fb-prop-label">Tipo de mídia</label>
+        <select id="fp-media-type" class="fb-prop-input" onchange="fbSavePropDebounced(${q.id})">
+          <option value="image" ${s.media_type === 'image' || !s.media_type ? 'selected' : ''}>Imagem</option>
+          <option value="youtube" ${s.media_type === 'youtube' ? 'selected' : ''}>YouTube</option>
+          <option value="pdf" ${s.media_type === 'pdf' ? 'selected' : ''}>PDF</option>
+          <option value="attachment" ${s.media_type === 'attachment' ? 'selected' : ''}>Anexo</option>
+        </select>
+      </div>
+    </div>
+    <div class="fb-prop-group">
+      <label class="fb-prop-label">URL</label>
+      <input id="fp-media-url" class="fb-prop-input" value="${fbEsc(s.media_url || '')}" placeholder="https://..." oninput="fbSavePropDebounced(${q.id})">
+    </div>
+    <div class="fb-prop-group">
+      <label class="fb-prop-label">Legenda</label>
+      <input id="fp-media-caption" class="fb-prop-input" value="${fbEsc(s.caption || '')}" placeholder="Legenda opcional" oninput="fbSavePropDebounced(${q.id})">
     </div>`;
   }
   return '';

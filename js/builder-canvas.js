@@ -1,6 +1,8 @@
 'use strict';
 /* builder-canvas.js — Form Builder: canvas, páginas, questões, configurações */
 
+let FB_DRAG_QUESTION_ID = null;
+
 /* ──────────────────────────────────────────────────────────────────────────────
    Builder — open & page management
 ──────────────────────────────────────────────────────────────────────────────*/
@@ -101,8 +103,10 @@ function fbRenderCanvas() {
     const typeInfo = QB_TYPES.find(t => t.type === q.type) || { icon:'❓', label: q.type };
     const isActive = FB.selectedQ === q.id;
     return `
-    <div class="fb-question-card ${isActive ? 'fb-q-active' : ''}"
+        <div class="fb-question-card ${isActive ? 'fb-q-active' : ''}"
          id="fb-q-${q.id}"
+          data-question-id="${q.id}"
+          draggable="${FB.readOnly ? 'false' : 'true'}"
          onclick="fbSelectQuestion(${q.id})">
       <div class="fb-question-card-row">
         <span class="fb-question-card-icon">${typeInfo.icon}</span>
@@ -122,6 +126,8 @@ function fbRenderCanvas() {
           <button onclick="event.stopPropagation();fbMoveQuestion(${q.id},'down')" title="Mover para baixo"
             class="fb-question-card-action-btn"
             ${i === questions.length-1 ? 'disabled' : ''}>↓</button>
+          <button onclick="event.stopPropagation();fbDuplicateQuestion(${q.id})" title="Duplicar"
+            class="fb-question-card-action-btn">⧉</button>
           <button onclick="event.stopPropagation();fbDeleteQuestion(${q.id})" title="Excluir"
             class="fb-question-card-action-btn fb-question-card-action-delete">🗑</button>
         </div>`}
@@ -129,22 +135,81 @@ function fbRenderCanvas() {
       ${fbRenderQuestionPreview(q)}
     </div>`;
   }).join('');
+
+  fbBindQuestionDnD();
+}
+
+function fbBindQuestionDnD() {
+  if (FB.readOnly) return;
+  const canvas = document.getElementById('fb-canvas');
+  if (!canvas) return;
+  canvas.querySelectorAll('.fb-question-card[data-question-id]').forEach((card) => {
+    card.addEventListener('dragstart', () => {
+      FB_DRAG_QUESTION_ID = Number(card.dataset.questionId);
+      card.classList.add('fb-q-dragging');
+    });
+    card.addEventListener('dragend', () => {
+      card.classList.remove('fb-q-dragging');
+      FB_DRAG_QUESTION_ID = null;
+      canvas.querySelectorAll('.fb-q-drop-target').forEach((node) => node.classList.remove('fb-q-drop-target'));
+    });
+    card.addEventListener('dragover', (event) => {
+      event.preventDefault();
+      if (!FB_DRAG_QUESTION_ID || FB_DRAG_QUESTION_ID === Number(card.dataset.questionId)) return;
+      card.classList.add('fb-q-drop-target');
+    });
+    card.addEventListener('dragleave', () => card.classList.remove('fb-q-drop-target'));
+    card.addEventListener('drop', async (event) => {
+      event.preventDefault();
+      card.classList.remove('fb-q-drop-target');
+      if (!FB_DRAG_QUESTION_ID || FB_DRAG_QUESTION_ID === Number(card.dataset.questionId)) return;
+      await fbReorderQuestions(FB_DRAG_QUESTION_ID, Number(card.dataset.questionId));
+    });
+  });
+}
+
+async function fbReorderQuestions(sourceId, targetId) {
+  const ordered = [...(FB.currentPage?.questions || [])].sort((a, b) => a.order_index - b.order_index);
+  const sourceIndex = ordered.findIndex((question) => question.id === sourceId);
+  const targetIndex = ordered.findIndex((question) => question.id === targetId);
+  if (sourceIndex < 0 || targetIndex < 0) return;
+  const [moved] = ordered.splice(sourceIndex, 1);
+  ordered.splice(targetIndex, 0, moved);
+  const payload = ordered.map((question, index) => ({ id: question.id, order_index: index }));
+  const res = await fetch(`/api/admin/forms/${FB.currentFormId}/questions/reorder`, {
+    method: 'POST',
+    headers: fbAuthH(),
+    body: JSON.stringify({ order: payload }),
+  });
+  if (!res.ok) {
+    fbToast('Erro ao reordenar questões.','error');
+    return;
+  }
+  await fbRefreshForm();
+  FB.currentPage = (FB.currentForm.pages || []).find((page) => page.id === FB.currentPage.id) || FB.currentPage;
+  fbRenderCanvas();
 }
 
 function fbRenderQuestionPreview(q) {
   if (q.type === 'section') return '';
+  if (q.type === 'content') {
+    return `<div class="fb-question-preview-wrap"><div class="fb-question-preview-formula">${fbEsc(q.settings?.body || q.description || 'Bloco de conteúdo')}</div></div>`;
+  }
+  if (q.type === 'media') {
+    return `<div class="fb-question-preview-wrap"><div class="fb-question-preview-upload">${fbEsc(q.settings?.media_type || 'media')} · ${fbEsc(q.settings?.media_url || 'sem URL')}</div></div>`;
+  }
   if (q.type === 'short_text')  return `<div class="fb-question-preview-wrap"><input disabled placeholder="${fbEsc(q.placeholder || 'Resposta curta...')}" class="fb-question-preview-input"></div>`;
   if (q.type === 'long_text')   return `<div class="fb-question-preview-wrap"><textarea disabled placeholder="${fbEsc(q.placeholder || 'Resposta longa...')}" rows="2" class="fb-question-preview-input fb-question-preview-textarea"></textarea></div>`;
   if (q.type === 'number' || q.type === 'currency' || q.type === 'percentage')
     return `<div class="fb-question-preview-wrap"><input type="number" disabled placeholder="0" class="fb-question-preview-input fb-question-preview-input-sm"></div>`;
   if (q.type === 'date')
     return `<div class="fb-question-preview-wrap"><input type="date" disabled class="fb-question-preview-input fb-question-preview-input-auto"></div>`;
-  if (q.type === 'single_choice' || q.type === 'multi_choice' || q.type === 'dropdown') {
+  if (q.type === 'single_choice' || q.type === 'multi_choice' || q.type === 'checklist' || q.type === 'dropdown') {
     const opts = Array.isArray(q.options) ? q.options : [];
     if (!opts.length) return `<div class="fb-question-preview-empty">(Sem opções configuradas)</div>`;
     return `<div class="fb-question-preview-wrap fb-question-preview-options">
       ${opts.slice(0,3).map(o => `<label class="fb-question-preview-option-row">
-        <input type="${q.type==='multi_choice'?'checkbox':'radio'}" disabled class="fb-question-preview-option-input"> ${fbEsc(typeof o === 'string' ? o : o.label || o)}
+        <input type="${q.type==='multi_choice' || q.type==='checklist'?'checkbox':'radio'}" disabled class="fb-question-preview-option-input"> ${fbEsc(typeof o === 'string' ? o : o.label || o)}
       </label>`).join('')}
       ${opts.length > 3 ? `<span class="fb-question-preview-empty">+ ${opts.length-3} mais opções...</span>` : ''}
     </div>`;
@@ -160,6 +225,8 @@ function fbRenderQuestionPreview(q) {
     return `<div class="fb-question-preview-wrap fb-question-preview-binary-row"><button disabled class="fb-question-preview-binary-btn">✅ Sim</button><button disabled class="fb-question-preview-binary-btn">❌ Não</button></div>`;
   if (q.type === 'file_upload')
     return `<div class="fb-question-preview-wrap"><div class="fb-question-preview-upload">📎 Clique ou arraste o arquivo aqui</div></div>`;
+  if (q.type === 'score')
+    return `<div class="fb-question-preview-wrap"><div class="fp-score-card"><div class="fp-score-value">84%</div><div class="fp-score-meta">Painel de score em tempo real</div></div></div>`;
   if (q.type === 'calculated')
     return `<div class="fb-question-preview-wrap"><div class="fb-question-preview-formula">${fbEsc(q.formula || 'Sem fórmula configurada')}</div></div>`;
   return '';
@@ -235,6 +302,24 @@ async function fbSaveQuestion(qId) {
   const slmax = document.getElementById('fp-scale-lmax');
   if (smin) settings = { ...settings, min: parseFloat(smin.value)||1, max: parseFloat(smax?.value)||10, label_min: slmin?.value||'', label_max: slmax?.value||'' };
 
+  const contentBody = document.getElementById('fp-content-body');
+  const contentVariant = document.getElementById('fp-content-variant');
+  if (contentBody || contentVariant) {
+    settings = { ...settings, body: contentBody?.value || '', variant: contentVariant?.value || 'text' };
+  }
+
+  const mediaType = document.getElementById('fp-media-type');
+  const mediaUrl = document.getElementById('fp-media-url');
+  const mediaCaption = document.getElementById('fp-media-caption');
+  if (mediaType || mediaUrl || mediaCaption) {
+    settings = {
+      ...settings,
+      media_type: mediaType?.value || 'image',
+      media_url: mediaUrl?.value || '',
+      caption: mediaCaption?.value || '',
+    };
+  }
+
   let formula = q.formula || '';
   const fEl = document.getElementById('fp-formula');
   if (fEl) formula = fEl.value;
@@ -263,6 +348,37 @@ async function fbDeleteQuestion(qId) {
   fbRenderCanvas();
   fbRenderPropertiesEmpty();
   fbToast('Questão excluída.','success');
+}
+
+async function fbDuplicateQuestion(qId) {
+  const source = (FB.currentPage?.questions || []).find((question) => question.id === qId);
+  if (!source) return;
+  const body = {
+    page_id: source.page_id,
+    type: source.type,
+    label: `${source.label || 'Questão'} (cópia)`,
+    description: source.description,
+    placeholder: source.placeholder,
+    required: source.required,
+    options: source.options,
+    settings: source.settings,
+    weight: source.weight,
+    score_map: source.score_map,
+    formula: source.formula,
+  };
+  const res = await fetch(`/api/admin/forms/${FB.currentFormId}/questions`, {
+    method: 'POST',
+    headers: fbAuthH(),
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    fbToast('Erro ao duplicar questão.','error');
+    return;
+  }
+  await fbRefreshForm();
+  FB.currentPage = (FB.currentForm.pages || []).find((page) => page.id === FB.currentPage.id) || FB.currentPage;
+  fbRenderCanvas();
+  fbToast('Questão duplicada!','success');
 }
 
 async function fbMoveQuestion(qId, dir) {
@@ -295,9 +411,31 @@ async function fbSaveFormSettings() {
   const title  = document.getElementById('fb-settings-title')?.value.trim();
   const desc   = document.getElementById('fb-settings-desc')?.value.trim();
   const status = document.getElementById('fb-settings-status')?.value;
+  const publicEnabled = document.getElementById('fb-settings-public-enabled')?.checked || false;
+  const publicResume = document.getElementById('fb-settings-public-resume')?.checked !== false;
+  const publicCapture = document.getElementById('fb-settings-public-capture')?.checked !== false;
+  const publicSlugInput = document.getElementById('fb-settings-public-slug');
+  const publicSlug = fbSlugify(publicSlugInput?.value || title || 'formulario');
+  const publicLayout = document.getElementById('fb-settings-public-layout')?.value || 'focus';
   if (!title) { fbToast('Título obrigatório.','error'); return; }
+  if (publicSlugInput) publicSlugInput.value = publicSlug;
+
+  const settings = {
+    ...(FB.currentForm?.settings || {}),
+    public: {
+      ...((FB.currentForm?.settings || {}).public || {}),
+      enabled: publicEnabled,
+      slug: publicSlug,
+      allow_resume: publicResume,
+      capture_lead: publicCapture,
+      layout: publicLayout,
+      title,
+      description: desc,
+    },
+  };
+
   const res = await fetch(`/api/admin/forms/${FB.currentFormId}`, {
-    method:'PUT', headers: fbAuthH(), body: JSON.stringify({ title, description: desc, status })
+    method:'PUT', headers: fbAuthH(), body: JSON.stringify({ title, description: desc, status, settings })
   });
   if (res.ok) {
     const jset = await res.json(); FB.currentForm = jset.form || jset;
@@ -313,8 +451,16 @@ function fbToggleSettings() {
   const show = p.classList.contains('ui-hidden');
   p.classList.toggle('ui-hidden', !show);
   if (show && FB.currentForm) {
+    const publicConfig = (FB.currentForm.settings || {}).public || {};
     document.getElementById('fb-settings-title').value  = FB.currentForm.title || '';
     document.getElementById('fb-settings-desc').value   = FB.currentForm.description || '';
     document.getElementById('fb-settings-status').value = FB.currentForm.status || 'draft';
+    document.getElementById('fb-settings-public-enabled').checked = publicConfig.enabled === true;
+    document.getElementById('fb-settings-public-resume').checked = publicConfig.allow_resume !== false;
+    document.getElementById('fb-settings-public-capture').checked = publicConfig.capture_lead !== false;
+    document.getElementById('fb-settings-public-slug').value = publicConfig.slug || fbSlugify(FB.currentForm.title || 'formulario');
+    document.getElementById('fb-settings-public-layout').value = publicConfig.layout || 'focus';
+    const publicUrl = `${location.origin}/formulario/${document.getElementById('fb-settings-public-slug').value}`;
+    document.getElementById('fb-settings-public-url').value = publicUrl;
   }
 }

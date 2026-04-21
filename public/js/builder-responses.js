@@ -42,8 +42,9 @@ async function fbOpenResponses(formId, formTitle) {
     <tbody>
       ${FB.responses.map(r => {
         const u = r['re_users!re_form_responses_user_id_fkey'] || {};
-        const uname  = u.name  || r.user_name  || '—';
-        const uemail = u.email || r.user_email || '—';
+        const visitor = r.metadata?.visitor || {};
+        const uname  = u.name  || r.user_name  || visitor.name || 'Visitante';
+        const uemail = u.email || r.user_email || visitor.email || '—';
         return `
       <tr class="form-builder-response-row" onclick="fbOpenResponseDetail(${r.id})">
         <td>
@@ -127,7 +128,7 @@ function fbExportResponsesCSV() {
   if (!FB.responses.length) { fbToast('Sem respostas para exportar.','error'); return; }
   const rows = [['ID','Cliente','Email','Status','Pontuação %','Classificação','Data']];
   FB.responses.forEach(r => rows.push([
-    r.id, r.user_name||'', r.user_email||'', r.status||'',
+    r.id, r.user_name||r.metadata?.visitor?.name||'', r.user_email||r.metadata?.visitor?.email||'', r.status||'',
     r.score_pct != null ? Math.round(r.score_pct) : '',
     r.score_classification||'',
     r.updated_at ? new Date(r.updated_at).toLocaleDateString('pt-BR') : ''

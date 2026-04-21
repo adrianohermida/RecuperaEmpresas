@@ -1,8 +1,10 @@
 'use strict';
 const router = require('express').Router();
+const crypto = require('crypto');
 const { sb } = require('../lib/config');
 const { requireAuth, requireAdmin } = require('../lib/auth');
 const { auditLog, pushNotification } = require('../lib/logging');
+const { syncFreshsalesContact, createFreshsalesDeal } = require('../lib/crm');
 const {
   buildRouteDiagnostic,
   insertWithColumnFallback,
@@ -34,6 +36,129 @@ async function loadFullForm(formId) {
     pages: allPages,
     questions: questions || [],
     logic: logic || [],
+  };
+}
+
+function slugifyFormValue(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '')
+    .slice(0, 120);
+}
+
+function getFormPublicConfig(form) {
+  const settings = form?.settings && typeof form.settings === 'object' ? form.settings : {};
+  const publicConfig = settings.public && typeof settings.public === 'object'
+    ? settings.public
+    : (settings.public_config && typeof settings.public_config === 'object' ? settings.public_config : {});
+  const fallbackSlug = slugifyFormValue(publicConfig.slug || form?.slug || form?.title || 'formulario');
+  return {
+    enabled: publicConfig.enabled === true,
+    slug: fallbackSlug,
+    layout: publicConfig.layout === 'list' ? 'list' : 'focus',
+    requireCaptcha: publicConfig.require_captcha === true,
+    allowResume: publicConfig.allow_resume !== false,
+    allowAnonymous: publicConfig.allow_anonymous !== false,
+    allowEditAfterSubmit: publicConfig.allow_edit_after_submit === true,
+    captureLead: publicConfig.capture_lead !== false,
+    title: publicConfig.title || form?.title || 'Formulário',
+    description: publicConfig.description || form?.description || '',
+    thankYouMessage: publicConfig.thank_you_message || '',
+  };
+}
+
+function isFormPubliclyAvailable(form) {
+  const publicConfig = getFormPublicConfig(form);
+  return publicConfig.enabled && ['active', 'publicado'].includes(String(form?.status || ''));
+}
+
+async function findPublicFormBySlug(slug) {
+  const normalizedSlug = slugifyFormValue(slug);
+  if (!normalizedSlug) return null;
+  const { data: forms, error } = await sb.from('re_forms')
+    .select('*')
+    .in('status', ['active', 'publicado'])
+    .order('updated_at', { ascending: false })
+    .limit(200);
+  if (error) throw error;
+  return (forms || []).find((form) => {
+    const publicConfig = getFormPublicConfig(form);
+    return publicConfig.enabled && publicConfig.slug === normalizedSlug;
+  }) || null;
+}
+
+function normalizePublicVisitor(payload = {}) {
+  const name = String(payload.name || payload.full_name || '').trim();
+  const email = String(payload.email || '').trim().toLowerCase();
+  const company = String(payload.company || '').trim();
+  const phone = String(payload.phone || '').trim();
+  return { name, email, company, phone };
+}
+
+function computeQuestionScore(question, answerValue) {
+  if (!question?.weight) return 0;
+  const scoreMap = question.score_map || {};
+  if (Array.isArray(answerValue)) {
+    return answerValue.reduce((sum, item) => {
+      const mapped = scoreMap[String(item)];
+      return sum + (mapped !== undefined ? (parseFloat(mapped) || 0) : 0);
+    }, 0);
+  }
+  if (answerValue != null && scoreMap[String(answerValue)] !== undefined) {
+    return parseFloat(scoreMap[String(answerValue)]) || 0;
+  }
+  if (typeof answerValue === 'number') {
+    return answerValue * (Number(question.weight || 0) / 10);
+  }
+  return 0;
+}
+
+function computeFormScoreData(form, questions, answers) {
+  let totalScore = 0;
+  let maxScore = 0;
+  const scoreDetails = {};
+  for (const question of (questions || [])) {
+    if (!question?.weight) continue;
+    maxScore += Number(question.weight || 0);
+    const answerValue = answers?.[String(question.id)];
+    const points = computeQuestionScore(question, answerValue);
+    totalScore += points;
+    scoreDetails[question.id] = points;
+  }
+  const scorePct = maxScore > 0 ? (totalScore / maxScore) * 100 : null;
+  const classification = scorePct == null
+    ? null
+    : scorePct >= 70
+      ? 'saudavel'
+      : scorePct >= 40
+        ? 'risco_moderado'
+        : 'risco_alto';
+  const reportTitle = form?.title || 'Diagnóstico';
+  const autoReport = scorePct == null
+    ? null
+    : `Relatório de ${reportTitle}\n\nPontuação: ${Math.round(scorePct)}% (${totalScore.toFixed(1)}/${maxScore} pontos)\nGerado automaticamente em ${new Date().toLocaleDateString('pt-BR')}.`;
+
+  return {
+    score_total: totalScore,
+    score_max: maxScore,
+    score_pct: scorePct,
+    score_classification: classification,
+    score_details: scoreDetails,
+    auto_report: autoReport,
+  };
+}
+
+function decorateResponseActor(response) {
+  const metadata = response?.metadata && typeof response.metadata === 'object' ? response.metadata : {};
+  const visitor = metadata.visitor && typeof metadata.visitor === 'object' ? metadata.visitor : {};
+  return {
+    ...response,
+    user_name: response?.user_name || response?.['re_users!re_form_responses_user_id_fkey']?.name || visitor.name || 'Visitante',
+    user_email: response?.user_email || response?.['re_users!re_form_responses_user_id_fkey']?.email || visitor.email || '—',
+    user_company: response?.user_company || response?.['re_users!re_form_responses_user_id_fkey']?.company || visitor.company || '',
   };
 }
 
@@ -450,7 +575,7 @@ router.get('/api/admin/forms/:id/responses', requireAdmin, async (req, res) => {
       .order('started_at', { ascending: false });
     if (status) query = query.eq('status', status);
     const { data: responses } = await query;
-    res.json({ responses: responses || [] });
+    res.json({ responses: (responses || []).map(decorateResponseActor) });
   } catch {
     res.json({ responses: [] });
   }
@@ -465,7 +590,174 @@ router.get('/api/admin/forms/:id/responses/:responseId', requireAdmin, async (re
     const { data: answers } = await sb.from('re_form_answers')
       .select('*,re_form_questions(label,type)')
       .eq('response_id', req.params.responseId);
-    res.json({ response, answers: answers || [] });
+    res.json({ response: decorateResponseActor(response), answers: answers || [] });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.get('/api/public/forms/:slug', async (req, res) => {
+  try {
+    const form = await findPublicFormBySlug(req.params.slug);
+    if (!form || !isFormPubliclyAvailable(form)) {
+      return res.status(404).json({ error: 'Formulário público não encontrado.' });
+    }
+
+    const fullForm = await loadFullForm(form.id);
+    const publicConfig = getFormPublicConfig(fullForm);
+    let existingResponse = null;
+
+    if (publicConfig.allowResume && req.query.response_id) {
+      const { data: response } = await sb.from('re_form_responses')
+        .select('id,status,current_page_id,score_pct,score_total,score_max,score_classification,auto_report,metadata')
+        .eq('id', req.query.response_id)
+        .eq('form_id', fullForm.id)
+        .is('user_id', null)
+        .single();
+      if (response) {
+        const { data: answers } = await sb.from('re_form_answers')
+          .select('question_id,value,value_json')
+          .eq('response_id', response.id);
+        existingResponse = {
+          ...response,
+          answers: answers || [],
+          visitor: response.metadata?.visitor || null,
+        };
+      }
+    }
+
+    res.json({
+      form: {
+        ...fullForm,
+        settings: {
+          ...(fullForm.settings || {}),
+          public: publicConfig,
+        },
+      },
+      existing_response: existingResponse,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.post('/api/public/forms/:slug/response', async (req, res) => {
+  try {
+    const form = await findPublicFormBySlug(req.params.slug);
+    if (!form || !isFormPubliclyAvailable(form)) {
+      return res.status(404).json({ error: 'Formulário público não encontrado.' });
+    }
+
+    const fullForm = await loadFullForm(form.id);
+    const publicConfig = getFormPublicConfig(fullForm);
+    if (!publicConfig.allowAnonymous && !req.user?.id) {
+      return res.status(403).json({ error: 'Este formulário não aceita respostas anônimas.' });
+    }
+    if (publicConfig.requireCaptcha && !req.body?.captcha_token) {
+      return res.status(400).json({ error: 'Captcha obrigatório.' });
+    }
+
+    const answers = req.body?.answers && typeof req.body.answers === 'object' ? req.body.answers : {};
+    const currentPageId = req.body?.current_page_id || null;
+    const incomingStatus = req.body?.status === 'concluido' ? 'completed' : 'in_progress';
+    const visitor = normalizePublicVisitor(req.body?.visitor || req.body);
+    const now = new Date().toISOString();
+
+    let response = null;
+    if (req.body?.response_id) {
+      const { data } = await sb.from('re_form_responses')
+        .select('id,status,started_at,metadata')
+        .eq('id', req.body.response_id)
+        .eq('form_id', fullForm.id)
+        .is('user_id', null)
+        .single();
+      response = data || null;
+    }
+
+    const responseMetadata = {
+      ...(response?.metadata && typeof response.metadata === 'object' ? response.metadata : {}),
+      mode: 'public',
+      slug: publicConfig.slug,
+      form_owner_id: fullForm.created_by || null,
+      form_type: fullForm.type || null,
+      visitor,
+      public: {
+        layout: publicConfig.layout,
+        capture_lead: publicConfig.captureLead,
+      },
+    };
+
+    if (!response) {
+      const { data: created } = await sb.from('re_form_responses').insert({
+        form_id: fullForm.id,
+        user_id: null,
+        status: incomingStatus,
+        current_page_id: currentPageId,
+        started_at: now,
+        updated_at: now,
+        last_active_at: now,
+        metadata: responseMetadata,
+      }).select('id,status,started_at,metadata').single();
+      response = created;
+    } else {
+      const updates = {
+        status: incomingStatus,
+        current_page_id: currentPageId,
+        updated_at: now,
+        last_active_at: now,
+        metadata: responseMetadata,
+      };
+      if (incomingStatus === 'completed') {
+        updates.completed_at = now;
+        if (response.started_at) {
+          updates.time_to_complete_seconds = Math.round((Date.now() - new Date(response.started_at).getTime()) / 1000);
+        }
+      }
+      await sb.from('re_form_responses').update(updates).eq('id', response.id);
+    }
+
+    for (const [questionId, value] of Object.entries(answers)) {
+      const isComplex = Array.isArray(value) || (value && typeof value === 'object');
+      await sb.from('re_form_answers').upsert({
+        response_id: response.id,
+        question_id: Number(questionId),
+        value: isComplex ? null : (value == null ? null : String(value)),
+        value_json: isComplex ? value : null,
+        updated_at: now,
+      }, { onConflict: 'response_id,question_id' });
+    }
+
+    let scoreData = {};
+    if (incomingStatus === 'completed') {
+      const { data: questions } = await sb.from('re_form_questions')
+        .select('id,weight,score_map,type')
+        .eq('form_id', fullForm.id);
+      scoreData = computeFormScoreData(fullForm, questions || [], answers);
+      await sb.from('re_form_responses').update({
+        ...scoreData,
+        completed_at: now,
+        metadata: responseMetadata,
+      }).eq('id', response.id);
+
+      if (publicConfig.captureLead && visitor.email) {
+        syncFreshsalesContact(visitor.email, visitor.name || visitor.email, visitor.company || '', visitor.phone || null, {
+          job_title: 'Lead de formulário público',
+        }).then(async (contactId) => {
+          if (contactId && scoreData.score_total) {
+            await createFreshsalesDeal(contactId, `${fullForm.title || 'Formulário'} — lead público`, Number(scoreData.score_total) || 0)
+              .catch((crmError) => console.warn('[async]', crmError?.message));
+          }
+        }).catch((crmError) => console.warn('[async]', crmError?.message));
+      }
+    }
+
+    res.json({
+      success: true,
+      response_id: response.id,
+      status: incomingStatus,
+      visitor,
+      ...scoreData,
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

@@ -106,6 +106,16 @@ const apiLimiter = rateLimit({
 });
 app.use('/api/', apiLimiter);
 
+const publicFormLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Muitas tentativas no formulário público. Tente novamente em alguns minutos.' },
+  skip: () => process.env.NODE_ENV === 'test',
+});
+app.use('/api/public/forms', publicFormLimiter);
+
 // Upload de arquivos: 10 uploads / 10 min por IP
 const uploadLimiter = rateLimit({
   windowMs: 10 * 60 * 1000,
@@ -197,6 +207,10 @@ app.use(documentRequestRoutes);
 // ─── Health check (used by Render.com and uptime monitors) ───────────────────
 app.get(['/api/health', '/healthz'], (req, res) => {
   res.json({ status: 'ok', ts: new Date().toISOString() });
+});
+
+app.get(['/formulario', '/formulario/*'], (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'formulario.html'));
 });
 
 // ─── Fallback ──────────────────────────────────────────────────────────────────

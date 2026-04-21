@@ -20,6 +20,16 @@ function fbEsc(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+function fbSlugify(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '')
+    .slice(0, 120);
+}
+
 function fbToast(msg, type) {
   if (typeof showToast === 'function') showToast(msg, type);
   else console.log('[FB]', type, msg);
@@ -64,6 +74,7 @@ const QB_TYPES = [
   { type:'date',          label:'Data',                icon:'📅' },
   { type:'single_choice', label:'Múltipla escolha',    icon:'🔘' },
   { type:'multi_choice',  label:'Caixas de seleção',   icon:'☑️' },
+  { type:'checklist',     label:'Checklist',           icon:'📌' },
   { type:'dropdown',      label:'Lista suspensa',      icon:'🔽' },
   { type:'scale',         label:'Escala linear',       icon:'📏' },
   { type:'nps',           label:'NPS (0-10)',           icon:'⭐' },
@@ -71,6 +82,9 @@ const QB_TYPES = [
   { type:'yes_no',        label:'Sim / Não',           icon:'✅' },
   { type:'file_upload',   label:'Upload de arquivo',   icon:'📎' },
   { type:'section',       label:'Título de seção',     icon:'🏷️' },
+  { type:'content',       label:'Bloco de conteúdo',   icon:'🧾' },
+  { type:'media',         label:'Imagem / vídeo / PDF', icon:'🖼️' },
+  { type:'score',         label:'Painel de score',     icon:'📈' },
   { type:'calculated',    label:'Campo calculado',     icon:'🧮' },
 ];
 

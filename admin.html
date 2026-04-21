@@ -434,6 +434,37 @@
             <label class="form-builder-field-label">Descrição</label>
             <input id="fb-settings-desc" class="portal-input" placeholder="Descrição (opcional)">
           </div>
+          <div class="form-builder-settings-grid form-builder-settings-grid-public">
+            <label class="form-builder-checkbox-row">
+              <input id="fb-settings-public-enabled" type="checkbox">
+              <span>Publicar sem login</span>
+            </label>
+            <label class="form-builder-checkbox-row">
+              <input id="fb-settings-public-resume" type="checkbox" checked>
+              <span>Permitir retomada</span>
+            </label>
+            <label class="form-builder-checkbox-row">
+              <input id="fb-settings-public-capture" type="checkbox" checked>
+              <span>Capturar lead</span>
+            </label>
+          </div>
+          <div class="form-builder-settings-grid form-builder-settings-grid-public">
+            <div>
+              <label class="form-builder-field-label">Slug público</label>
+              <input id="fb-settings-public-slug" class="portal-input" placeholder="diagnostico-financeiro">
+            </div>
+            <div>
+              <label class="form-builder-field-label">Layout público</label>
+              <select id="fb-settings-public-layout" class="portal-input" aria-label="Layout público">
+                <option value="focus">Uma pergunta por vez</option>
+                <option value="list">Página completa</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-builder-settings-desc">
+            <label class="form-builder-field-label">URL pública</label>
+            <input id="fb-settings-public-url" class="portal-input" readonly>
+          </div>
         </div>
 
         <!-- Stats panel (collapsible) -->
