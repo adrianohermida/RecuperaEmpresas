@@ -33,11 +33,11 @@
     }
 
     const messageTemplates = [
-      { label: 'Solicitar dados pendentes', icon: '�x9', text: 'Identificamos que algumas informações estão pendentes no seu cadastro. Para avançarmos na elaboração do Business Plan, precisamos que você complemente os dados do formulário de onboarding. Caso tenha dúvidas, estamos à disposição.' },
-      { label: 'Ajuste de documento', icon: '�x', text: 'O documento enviado apresenta algumas inconsistências. Solicitamos o reenvio com as seguintes correções:\n- Verificar período das informações\n- Incluir detalhamento solicitado\n\nAssim que o ajuste for realizado, daremos continuidade à análise.' },
-      { label: 'Atualização de etapa', icon: '�x`', text: 'Informamos que estamos avançando na análise do seu processo. Atualmente, estamos na fase de estruturação do Business Plan. Caso haja qualquer atualização relevante sobre a situação da empresa, por favor nos comunique.' },
-      { label: 'Etapa aprovada', icon: '�S&', text: 'Temos uma boa notícia! A etapa de diagnóstico foi concluída com sucesso. A partir de agora, seguiremos para a estruturação da estratégia de recuperação. Em breve entraremos em contato com os próximos passos.' },
-      { label: 'Agendar reunião', icon: '�x&', text: 'Gostaríamos de agendar uma reunião para discutir o andamento do seu processo. Por favor, acesse a seção "Agenda" no portal e selecione um horário de sua preferência. Aguardamos sua confirmação.' },
+      { label: 'Solicitar dados pendentes', icon: '📌', text: 'Identificamos que algumas informações estão pendentes no seu cadastro. Para avançarmos na elaboração do Business Plan, precisamos que você complemente os dados do formulário de onboarding. Caso tenha dúvidas, estamos à disposição.' },
+      { label: 'Ajuste de documento', icon: '📄', text: 'O documento enviado apresenta algumas inconsistências. Solicitamos o reenvio com as seguintes correções:\n- Verificar período das informações\n- Incluir detalhamento solicitado\n\nAssim que o ajuste for realizado, daremos continuidade à análise.' },
+      { label: 'Atualização de etapa', icon: '🔄', text: 'Informamos que estamos avançando na análise do seu processo. Atualmente, estamos na fase de estruturação do Business Plan. Caso haja qualquer atualização relevante sobre a situação da empresa, por favor nos comunique.' },
+      { label: 'Etapa aprovada', icon: '✅', text: 'Temos uma boa notícia! A etapa de diagnóstico foi concluída com sucesso. A partir de agora, seguiremos para a estruturação da estratégia de recuperação. Em breve entraremos em contato com os próximos passos.' },
+      { label: 'Agendar reunião', icon: '📅', text: 'Gostaríamos de agendar uma reunião para discutir o andamento do seu processo. Por favor, acesse a seção "Agenda" no portal e selecione um horário de sua preferência. Aguardamos sua confirmação.' },
     ];
 
     body.innerHTML = `
@@ -107,7 +107,7 @@
         <div class="cds-section-title">Agendamentos</div>
         <button onclick="openBookForClientFromDrawer('${currentClientId}')"
           class="btn-primary cds-new-booking-btn">
-          �x& Novo agendamento
+          Novo agendamento
         </button>
       </div>`;
 
@@ -138,10 +138,10 @@
         <div class="${bookingClasses}">
           <div class="cds-booking-header-row">
             <div class="cds-booking-copy">
-              <div class="cds-booking-title">${slot.title || '�'}</div>
+              <div class="cds-booking-title">${slot.title || '—'}</div>
               ${startsAt ? `<div class="cds-booking-time">
                 ${startsAt.toLocaleDateString('pt-BR')} às ${String(startsAt.getHours()).padStart(2,'0')}:${String(startsAt.getMinutes()).padStart(2,'0')}
-                ${endsAt ? `� ${String(endsAt.getHours()).padStart(2,'0')}:${String(endsAt.getMinutes()).padStart(2,'0')}` : ''}
+                ${endsAt ? `— ${String(endsAt.getHours()).padStart(2,'0')}:${String(endsAt.getMinutes()).padStart(2,'0')}` : ''}
               </div>` : ''}
               ${booking.notes ? `<div class="cds-booking-note">${booking.notes}</div>` : ''}
               ${booking.cancel_reason ? `<div class="cds-booking-cancel-reason">Motivo: ${booking.cancel_reason}</div>` : ''}
@@ -150,13 +150,13 @@
           </div>
           ${booking.status === 'pending' ? `
           <div class="cds-booking-actions">
-            <button onclick="agendaConfirmBooking('${booking.id}');renderClientDetailTab('agenda');" class="cds-action-btn cds-action-btn-confirm">�S& Confirmar</button>
-            <button onclick="agendaRescheduleBooking('${booking.id}','${clientName}')" class="cds-action-btn cds-action-btn-reschedule">� "�¸ Remarcar</button>
-            <button onclick="agendaCancelBooking('${booking.id}','${clientName}')" class="cds-action-btn cds-action-btn-cancel">�R Cancelar</button>
+            <button onclick="agendaConfirmBooking('${booking.id}');renderClientDetailTab('agenda');" class="cds-action-btn cds-action-btn-confirm">Confirmar</button>
+            <button onclick="agendaRescheduleBooking('${booking.id}','${clientName}')" class="cds-action-btn cds-action-btn-reschedule">Remarcar</button>
+            <button onclick="agendaCancelBooking('${booking.id}','${clientName}')" class="cds-action-btn cds-action-btn-cancel">Cancelar</button>
           </div>` : booking.status === 'confirmed' ? `
           <div class="cds-booking-actions">
-            <button onclick="agendaRescheduleBooking('${booking.id}','${clientName}')" class="cds-action-btn cds-action-btn-reschedule">� "�¸ Remarcar</button>
-            <button onclick="agendaCancelBooking('${booking.id}','${clientName}')" class="cds-action-btn cds-action-btn-cancel">�R Cancelar</button>
+            <button onclick="agendaRescheduleBooking('${booking.id}','${clientName}')" class="cds-action-btn cds-action-btn-reschedule">Remarcar</button>
+            <button onclick="agendaCancelBooking('${booking.id}','${clientName}')" class="cds-action-btn cds-action-btn-cancel">Cancelar</button>
           </div>` : ''}
         </div>`;
     }).join('');
@@ -178,7 +178,7 @@
   };
   const REQ_STATUS = {
     pending:   { label:'Aguardando envio', cls:'badge-amber' },
-    uploaded:  { label:'Enviado � revisar', cls:'badge-blue' },
+    uploaded:  { label:'Enviado — revisar', cls:'badge-blue' },
     approved:  { label:'Aprovado',         cls:'badge-green' },
     rejected:  { label:'Rejeitado',        cls:'badge-red'  },
     cancelled: { label:'Cancelado',        cls:'badge-gray' },
@@ -244,7 +244,7 @@
         html += pending.map(reqCard).join('');
       }
       if (uploaded.length) {
-        html += `<div style="font-size:12px;font-weight:600;color:#1d4ed8;margin-top:10px;margin-bottom:6px">Enviados � aguardando revisão (${uploaded.length})</div>`;
+        html += `<div style="font-size:12px;font-weight:600;color:#1d4ed8;margin-top:10px;margin-bottom:6px">Enviados — aguardando revisão (${uploaded.length})</div>`;
         html += uploaded.map(reqCard).join('');
       }
       if (resolved.length) {

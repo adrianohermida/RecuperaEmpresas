@@ -1956,10 +1956,14 @@ body {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.5);
-  display: flex;
+  display: none;
   align-items: center;
   justify-content: center;
   z-index: 1000;
+}
+.mkt-modal-overlay[data-re-modal-bound="1"]:not(.ui-hidden),
+.mkt-modal-overlay[data-open="1"] {
+  display: flex;
 }
 
 .mkt-modal-card {
@@ -2136,12 +2140,16 @@ body {
   border-color: #FEE2E2; background: #FFF5F5; color: #DC2626;
 }
 .admin-modal-overlay {
-  position: fixed; inset: 0; background: rgba(0,0,0,.5); display: flex;
+  position: fixed; inset: 0; background: rgba(0,0,0,.5); display: none;
   align-items: center; justify-content: center; z-index: 1000;
   padding: 20px;
   overflow-y: auto;
   overscroll-behavior: contain;
   backdrop-filter: blur(2px);
+}
+.admin-modal-overlay[data-re-modal-bound="1"]:not(.ui-hidden),
+.admin-modal-overlay[data-open="1"] {
+  display: flex;
 }
 .admin-modal {
   background: #fff; border-radius: 12px; padding: 28px; width: 440px;

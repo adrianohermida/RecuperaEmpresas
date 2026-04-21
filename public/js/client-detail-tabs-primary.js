@@ -49,7 +49,7 @@
       <div class="cdp-section-gap">
         <div class="cdp-section-title">Informações do cliente</div>
         <table class="cdp-info-table">
-          ${[['Nome', user.name], ['E-mail', user.email], ['Empresa', user.company || '�'], ['Cadastrado em', new Date(user.createdAt).toLocaleDateString('pt-BR')]].map(([label, value]) =>
+          ${[['Nome', user.name], ['E-mail', user.email], ['Empresa', user.company || '—'], ['Cadastrado em', new Date(user.createdAt).toLocaleDateString('pt-BR')]].map(([label, value]) =>
             `<tr><td class="cdp-info-label">${label}</td><td class="cdp-info-value">${value}</td></tr>`
           ).join('')}
         </table>
@@ -62,7 +62,7 @@
           const active = !onboarding.completed && stepNumber === step;
           const rowClass = done ? 'done' : active ? 'active' : 'todo';
           const icon = done ? stepIconDone() : active ? stepIconActive() : stepIconTodo();
-          return `<div class="step-row ${rowClass}">${icon}<span>Etapa ${stepNumber} � ${STEP_TITLES[stepNumber]}</span></div>`;
+          return `<div class="step-row ${rowClass}">${icon}<span>Etapa ${stepNumber} — ${STEP_TITLES[stepNumber]}</span></div>`;
         }).join('')}
       </div>`;
   }

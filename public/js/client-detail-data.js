@@ -21,9 +21,9 @@
   }
 
   function calcTotalDebt(dividas) {
-    if (!Array.isArray(dividas) || !dividas.length) return '�';
+    if (!Array.isArray(dividas) || !dividas.length) return '—';
     const total = dividas.reduce((sum, debt) => sum + parseCurrencyVal(debt.saldoAtual || debt.valorOriginal), 0);
-    if (!total) return '�';
+    if (!total) return '—';
     return window.REShared.formatCurrencyBRL(total);
   }
 
@@ -75,31 +75,31 @@
     const receita = parseCurrencyVal(fin.receitaMediaMensal);
     const custos = parseCurrencyVal(fin.custosFixosMensais) + parseCurrencyVal(fin.custosVariaveis);
     if (receita > 0 && custos > 0 && custos > receita) {
-      insights.push('Custos operacionais superam a receita � empresa operando no negativo');
+      insights.push('Custos operacionais superam a receita — empresa operando no negativo');
     } else if (receita > 0 && custos > 0 && (receita - custos) / receita < 0.1) {
-      insights.push('Margem de contribuição muito estreita � risco elevado de insolvência');
+      insights.push('Margem de contribuição muito estreita — risco elevado de insolvência');
     }
 
     const totalDebt = dividas.reduce((sum, debt) => sum + parseCurrencyVal(debt.saldoAtual || debt.valorOriginal), 0);
     if (receita > 0 && totalDebt > receita * 12) {
-      insights.push('Endividamento superior a 12 meses de receita � reestruturação urgente');
+      insights.push('Endividamento superior a 12 meses de receita — reestruturação urgente');
     } else if (receita > 0 && totalDebt > receita * 6) {
-      insights.push('Dívida elevada (>6× receita mensal) � priorizar renegociação');
+      insights.push('Dívida elevada (>6× receita mensal) — priorizar renegociação');
     }
 
     const judicializadas = dividas.filter(debt => debt.estaJudicializada === 'sim');
     if (judicializadas.length > 0) {
-      insights.push(`${judicializadas.length} dívida(s) judicializadas � risco de penhora de ativos`);
+      insights.push(`${judicializadas.length} dívida(s) judicializadas — risco de penhora de ativos`);
     }
-    if (func.folhaEmAtraso === 'sim') insights.push('Folha de pagamento em atraso � risco trabalhista imediato');
-    if (func.acoesTrabalhistasAndamento === 'sim') insights.push('Ações trabalhistas em andamento � passivo oculto a quantificar');
-    if (func.demissoesRecentes === 'sim') insights.push('Demissões em massa recentes � avaliar impacto operacional e trabalhista');
+    if (func.folhaEmAtraso === 'sim') insights.push('Folha de pagamento em atraso — risco trabalhista imediato');
+    if (func.acoesTrabalhistasAndamento === 'sim') insights.push('Ações trabalhistas em andamento — passivo oculto a quantificar');
+    if (func.demissoesRecentes === 'sim') insights.push('Demissões em massa recentes — avaliar impacto operacional e trabalhista');
     if (['mais3a', '2a3a'].includes(crise.inicioDificuldades)) {
-      insights.push('Crise financeira prolongada � risco de insolvência sem intervenção estruturada');
+      insights.push('Crise financeira prolongada — risco de insolvência sem intervenção estruturada');
     }
     const causes = crise.causasCrise || [];
     if (causes.includes('endividamento') && causes.includes('queda_receita')) {
-      insights.push('Dupla pressão: queda de receita + endividamento crescente � cenário crítico');
+      insights.push('Dupla pressão: queda de receita + endividamento crescente — cenário crítico');
     }
 
     return insights;
@@ -117,22 +117,22 @@
     const receita = parseCurrencyVal(fin.receitaMediaMensal);
     const custos = parseCurrencyVal(fin.custosFixosMensais);
     if (receita > 0 && custos > receita * 0.7) {
-      suggestions.push('Revisão urgente da estrutura de custos fixos � meta: reduzir para <60% da receita');
+      suggestions.push('Revisão urgente da estrutura de custos fixos — meta: reduzir para <60% da receita');
     }
     if (fin.possuiControleFinanceiro === 'nao') {
       suggestions.push('Implementar controle financeiro sistemático (Conta Azul, Omie ou planilha estruturada)');
     }
     if (func.demissoesRecentes !== 'sim' && func.folhaEmAtraso !== 'sim') {
-      suggestions.push('Manter equipe estável � capital humano é ativo crítico na recuperação');
+      suggestions.push('Manter equipe estável — capital humano é ativo crítico na recuperação');
     }
     if (score >= 50 && score < 70) {
-      suggestions.push('Focar em renegociação extrajudicial � evitar judicialização desnecessária');
+      suggestions.push('Focar em renegociação extrajudicial — evitar judicialização desnecessária');
     }
     return suggestions;
   }
 
   function execSectionHtml(title, rows) {
-    const validRows = rows.filter(([, value]) => value !== null && value !== undefined && value !== '' && value !== '�');
+    const validRows = rows.filter(([, value]) => value !== null && value !== undefined && value !== '' && value !== '—');
     if (!validRows.length) return '';
     return `<div class="acdd-exec-section">
       <div class="acdd-exec-section-title">${title}</div>
@@ -260,10 +260,10 @@
               </tr></thead>
               <tbody>
                 ${dividas.map(debt => `<tr>
-                  <td class="acdd-debt-creditor">${debt.nomeCredor||'�'}</td>
-                  <td>${TIPO_LABELS[debt.tipoDivida]||debt.tipoDivida||'�'}</td>
-                  <td>${fmtCur(debt.valorOriginal)||'�'}</td>
-                  <td class="acdd-debt-balance">${fmtCur(debt.saldoAtual)||'�'}</td>
+                  <td class="acdd-debt-creditor">${debt.nomeCredor||'—'}</td>
+                  <td>${TIPO_LABELS[debt.tipoDivida]||debt.tipoDivida||'—'}</td>
+                  <td>${fmtCur(debt.valorOriginal)||'—'}</td>
+                  <td class="acdd-debt-balance">${fmtCur(debt.saldoAtual)||'—'}</td>
                   <td>${debt.possuiGarantia==='sim'?'<span class="badge badge-amber">Sim</span>':'<span class="badge badge-gray">Não</span>'}</td>
                   <td>${debt.estaJudicializada==='sim'?'<span class="badge badge-red">Sim</span>':'<span class="badge badge-green">Não</span>'}</td>
                 </tr>`).join('')}
@@ -312,10 +312,10 @@
         ['Medidas já tomadas', fmtVal(crise.medidasJaTomadas)],
       ]);
       html += execSectionHtml('Diagnóstico Estratégico', [
-        ['Análise SWOT � Forças', fmtVal(diag.forcas)],
-        ['Análise SWOT � Fraquezas', fmtVal(diag.fraquezas)],
-        ['Análise SWOT � Oportunidades', fmtVal(diag.oportunidades)],
-        ['Análise SWOT � Ameaças', fmtVal(diag.ameacas)],
+        ['Análise SWOT — Forças', fmtVal(diag.forcas)],
+        ['Análise SWOT — Fraquezas', fmtVal(diag.fraquezas)],
+        ['Análise SWOT — Oportunidades', fmtVal(diag.oportunidades)],
+        ['Análise SWOT — Ameaças', fmtVal(diag.ameacas)],
       ]);
       html += execSectionHtml('Mercado', [
         ['Descrição do mercado', fmtVal(merc.descricaoMercado)],
@@ -373,8 +373,8 @@
 
     body.innerHTML = `
       <div class="acdd-exec-header">
-        <div class="acdd-exec-company">${empresa.razaoSocial || user.company || '�'}</div>
-        <div class="acdd-exec-cnpj">CNPJ: ${empresa.cnpj || '�'} &nbsp;·&nbsp; <span class="badge ${statusCls} acdd-badge-sm">${statusLabel}</span></div>
+        <div class="acdd-exec-company">${empresa.razaoSocial || user.company || '—'}</div>
+        <div class="acdd-exec-cnpj">CNPJ: ${empresa.cnpj || '—'} &nbsp;·&nbsp; <span class="badge ${statusCls} acdd-badge-sm">${statusLabel}</span></div>
         <div class="acdd-exec-kpis">
           <div class="acdd-exec-kpi">
             <div class="acdd-exec-kpi-val ${scoreToneClass}">${score}%</div>

@@ -14,9 +14,8 @@
     return (cents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   }
 
-  function fmtDate(d) { return d ? new Date(d + 'T12:00:00').toLocaleDateString('pt-BR') : '�'; }
-
-  // ���”€ Financeiro ���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€
+  function fmtDate(d) { return d ? new Date(d + 'T12:00:00').toLocaleDateString('pt-BR') : '—'; }
+  // Financeiro
   async function renderFinancial(context) {
     const { body, currentClientId } = context;
     body.innerHTML = tertiaryLoading('Carregando financeiro...');
@@ -57,8 +56,7 @@
       body.innerHTML = '<div class="empty-state"><p>Erro ao carregar dados financeiros.</p></div>';
     }
   }
-
-  // ���”€ Equipe (enhanced: departments + invite + member docs) ���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€
+  // Equipe
   async function renderTeam(context) {
     const { body, currentClientId } = context;
     body.innerHTML = tertiaryLoading('Carregando equipe...');
@@ -129,7 +127,7 @@
             <div class="cdt-member-name">${escHtml(m.name)}</div>
             <div class="cdt-member-email">${escHtml(m.email)}</div>
             ${m.job_title ? `<div style="font-size:11px;color:#6b7280">${escHtml(m.job_title)}</div>` : ''}
-            ${m.department_id ? `<div style="font-size:11px;color:#6366f1">�x� ${escHtml(deptMap[m.department_id] || 'Dept')}</div>` : ''}
+            ${m.department_id ? `<div style="font-size:11px;color:#6366f1">Departamento: ${escHtml(deptMap[m.department_id] || 'Dept')}</div>` : ''}
           </div>
           <span class="cdt-member-role ${roleTone(m.role)}">${roleLabels[m.role] || m.role}</span>
           <span class="cdt-member-status ${m.active ? 'cdt-member-status-active' : 'cdt-member-status-inactive'}">${m.active ? 'Ativo' : 'Inativo'}</span>
@@ -145,8 +143,7 @@
 
     body.innerHTML = html;
   }
-
-  // ���”€ Organograma ���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€��
+  // Organograma
   async function renderOrgChart(context) {
     const { body, currentClientId } = context;
     body.innerHTML = tertiaryLoading('Carregando organograma...');
@@ -174,7 +171,7 @@
         <div class="org-node" style="--level:${level}">
           <div class="org-card" style="border-top:3px solid ${dept.color || '#6366f1'}">
             <div class="org-dept-name">${escHtml(dept.name)}</div>
-            ${manager ? `<div class="org-manager">�x� ${escHtml(manager.name)}${manager.job_title ? ' · ' + escHtml(manager.job_title) : ''}</div>` : ''}
+            ${manager ? `<div class="org-manager">Gestor: ${escHtml(manager.name)}${manager.job_title ? ' · ' + escHtml(manager.job_title) : ''}</div>` : ''}
             <div class="org-members">${deptMembers.length} membro${deptMembers.length !== 1 ? 's' : ''}</div>
           </div>
           ${children.length ? `<div class="org-children">${children.map(c => buildNode(c, level + 1)).join('')}</div>` : ''}
@@ -202,7 +199,7 @@
           border-radius:10px;padding:14px 20px;text-align:center;margin-bottom:24px;
           font-weight:700;font-size:15px}
       </style>
-      <div class="org-company">�x�� Organograma da Empresa</div>`;
+      <div class="org-company">Organograma da Empresa</div>`;
 
     if (!depts.length) {
       html += `<div class="empty-state"><p>Nenhum departamento criado ainda.</p>
@@ -223,8 +220,7 @@
     html += '</div>';
     body.innerHTML = html;
   }
-
-  // ���”€ Credores ���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€
+  // Credores
   async function renderCreditors(context) {
     const { body, currentClientId } = context;
     body.innerHTML = tertiaryLoading('Carregando credores...');
@@ -258,7 +254,7 @@
                 <div style="font-size:12px;color:#6b7280">${typeLabels[c.creditor_type] || c.creditor_type}${c.document ? ' · ' + escHtml(c.document) : ''}</div>
               </div>
               <div style="text-align:right">
-                <div style="font-weight:600;color:#dc2626">${c.current_balance != null ? parseFloat(c.current_balance).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}) : '�'}</div>
+                <div style="font-weight:600;color:#dc2626">${c.current_balance != null ? parseFloat(c.current_balance).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}) : '—'}</div>
                 <span class="badge ${statusCls[c.status] || 'badge-gray'}">${statusLabels[c.status] || c.status}</span>
               </div>
             </div>
@@ -273,8 +269,7 @@
     }
     body.innerHTML = html;
   }
-
-  // ���”€ Fornecedores ���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€��
+  // Fornecedores
   async function renderSuppliers(context) {
     const { body, currentClientId } = context;
     body.innerHTML = tertiaryLoading('Carregando fornecedores...');
@@ -305,7 +300,7 @@
             <div style="display:flex;justify-content:space-between">
               <div>
                 <div style="font-weight:600">${escHtml(s.name)}</div>
-                <div style="font-size:12px;color:#6b7280">${escHtml(s.category || '�')}${s.document ? ' · ' + escHtml(s.document) : ''}</div>
+                <div style="font-size:12px;color:#6b7280">${escHtml(s.category || '—')}${s.document ? ' · ' + escHtml(s.document) : ''}</div>
               </div>
               <span class="badge ${s.status === 'active' ? 'badge-green' : 'badge-gray'}">${s.status === 'active' ? 'Ativo' : 'Inativo'}</span>
             </div>
@@ -325,7 +320,7 @@
             <div style="display:flex;justify-content:space-between;align-items:center">
               <div>
                 <div style="font-weight:500">${escHtml(c.title)}</div>
-                <div style="font-size:12px;color:#6b7280">${escHtml(supplierMap[c.supplier_id]?.name || '�')}</div>
+                <div style="font-size:12px;color:#6b7280">${escHtml(supplierMap[c.supplier_id]?.name || '—')}</div>
               </div>
               <div style="text-align:right">
                 ${c.value_cents ? `<div style="font-weight:600">${fmtBRL(c.value_cents)}</div>` : ''}
@@ -343,8 +338,7 @@
 
     body.innerHTML = html;
   }
-
-  // ���”€ Funcionários ���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€���”€��
+  // Funcionários
   async function renderEmployees(context) {
     const { body, currentClientId } = context;
     body.innerHTML = tertiaryLoading('Carregando funcionários...');
@@ -383,13 +377,13 @@
               <div>
                 <div style="font-weight:600">${escHtml(e.name)}</div>
                 <div style="font-size:12px;color:#6b7280">
-                  ${escHtml(e.job_title || '�')} · ${empTypeLabels[e.employment_type] || e.employment_type}
+                  ${escHtml(e.job_title || '—')} · ${empTypeLabels[e.employment_type] || e.employment_type}
                   ${e.re_departments ? ' · ' + escHtml(e.re_departments.name) : ''}
                 </div>
                 ${e.admission_date ? `<div style="font-size:11px;color:#9ca3af">Admitido: ${fmtDate(e.admission_date)}</div>` : ''}
               </div>
               <div style="text-align:right">
-                <div style="font-weight:600">${e.salary_cents ? fmtBRL(e.salary_cents) : '�'}</div>
+                <div style="font-weight:600">${e.salary_cents ? fmtBRL(e.salary_cents) : '—'}</div>
                 ${e.total_cost_cents ? `<div style="font-size:11px;color:#6b7280">Custo: ${fmtBRL(e.total_cost_cents)}</div>` : ''}
                 <span class="badge ${statusCls[e.status] || 'badge-gray'}">${e.status === 'active' ? 'Ativo' : e.status === 'terminated' ? 'Desligado' : 'Inativo'}</span>
               </div>
