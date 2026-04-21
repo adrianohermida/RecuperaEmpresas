@@ -1,4 +1,4 @@
-﻿'use strict';
+'use strict';
 
 (function () {
   function stepIconDone() {
@@ -19,12 +19,12 @@
 
   function renderOverview(context) {
     const { body, user, onboarding, currentClientId } = context;
-    logDrawerDiagnostic('VisÃ£o Geral', {
+    logDrawerDiagnostic('Visão Geral', {
       route: `/api/admin/client/${currentClientId}`,
       source: 'cache:/api/admin/client/:id',
       expectedKeys: ['user', 'onboarding'],
       actualPayload: { user, onboarding },
-      note: 'Deveria usar os dados jÃ¡ carregados da rota base do drawer e conter user e onboarding preenchidos.',
+      note: 'Deveria usar os dados já carregados da rota base do drawer e conter user e onboarding preenchidos.',
     });
 
     const step = onboarding.step || 1;
@@ -44,12 +44,12 @@
       </div>
       <div class="cdp-section-gap">
         <span class="badge ${status.cls} cdp-status-badge">${status.label}</span>
-        ${onboarding.completedAt ? `<span class="cdp-status-meta">ConcluÃ­do em ${onboarding.completedAt}</span>` : ''}
+        ${onboarding.completedAt ? `<span class="cdp-status-meta">Concluído em ${onboarding.completedAt}</span>` : ''}
       </div>
       <div class="cdp-section-gap">
-        <div class="cdp-section-title">InformaÃ§Ãµes do cliente</div>
+        <div class="cdp-section-title">Informações do cliente</div>
         <table class="cdp-info-table">
-          ${[['Nome', user.name], ['E-mail', user.email], ['Empresa', user.company || 'â€”'], ['Cadastrado em', new Date(user.createdAt).toLocaleDateString('pt-BR')]].map(([label, value]) =>
+          ${[['Nome', user.name], ['E-mail', user.email], ['Empresa', user.company || '�'], ['Cadastrado em', new Date(user.createdAt).toLocaleDateString('pt-BR')]].map(([label, value]) =>
             `<tr><td class="cdp-info-label">${label}</td><td class="cdp-info-value">${value}</td></tr>`
           ).join('')}
         </table>
@@ -62,7 +62,7 @@
           const active = !onboarding.completed && stepNumber === step;
           const rowClass = done ? 'done' : active ? 'active' : 'todo';
           const icon = done ? stepIconDone() : active ? stepIconActive() : stepIconTodo();
-          return `<div class="step-row ${rowClass}">${icon}<span>Etapa ${stepNumber} â€” ${STEP_TITLES[stepNumber]}</span></div>`;
+          return `<div class="step-row ${rowClass}">${icon}<span>Etapa ${stepNumber} � ${STEP_TITLES[stepNumber]}</span></div>`;
         }).join('')}
       </div>`;
   }
@@ -121,15 +121,15 @@
     body.innerHTML = `
       <div class="cdp-section-gap">
         <div class="cdp-task-heading">Adicionar tarefa</div>
-        <input type="text" class="portal-input cdp-task-input" id="newTaskTitle" placeholder="TÃ­tulo da tarefa"/>
-        <input type="text" class="portal-input cdp-task-input" id="newTaskDesc" placeholder="DescriÃ§Ã£o (opcional)"/>
+        <input type="text" class="portal-input cdp-task-input" id="newTaskTitle" placeholder="Título da tarefa"/>
+        <input type="text" class="portal-input cdp-task-input" id="newTaskDesc" placeholder="Descrição (opcional)"/>
         <input type="date" class="portal-input cdp-task-input cdp-task-input-date" id="newTaskDate"/>
         <button class="btn-primary" onclick="addTask()">
           <svg class="cdp-task-add-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           Adicionar tarefa
         </button>
       </div>
-      <div class="cdp-task-heading">Tarefas atribuÃ­das</div>
+      <div class="cdp-task-heading">Tarefas atribuídas</div>
       <div class="task-list">
         ${!tasks.length
           ? '<div class="empty-state"><p>Nenhuma tarefa criada.</p></div>'
@@ -140,7 +140,7 @@
                 ${task.description ? `<div class="cdp-task-desc">${task.description}</div>` : ''}
               </div>
               ${task.dueDate ? `<div class="task-due">${new Date(task.dueDate).toLocaleDateString('pt-BR')}</div>` : ''}
-              <span class="badge ${task.status === 'concluido' ? 'badge-green' : 'badge-amber'}">${task.status === 'concluido' ? 'ConcluÃ­da' : 'Pendente'}</span>
+              <span class="badge ${task.status === 'concluido' ? 'badge-green' : 'badge-amber'}">${task.status === 'concluido' ? 'Concluída' : 'Pendente'}</span>
             </div>`).join('')}
       </div>`;
   }

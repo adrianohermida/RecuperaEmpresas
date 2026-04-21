@@ -1,118 +1,106 @@
 'use strict';
 
 (function () {
-  const PREFS_KEY = 're_admin_prefs';
-
-  function getToken() {
-    if (window.REShared?.getStoredToken) return window.REShared.getStoredToken();
-    return localStorage.getItem('re_token');
-  }
+  const PREFS_KEY = 're_portal_prefs';
 
   function authH() {
     if (window.REShared?.buildAuthHeaders) return window.REShared.buildAuthHeaders();
-    return { 'Content-Type': 'application/json', Authorization: 'Bearer ' + getToken() };
+    return { 'Content-Type': 'application/json' };
   }
 
-  function loadPrefs() {
-    try { return JSON.parse(localStorage.getItem(PREFS_KEY) || '{}'); } catch { return {}; }
+  function getPrefsKey(user) {
+    return user && user.isAdmin ? 're_admin_prefs' : PREFS_KEY;
   }
 
-  function storePrefs(prefs) {
-    localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
+  function loadPrefs(user) {
+    try {
+      return JSON.parse(localStorage.getItem(getPrefsKey(user)) || '{}');
+    } catch (error) {
+      return {};
+    }
+  }
+
+  function storePrefs(user, prefs) {
+    localStorage.setItem(getPrefsKey(user), JSON.stringify(prefs));
   }
 
   window.saveSetting = function (key, value) {
-    const prefs = loadPrefs();
+    const user = window.REShared?.getStoredUser?.() || {};
+    const prefs = loadPrefs(user);
     prefs[key] = value;
-    storePrefs(prefs);
+    storePrefs(user, prefs);
     showToast('Preferência salva.', 'success', 1500);
   };
 
   window.revokeAllSessions = async function () {
     if (!confirm('Isso encerrará sua sessão em todos os dispositivos. Continuar?')) return;
     try {
-      const response = await fetch('/api/auth/revoke-sessions', {
-        method: 'POST',
-        headers: authH(),
-      });
-      if (!response.ok) throw new Error('response not ok');
-      if (window.REShared?.clearStoredAuth) window.REShared.clearStoredAuth();
-      else ['re_token', 're_user'].forEach(key => localStorage.removeItem(key));
-      location.href = 'login.html';
-    } catch {
+      if (window.REShared?.logoutSession) {
+        await window.REShared.logoutSession({ global: true });
+      } else {
+        const response = await fetch('/api/auth/revoke-sessions', {
+          method: 'POST',
+          headers: authH(),
+        });
+        if (!response.ok) throw new Error('response not ok');
+      }
+      window.REShared.redirectToRoute('login');
+    } catch (error) {
       showToast('Erro ao encerrar sessões.', 'error');
     }
   };
 
   function applyPrefsToUI(prefs) {
-    const ids = ['notifMessages', 'notifNewClients', 'notifSteps', 'prefCompactTable', 'prefShowProgress'];
-    ids.forEach(id => {
-      const el = document.getElementById(id);
-      if (!el) return;
-      if (id in prefs) {
-        el.checked = !!prefs[id];
+    ['notifMessages', 'notifNewClients', 'notifSteps', 'prefCompactTable', 'prefShowProgress'].forEach(function (id) {
+      const element = document.getElementById(id);
+      if (!element) return;
+      if (Object.prototype.hasOwnProperty.call(prefs, id)) {
+        element.checked = !!prefs[id];
       }
     });
   }
 
+  function fillUser(user) {
+    const displayName = user.name || user.company || user.email || 'Usuário';
+    const initial = displayName.charAt(0).toUpperCase();
+    const avatar = document.getElementById('userAvatar');
+
+    document.getElementById('userName').textContent = displayName;
+    document.getElementById('dropupUserName').textContent = displayName;
+    document.getElementById('dropupUserEmail').textContent = user.email || 'Sem e-mail';
+    if (avatar) avatar.textContent = initial;
+
+    const avatarKey = user.isAdmin ? 're_admin_avatar' : 're_client_avatar';
+    const savedAvatar = localStorage.getItem(avatarKey);
+    if (savedAvatar && avatar) {
+      avatar.style.backgroundImage = 'url(' + savedAvatar + ')';
+      avatar.style.backgroundSize = 'cover';
+      avatar.style.backgroundPosition = 'center';
+      avatar.textContent = '';
+    }
+  }
+
   async function initConfiguracoes() {
-    const token = getToken();
-    if (!token) { location.href = 'login.html'; return; }
+    const session = await window.REShared.verifySession({ timeoutMs: 55000 }).catch(function () {
+      return { ok: false, status: 0 };
+    });
 
-    let response;
-    try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 55000);
-      response = await fetch('/api/auth/verify', {
-        headers: { Authorization: 'Bearer ' + token },
-        signal: controller.signal,
-      });
-      clearTimeout(timeout);
-    } catch {
-      location.href = 'login.html?err=timeout';
+    if (!session.ok || !session.user) {
+      window.REShared.redirectToRoute('login');
       return;
     }
 
-    if (!response.ok) { location.href = 'login.html'; return; }
-
-    let user;
-    try {
-      const body = await response.json();
-      user = body.user;
-      if (!user) throw new Error('missing user');
-    } catch {
-      location.href = 'login.html?err=parse';
-      return;
-    }
-
-    if (!user.isAdmin) { location.href = 'dashboard.html'; return; }
-
-    const userName = document.getElementById('userName');
-    const userAvatar = document.getElementById('userAvatar');
-    const dropupUserName = document.getElementById('dropupUserName');
-    const dropupUserEmail = document.getElementById('dropupUserEmail');
-
-    if (userName) userName.textContent = user.name || user.email;
-    if (userAvatar) userAvatar.textContent = (user.name || user.email || '?')[0].toUpperCase();
-    if (dropupUserName) dropupUserName.textContent = user.name || user.email;
-    if (dropupUserEmail) dropupUserEmail.textContent = user.email || '';
-
-    const savedAvatar = localStorage.getItem('re_admin_avatar');
-    if (savedAvatar && userAvatar) {
-      userAvatar.style.backgroundImage = `url(${savedAvatar})`;
-      userAvatar.style.backgroundSize = 'cover';
-      userAvatar.style.backgroundPosition = 'center';
-      userAvatar.textContent = '';
-    }
-
-    applyPrefsToUI(loadPrefs());
+    const user = session.user;
+    window.REShared.applyPortalAccountShell(user, { section: 'home' });
+    fillUser(user);
+    applyPrefsToUI(loadPrefs(user));
     document.getElementById('authGuard')?.remove();
   }
 
   if (document.readyState === 'complete') {
     initConfiguracoes();
   } else {
-    window.addEventListener('load', initConfiguracoes);
+    window.addEventListener('load', initConfiguracoes, { once: true });
   }
 
   console.info('[RE:configuracoes-init] loaded');

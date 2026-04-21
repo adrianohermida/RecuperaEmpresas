@@ -1,4 +1,4 @@
-﻿'use strict';
+'use strict';
 
 (function () {
   function downloadBlob(blob, fileName) {
@@ -49,12 +49,12 @@
         headers: authH(),
       });
       if (!response.ok) {
-        showToast('Erro ao gerar token de visualizaÃ§Ã£o.', 'error');
+        showToast('Erro ao gerar token de visualização.', 'error');
         return;
       }
       const payload = await response.json();
       if (!payload.token) {
-        showToast('Token de visualizaÃ§Ã£o nÃ£o retornado.', 'error');
+        showToast('Token de visualização não retornado.', 'error');
         return;
       }
       window.open(window.REShared.getRoute('dashboard') + '?impersonate=' + encodeURIComponent(payload.token), '_blank');

@@ -5665,3 +5665,22 @@ body {
   .page-section { padding: 20px 16px; }
   .page-avatar-wrap { flex-direction: column; align-items: flex-start; }
 }
+
+/* Legacy drawer is no longer part of the active UX flow. Keep it inert so stale markup
+   or cached shells cannot block the viewport on desktop widths. */
+.drawer-overlay,
+.drawer,
+#drawerOverlay,
+#clientDrawer,
+#drawer {
+  display: none !important;
+  pointer-events: none !important;
+}
+
+@media (max-width: 768px) {
+  .page-toggle-row,
+  .page-danger-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

@@ -14,6 +14,9 @@
     resetPassword: '/reset-password',
     dashboard: '/dashboard',
     admin: '/admin',
+    perfil: '/perfil',
+    configuracoes: '/configuracoes',
+    cliente: '/cliente',
     onboarding: '/index.html'
   };
 
@@ -23,11 +26,59 @@
       var impersonationToken = sessionStorage.getItem('re_impersonate_token');
       if (impersonationToken) return impersonationToken;
     }
-    return localStorage.getItem('re_token');
+    return localStorage.getItem('re_token') || '';
   }
 
   function getStoredUser() {
     return parseStoredJson('re_user');
+  }
+
+  function storeAuthUser(user) {
+    localStorage.setItem('re_user', JSON.stringify(user || {}));
+    localStorage.removeItem('re_token');
+  }
+
+  function getSupabaseProjectRef() {
+    try {
+      var url = window.VITE_SUPABASE_URL || window.RE_SUPABASE_URL || '';
+      var hostname = new URL(url).hostname;
+      return hostname.split('.')[0] || '';
+    } catch (error) {
+      return '';
+    }
+  }
+
+  function getSupabaseStorageKeys() {
+    var ref = getSupabaseProjectRef();
+    if (!ref) return [];
+    return [
+      'sb-' + ref + '-auth-token',
+      'sb-' + ref + '-auth-token-code-verifier'
+    ];
+  }
+
+  function getSupabaseSessionTokens() {
+    var keys = getSupabaseStorageKeys();
+    for (var index = 0; index < keys.length; index += 1) {
+      try {
+        var parsed = JSON.parse(localStorage.getItem(keys[index]) || 'null');
+        if (parsed && parsed.access_token && parsed.refresh_token) {
+          return {
+            access_token: parsed.access_token,
+            refresh_token: parsed.refresh_token
+          };
+        }
+      } catch (error) {
+        // Ignore malformed local storage entries.
+      }
+    }
+    return { access_token: '', refresh_token: '' };
+  }
+
+  function clearSupabaseBrowserSession() {
+    getSupabaseStorageKeys().forEach(function (key) {
+      localStorage.removeItem(key);
+    });
   }
 
   function buildAuthHeaders(options) {
@@ -39,7 +90,7 @@
     if (opts.includeContentType !== false) {
       headers['Content-Type'] = 'application/json';
     }
-    if (token) {
+    if (token && token !== 'null' && token !== 'undefined') {
       headers.Authorization = 'Bearer ' + token;
     }
 
@@ -66,6 +117,78 @@
     redirectToRoute('dashboard');
   }
 
+  function getPortalView(user, options) {
+    if (user && user.isAdmin && !(options && options.allowImpersonation)) {
+      return 'admin';
+    }
+    return 'client';
+  }
+
+  function buildPortalSectionUrl(user, section, options) {
+    var route = getPortalView(user, options) === 'admin' ? getRoute('admin') : getRoute('dashboard');
+    if (!section) return route;
+    return route + '?section=' + encodeURIComponent(section);
+  }
+
+  function applyText(target, value) {
+    if (!target || typeof value !== 'string') return;
+    target.textContent = value;
+  }
+
+  function setLink(target, href, label, isActive) {
+    if (!target) return;
+    if (typeof href === 'string' && href) target.href = href;
+    if (typeof label === 'string') {
+      var labelNode = target.querySelector('[data-shell-label]') || target;
+      labelNode.textContent = label;
+    }
+    if (typeof isActive === 'boolean') {
+      target.classList.toggle('active', isActive);
+    }
+  }
+
+  function applyPortalAccountShell(user, options) {
+    var opts = options || {};
+    var view = getPortalView(user, opts);
+    var isAdmin = view === 'admin';
+    var config = isAdmin
+      ? {
+          logoSub: 'Painel do Consultor',
+          badge: 'Admin',
+          role: 'Consultor Admin',
+          navLabel: 'Visão Geral',
+          primaryLinks: [
+            { href: getRoute('admin'), label: 'Clientes', active: opts.section === 'home' },
+            { href: buildPortalSectionUrl(user, 'agenda', opts), label: 'Agenda', active: opts.section === 'agenda' }
+          ],
+          homeHref: getRoute('admin'),
+          homeLabel: 'Voltar ao painel'
+        }
+      : {
+          logoSub: 'Portal do Cliente',
+          badge: 'Cliente',
+          role: 'Cliente Empresa',
+          navLabel: 'Meu Portal',
+          primaryLinks: [
+            { href: getRoute('dashboard'), label: 'Dashboard', active: opts.section === 'home' },
+            { href: buildPortalSectionUrl(user, 'agenda', opts), label: 'Agenda', active: opts.section === 'agenda' }
+          ],
+          homeHref: getRoute('dashboard'),
+          homeLabel: 'Voltar ao portal'
+        };
+
+    applyText(document.getElementById('shellLogoSub'), config.logoSub);
+    applyText(document.getElementById('shellRoleBadge'), config.badge);
+    applyText(document.getElementById('userMenuRole'), config.role);
+    applyText(document.getElementById('shellNavLabel'), config.navLabel);
+    setLink(document.getElementById('shellPrimaryLinkOne'), config.primaryLinks[0].href, config.primaryLinks[0].label, !!config.primaryLinks[0].active);
+    setLink(document.getElementById('shellPrimaryLinkTwo'), config.primaryLinks[1].href, config.primaryLinks[1].label, !!config.primaryLinks[1].active);
+    setLink(document.getElementById('accountBackLink'), config.homeHref, config.homeLabel, false);
+
+    document.body.dataset.portalView = view;
+    return config;
+  }
+
   async function verifySession(options) {
     var opts = options || {};
     var allowAnonymous = !!opts.allowAnonymous;
@@ -86,8 +209,7 @@
       });
       var data = await readResponse(response);
       if (response.ok && data && data.user) {
-        localStorage.setItem('re_user', JSON.stringify(data.user || {}));
-        localStorage.removeItem('re_token');
+        storeAuthUser(data.user);
       }
       return {
         ok: response.ok,
@@ -106,9 +228,31 @@
     keys.forEach(function (key) {
       localStorage.removeItem(key);
     });
+    clearSupabaseBrowserSession();
     if (opts.clearImpersonation) {
       sessionStorage.removeItem('re_impersonate_token');
     }
+  }
+
+  async function logoutSession(options) {
+    var opts = options || {};
+    var endpoint = opts.global ? '/api/auth/revoke-sessions' : '/api/auth/logout';
+    var supabaseSession = getSupabaseSessionTokens();
+
+    try {
+      await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(supabaseSession)
+      });
+    } catch (error) {
+      // Best effort: local cleanup still needs to happen.
+    }
+
+    clearStoredAuth({
+      keys: opts.keys || ['re_token', 're_user'],
+      clearImpersonation: opts.clearImpersonation
+    });
   }
 
   function readResponse(response) {
@@ -194,12 +338,18 @@
     formatCurrencyBRL: formatCurrencyBRL,
     formatDateBR: formatDateBR,
     formatDateTimeBR: formatDateTimeBR,
+    applyPortalAccountShell: applyPortalAccountShell,
+    buildPortalSectionUrl: buildPortalSectionUrl,
+    getPortalView: getPortalView,
+    getSupabaseSessionTokens: getSupabaseSessionTokens,
     getRoute: getRoute,
     getStoredToken: getStoredToken,
     getStoredUser: getStoredUser,
+    logoutSession: logoutSession,
     readResponse: readResponse,
     redirectToRoute: redirectToRoute,
     redirectToUserHome: redirectToUserHome,
+    storeAuthUser: storeAuthUser,
     verifySession: verifySession,
   };
 })();

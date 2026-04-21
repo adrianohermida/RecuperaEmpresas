@@ -1,18 +1,59 @@
 /**
  * api-base.js — API URL interceptor
  *
- * Production now runs on a single origin (Render serving frontend + backend),
- * so `/api/*` must stay same-origin by default.
+ * Production uses same-origin `/api/*` by default.
  *
- * Only set `window.RE_API_BASE` when you intentionally want a different API
- * origin in a controlled environment. Otherwise keep it empty.
+ * You can override all API traffic with `window.RE_API_BASE`, or route only a
+ * subset of endpoints to a Worker using `window.RE_API_WORKER_BASE` plus
+ * `window.RE_API_WORKER_ROUTES`.
  */
 (function () {
+  function trimBase(value) {
+    return String(value || '').replace(/\/+$/, '');
+  }
+
+  function parseWorkerRoutes(value) {
+    if (Array.isArray(value)) return value.map(function (item) { return String(item || '').trim(); }).filter(Boolean);
+    if (typeof value === 'string') {
+      return value.split(',').map(function (item) { return item.trim(); }).filter(Boolean);
+    }
+    return [];
+  }
+
+  function patternToRegex(pattern) {
+    var escaped = pattern.replace(/[.+?^${}()|[\]\\]/g, '\\$&');
+    var wildcarded = escaped.replace(/\*/g, '[^/]+' );
+    return new RegExp('^' + wildcarded + '(?:$|/.*)');
+  }
+
+  function matchesWorkerRoute(pathname) {
+    var patterns = parseWorkerRoutes(window.RE_API_WORKER_ROUTES);
+    return patterns.some(function (pattern) {
+      if (!pattern) return false;
+      if (pattern.indexOf('*') !== -1) return patternToRegex(pattern).test(pathname);
+      return pathname === pattern || pathname.indexOf(pattern + '/') === 0;
+    });
+  }
+
+  function resolveBaseForPath(pathname) {
+    var workerBase = trimBase(window.RE_API_WORKER_BASE);
+    if (workerBase && matchesWorkerRoute(pathname)) return workerBase;
+
+    return trimBase(window.RE_API_BASE);
+  }
+
   function resolveUrl(url) {
-    var base = (window.RE_API_BASE || '').replace(/\/+$/, '');
-    if (!base) return url;
-    if (typeof url === 'string' && url.charAt(0) === '/') return base + url;
-    return url;
+    if (typeof url !== 'string' || url.charAt(0) !== '/') return url;
+
+    var pathname;
+    try {
+      pathname = new URL(url, window.location.origin).pathname;
+    } catch (error) {
+      pathname = url;
+    }
+
+    var base = resolveBaseForPath(pathname);
+    return base ? base + url : url;
   }
 
   function normalizeHeaders(headers) {
@@ -69,13 +110,31 @@
     return getExpectedStatuses(opts).indexOf(Number(status)) !== -1;
   }
 
+  function shouldIncludeCredentials(url, resolvedUrl) {
+    try {
+      var original = typeof url === 'string' ? url : '';
+      if (original.indexOf('/api/') === 0) return true;
+
+      var parsed = new URL(resolvedUrl, window.location.href);
+      if (parsed.pathname.indexOf('/api/') !== 0) return false;
+
+      return /(^|\.)recuperaempresas\.com\.br$/i.test(parsed.hostname) || /(^|\.)pages\.dev$/i.test(parsed.hostname);
+    } catch (error) {
+      return false;
+    }
+  }
+
   // Patch window.fetch
   var _fetch = window.fetch.bind(window);
   window.fetch = function (url, opts) {
     var resolvedUrl = resolveUrl(url);
     var method = String((opts && opts.method) || 'GET').toUpperCase();
     var trace = captureTrace('fetch:' + resolvedUrl).frames;
-    return _fetch(resolvedUrl, opts).catch(function (error) {
+    var requestOptions = Object.assign({}, opts || {});
+    if (!requestOptions.credentials && shouldIncludeCredentials(url, resolvedUrl)) {
+      requestOptions.credentials = 'include';
+    }
+    return _fetch(resolvedUrl, requestOptions).catch(function (error) {
       reportApiFailure({
         url: resolvedUrl,
         originalUrl: url,
@@ -102,7 +161,7 @@
 
       xhr.open(method, targetUrl, true);
 
-      if (opts.credentials === 'include') {
+      if (opts.credentials === 'include' || shouldIncludeCredentials(url, targetUrl)) {
         xhr.withCredentials = true;
       }
 

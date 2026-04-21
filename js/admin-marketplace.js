@@ -140,7 +140,7 @@
         </label>
         ${journeySelect}
         <div class="mkt-modal-actions">
-          <button onclick="document.getElementById('svcModal').remove()" class="mkt-modal-btn mkt-modal-btn-secondary">Cancelar</button>
+          <button onclick="window.REAdminModal?.closeById?.('svcModal', 'admin-marketplace:cancel')" class="mkt-modal-btn mkt-modal-btn-secondary">Cancelar</button>
           <button onclick="submitServiceForm()" class="mkt-modal-btn mkt-modal-btn-primary">${isEdit ? 'Salvar' : 'Criar Serviço'}</button>
         </div>
       </div>

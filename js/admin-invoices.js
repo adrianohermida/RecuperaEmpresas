@@ -95,7 +95,7 @@
         <label class="admin-modal-label">Observações</label>
         <textarea id="ciNotes" rows="2" class="portal-input admin-modal-field admin-modal-textarea"></textarea>
         <div class="admin-modal-actions">
-          <button onclick="document.getElementById('createInvoiceModal').remove()" class="btn-ghost admin-modal-btn">Cancelar</button>
+          <button onclick="window.REAdminModal?.closeById?.('createInvoiceModal', 'admin-invoices:cancel')" class="btn-ghost admin-modal-btn">Cancelar</button>
           <button onclick="submitCreateInvoice()" class="btn-primary admin-modal-btn">Criar Cobrança</button>
         </div>
       </div>

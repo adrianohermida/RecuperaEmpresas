@@ -119,10 +119,9 @@ createHtmlRouteAlias('configuracoes.html', path.join('configuracoes', 'index.htm
 createHtmlRouteAlias('cliente.html', path.join('cliente', 'index.html'));
 // Sempre mantenha aliases únicos e documente a decisão para evitar regressão.
 
-// Root files are now reserved for the marketing/landing experience on GitHub Pages.
-// Only sync portal mirrors to the repository root when explicitly requested.
-if (process.env.SYNC_ROOT_MIRRORS === 'true') {
-  syncRootMirrors({ silent: true });
-}
+// Keep the branch root aligned with the portal build because some Cloudflare
+// Pages source deployments have resolved clean routes from the repository root.
+// Mirroring here prevents stale auth pages from resurfacing on /login and peers.
+syncRootMirrors({ silent: true });
 
 console.log('Build concluído com sucesso. Saída em dist/.');

@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="robots" content="noindex, nofollow"/>
+  <title>Cliente — Recupera Empresas</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
+  <link rel="stylesheet" href="./css/portal.css?v=20260421h"/>
+  <script src="./js/config.js?v=20260420a"></script>
+  <script src="./js/runtime-diagnostics.js?v=20260420a"></script>
+  <script src="./js/api-base.js?v=20260420a"></script>
+  <script src="./js/shared-utils.js?v=20260421g"></script>
+  <style>
+    .client-detail-page { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+    .client-detail-hero { border: 1px solid #dbe7ff; border-radius: 22px; padding: 20px; background: linear-gradient(135deg, #f8fbff 0%, #eef4ff 100%); }
+    .client-detail-hero-row { display: flex; flex-direction: column; gap: 14px; }
+    .client-detail-title-wrap { min-width: 0; }
+    .client-detail-title { margin: 0; font-size: clamp(28px, 5vw, 38px); line-height: 1.06; color: #10233f; letter-spacing: -0.03em; }
+    .client-detail-subtitle { margin: 8px 0 0; color: #5b6b80; }
+    .client-detail-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+    .client-detail-summary-grid { display: grid; gap: 12px; grid-template-columns: 1fr; margin-top: 18px; }
+    .client-detail-summary-card { background: rgba(255,255,255,.92); border: 1px solid #dde7f5; border-radius: 16px; padding: 14px; min-width: 0; }
+    .client-detail-summary-label { font-size: 12px; color: #64748b; margin-bottom: 6px; }
+    .client-detail-summary-value { font-size: 18px; font-weight: 700; color: #10233f; word-break: break-word; }
+    .client-detail-shortcuts { margin-top: 16px; display: flex; flex-wrap: wrap; gap: 10px; }
+    .client-detail-shortcut { display: inline-flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 999px; border: 1px solid #d9e4f5; background: #fff; color: #1b365d; text-decoration: none; font-size: 13px; font-weight: 600; }
+    .client-detail-tabs-shell { border: 1px solid #e5e7eb; border-radius: 20px; background: #fff; overflow: hidden; min-width: 0; }
+    .client-detail-tabs { display: flex; gap: 8px; overflow-x: auto; padding: 12px; border-bottom: 1px solid #eef2f7; scrollbar-width: thin; }
+    .client-detail-tab { flex: 0 0 auto; padding: 10px 14px; border-radius: 999px; border: 1px solid #dbe2ea; background: #f8fafc; color: #334155; font-size: 13px; font-weight: 700; cursor: pointer; }
+    .client-detail-tab.active { background: #1d4ed8; border-color: #1d4ed8; color: #fff; }
+    .client-detail-body { padding: 18px; min-width: 0; overflow-x: auto; }
+    .client-detail-back-link { width: fit-content; }
+    @media (min-width: 768px) {
+      .client-detail-hero-row { flex-direction: row; justify-content: space-between; align-items: flex-start; }
+      .client-detail-summary-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .client-detail-body { padding: 22px; }
+    }
+  </style>
+</head>
+<body>
+<div id="authGuard" class="auth-guard">
+  <div class="auth-guard-content">
+    <svg width="44" height="36" viewBox="0 0 44 36" fill="none" class="auth-guard-logo">
+      <rect x="0"  y="26" width="8" height="10" rx="4" fill="#4B9EFF"/>
+      <rect x="12" y="18" width="8" height="18" rx="4" fill="#2B7FFF"/>
+      <rect x="24" y="10" width="8" height="26" rx="4" fill="#1A56DB"/>
+      <rect x="36" y="2"  width="8" height="34" rx="4" fill="#1244AB"/>
+    </svg>
+    <div class="auth-guard-message">Verificando acesso...</div>
+  </div>
+</div>
+
+<header class="header">
+  <div class="header-inner">
+    <div class="logo">
+      <svg width="36" height="30" viewBox="0 0 44 36" fill="none">
+        <rect x="0"  y="26" width="8" height="10" rx="4" fill="#4B9EFF"/>
+        <rect x="12" y="18" width="8" height="18" rx="4" fill="#2B7FFF"/>
+        <rect x="24" y="10" width="8" height="26" rx="4" fill="#1A56DB"/>
+        <rect x="36" y="2"  width="8" height="34" rx="4" fill="#1244AB"/>
+      </svg>
+      <div>
+        <div class="logo-text">Recupera Empresas</div>
+        <div class="logo-sub">Client Details</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <span class="admin-badge">Admin</span>
+      <button class="menu-toggle" id="menuToggle" onclick="toggleSidebar()" aria-label="Abrir menu">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<div class="sidebar-backdrop" id="sidebarBackdrop" onclick="closeSidebar()"></div>
+
+<div class="portal-layout" id="clientPageLayout">
+  <nav class="sidebar" id="appSidebar">
+    <div class="sidebar-nav">
+      <div class="sidebar-section">
+        <div class="sidebar-label">Navegação</div>
+        <a href="/admin" class="sidebar-link active">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          Clientes
+        </a>
+        <a href="/admin?section=agenda" class="sidebar-link">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          Agenda
+        </a>
+        <a href="/perfil" class="sidebar-link">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          Meu Perfil
+        </a>
+      </div>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="user-dropup" id="userDropup" role="menu">
+        <div class="user-dropup-header">
+          <div class="user-dropup-name" id="dropupUserName">—</div>
+          <div class="user-dropup-email" id="dropupUserEmail">—</div>
+        </div>
+        <a href="/perfil" class="user-dropup-item" role="menuitem">Meu Perfil</a>
+        <a href="/configuracoes" class="user-dropup-item" role="menuitem">Configurações</a>
+        <hr class="user-dropup-divider"/>
+        <button class="user-dropup-item danger" onclick="logout()" role="menuitem">Sair</button>
+      </div>
+      <button class="user-menu-btn" id="userMenuBtn" onclick="toggleUserDropup()" aria-expanded="false" aria-haspopup="true">
+        <div class="user-menu-avatar" id="userAvatar">?</div>
+        <div class="user-menu-info">
+          <div class="user-menu-name" id="userName">Carregando...</div>
+          <div class="user-menu-role">Consultor Admin</div>
+        </div>
+        <svg class="user-menu-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <polyline points="18 15 12 9 6 15"/>
+        </svg>
+      </button>
+    </div>
+  </nav>
+
+  <main class="portal-main">
+    <div class="page-shell client-detail-page">
+      <a href="/admin" class="btn btn-secondary client-detail-back-link" id="clientPageBackLink">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+        Voltar ao painel
+      </a>
+
+      <section class="client-detail-hero">
+        <div class="client-detail-hero-row">
+          <div class="client-detail-title-wrap">
+            <h1 class="client-detail-title" id="clientPageTitle">Carregando...</h1>
+            <p class="client-detail-subtitle" id="clientPageSubtitle">Preparando dados do cliente</p>
+          </div>
+          <div class="client-detail-actions">
+            <button class="btn-ghost drawer-action-btn" onclick="exportClientXLS(REClientDetailState.currentClientId)">Exportar XLS</button>
+            <button class="btn-ghost drawer-action-btn" onclick="exportClientPDF(REClientDetailState.currentClientId)">Exportar PDF</button>
+            <button class="btn-ghost drawer-action-btn" onclick="impersonateClient(REClientDetailState.currentClientId)">Ver como cliente</button>
+            <button class="btn-ghost drawer-action-btn" onclick="adminEditClient(REClientDetailState.currentClientId)">Editar</button>
+            <button class="btn-ghost drawer-action-btn" onclick="adminDeleteClient(REClientDetailState.currentClientId)" style="color:#dc2626">Excluir</button>
+          </div>
+        </div>
+
+        <div class="client-detail-summary-grid">
+          <div class="client-detail-summary-card">
+            <div class="client-detail-summary-label">Cliente</div>
+            <div class="client-detail-summary-value" id="clientSummaryName">—</div>
+          </div>
+          <div class="client-detail-summary-card">
+            <div class="client-detail-summary-label">Contato principal</div>
+            <div class="client-detail-summary-value" id="clientSummaryMeta">—</div>
+          </div>
+          <div class="client-detail-summary-card">
+            <div class="client-detail-summary-label">Status</div>
+            <div><span class="badge badge-gray" id="clientSummaryStatus">Carregando</span></div>
+          </div>
+        </div>
+
+        <div class="client-detail-shortcuts">
+          <a class="client-detail-shortcut" href="#agenda" id="clientAgendaShortcut">Agenda</a>
+          <a class="client-detail-shortcut" href="#docs" id="clientDocsShortcut">Documentos</a>
+          <a class="client-detail-shortcut" href="/admin">Lista de clientes</a>
+        </div>
+      </section>
+
+      <section class="client-detail-tabs-shell">
+        <div class="client-detail-tabs" id="clientPageTabs">
+          <button class="client-detail-tab active" data-client-tab="overview" onclick="switchClientDetailTab('overview',this)">Visão Geral</button>
+          <button class="client-detail-tab" data-client-tab="plan" onclick="switchClientDetailTab('plan',this)">Business Plan</button>
+          <button class="client-detail-tab" data-client-tab="tasks" onclick="switchClientDetailTab('tasks',this)">Tarefas</button>
+          <button class="client-detail-tab" data-client-tab="messages" id="drawerTabMessages" onclick="switchClientDetailTab('messages',this)">Mensagens</button>
+          <button class="client-detail-tab" data-client-tab="agenda" onclick="switchClientDetailTab('agenda',this)">Agenda</button>
+          <button class="client-detail-tab" data-client-tab="docs" onclick="switchClientDetailTab('docs',this)">Documentos</button>
+          <button class="client-detail-tab" data-client-tab="equipe" onclick="switchClientDetailTab('equipe',this)">Equipe</button>
+          <button class="client-detail-tab" data-client-tab="organograma" onclick="switchClientDetailTab('organograma',this)">Organograma</button>
+          <button class="client-detail-tab" data-client-tab="credores" onclick="switchClientDetailTab('credores',this)">Credores</button>
+          <button class="client-detail-tab" data-client-tab="fornecedores" onclick="switchClientDetailTab('fornecedores',this)">Fornecedores</button>
+          <button class="client-detail-tab" data-client-tab="funcionarios" onclick="switchClientDetailTab('funcionarios',this)">Funcionários</button>
+          <button class="client-detail-tab" data-client-tab="financeiro_client" onclick="switchClientDetailTab('financeiro_client',this)">Financeiro</button>
+          <button class="client-detail-tab" data-client-tab="data" onclick="switchClientDetailTab('data',this)">Dados</button>
+        </div>
+        <div class="client-detail-body" id="clientPageBody">
+          <div class="empty-state"><p>Carregando cliente...</p></div>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="./js/admin-modal-manager.js?v=20260421g"></script>
+<script src="./js/admin-shell-core.js?v=20260421g"></script>
+<script src="./js/admin-client-actions.js?v=20260421f"></script>
+<script src="./js/admin-client-actions-extended.js?v=20260421f"></script>
+<script src="./js/admin-agenda.js?v=20260421f"></script>
+<script src="./js/client-detail-tabs-primary.js?v=20260421f"></script>
+<script src="./js/client-detail-tabs-secondary.js?v=20260421f"></script>
+<script src="./js/client-detail-tabs-tertiary.js?v=20260421f"></script>
+<script src="./js/client-detail-data.js?v=20260421f"></script>
+<script src="./js/client-detail-exports.js?v=20260421f"></script>
+<script src="./js/client-detail-controller.js?v=20260421h"></script>
+</body>
+</html>

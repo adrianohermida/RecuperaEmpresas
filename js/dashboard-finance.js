@@ -124,7 +124,7 @@ async function loadInternalInvoices() {
         <td><span class="badge ${isOverdue ? 'badge-red' : sCls}">${isOverdue ? 'Vencido' : sLbl}</span></td>
         <td>
           ${inv.status !== 'cancelled' && inv.status !== 'paid'
-            ? `<a href="/api/financial/internal-invoices/${inv.id}/pdf?token=${encodeURIComponent(localStorage.getItem('re_token') || '')}" target="_blank" class="admin-invoice-action-link">📄 Boleto</a>`
+            ? `<a href="/api/financial/internal-invoices/${inv.id}/pdf" target="_blank" class="admin-invoice-action-link">📄 Boleto</a>`
             : ''}
         </td>
       </tr>`;

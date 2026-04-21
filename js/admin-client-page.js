@@ -24,8 +24,7 @@
       showToast('Erro ao exportar XLS.', 'error');
       return;
     }
-    const currentClient = window.REClientDetailState?.currentClientData || window._currentClientData;
-    const label = sanitizeFileName(currentClient?.user?.company || currentClient?.user?.name || clientId);
+    const label = sanitizeFileName(window._currentClientData?.user?.company || window._currentClientData?.user?.name || clientId);
     downloadBlob(await response.blob(), label + '.xlsx');
   }
 
@@ -36,8 +35,7 @@
       showToast('Erro ao exportar PDF.', 'error');
       return;
     }
-    const currentClient = window.REClientDetailState?.currentClientData || window._currentClientData;
-    const label = sanitizeFileName(currentClient?.user?.company || currentClient?.user?.name || clientId);
+    const label = sanitizeFileName(window._currentClientData?.user?.company || window._currentClientData?.user?.name || clientId);
     downloadBlob(await response.blob(), label + '.pdf');
   }
 
@@ -66,10 +64,4 @@
   window.exportClientXLS = exportClientXLS;
   window.exportClientPDF = exportClientPDF;
   window.impersonateClient = impersonateClient;
-  window.REClientDetailExports = {
-    exportClientPDF,
-    exportClientXLS,
-    impersonateClient,
-  };
 })();
-

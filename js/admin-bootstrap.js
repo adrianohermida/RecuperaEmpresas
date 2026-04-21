@@ -118,7 +118,7 @@
       }
 
       const { token } = await response.json();
-      window.open(`dashboard.html?impersonate=${encodeURIComponent(token)}`, '_blank');
+      window.open(`${window.REShared.getRoute('dashboard')}?impersonate=${encodeURIComponent(token)}`, '_blank');
     } catch (error) {
       showToast('Erro ao visualizar como cliente.', 'error');
     }
@@ -176,14 +176,14 @@
     } catch (error) {
       clearTimeout(warmTimer);
       console.error('[RE:admin-bootstrap] verify fetch failed:', error.message);
-      location.href = 'login.html?err=timeout';
+      window.REShared.redirectToRoute('login', { search: 'err=timeout' });
       return;
     }
     clearTimeout(warmTimer);
 
     if (!response.ok) {
       console.warn('[RE:admin-bootstrap] verify response not ok:', response.status);
-      location.href = 'login.html';
+      window.REShared.redirectToRoute('login');
       return;
     }
 
@@ -192,15 +192,16 @@
       const body = await response.json();
       user = body.user;
       if (!user) throw new Error('user field missing from /api/auth/verify response');
+      if (window.REShared?.storeAuthUser) window.REShared.storeAuthUser(user);
     } catch (err) {
       console.error('[RE:admin-bootstrap] verify JSON parse error:', err.message);
-      location.href = 'login.html?err=parse';
+      window.REShared.redirectToRoute('login', { search: 'err=parse' });
       return;
     }
 
     if (!user.isAdmin) {
       console.warn('[RE:admin-bootstrap] user is not admin → redirect dashboard');
-      location.href = 'dashboard.html';
+      window.REShared.redirectToRoute('dashboard');
       return;
     }
 

@@ -4,64 +4,20 @@
 let _logicSourceQId = null;
 
 const FB_TRANSIENT_MODAL_IDS = ['fb-modal-new', 'fb-logic-modal', 'fb-assign-modal', 'fb-resp-detail-modal'];
-const FB_MODAL_DESKTOP_BREAKPOINT = 900;
-const fbTransientModalState = {
-  activeModalId: null,
-  initialized: false,
-  resizeHandler: null,
-};
-
-// Debounce helper
-function debounce(fn, ms) {
-  let timer;
-  return function(...args) {
-    clearTimeout(timer);
-    timer = setTimeout(() => fn.apply(this, args), ms);
-  };
-}
 
 function fbGetTransientModal(id) {
   return document.getElementById(id);
 }
 
-function fbGetVisibleTransientModals() {
-  return FB_TRANSIENT_MODAL_IDS
-    .map(fbGetTransientModal)
-    .filter(modal => modal && !modal.classList.contains('ui-hidden'));
-}
-
-function fbSyncTransientModalState() {
-  const visible = fbGetVisibleTransientModals();
-  if (!visible.length) {
-    fbTransientModalState.activeModalId = null;
-    return;
-  }
-
-  const activeModal = visible[visible.length - 1];
-  fbTransientModalState.activeModalId = activeModal.id;
-}
-
-function fbEnforceSingleVisibleModal() {
-  const visible = fbGetVisibleTransientModals();
-  if (visible.length <= 1) {
-    fbSyncTransientModalState();
-    return;
-  }
-
-  const activeId = fbTransientModalState.activeModalId;
-  const keep = visible.find(modal => modal.id === activeId) || visible[visible.length - 1];
-  visible.forEach(modal => {
-    if (modal.id !== keep.id) modal.classList.add('ui-hidden');
-  });
-  fbTransientModalState.activeModalId = keep.id;
-}
-
 function fbCloseAllTransientModals(exceptId) {
-  FB_TRANSIENT_MODAL_IDS.forEach(id => {
-    if (id === exceptId) return;
-    fbGetTransientModal(id)?.classList.add('ui-hidden');
-  });
-  fbTransientModalState.activeModalId = exceptId || null;
+  if (window.REAdminModal?.closeAll) {
+    window.REAdminModal.closeAll({ keepId: exceptId || null, reason: 'fb-close-all' });
+  } else {
+    FB_TRANSIENT_MODAL_IDS.forEach(id => {
+      if (id === exceptId) return;
+      fbGetTransientModal(id)?.classList.add('ui-hidden');
+    });
+  }
 }
 
 function fbCloseTransientModals(exceptId) {
@@ -70,36 +26,27 @@ function fbCloseTransientModals(exceptId) {
 
 function fbOpenTransientModal(id) {
   if (!FB_TRANSIENT_MODAL_IDS.includes(id)) return;
-  fbCloseAllTransientModals(id);
-  fbGetTransientModal(id)?.classList.remove('ui-hidden');
-  fbTransientModalState.activeModalId = id;
+  if (window.REAdminModal?.openStatic) {
+    window.REAdminModal.openStatic(id, 'form-builder:' + id);
+  } else {
+    fbCloseAllTransientModals(id);
+    fbGetTransientModal(id)?.classList.remove('ui-hidden');
+  }
 }
 
 function fbCloseTransientModal(id) {
   if (!FB_TRANSIENT_MODAL_IDS.includes(id)) return;
-  fbGetTransientModal(id)?.classList.add('ui-hidden');
-  if (fbTransientModalState.activeModalId === id) {
-    fbTransientModalState.activeModalId = null;
+  if (window.REAdminModal?.closeById) {
+    window.REAdminModal.closeById(id, 'form-builder:' + id + ':close');
+  } else {
+    fbGetTransientModal(id)?.classList.add('ui-hidden');
   }
 }
 
 function fbEnsureTransientModalController() {
-  if (fbTransientModalState.initialized) return;
-  fbTransientModalState.initialized = true;
-
-  let lastWidth = window.innerWidth;
-  fbTransientModalState.resizeHandler = debounce(() => {
-    if (window.innerWidth === lastWidth) return;
-    const previousWidth = lastWidth;
-    lastWidth = window.innerWidth;
-
-    // Em desktop, garante que apenas um modal transiente permaneça visível.
-    if (window.innerWidth > FB_MODAL_DESKTOP_BREAKPOINT || previousWidth > FB_MODAL_DESKTOP_BREAKPOINT) {
-      fbEnforceSingleVisibleModal();
-    }
-  }, 150);
-
-  window.addEventListener('resize', fbTransientModalState.resizeHandler);
+  if (window.__fbTransientModalControllerReady) return;
+  window.__fbTransientModalControllerReady = true;
+  window.REAdminModal?.registerStatic?.(FB_TRANSIENT_MODAL_IDS, 'form-builder');
 }
 
 function fbBindTransientModalBehavior() {
@@ -113,19 +60,6 @@ function fbBindTransientModalBehavior() {
       if (event.target !== modal) return;
       fbCloseTransientModal(id);
     });
-  });
-
-  if (document.body.dataset.fbEscBound === '1') return;
-  document.body.dataset.fbEscBound = '1';
-
-  document.addEventListener('keydown', event => {
-    if (event.key !== 'Escape') return;
-    if (fbTransientModalState.activeModalId) {
-      fbCloseTransientModal(fbTransientModalState.activeModalId);
-      return;
-    }
-    const activeModal = [...fbGetVisibleTransientModals()].pop();
-    if (activeModal) fbCloseTransientModal(activeModal.id);
   });
 }
 

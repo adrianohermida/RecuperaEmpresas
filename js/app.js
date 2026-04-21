@@ -18,9 +18,9 @@ function authHeaders(extra = {}) {
   return window.REShared.buildAuthHeaders({ extra });
 }
 
-function logout() {
-  window.REShared.clearStoredAuth({ keys: ['re_token', 're_user', LS_KEY] });
-  window.location.href = 'login.html';
+async function logout() {
+  await window.REShared.logoutSession({ keys: ['re_token', 're_user', LS_KEY] });
+  window.REShared.redirectToRoute('login');
 }
 
 // ─── State ───────────────────────────────────────────────────────────────────
@@ -305,8 +305,6 @@ const app = {
 
 // ─── Per-step API notification ────────────────────────────────────────────────
 async function notifyStepComplete(stepNum) {
-  const token = getToken();
-  if (!token) return;
   try {
     await fetch('/api/step-complete', {
       method: 'POST',
@@ -393,7 +391,7 @@ function showSuccessScreen() {
         você receberá um contato para alinhamento das próximas etapas.
       </div>
       <p class="success-screen-link-wrap">
-        <a href="./dashboard.html" class="success-screen-link">
+        <a href="/dashboard" class="success-screen-link">
           Acessar o Portal
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
         </a>
@@ -401,19 +399,16 @@ function showSuccessScreen() {
     </div>
   `);
   // Auto-redirect after 6 seconds
-  setTimeout(() => { window.location.href = 'dashboard.html'; }, 6000);
+  setTimeout(() => { window.REShared.redirectToRoute('dashboard'); }, 6000);
 }
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
 (async function init() {
-  // Auth guard
-  const token = getToken();
-  if (!token) { window.location.href = 'login.html'; return; }
-
-  const res = await fetch('/api/auth/verify', { headers: { Authorization: 'Bearer ' + token } });
-  if (!res.ok) { window.location.href = 'login.html'; return; }
+  const res = await fetch('/api/auth/verify', { headers: authHeaders({}) });
+  if (!res.ok) { window.REShared.redirectToRoute('login'); return; }
 
   const { user } = await res.json();
+  if (window.REShared?.storeAuthUser) window.REShared.storeAuthUser(user);
 
   // Show user info in header
   const userEl   = el('userName');
@@ -426,11 +421,11 @@ function showSuccessScreen() {
   if (guard) guard.remove();
 
   // Redirect admin to admin panel
-  if (user.isAdmin) { window.location.href = 'admin.html'; return; }
+  if (user.isAdmin) { window.REShared.redirectToRoute('admin'); return; }
 
   // ── Load form configuration ───────────────────────────────────────────────
   try {
-    const cfgRes = await fetch('/api/form-config', { headers: { Authorization: 'Bearer ' + token } });
+    const cfgRes = await fetch('/api/form-config', { headers: authHeaders() });
     if (cfgRes.ok) {
       const cfg = await cfgRes.json();
       window._formCfg = cfg;
@@ -455,11 +450,11 @@ function showSuccessScreen() {
 
   // ── Load server-side progress ─────────────────────────────────────────────
   try {
-    const pRes = await fetch('/api/progress', { headers: { Authorization: 'Bearer ' + token } });
+    const pRes = await fetch('/api/progress', { headers: authHeaders() });
     if (pRes.ok) {
       const serverProgress = await pRes.json();
       // If already completed, go to dashboard
-      if (serverProgress.completed) { window.location.href = 'dashboard.html'; return; }
+      if (serverProgress.completed) { window.REShared.redirectToRoute('dashboard'); return; }
       if (serverProgress.step > 1 && serverProgress.data) {
         Object.assign(state.data, serverProgress.data);
         // Snap to nearest active step if saved step is now disabled

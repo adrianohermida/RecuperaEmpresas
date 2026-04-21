@@ -490,6 +490,27 @@
     return snapshot;
   }
 
+  function closeLegacyDrawers() {
+    const legacyOverlays = Array.from(document.querySelectorAll('.drawer-overlay, #drawerOverlay'));
+    const legacyDrawers = Array.from(document.querySelectorAll('.drawer, #clientDrawer, #drawer'));
+    let closed = 0;
+
+    legacyOverlays.forEach(function (overlay) {
+      overlay.classList.remove('open');
+      overlay.classList.add('ui-hidden');
+      closed += 1;
+    });
+
+    legacyDrawers.forEach(function (drawer) {
+      drawer.classList.remove('open');
+      drawer.classList.add('ui-hidden');
+      drawer.setAttribute('aria-hidden', 'true');
+      closed += 1;
+    });
+
+    return closed;
+  }
+
   function sanitizeShellOverlays(reason) {
     const sidebar = document.getElementById('appSidebar');
     const sidebarBackdrop = document.getElementById('sidebarBackdrop');
@@ -499,6 +520,10 @@
     if (sidebarBackdrop && !sidebar?.classList.contains('mobile-open')) {
       sidebarBackdrop.classList.remove('open');
       if (isElementVisible(sidebarBackdrop)) blockers.push('sidebarBackdrop');
+    }
+
+    if (closeLegacyDrawers()) {
+      blockers.push('legacyDrawer');
     }
 
     STATIC_MODAL_IDS.forEach(function (id) {
@@ -643,6 +668,7 @@
       if (currentWidth === previousWidth) return;
       state.lastWidth = currentWidth;
       if (currentWidth > BREAKPOINT || previousWidth > BREAKPOINT) {
+        closeLegacyDrawers();
         sanitizeShellOverlays('resize');
         enforceSingleVisible({ keepId: state.modal?.id || null });
       }
