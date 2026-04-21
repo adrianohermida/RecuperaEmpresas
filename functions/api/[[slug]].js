@@ -1,6 +1,6 @@
 const DEFAULT_LEGACY_API_BASE = 'https://api.recuperaempresas.com.br';
 const DEFAULT_WORKER_API_BASE = 'https://api-edge.recuperaempresas.com.br';
-const DEFAULT_WORKER_ROUTES = ['/api/admin/invoices', '/api/admin/journeys'];
+const DEFAULT_WORKER_ROUTES = ['/api/admin/invoices', '/api/admin/journeys', '/api/notifications'];
 
 function trimBase(value) {
   return String(value || '').replace(/\/+$/, '');
