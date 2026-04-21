@@ -5,7 +5,7 @@ function fbRenderPropertiesEmpty() {
   const panel = document.getElementById('fb-props-panel');
   if (!panel) return;
   panel.innerHTML = `<div class="fb-props-empty">
-    <div class="fb-props-empty-icon">👈</div>
+    <div class="fb-props-empty-icon">${ICONS.chevronLeft(32)}</div>
     <div class="fb-props-empty-copy">Clique em uma questão para editar suas propriedades</div>
   </div>`;
 }
@@ -17,11 +17,11 @@ function fbRenderPropertiesPanel(qId) {
   const q = questions.find(x => x.id === qId);
   if (!q) { fbRenderPropertiesEmpty(); return; }
 
-  const typeInfo = QB_TYPES.find(t => t.type === q.type) || { icon:'❓', label: q.type };
+  const typeInfo = QB_TYPES.find(t => t.type === q.type) || { icon: ICONS.helpCircle(16), label: q.type };
 
   panel.innerHTML = `
   <div class="fb-props-panel-inner">
-    ${FB.readOnly ? '<div class="fb-props-readonly-banner">🔒 Somente leitura</div>' : ''}
+    ${FB.readOnly ? `<div class="fb-props-readonly-banner">${ICONS.lock(16)} Somente leitura</div>` : ''}
     <div class="fb-props-type-badge">
       ${typeInfo.icon} ${typeInfo.label}
     </div>
@@ -67,11 +67,11 @@ function fbRenderPropertiesPanel(qId) {
     <!-- Buttons -->
     ${FB.readOnly ? '' : `<div class="fb-props-actions">
       <button class="btn-primary fb-props-action-btn" onclick="fbSaveQuestion(${q.id})">
-        💾 Salvar questão
+        ${ICONS.save(16)} Salvar questão
       </button>
       ${['single_choice','multi_choice','checklist','dropdown','scale','nps','rating'].includes(q.type) ? `
       <button class="btn-ghost fb-props-action-btn" onclick="fbOpenLogicEditor(${q.id})">
-        🔀 Editar lógica condicional
+        ${ICONS.gitBranch(16)} Editar lógica condicional
       </button>` : ''}
     </div>`}
   </div>`;

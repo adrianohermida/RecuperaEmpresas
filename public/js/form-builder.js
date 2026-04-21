@@ -66,26 +66,26 @@ const FB = {
    Question Types catalogue
 ──────────────────────────────────────────────────────────────────────────────*/
 const QB_TYPES = [
-  { type:'short_text',    label:'Texto curto',         icon:'✏️' },
-  { type:'long_text',     label:'Texto longo',         icon:'📝' },
-  { type:'number',        label:'Número',              icon:'🔢' },
-  { type:'currency',      label:'Valor monetário',     icon:'💰' },
-  { type:'percentage',    label:'Percentual',          icon:'📊' },
-  { type:'date',          label:'Data',                icon:'📅' },
-  { type:'single_choice', label:'Múltipla escolha',    icon:'🔘' },
-  { type:'multi_choice',  label:'Caixas de seleção',   icon:'☑️' },
-  { type:'checklist',     label:'Checklist',           icon:'📌' },
-  { type:'dropdown',      label:'Lista suspensa',      icon:'🔽' },
-  { type:'scale',         label:'Escala linear',       icon:'📏' },
-  { type:'nps',           label:'NPS (0-10)',           icon:'⭐' },
-  { type:'rating',        label:'Avaliação (estrelas)', icon:'🌟' },
-  { type:'yes_no',        label:'Sim / Não',           icon:'✅' },
-  { type:'file_upload',   label:'Upload de arquivo',   icon:'📎' },
-  { type:'section',       label:'Título de seção',     icon:'🏷️' },
-  { type:'content',       label:'Bloco de conteúdo',   icon:'🧾' },
-  { type:'media',         label:'Imagem / vídeo / PDF', icon:'🖼️' },
-  { type:'score',         label:'Painel de score',     icon:'📈' },
-  { type:'calculated',    label:'Campo calculado',     icon:'🧮' },
+  { type:'short_text',    label:'Texto curto',         icon: ICONS.alignLeft(16) },
+  { type:'long_text',     label:'Texto longo',         icon: ICONS.alignJustify(16) },
+  { type:'number',        label:'Número',              icon: ICONS.hash(16) },
+  { type:'currency',      label:'Valor monetário',     icon: ICONS.dollarSign(16) },
+  { type:'percentage',    label:'Percentual',          icon: ICONS.percent(16) },
+  { type:'date',          label:'Data',                icon: ICONS.calendar(16) },
+  { type:'single_choice', label:'Múltipla escolha',    icon: ICONS.checkCircle(16) },
+  { type:'multi_choice',  label:'Caixas de seleção',   icon: ICONS.checkSquare(16) },
+  { type:'checklist',     label:'Checklist',           icon: ICONS.list(16) },
+  { type:'dropdown',      label:'Lista suspensa',      icon: ICONS.chevronUpDown(16) },
+  { type:'scale',         label:'Escala linear',       icon: ICONS.sliders(16) },
+  { type:'nps',           label:'NPS (0-10)',           icon: ICONS.barChart2(16) },
+  { type:'rating',        label:'Avaliação (estrelas)', icon: ICONS.star(16) },
+  { type:'yes_no',        label:'Sim / Não',           icon: ICONS.thumbsUp(16) },
+  { type:'file_upload',   label:'Upload de arquivo',   icon: ICONS.paperclip(16) },
+  { type:'section',       label:'Título de seção',     icon: ICONS.type(16) },
+  { type:'content',       label:'Bloco de conteúdo',   icon: ICONS.fileText(16) },
+  { type:'media',         label:'Imagem / vídeo / PDF', icon: ICONS.image(16) },
+  { type:'score',         label:'Painel de score',     icon: ICONS.trendingUp(16) },
+  { type:'calculated',    label:'Campo calculado',     icon: ICONS.zap(16) },
 ];
 
 /* ──────────────────────────────────────────────────────────────────────────────
@@ -126,7 +126,7 @@ async function fbLoadFormsList() {
 
   if (!FB.forms.length) {
     grid.innerHTML = `<div class="form-builder-list-empty">
-      <div class="form-builder-list-empty-icon">📋</div>
+      <div class="form-builder-list-empty-icon">${ICONS.clipboard(32)}</div>
       <div class="form-builder-list-empty-title">Nenhum formulário criado</div>
       <div class="form-builder-list-empty-copy">Clique em "Novo Formulário" para começar.</div>
     </div>`;
@@ -144,14 +144,14 @@ async function fbLoadFormsList() {
     const statusBadge = `<span class="badge ${STATUS_CLS[f.status] || 'badge-gray'}">${STATUS_LBL[f.status] || f.status}</span>`;
     const systemBadge = isSystem ? '<span class="badge form-builder-system-badge">Sistema</span>' : '';
     const actionBtns  = isSystem
-      ? `<button class="btn-primary form-builder-card-btn" onclick="fbOpenBuilder('${fid}',true)">👁️ Ver Perguntas</button>
-         <button class="btn-ghost form-builder-card-btn" onclick="fbOpenResponses('${fid}','${fbEsc(f.title)}')">📊 Respostas</button>
-         <button class="btn-ghost form-builder-card-btn" onclick="fbOpenStatsPanel('${fid}')">📈 Estatísticas</button>`
-      : `<button class="btn-primary form-builder-card-btn" onclick="fbOpenBuilder('${fid}')">✏️ Editar</button>
-         <button class="btn-ghost form-builder-card-btn" onclick="fbOpenResponses('${fid}','${fbEsc(f.title)}')">📊 Respostas</button>
-         <button class="btn-ghost form-builder-card-btn" onclick="fbOpenStatsPanel('${fid}')">📈 Estatísticas</button>
-         <button class="btn-ghost form-builder-card-btn" onclick="fbDuplicateForm('${fid}')">📋 Duplicar</button>
-         <button class="btn-ghost form-builder-card-btn form-builder-card-btn-danger" onclick="fbDeleteForm('${fid}','${fbEsc(f.title)}')">🗑️ Excluir</button>`;
+      ? `<button class="btn-primary form-builder-card-btn" onclick="fbOpenBuilder('${fid}',true)">${ICONS.eye(14)} Ver Perguntas</button>
+         <button class="btn-ghost form-builder-card-btn" onclick="fbOpenResponses('${fid}','${fbEsc(f.title)}')">${ICONS.barChart2(14)} Respostas</button>
+         <button class="btn-ghost form-builder-card-btn" onclick="fbOpenStatsPanel('${fid}')">${ICONS.trendingUp(14)} Estatísticas</button>`
+      : `<button class="btn-primary form-builder-card-btn" onclick="fbOpenBuilder('${fid}')">${ICONS.pencilSimple(14)} Editar</button>
+         <button class="btn-ghost form-builder-card-btn" onclick="fbOpenResponses('${fid}','${fbEsc(f.title)}')">${ICONS.barChart2(14)} Respostas</button>
+         <button class="btn-ghost form-builder-card-btn" onclick="fbOpenStatsPanel('${fid}')">${ICONS.trendingUp(14)} Estatísticas</button>
+         <button class="btn-ghost form-builder-card-btn" onclick="fbDuplicateForm('${fid}')">${ICONS.copy(14)} Duplicar</button>
+         <button class="btn-ghost form-builder-card-btn form-builder-card-btn-danger" onclick="fbDeleteForm('${fid}','${fbEsc(f.title)}')">${ICONS.trash2(14)} Excluir</button>`;
     return `
     <div class="form-builder-list-card ${isSystem ? 'form-builder-list-card-system' : ''}">
       <div class="form-builder-list-card-header">
@@ -162,9 +162,9 @@ async function fbLoadFormsList() {
         <div class="form-builder-list-card-badges">${systemBadge}${statusBadge}</div>
       </div>
       ${f.description ? `<div class="form-builder-list-card-desc">${fbEsc(f.description)}</div>` : ''}
-      ${isSystem && systemNote ? `<div class="form-builder-system-note">ℹ️ ${fbEsc(systemNote)}</div>` : ''}
+      ${isSystem && systemNote ? `<div class="form-builder-system-note">${ICONS.info(14)} ${fbEsc(systemNote)}</div>` : ''}
       <div class="form-builder-list-card-meta">
-        <span>📬 ${f.response_count || 0} respostas</span>
+        <span>${ICONS.send(14)} ${f.response_count || 0} respostas</span>
       </div>
       <div class="form-builder-list-card-actions">${actionBtns}</div>
     </div>`;

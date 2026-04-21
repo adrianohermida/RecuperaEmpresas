@@ -502,6 +502,19 @@ body {
   justify-content: center;
 }
 
+.header-center-template {
+  width: 100%;
+}
+
+.header-center-mobile,
+.header-center-desktop {
+  width: 100%;
+}
+
+.header-center-desktop {
+  display: none;
+}
+
 .header-center-empty {
   min-height: 1px;
 }
@@ -739,6 +752,14 @@ body {
   .header-page-title {
     font-size: 16px;
   }
+
+  .header-center-mobile {
+    display: none;
+  }
+
+  .header-center-desktop {
+    display: block;
+  }
 }
 
 @media (max-width: 768px) {
@@ -758,6 +779,10 @@ body {
     left: 12px;
     width: auto;
     min-width: 0;
+  }
+
+  .header-center-desktop {
+    display: none;
   }
 }
 
