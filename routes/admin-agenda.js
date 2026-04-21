@@ -2,7 +2,7 @@
 const router = require('express').Router();
 const { sb, GOOGLE_CALENDAR_WEBHOOK_SECRET } = require('../lib/config');
 const { requireAdmin } = require('../lib/auth');
-const { gcCreateEvent, gcPatchEvent, gcDeleteEvent, gcFreeBusy, computeFreeWindows } = require('../lib/calendar');
+const { gcCreateEvent, gcPatchEvent, gcDeleteEvent, gcFreeBusy, computeFreeWindows, _gcAccessToken } = require('../lib/calendar');
 const { selectWithColumnFallback, insertWithColumnFallback, isSchemaCompatibilityError, buildRouteDiagnostic } = require('../lib/schema');
 const { auditLog } = require('../lib/logging');
 const { adjustCredits } = require('./agenda');
@@ -171,6 +171,20 @@ router.delete('/api/admin/agenda/slots/:slotId', requireAdmin, async (req, res) 
  */
 router.get('/api/admin/agenda/camila-availability', requireAdmin, async (req, res) => {
   try {
+    // ── Check credentials before computing "free" windows ────────────────────
+    // Without a valid token, gcFreeBusy returns [] which looks like a fully-free
+    // calendar — indistinguishable from a real empty calendar. We detect this
+    // upfront and return a clear error so the UI can show the right message.
+    const token = await _gcAccessToken();
+    if (!token) {
+      return res.status(503).json({
+        error:         'Google Calendar não configurado. Verifique as credenciais (GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET / GOOGLE_OAUTH_REFRESH_TOKEN).',
+        unconfigured:  true,
+        free_windows:  {},
+        busy_intervals: [],
+      });
+    }
+
     const days     = Math.min(parseInt(req.query.days || '14'), 60);
     const from     = req.query.from || new Date().toISOString();
     const to       = new Date(Date.now() + days * 86400_000).toISOString();
@@ -178,18 +192,21 @@ router.get('/api/admin/agenda/camila-availability', requireAdmin, async (req, re
 
     const busy = await gcFreeBusy(from, to);
 
-    // Group free windows by day
+    // Group free windows by day (skip weekends)
     const dayMap = {};
     const cursor = new Date(from);
     const end    = new Date(to);
     while (cursor < end) {
-      const dateStr = cursor.toISOString().slice(0, 10);
-      const windows = computeFreeWindows(busy, dateStr, duration);
-      if (windows.length) dayMap[dateStr] = windows;
+      const dow     = cursor.getDay(); // 0=Sun, 6=Sat
+      if (dow !== 0 && dow !== 6) {   // skip weekends
+        const dateStr = cursor.toISOString().slice(0, 10);
+        const windows = computeFreeWindows(busy, dateStr, duration);
+        if (windows.length) dayMap[dateStr] = windows;
+      }
       cursor.setDate(cursor.getDate() + 1);
     }
 
-    res.json({ free_windows: dayMap, busy_intervals: busy });
+    res.json({ free_windows: dayMap, busy_intervals: busy, calendar_connected: true });
   } catch (e) {
     console.error('[AVAILABILITY]', e.message);
     res.status(500).json({ error: e.message, free_windows: {}, busy_intervals: [] });

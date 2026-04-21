@@ -128,9 +128,16 @@ function showSection(name, el) {
   if (el) el.classList.add('active');
   if (name === 'logs') loadLogs();
   if (name === 'agenda') {
-    // Open on the availability tab first — shows Camila's free windows immediately
-    if (typeof switchAgendaTab === 'function') switchAgendaTab('availability');
-    else { loadAdminAgenda(); if (typeof loadAvailabilityPanel === 'function') loadAvailabilityPanel(); }
+    // Open on the availability tab first — shows Camila's free windows immediately.
+    // switchAgendaTab is defined in admin-agenda.js which loads after this file;
+    // it is always available when the user clicks the sidebar, but may not exist
+    // yet during deep-link URL startup (race condition). The pending flag below
+    // is consumed by admin-agenda.js at its end to recover from this race.
+    if (typeof switchAgendaTab === 'function') {
+      switchAgendaTab('availability');
+    } else {
+      window._pendingAgendaTab = 'availability'; // picked up by admin-agenda.js
+    }
   }
   if (name === 'financeiro') loadAdminFinanceiro();
   if (name === 'formularios') loadFormBuilder();

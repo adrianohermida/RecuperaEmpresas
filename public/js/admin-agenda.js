@@ -258,44 +258,80 @@
     const container = document.getElementById('agendaAvailabilityPanel');
     if (!container) return;
 
-    container.innerHTML = '<div class="agenda-loading-state">Carregando disponibilidade...</div>';
+    container.innerHTML = '<div class="agenda-loading-state">Carregando disponibilidade do Google Calendar...</div>';
 
-    const response = await fetch('/api/admin/agenda/camila-availability', { headers: authH() });
-    if (!response.ok) {
-      container.innerHTML = '<div class="agenda-avail-warn">⚠️ Agenda Google não disponível.</div>';
+    let payload;
+    try {
+      const response = await fetch('/api/admin/agenda/camila-availability', { headers: authH() });
+      payload = await response.json();
+
+      // 503 = credentials not configured
+      if (response.status === 503 || payload.unconfigured) {
+        container.innerHTML = `
+          <div class="agenda-avail-warn">
+            <strong>⚠️ Google Calendar não configurado</strong><br>
+            Configure as variáveis de ambiente para habilitar a integração:<br>
+            <code style="font-size:11px;background:#F1F5F9;padding:2px 6px;border-radius:4px">
+              GOOGLE_CLIENT_ID · GOOGLE_CLIENT_SECRET · GOOGLE_OAUTH_REFRESH_TOKEN
+            </code>
+            <br><small style="color:#64748B">Sem esta integração, os horários podem ser criados manualmente pela aba "Horários &amp; Reservas".</small>
+          </div>`;
+        return;
+      }
+
+      if (!response.ok) {
+        container.innerHTML = `<div class="agenda-avail-warn">⚠️ Erro ao carregar agenda: ${payload.error || response.status}</div>`;
+        return;
+      }
+    } catch (e) {
+      container.innerHTML = '<div class="agenda-avail-warn">⚠️ Erro de rede ao carregar agenda Google.</div>';
       return;
     }
-    // Backend returns { free_windows: { "YYYY-MM-DD": [{start,end},...], ... }, busy_intervals: [...] }
-    // Transform into array for rendering
-    const payload = await response.json();
+
+    // Backend returns { free_windows: { "YYYY-MM-DD": [{start,end},...] }, calendar_connected: true }
     const freeWindows = payload.free_windows || {};
     const days = Object.entries(freeWindows)
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([date, windows]) => ({ date, windows }));
 
     if (!days.length) {
-      container.innerHTML = '<div class="agenda-avail-empty">Agenda Google sem janelas livres nos próximos dias. Verifique a integração ou os compromissos cadastrados.</div>';
+      container.innerHTML = `
+        <div class="agenda-avail-empty">
+          ✅ Google Calendar conectado — nenhuma janela livre nos próximos dias úteis.<br>
+          <small style="color:#64748B">Todos os horários estão ocupados, ou a agenda está fora do horário de trabalho (08:00–18:00).</small>
+        </div>`;
       return;
     }
 
-    const fmt = d => `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+    // Display windows in America/Sao_Paulo local time
+    // The ISO strings from the server are UTC; convert to BRT (UTC-3) for display
+    function fmtBRT(iso) {
+      return new Date(iso).toLocaleTimeString('pt-BR', {
+        timeZone: 'America/Sao_Paulo',
+        hour: '2-digit', minute: '2-digit',
+      });
+    }
 
     container.innerHTML = `
-      <div class="agenda-avail-title">🗓 Janelas livres de Camila — próximos dias</div>
+      <div class="agenda-avail-title">
+        🗓 Janelas livres de Camila
+        <span class="agenda-avail-connected">● Conectado</span>
+      </div>
+      <div class="agenda-avail-hint">Clique em uma janela para pré-preencher o formulário de novo horário.</div>
       <div class="agenda-avail-grid">
         ${days.map(day => `
           <div class="agenda-avail-day">
-            <div class="agenda-avail-day-header">${new Date(day.date + 'T12:00:00').toLocaleDateString('pt-BR', { weekday:'short', day:'2-digit', month:'short' })}</div>
-            ${(day.windows || []).length
-              ? (day.windows || []).map(w => {
-                  const s = new Date(w.start), e = new Date(w.end);
-                  return `<div class="agenda-avail-window" title="Clique para pré-preencher horário"
-                    onclick="_prefillSlotFromWindow('${day.date}','${w.start}','${w.end}')"
-                    style="cursor:pointer">
-                    ${fmt(s)} – ${fmt(e)}
-                  </div>`;
-                }).join('')
-              : '<div class="agenda-avail-busy">Dia ocupado</div>'}
+            <div class="agenda-avail-day-header">
+              ${new Date(day.date + 'T12:00:00-03:00').toLocaleDateString('pt-BR', {
+                weekday: 'short', day: '2-digit', month: 'short',
+              })}
+            </div>
+            ${(day.windows || []).map(w => `
+              <div class="agenda-avail-window"
+                title="Criar horário: ${fmtBRT(w.start)} – ${fmtBRT(w.end)}"
+                onclick="_prefillSlotFromWindow('${day.date}','${w.start}','${w.end}')">
+                ${fmtBRT(w.start)} – ${fmtBRT(w.end)}
+              </div>`).join('')}
           </div>`).join('')}
       </div>`;
   }
@@ -303,18 +339,34 @@
   // ─── Prefill slot form from a free window click ─────────────────────────────
 
   function prefillSlotFromWindow(dateStr, startIso, endIso) {
+    // Switch to the slots tab first so the form is visible
+    switchAgendaTab('slots');
+
     const formCard = document.getElementById('slotFormCard');
-    if (formCard.hidden) formCard.hidden = false;
-    const toLocal = iso => new Date(iso).toISOString().slice(0, 16);
-    document.getElementById('slotStart').value = toLocal(startIso);
-    document.getElementById('slotEnd').value   = toLocal(endIso);
-    // Sync duration field
+    if (!formCard) return;
+    formCard.hidden = false;
+
+    // Convert UTC ISO to local datetime-local value (browser renders in local tz)
+    const toDatetimeLocal = iso => {
+      const d = new Date(iso);
+      // Format as YYYY-MM-DDTHH:MM in America/Sao_Paulo
+      const brt = new Date(d.getTime() - 3 * 60 * 60 * 1000); // subtract UTC-3
+      return brt.toISOString().slice(0, 16);
+    };
+
+    document.getElementById('slotStart').value = toDatetimeLocal(startIso);
+    document.getElementById('slotEnd').value   = toDatetimeLocal(endIso);
+
     const diffMin = Math.round((new Date(endIso) - new Date(startIso)) / 60000);
     const durEl = document.getElementById('slotDuration');
-    if (durEl) durEl.value = Math.min(diffMin, 120); // cap at 120 min as default
-    formCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    document.getElementById('slotTitle').focus();
-    showToast('Horário pré-preenchido a partir da janela livre.', 'success');
+    if (durEl) durEl.value = Math.min(diffMin, 120);
+
+    setTimeout(() => {
+      formCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      document.getElementById('slotTitle')?.focus();
+    }, 100); // small delay to let the tab switch render first
+
+    showToast('Horário pré-preenchido — revise e publique.', 'success');
   }
 
   // ─── Slot form ──────────────────────────────────────────────────────────────
@@ -658,6 +710,14 @@
   window.openBookForClientFromDrawer = openBookForClientFromDrawer;
   window._submitBookFromDrawer     = submitBookFromDrawer;
   window._prefillSlotFromWindow    = prefillSlotFromWindow;
+
+  // ─── Recover from deep-link race condition ───────────────────────────────────
+  // admin-shell-core.js may have fired showSection('agenda') before this script
+  // loaded. It stores the pending tab name in window._pendingAgendaTab.
+  if (window._pendingAgendaTab) {
+    switchAgendaTab(window._pendingAgendaTab);
+    delete window._pendingAgendaTab;
+  }
 
   console.info('[RE:admin-agenda] loaded');
 })();

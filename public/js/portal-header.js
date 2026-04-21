@@ -256,18 +256,32 @@
       window.toggleUserDropup = toggleDefaultUserDropup;
     }
 
-    document.addEventListener('click', function (event) {
-      var shell = getUserMenuShell();
-      if (shell && !shell.contains(event.target)) {
-        window.setUserDropupState(false);
-      }
-    });
+    // Apenas registra event listeners se admin-shell-core.js não foi carregado
+    var hasAdminShellCore = typeof window.__reAdminShellCoreBound !== 'undefined' || 
+                            document.querySelector('[data-shell-header]');
+    
+    if (!hasAdminShellCore) {
+      document.addEventListener('click', function (event) {
+        var shell = getUserMenuShell();
+        var dropup = document.getElementById('userDropup');
+        
+        // Se o dropdown está aberto
+        if (dropup?.classList.contains('open')) {
+          // Se clicou dentro do shell (header user menu), não fecha
+          if (shell && shell.contains(event.target)) {
+            return;
+          }
+          // Se clicou fora, fecha o dropdown
+          window.setUserDropupState(false);
+        }
+      });
 
-    document.addEventListener('keydown', function (event) {
-      if (event.key === 'Escape') {
-        window.setUserDropupState(false);
-      }
-    });
+      document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape') {
+          window.setUserDropupState(false);
+        }
+      });
+    }
   }
 
   function render(root) {
