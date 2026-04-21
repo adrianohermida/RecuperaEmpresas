@@ -4,6 +4,7 @@
   const JRN = { currentId: null, forms: [], clients: [] };
 
   function jrnAuthH() {
+    if (window.REShared?.buildAuthHeaders) return window.REShared.buildAuthHeaders();
     const token = localStorage.getItem('re_token') || sessionStorage.getItem('re_token') || '';
     return { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
   }

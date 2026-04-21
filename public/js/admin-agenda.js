@@ -259,7 +259,7 @@
         <label class="agenda-modal-label">Motivo / observação (obrigatório)</label>
         <textarea id="rescheduleReason" rows="3" class="portal-input agenda-modal-field agenda-modal-textarea" placeholder="Ex.: Solicitação da empresa, conflito de agenda..."></textarea>
         <div class="admin-modal-actions agenda-modal-actions-tight">
-          <button onclick="document.getElementById('rescheduleModal').remove()" class="btn-ghost admin-modal-btn">Cancelar</button>
+          <button onclick="window.REAdminModal?.closeById?.('rescheduleModal', 'admin-agenda:reschedule-cancel')" class="btn-ghost admin-modal-btn">Cancelar</button>
           <button onclick="_submitReschedule('${bookingId}')" class="btn-primary admin-modal-btn">Remarcar</button>
         </div>
       </div>`;
@@ -341,7 +341,7 @@
         <textarea id="bfcNotes" rows="2" placeholder="Pauta, objetivo da reunião..." class="portal-input agenda-modal-field agenda-modal-textarea"></textarea>
 
         <div class="admin-modal-actions agenda-modal-actions-tight">
-          <button onclick="document.getElementById('bookForClientModal').remove()" class="btn-ghost admin-modal-btn">Cancelar</button>
+          <button onclick="window.REAdminModal?.closeById?.('bookForClientModal', 'admin-agenda:book-for-client-cancel')" class="btn-ghost admin-modal-btn">Cancelar</button>
           <button onclick="_submitBookForClient('${slotId}')" class="btn-primary admin-modal-btn">Confirmar agendamento</button>
         </div>
       </div>`;
@@ -425,7 +425,7 @@
         <label class="agenda-book-notes-label">Observações (opcional)</label>
         <textarea id="bookDrawerNotes" rows="2" placeholder="Pauta, objetivo..." class="portal-input agenda-modal-field agenda-modal-textarea"></textarea>
         <div class="admin-modal-actions agenda-modal-actions-tight">
-          <button onclick="document.getElementById('bookDrawerModal').remove()" class="btn-ghost admin-modal-btn">Cancelar</button>
+          <button onclick="window.REAdminModal?.closeById?.('bookDrawerModal', 'admin-agenda:book-drawer-cancel')" class="btn-ghost admin-modal-btn">Cancelar</button>
           <button onclick="_submitBookFromDrawer('${clientId}')" class="btn-primary admin-modal-btn">Agendar</button>
         </div>
       </div>`;

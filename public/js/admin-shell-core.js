@@ -46,7 +46,7 @@ async function logout() {
   } else {
     ['re_token', 're_user'].forEach(key => localStorage.removeItem(key));
   }
-  location.href = 'login.html';
+  window.REShared.redirectToRoute('login');
 }
 
 function showToast(msg, type, ms) {

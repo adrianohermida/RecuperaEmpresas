@@ -4,12 +4,13 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <meta name="robots" content="noindex, nofollow"/>
-  <title>Login — Recupera Empresas</title>
+  <title>Login â€” Recupera Empresas</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
   <link rel="stylesheet" href="/css/auth.css"/>
   <script src="/js/config.js?v=20260420a"></script>
   <script src="/js/runtime-diagnostics.js?v=20260420a"></script>
   <script src="/js/api-base.js?v=20260420a"></script>
+  <script src="/js/shared-utils.js?v=20260420c"></script>
   <script>
     window.__reLoadSupabaseCdn = function () {
       if (window.supabase) return;
@@ -43,10 +44,10 @@
     </div>
 
     <h1 class="brand-heading">
-      Reestruturação empresarial <em>com estratégia</em>
+      ReestruturaÃ§Ã£o empresarial <em>com estratÃ©gia</em>
     </h1>
     <p class="brand-sub">
-      Acesse o portal para preencher os dados da sua empresa e iniciar o processo de Business Plan e recuperação financeira.
+      Acesse o portal para preencher os dados da sua empresa e iniciar o processo de Business Plan e recuperaÃ§Ã£o financeira.
     </p>
 
     <div class="brand-features">
@@ -84,12 +85,12 @@
             <line x1="12" y1="17" x2="12" y2="21"/>
           </svg>
         </div>
-        Análise integrada com Business Plan
+        AnÃ¡lise integrada com Business Plan
       </div>
     </div>
 
     <div class="brand-footer">
-      © 2025 Recupera Empresas · recuperaempresas.com.br
+      Â© 2025 Recupera Empresas Â· recuperaempresas.com.br
     </div>
   </div>
 
@@ -127,7 +128,7 @@
             <a href="/forgot-password" class="auth-inline-link auth-inline-link-muted">Esqueci a senha</a>
           </label>
           <div class="form-control-wrap">
-            <input class="form-control" type="password" id="password" placeholder="••••••••" autocomplete="current-password"/>
+            <input class="form-control" type="password" id="password" placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" autocomplete="current-password"/>
             <button type="button" class="toggle-password" onclick="togglePwd('password',this)" title="Mostrar/ocultar senha">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="eye-icon">
                 <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
@@ -144,7 +145,7 @@
       </form>
 
       <div class="auth-links">
-        Não tem conta?
+        NÃ£o tem conta?
         <a href="/register">Criar acesso</a>
       </div>
     </div>
@@ -171,7 +172,7 @@ function clearErrors() {
   document.getElementById('alertError').classList.remove('show');
 }
 
-// ── Supabase client (browser-side) — persists session automatically ───────────
+// â”€â”€ Supabase client (browser-side) â€” persists session automatically â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const _sbUrl  = (window.VITE_SUPABASE_URL || window.RE_SUPABASE_URL || 'https://riiajjmnzgagntiqqshs.supabase.co').replace(/\/$/, '');
 const _sbAnon = window.VITE_SUPABASE_ANON_KEY || window.RE_SUPABASE_ANON || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJpaWFqam1uemdhZ250aXFxc2hzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYxNzY0ODUsImV4cCI6MjA5MTc1MjQ4NX0.zyOFjVFIBJem5FZmXBD-ya78RheD_a-YHetibyVvXcI';
 const _sb     = (_sbUrl && _sbAnon && window.supabase)
@@ -209,7 +210,7 @@ async function diagnoseOauthRuntime() {
         expected: {
           method: 'GET',
           route: '/api/auth/oauth/status',
-          expectedResponse: '200 com configured=true e nenhuma variável ausente para o Worker OAuth',
+          expectedResponse: '200 com configured=true e nenhuma variÃ¡vel ausente para o Worker OAuth',
           sourceFile: 'public/login.html'
         }
       }
@@ -220,8 +221,8 @@ async function diagnoseOauthRuntime() {
     var missingItems = Array.isArray(payload.missing) ? payload.missing : [];
     reportLoginIssue('oauth-worker-misconfigured', {
       summary: missingItems.length
-        ? 'O Worker OAuth respondeu, mas está mal configurado: faltam ' + missingItems.join(', ') + '.'
-        : 'O Worker OAuth respondeu, mas a configuração publicada ainda está incompleta.',
+        ? 'O Worker OAuth respondeu, mas estÃ¡ mal configurado: faltam ' + missingItems.join(', ') + '.'
+        : 'O Worker OAuth respondeu, mas a configuraÃ§Ã£o publicada ainda estÃ¡ incompleta.',
       expected: payload.expected || {
         route: '/api/auth/oauth/status',
         required: ['OAUTH_CLIENT_ID', 'JWT_SECRET', 'VITE_SUPABASE_URL', 'VITE_SUPABASE_ANON_KEY']
@@ -312,9 +313,9 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
         if (setSessionErr) {
           console.warn('[LOGIN] supabase-js setSession:', setSessionErr.message);
           reportLoginIssue('login-supabase-session-failed', {
-            summary: 'O login da API funcionou, mas a sessão Supabase no navegador falhou.',
+            summary: 'O login da API funcionou, mas a sessÃ£o Supabase no navegador falhou.',
             expected: {
-              action: 'persistir sessão Supabase para o fluxo /oauth/consent',
+              action: 'persistir sessÃ£o Supabase para o fluxo /oauth/consent',
               sourceFile: 'public/login.html'
             },
             identified: {
@@ -333,21 +334,21 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
         window.location.href = returnTo;
         return;
       }
-      window.location.href = json.user?.isAdmin ? 'admin.html' : 'dashboard.html';
+      window.REShared.redirectToUserHome(json.user);
     } else {
-      const msg = json.error || 'Credenciais inválidas.';
-      // Email not confirmed — offer to resend
+      const msg = json.error || 'Credenciais invÃ¡lidas.';
+      // Email not confirmed â€” offer to resend
       if (msg.toLowerCase().includes('not confirmed') || msg.toLowerCase().includes('confirmar')) {
         document.getElementById('alertErrorMsg').innerHTML =
           'Confirme seu e-mail antes de entrar. ' +
-          '<a href="#" id="resendLink" class="auth-inline-link-danger">Reenviar confirmação</a>';
+          '<a href="#" id="resendLink" class="auth-inline-link-danger">Reenviar confirmaÃ§Ã£o</a>';
         document.getElementById('resendLink')?.addEventListener('click', async (ev) => {
           ev.preventDefault();
           await requestApiJson('/api/auth/resend-confirmation', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email })
           });
-          document.getElementById('alertErrorMsg').textContent = 'E-mail de confirmação reenviado. Verifique sua caixa de entrada.';
+          document.getElementById('alertErrorMsg').textContent = 'E-mail de confirmaÃ§Ã£o reenviado. Verifique sua caixa de entrada.';
         });
       } else {
         document.getElementById('alertErrorMsg').textContent = msg;
@@ -358,27 +359,27 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
     }
   } catch {
     reportLoginIssue('login-request-threw', {
-      summary: 'A tentativa de login lançou exceção antes de concluir o fluxo de autenticação.',
+      summary: 'A tentativa de login lanÃ§ou exceÃ§Ã£o antes de concluir o fluxo de autenticaÃ§Ã£o.',
       expected: {
         action: 'receber resposta JSON dos endpoints /api/auth/login e /api/auth/member-login',
         sourceFile: 'public/login.html'
       }
     });
-    document.getElementById('alertErrorMsg').textContent = 'Erro de conexão. Tente novamente.';
+    document.getElementById('alertErrorMsg').textContent = 'Erro de conexÃ£o. Tente novamente.';
     document.getElementById('alertError').classList.add('show');
     btn.disabled = false;
     btn.textContent = 'Entrar no Portal';
   }
 });
 
-// ── Handle URL params & hash tokens on page load ──────────────────────────────
+// â”€â”€ Handle URL params & hash tokens on page load â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 (async () => {
   const params      = new URLSearchParams(window.location.search);
   const hash        = Object.fromEntries(new URLSearchParams(window.location.hash.slice(1)));
   const accessToken = hash.access_token || '';
   const hashType    = hash.type         || '';
 
-  // Came back from OAuth callback — server already exchanged code, passes portal token in hash
+  // Came back from OAuth callback â€” server already exchanged code, passes portal token in hash
   if (hash.oauth_user && (hash.oauth === '1' || hash.oauth_token)) {
     try {
       const user = JSON.parse(decodeURIComponent(hash.oauth_user || '{}'));
@@ -389,7 +390,7 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
         });
         if (oauthSessionErr) {
           reportLoginIssue('oauth-callback-session-failed', {
-            summary: 'O callback OAuth retornou ao login, mas a sessão Supabase não foi persistida.',
+            summary: 'O callback OAuth retornou ao login, mas a sessÃ£o Supabase nÃ£o foi persistida.',
             expected: {
               action: 'persistir access_token e refresh_token retornados pelo callback OAuth',
               sourceFile: 'public/login.html'
@@ -406,7 +407,7 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
       const returnTo = params.get('returnTo');
       window.location.href = returnTo && returnTo.startsWith('/')
         ? returnTo
-        : (user?.isAdmin ? 'admin.html' : 'dashboard.html');
+        : window.REShared.getRoute(user?.isAdmin ? 'admin' : 'dashboard');
       return;
     } catch (error) {
       reportLoginIssue('oauth-callback-hash-parse-failed', {
@@ -423,7 +424,7 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
     }
   }
 
-  // Came back from email confirmation link → auto-login with the hash tokens
+  // Came back from email confirmation link â†’ auto-login with the hash tokens
   if (accessToken && (hashType === 'signup' || hashType === 'magiclink')) {
     try {
       const result = await requestApiJson('/api/auth/confirm', {
@@ -434,7 +435,7 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
           expected: {
             method: 'POST',
             route: '/api/auth/confirm',
-            expectedResponse: '200 com token e user após confirmação de e-mail',
+            expectedResponse: '200 com token e user apÃ³s confirmaÃ§Ã£o de e-mail',
             sourceFile: 'public/login.html'
           }
         }
@@ -443,31 +444,31 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
       if (json.success && json.user) {
         if (window.REShared?.storeAuthUser) window.REShared.storeAuthUser(json.user);
         else localStorage.setItem('re_user', JSON.stringify(json.user || {}));
-        window.location.href = json.user?.isAdmin ? 'admin.html' : 'dashboard.html';
+        window.REShared.redirectToUserHome(json.user);
         return;
       }
     } catch {}
-    // Auto-login failed — fall back to showing a success message so they log in manually
-    showSuccess('E-mail confirmado! Faça login para continuar.');
+    // Auto-login failed â€” fall back to showing a success message so they log in manually
+    showSuccess('E-mail confirmado! FaÃ§a login para continuar.');
   } else if (params.get('confirmed') === '1') {
-    showSuccess('E-mail confirmado com sucesso! Faça login para continuar.');
+    showSuccess('E-mail confirmado com sucesso! FaÃ§a login para continuar.');
   } else if (params.get('invited') === '1') {
     showSuccess('Convite confirmado. Defina sua senha e entre na plataforma.');
   } else if (params.get('magic') === '1') {
     showSuccess('Magic link enviado. Abra o e-mail e use o link para entrar.');
   } else if (params.get('email_changed') === '1') {
-    showSuccess('Alteração de e-mail confirmada com sucesso.');
+    showSuccess('AlteraÃ§Ã£o de e-mail confirmada com sucesso.');
   } else if (params.get('reauthenticated') === '1') {
-    showSuccess('Reautenticação concluída com sucesso.');
+    showSuccess('ReautenticaÃ§Ã£o concluÃ­da com sucesso.');
   } else if (params.get('err') === 'timeout') {
     document.getElementById('alertErrorMsg').textContent =
       'O servidor demorou para responder. Tente fazer login novamente.';
     document.getElementById('alertError').classList.add('show');
   } else if (params.get('err') === 'oauth') {
-    const desc = params.get('desc') || 'Erro na autorização OAuth.';
+    const desc = params.get('desc') || 'Erro na autorizaÃ§Ã£o OAuth.';
     document.getElementById('alertErrorMsg').textContent =
       desc === 'session_expired_retry'
-        ? 'Sessão OAuth expirada. Inicie o fluxo novamente.'
+        ? 'SessÃ£o OAuth expirada. Inicie o fluxo novamente.'
         : `Erro OAuth: ${desc}`;
     document.getElementById('alertError').classList.add('show');
   }
@@ -489,26 +490,13 @@ function showSuccess(msg) {
 // Redirect if already logged in
 (async () => {
   try {
-    const result = await requestApiJson('/api/auth/verify?allowAnonymous=1', {
-      method: 'GET',
-      timeout: 20000,
-      diagnostics: {
-        operation: 'auth.verify',
-        expectedStatuses: [200],
-        expected: {
-          method: 'GET',
-          route: '/api/auth/verify?allowAnonymous=1',
-          expectedResponse: '200 com user autenticado ou valid=false quando ainda não há sessão',
-          sourceFile: 'public/login.html'
-        }
-      }
-    });
+    const result = await window.REShared.verifySession({ allowAnonymous: true, timeoutMs: 20000 });
     if (window.REDiagnostics && typeof window.REDiagnostics.reportIssue === 'function') {
       window.REDiagnostics.reportIssue(result.ok ? 'info' : 'warn', 'login-verify-probe-result', {
         sourceFile: 'public/login.html',
         summary: result.ok && result.data && result.data.user
-          ? 'A página de login encontrou uma sessão válida e vai redirecionar o usuário.'
-          : 'A página de login não encontrou sessão ativa, então continuará exibindo o formulário.',
+          ? 'A pÃ¡gina de login encontrou uma sessÃ£o vÃ¡lida e vai redirecionar o usuÃ¡rio.'
+          : 'A pÃ¡gina de login nÃ£o encontrou sessÃ£o ativa, entÃ£o continuarÃ¡ exibindo o formulÃ¡rio.',
         identified: {
           status: result.status,
           valid: result.data && result.data.valid,
@@ -516,12 +504,10 @@ function showSuccess(msg) {
         }
       });
     }
-    if (result.ok && result.data && result.data.user) {
-      if (window.REShared?.storeAuthUser) window.REShared.storeAuthUser(result.data.user);
-      const user = result.data.user;
-      window.location.href = user.isAdmin ? 'admin.html' : 'dashboard.html';
+    if (result.ok && result.user) {
+      window.REShared.redirectToUserHome(result.user);
     }
-  } catch { /* server offline or slow — stay on login page */ }
+  } catch { /* server offline or slow â€” stay on login page */ }
 })();
 </script>
 </body>

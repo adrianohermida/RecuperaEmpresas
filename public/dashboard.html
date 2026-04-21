@@ -10,7 +10,7 @@
   <script src="/js/config.js?v=20260420a"></script>
   <script src="/js/runtime-diagnostics.js?v=20260420a"></script>
   <script src="/js/api-base.js?v=20260420a"></script>
-  <script src="/js/shared-utils.js?v=20260420a"></script>
+  <script src="/js/shared-utils.js?v=20260420c"></script>
   <!-- Sempre use assets absolutos /css/ e /js/ para evitar conflitos de cache e duplicidade. -->
 </head>
 <body>
@@ -754,7 +754,7 @@
   const t = p.get('impersonate');
   if (t) {
     sessionStorage.setItem('re_impersonate_token', t);
-    window.history.replaceState({}, '', 'dashboard.html');
+    window.history.replaceState({}, '', window.REShared.getRoute('dashboard'));
   }
 })();
 
@@ -770,7 +770,7 @@ async function logout() {
     return;
   }
   await window.REShared.logoutSession({ keys: ['re_token', 're_user', 'recupera_onboarding_v2'] });
-  location.href='login.html';
+  window.REShared.redirectToRoute('login');
 }
 
 function exitImpersonation() {
@@ -839,21 +839,21 @@ async function initFreshchat(user) {
     clearTimeout(timeout);
   } catch (err) {
     clearTimeout(warmTimer);
-    location.href = 'login.html?err=timeout';
+    window.REShared.redirectToRoute('login', { search: 'err=timeout' });
     return;
   }
   clearTimeout(warmTimer);
 
   if (!res.ok) {
     if (isImpersonating) sessionStorage.removeItem('re_impersonate_token');
-    location.href='login.html';
+    window.REShared.redirectToRoute('login');
     return;
   }
 
   const { user } = await res.json();
 
   // Admins go to admin panel, unless viewing as client
-  if (user.isAdmin && !isImpersonating) { location.href='admin.html'; return; }
+  if (user.isAdmin && !isImpersonating) { window.REShared.redirectToRoute('admin'); return; }
 
   // Show impersonation banner
   if (isImpersonating) {

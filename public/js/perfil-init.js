@@ -149,11 +149,11 @@
       });
       clearTimeout(timeout);
     } catch {
-      location.href = 'login.html?err=timeout';
+      window.REShared.redirectToRoute('login', { search: 'err=timeout' });
       return;
     }
 
-    if (!response.ok) { location.href = 'login.html'; return; }
+    if (!response.ok) { window.REShared.redirectToRoute('login'); return; }
 
     let user;
     try {
@@ -162,11 +162,11 @@
       if (!user) throw new Error('missing user');
       if (window.REShared?.storeAuthUser) window.REShared.storeAuthUser(user);
     } catch {
-      location.href = 'login.html?err=parse';
+      window.REShared.redirectToRoute('login', { search: 'err=parse' });
       return;
     }
 
-    if (!user.isAdmin) { location.href = 'dashboard.html'; return; }
+    if (!user.isAdmin) { window.REShared.redirectToRoute('dashboard'); return; }
 
     const userName = document.getElementById('userName');
     const userAvatar = document.getElementById('userAvatar');

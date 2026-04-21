@@ -7,6 +7,16 @@
     }
   }
 
+  var ROUTES = {
+    login: '/login',
+    register: '/register',
+    forgotPassword: '/forgot-password',
+    resetPassword: '/reset-password',
+    dashboard: '/dashboard',
+    admin: '/admin',
+    onboarding: '/index.html'
+  };
+
   function getStoredToken(options) {
     var allowImpersonation = !!(options && options.allowImpersonation);
     if (allowImpersonation) {
@@ -34,6 +44,60 @@
     }
 
     return Object.assign(headers, extra);
+  }
+
+  function getRoute(name) {
+    return ROUTES[name] || '/';
+  }
+
+  function redirectToRoute(name, options) {
+    var route = getRoute(name);
+    var opts = options || {};
+    var search = opts.search || '';
+    if (search && search.charAt(0) !== '?') search = '?' + search;
+    window.location.href = route + search;
+  }
+
+  function redirectToUserHome(user, options) {
+    if (user && user.isAdmin && !(options && options.allowImpersonation)) {
+      redirectToRoute('admin');
+      return;
+    }
+    redirectToRoute('dashboard');
+  }
+
+  async function verifySession(options) {
+    var opts = options || {};
+    var allowAnonymous = !!opts.allowAnonymous;
+    var controller = new AbortController();
+    var timeoutMs = typeof opts.timeoutMs === 'number' ? opts.timeoutMs : 20000;
+    var timeout = setTimeout(function () { controller.abort(); }, timeoutMs);
+    var url = '/api/auth/verify' + (allowAnonymous ? '?allowAnonymous=1' : '');
+
+    try {
+      var response = await fetch(url, {
+        method: 'GET',
+        headers: buildAuthHeaders({
+          allowImpersonation: !!opts.allowImpersonation,
+          includeContentType: false
+        }),
+        credentials: 'include',
+        signal: controller.signal
+      });
+      var data = await readResponse(response);
+      if (response.ok && data && data.user) {
+        localStorage.setItem('re_user', JSON.stringify(data.user || {}));
+        localStorage.removeItem('re_token');
+      }
+      return {
+        ok: response.ok,
+        status: response.status,
+        data: data,
+        user: data && data.user ? data.user : null
+      };
+    } finally {
+      clearTimeout(timeout);
+    }
   }
 
   function clearStoredAuth(options) {
@@ -130,8 +194,12 @@
     formatCurrencyBRL: formatCurrencyBRL,
     formatDateBR: formatDateBR,
     formatDateTimeBR: formatDateTimeBR,
+    getRoute: getRoute,
     getStoredToken: getStoredToken,
     getStoredUser: getStoredUser,
     readResponse: readResponse,
+    redirectToRoute: redirectToRoute,
+    redirectToUserHome: redirectToUserHome,
+    verifySession: verifySession,
   };
 })();

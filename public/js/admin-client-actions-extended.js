@@ -22,13 +22,13 @@
       <div class="admin-modal" style="max-width:${w};width:95%;border-radius:12px;padding:24px;background:#fff;position:relative">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
           <div style="font-weight:700;font-size:15px">${title}</div>
-          <button onclick="document.getElementById('${id}')?.remove()"
+          <button onclick="closeModal('${id}')"
             style="background:none;border:none;cursor:pointer;font-size:20px;color:#6b7280;line-height:1">&times;</button>
         </div>
         <div class="modal-body">${bodyHtml}</div>
         <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:20px">${footerHtml}</div>
       </div>`;
-    el.addEventListener('mousedown', e => { if (e.target === el) el.remove(); });
+    el.addEventListener('mousedown', e => { if (e.target === el) closeModal(id); });
     if (window.REAdminModal?.append) {
       window.REAdminModal.append(el, 'admin-client-actions:open:' + id);
     } else {
