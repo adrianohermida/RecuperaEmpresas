@@ -3,6 +3,7 @@
 const express = require('express');
 const { sb } = require('../lib/config');
 const { requireAuth, requireAdmin } = require('../lib/auth');
+const { isSchemaCompatibilityError } = require('../lib/schema');
 
 const router = express.Router();
 
@@ -84,20 +85,20 @@ router.delete('/api/admin/journeys/:id', requireAdmin, async (req, res) => {
     const { error: unlinkServicesError } = await sb.from('re_services')
       .update({ journey_id: null })
       .eq('journey_id', journeyId);
-    if (unlinkServicesError) throw unlinkServicesError;
+    if (unlinkServicesError && !isSchemaCompatibilityError(unlinkServicesError.message, ['re_services', 'journey_id'])) throw unlinkServicesError;
 
     if (assignmentIds.length) {
       const { error: completionsByAssignmentError } = await sb.from('re_journey_step_completions')
         .delete()
         .in('assignment_id', assignmentIds);
-      if (completionsByAssignmentError) throw completionsByAssignmentError;
+      if (completionsByAssignmentError && !isSchemaCompatibilityError(completionsByAssignmentError.message, ['re_journey_step_completions', 'assignment_id'])) throw completionsByAssignmentError;
     }
 
     if (stepIds.length) {
       const { error: completionsByStepError } = await sb.from('re_journey_step_completions')
         .delete()
         .in('step_id', stepIds);
-      if (completionsByStepError) throw completionsByStepError;
+      if (completionsByStepError && !isSchemaCompatibilityError(completionsByStepError.message, ['re_journey_step_completions', 'step_id'])) throw completionsByStepError;
     }
 
     if (assignmentIds.length) {

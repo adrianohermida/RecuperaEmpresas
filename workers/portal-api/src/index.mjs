@@ -107,10 +107,10 @@ async function routeAdmin(request, env, pathname, executionCtx) {
   params = match(pathname, /^\/api\/admin\/invoices(?:\/(?<rest>.*))?$/);
   if (params) return handleAdminReadModels(request, { ...auth, env, executionCtx, params, scope: 'admin' });
 
-  params = match(pathname, /^\/api\/admin\/services$/);
+  params = match(pathname, /^\/api\/admin\/services(?:\/(?<id>[^/]+))?$/);
   if (params) return handleAdminReadModels(request, { ...auth, env, executionCtx, params, scope: 'admin' });
 
-  params = match(pathname, /^\/api\/admin\/service-orders$/);
+  params = match(pathname, /^\/api\/admin\/service-orders(?:\/(?<id>[^/]+))?$/);
   if (params) return handleAdminReadModels(request, { ...auth, env, executionCtx, params, scope: 'admin' });
 
   params = match(pathname, /^\/api\/admin\/forms(?:\/(?<rest>.*))?$/);

@@ -54,6 +54,18 @@ async function listSafe(query, fallback = []) {
   }
 }
 
+function isSchemaCompatibilityError(message, hints = []) {
+  const text = String(message || '').toLowerCase();
+  if (!text) return false;
+  if (text.includes('permission denied') || text.includes('insufficient privileges') || text.includes('violates row-level security') || text.includes('jwt')) {
+    return false;
+  }
+  const hasSchemaSignal = ['does not exist', 'could not find', 'schema cache', 'has no field'].some((signal) => text.includes(signal));
+  if (!hasSchemaSignal) return false;
+  if (!hints.length) return true;
+  return hints.some((hint) => text.includes(String(hint).toLowerCase()));
+}
+
 function csvEscape(value) {
   return `"${String(value ?? '').replace(/"/g, '""')}"`;
 }
@@ -1229,14 +1241,16 @@ async function handleJourneys(request, context) {
       .from('re_services')
       .update({ journey_id: null })
       .eq('journey_id', id);
-    if (unlinkServicesError) return json({ error: unlinkServicesError.message }, { status: 500 });
+    if (unlinkServicesError && !isSchemaCompatibilityError(unlinkServicesError.message, ['re_services', 'journey_id'])) {
+      return json({ error: unlinkServicesError.message }, { status: 500 });
+    }
 
     if (assignmentIds.length) {
       const { error: completionsByAssignmentError } = await context.sb
         .from('re_journey_step_completions')
         .delete()
         .in('assignment_id', assignmentIds);
-      if (completionsByAssignmentError) {
+      if (completionsByAssignmentError && !isSchemaCompatibilityError(completionsByAssignmentError.message, ['re_journey_step_completions', 'assignment_id'])) {
         return json({ error: completionsByAssignmentError.message }, { status: 500 });
       }
     }
@@ -1246,7 +1260,9 @@ async function handleJourneys(request, context) {
         .from('re_journey_step_completions')
         .delete()
         .in('step_id', stepIds);
-      if (completionsByStepError) return json({ error: completionsByStepError.message }, { status: 500 });
+      if (completionsByStepError && !isSchemaCompatibilityError(completionsByStepError.message, ['re_journey_step_completions', 'step_id'])) {
+        return json({ error: completionsByStepError.message }, { status: 500 });
+      }
     }
 
     if (assignmentIds.length) {
