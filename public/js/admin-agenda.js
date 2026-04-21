@@ -444,7 +444,7 @@
     if (response.ok) {
       window.REAdminModal?.closeById?.('bookDrawerModal', 'admin-agenda:book-drawer-submit');
       showToast('Agendamento criado!', 'success');
-      renderDrawerTab('agenda');
+      (window.renderClientDetailTab || renderDrawerTab)('agenda');
       return;
     }
     showToast(payload.error || 'Erro ao agendar.', 'error');

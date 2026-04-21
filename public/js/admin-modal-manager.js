@@ -493,19 +493,12 @@
   function sanitizeShellOverlays(reason) {
     const sidebar = document.getElementById('appSidebar');
     const sidebarBackdrop = document.getElementById('sidebarBackdrop');
-    const drawer = document.getElementById('clientDrawer');
-    const drawerOverlay = document.getElementById('drawerOverlay');
     const authGuard = document.getElementById('authGuard');
     const blockers = [];
 
     if (sidebarBackdrop && !sidebar?.classList.contains('mobile-open')) {
       sidebarBackdrop.classList.remove('open');
       if (isElementVisible(sidebarBackdrop)) blockers.push('sidebarBackdrop');
-    }
-
-    if (drawerOverlay && !drawer?.classList.contains('open')) {
-      drawerOverlay.classList.remove('open');
-      if (isElementVisible(drawerOverlay)) blockers.push('drawerOverlay');
     }
 
     STATIC_MODAL_IDS.forEach(function (id) {
@@ -526,8 +519,6 @@
       reason: reason || 'sanitize',
       activeModal: getModalState(),
       visibleModals: getVisibleModals().map(function (modal) { return modal.id || null; }),
-      drawerOpen: !!drawer?.classList.contains('open'),
-      drawerOverlayOpen: !!drawerOverlay?.classList.contains('open'),
       sidebarOpen: !!sidebar?.classList.contains('mobile-open'),
       sidebarBackdropOpen: !!sidebarBackdrop?.classList.contains('open'),
       authGuardPresent: !!document.getElementById('authGuard'),

@@ -32,7 +32,10 @@
   function fmtDate(d) { return d ? new Date(d+'T12:00:00').toLocaleDateString('pt-BR') : '—'; }
 
   // ─── Re-render helper ─────────────────────────────────────────────────────────
-  function rerenderTab(tab) { if (typeof renderDrawerTab === 'function') renderDrawerTab(tab); }
+  function rerenderTab(tab) {
+    if (typeof window.renderClientDetailTab === 'function') window.renderClientDetailTab(tab);
+    else if (typeof renderDrawerTab === 'function') renderDrawerTab(tab);
+  }
 
   // ═══════════════════════════════════════════════════════════════════════════════
   // ENTITY DOCUMENTS (shared for member/creditor/supplier/contract/employee)

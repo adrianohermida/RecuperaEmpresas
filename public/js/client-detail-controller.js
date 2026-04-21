@@ -1,4 +1,4 @@
-'use strict';
+﻿'use strict';
 
 (function () {
   function drawerDebugSummarize(value) {
@@ -64,15 +64,15 @@
   }
 
   function getBodyElement() {
-    return document.getElementById('drawerBody') || document.getElementById('clientPageBody');
+    return document.getElementById('clientPageBody') || document.getElementById('drawerBody');
   }
 
   function getTitleElement() {
-    return document.getElementById('drawerTitle') || document.getElementById('clientPageTitle');
+    return document.getElementById('clientPageTitle') || document.getElementById('drawerTitle');
   }
 
   function getSubtitleElement() {
-    return document.getElementById('drawerSub') || document.getElementById('clientPageSubtitle');
+    return document.getElementById('clientPageSubtitle') || document.getElementById('drawerSub');
   }
 
   function getCurrentTabNavElement() {
@@ -95,22 +95,32 @@
     const subtitle = getSubtitleElement();
     if (title) title.textContent = user.company || user.name || 'Cliente';
     if (subtitle) {
-      subtitle.textContent = user.email + (user.freshdeskTicketId ? ' · Ticket #' + user.freshdeskTicketId : '');
+      subtitle.textContent = user.email + (user.freshdeskTicketId ? ' Â· Ticket #' + user.freshdeskTicketId : '');
     }
     const summaryName = document.getElementById('clientSummaryName');
     const summaryMeta = document.getElementById('clientSummaryMeta');
     const statusBadge = document.getElementById('clientSummaryStatus');
     if (summaryName) summaryName.textContent = user.company || user.name || 'Cliente';
     if (summaryMeta) summaryMeta.textContent = user.email || '';
-    if (statusBadge && window._currentClientData?.onboarding) {
-      const status = STATUS_LABELS[window._currentClientData.onboarding.status] || STATUS_LABELS.nao_iniciado;
+    if (statusBadge && detailState.currentClientData?.onboarding) {
+      const status = STATUS_LABELS[detailState.currentClientData.onboarding.status] || STATUS_LABELS.nao_iniciado;
       statusBadge.className = 'badge ' + status.cls;
       statusBadge.textContent = status.label;
     }
   }
 
-  window._currentClientId = window._currentClientId || null;
-  window._currentClientData = window._currentClientData || null;
+  const detailState = window.REClientDetailState || { currentClientId: null, currentClientData: null };
+  window.REClientDetailState = detailState;
+  Object.defineProperty(window, '_currentClientId', {
+    configurable: true,
+    get() { return detailState.currentClientId; },
+    set(value) { detailState.currentClientId = value; },
+  });
+  Object.defineProperty(window, '_currentClientData', {
+    configurable: true,
+    get() { return detailState.currentClientData; },
+    set(value) { detailState.currentClientData = value; },
+  });
   var _drawerMsgPollTimer = null;
 
   function _stopDrawerMsgPoll() {
@@ -121,7 +131,7 @@
   }
 
   async function _drawerMsgPollTick() {
-    if (!window._currentClientId) return;
+    if (!detailState.currentClientId) return;
     const thread = document.getElementById('adminMsgThread');
     if (!thread) {
       _stopDrawerMsgPoll();
@@ -129,16 +139,16 @@
     }
 
     try {
-      const response = await fetch('/api/admin/client/' + window._currentClientId, { headers: authH() });
+      const response = await fetch('/api/admin/client/' + detailState.currentClientId, { headers: authH() });
       if (!response.ok) return;
       const data = await response.json();
       const messages = data.messages || [];
-      const previousMessages = window._currentClientData?.messages || [];
+      const previousMessages = detailState.currentClientData?.messages || [];
       const hasChanged = messages.length !== previousMessages.length
         || (messages.length && messages[messages.length - 1].ts !== previousMessages.slice(-1)[0]?.ts);
       if (!hasChanged) return;
 
-      window._currentClientData = data;
+      detailState.currentClientData = data;
       thread.innerHTML = !messages.length
         ? '<div class="empty-state"><p>Nenhuma mensagem.</p></div>'
         : messages.map(function (message) {
@@ -158,7 +168,7 @@
     const route = '/api/admin/client/' + id;
     const response = await fetch(route, { headers: authH() });
     const payload = await readDrawerResponse(
-      'Base da Página do Cliente',
+      'Base da PÃ¡gina do Cliente',
       route,
       response,
       ['user', 'onboarding', 'tasks', 'plan', 'messages'],
@@ -170,8 +180,8 @@
       return null;
     }
 
-    window._currentClientData = payload;
-    window._currentClientId = id;
+    detailState.currentClientData = payload;
+    detailState.currentClientId = id;
     updatePageHeader(payload.user || {});
     setActionLinks(id);
     return payload;
@@ -192,19 +202,19 @@
 
     const payload = await loadClientData(id);
     if (!payload) return;
-    switchDrawerTab(getRequestedTab());
+    switchClientDetailTab(getRequestedTab());
   }
 
-  function closeDrawer() {
+  function closeClientDetail() {
     _stopDrawerMsgPoll();
-    window._currentClientId = null;
-    window._currentClientData = null;
+    detailState.currentClientId = null;
+    detailState.currentClientData = null;
     if (isClientPageMode()) {
       window.location.href = 'admin.html';
     }
   }
 
-  function switchDrawerTab(tab, element) {
+  function switchClientDetailTab(tab, element) {
     _stopDrawerMsgPoll();
 
     document.querySelectorAll('.client-page-tab').forEach(function (node) {
@@ -217,61 +227,61 @@
       nav?.querySelector('[data-client-tab="' + tab + '"]')?.classList.add('active');
     }
 
-    renderDrawerTab(tab);
+    renderClientDetailTab(tab);
     if (tab === 'messages') {
       _drawerMsgPollTimer = setInterval(_drawerMsgPollTick, 10000);
     }
   }
 
-  async function renderDrawerTab(tab) {
-    if (!window._currentClientData) return;
+  async function renderClientDetailTab(tab) {
+    if (!detailState.currentClientData) return;
     const body = getBodyElement();
-    const user = window._currentClientData.user || {};
-    const onboarding = window._currentClientData.onboarding || {};
-    const tasks = window._currentClientData.tasks || [];
-    const plan = window._currentClientData.plan || {};
-    const messages = window._currentClientData.messages || [];
+    const user = detailState.currentClientData.user || {};
+    const onboarding = detailState.currentClientData.onboarding || {};
+    const tasks = detailState.currentClientData.tasks || [];
+    const plan = detailState.currentClientData.plan || {};
+    const messages = detailState.currentClientData.messages || [];
 
-    if (window.REAdminDrawerPrimaryTabs?.render?.(tab, {
+    if (window.REClientDetailPrimaryTabs?.render?.(tab, {
       body: body,
       user: user,
       onboarding: onboarding,
       tasks: tasks,
       plan: plan,
       messages: messages,
-      currentClientId: window._currentClientId,
+      currentClientId: detailState.currentClientId,
     })) {
       return;
     }
 
-    if (await window.REAdminDrawerSecondaryTabs?.render?.(tab, {
+    if (await window.REClientDetailSecondaryTabs?.render?.(tab, {
       body: body,
       user: user,
       onboarding: onboarding,
       tasks: tasks,
       plan: plan,
       messages: messages,
-      currentClientId: window._currentClientId,
-      currentClientData: window._currentClientData,
+      currentClientId: detailState.currentClientId,
+      currentClientData: detailState.currentClientData,
     })) {
       return;
     }
 
-    if (await window.REAdminDrawerTertiaryTabs?.render?.(tab, {
+    if (await window.REClientDetailTertiaryTabs?.render?.(tab, {
       body: body,
       user: user,
       onboarding: onboarding,
       tasks: tasks,
       plan: plan,
       messages: messages,
-      currentClientId: window._currentClientId,
-      currentClientData: window._currentClientData,
+      currentClientId: detailState.currentClientId,
+      currentClientData: detailState.currentClientData,
     })) {
       return;
     }
 
     if (tab === 'data') {
-      window.REAdminDrawerDataTab.render({ body: body, user: user, onboarding: onboarding });
+      window.REClientDetailDataTab.render({ body: body, user: user, onboarding: onboarding });
     }
   }
 
@@ -320,20 +330,39 @@
     await openClient(clientId);
   }
 
+  window.REClientDetail = {
+    close: closeClientDetail,
+    getState() {
+      return {
+        currentClientData: detailState.currentClientData,
+        currentClientId: detailState.currentClientId,
+      };
+    },
+    init: initClientPage,
+    open: openClient,
+    renderTab: renderClientDetailTab,
+    switchTab: switchClientDetailTab,
+  };
+  window.logClientDetailDiagnostic = logDrawerDiagnostic;
+  window.readClientDetailResponse = readDrawerResponse;
+  window.openClient = openClient;
+  window.closeClientDetail = closeClientDetail;
+  window.switchClientDetailTab = switchClientDetailTab;
+  window.renderClientDetailTab = renderClientDetailTab;
+  window.initClientPage = initClientPage;
   window.logDrawerDiagnostic = logDrawerDiagnostic;
   window.readDrawerResponse = readDrawerResponse;
-  window.openClient = openClient;
-  window.closeDrawer = closeDrawer;
-  window.switchDrawerTab = switchDrawerTab;
-  window.renderDrawerTab = renderDrawerTab;
-  window.initClientPage = initClientPage;
+  window.closeDrawer = closeClientDetail;
+  window.switchDrawerTab = switchClientDetailTab;
+  window.renderDrawerTab = renderClientDetailTab;
 
   document.addEventListener('DOMContentLoaded', function () {
     initClientPage().catch(function (error) {
       console.error('[CLIENT PAGE INIT]', error.message);
-      showToast('Erro ao carregar a página do cliente.', 'error');
+      showToast('Erro ao carregar a pÃ¡gina do cliente.', 'error');
     });
   });
 
-  console.info('[RE:admin-client-drawer] loaded');
+  console.info('[RE:client-detail-controller] loaded');
 })();
+

@@ -1,10 +1,10 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <meta name="robots" content="noindex, nofollow"/>
-  <title>Painel do Consultor — Recupera Empresas</title>
+  <title>Painel do Consultor â€” Recupera Empresas</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
   <link rel="stylesheet" href="/css/portal.css?v=20260420a"/>
   <script src="/js/config.js?v=20260420a"></script>
@@ -47,7 +47,7 @@
       <span class="admin-badge">Admin</span>
       <!-- Admin Notification Bell -->
       <div class="admin-notif-wrap" id="adminNotifBellWrap">
-        <button id="adminNotifBell" class="admin-notif-bell" onclick="toggleAdminNotifDropdown()" title="Notificações">
+        <button id="adminNotifBell" class="admin-notif-bell" onclick="toggleAdminNotifDropdown()" title="NotificaÃ§Ãµes">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>
           </svg>
@@ -55,7 +55,7 @@
         </button>
         <div id="adminNotifDropdown" class="admin-notif-dropdown">
           <div class="admin-notif-dropdown-header">
-            <span class="admin-notif-dropdown-title">Notificações do Admin</span>
+            <span class="admin-notif-dropdown-title">NotificaÃ§Ãµes do Admin</span>
             <button class="admin-notif-mark-all" onclick="adminMarkAllNotifRead()">Marcar todas lidas</button>
           </div>
           <div id="adminNotifList" class="admin-notif-list">
@@ -63,7 +63,7 @@
           </div>
         </div>
       </div>
-      <!-- Hamburger — mobile only -->
+      <!-- Hamburger â€” mobile only -->
       <button class="menu-toggle" id="menuToggle" onclick="toggleSidebar()" aria-label="Abrir menu">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
           <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
@@ -84,7 +84,7 @@
     <!-- Nav links -->
     <div class="sidebar-nav">
       <div class="sidebar-section">
-        <div class="sidebar-label">Visão Geral</div>
+        <div class="sidebar-label">VisÃ£o Geral</div>
         <button class="sidebar-link active" onclick="showSection('clients',this)">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
           Clientes
@@ -99,7 +99,7 @@
         </button>
         <button class="sidebar-link" onclick="showSection('formularios',this)">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
-          Formulários
+          FormulÃ¡rios
         </button>
         <button class="sidebar-link" onclick="showSection('jornadas',this)">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
@@ -111,7 +111,7 @@
         </button>
         <button class="sidebar-link" onclick="showSection('adminInvoices',this)">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
-          Cobranças
+          CobranÃ§as
         </button>
         <button class="sidebar-link" onclick="showSection('adminMarketplace',this)">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
@@ -124,13 +124,13 @@
       </div>
     </div><!-- /sidebar-nav -->
 
-    <!-- Sidebar footer — user avatar + dropup -->
+    <!-- Sidebar footer â€” user avatar + dropup -->
     <div class="sidebar-footer">
       <!-- Dropup menu (renders upward) -->
       <div class="user-dropup" id="userDropup" role="menu">
         <div class="user-dropup-header">
-          <div class="user-dropup-name" id="dropupUserName">—</div>
-          <div class="user-dropup-email" id="dropupUserEmail">—</div>
+          <div class="user-dropup-name" id="dropupUserName">â€”</div>
+          <div class="user-dropup-email" id="dropupUserEmail">â€”</div>
         </div>
         <a href="perfil.html" class="user-dropup-item" role="menuitem">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
@@ -138,7 +138,7 @@
         </a>
         <a href="configuracoes.html" class="user-dropup-item" role="menuitem">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-          Configurações
+          ConfiguraÃ§Ãµes
         </a>
         <hr class="user-dropup-divider"/>
         <button class="user-dropup-item danger" onclick="logout()" role="menuitem">
@@ -183,29 +183,29 @@
           <div class="stat-icon">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
           </div>
-          <div class="stat-value" id="sTotalClients">—</div>
+          <div class="stat-value" id="sTotalClients">â€”</div>
           <div class="stat-label">Total de clientes</div>
         </div>
         <div class="stat-card green">
           <div class="stat-icon">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
           </div>
-          <div class="stat-value" id="sConcluido">—</div>
-          <div class="stat-label">Concluídos</div>
+          <div class="stat-value" id="sConcluido">â€”</div>
+          <div class="stat-label">ConcluÃ­dos</div>
         </div>
         <div class="stat-card blue">
           <div class="stat-icon">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
           </div>
-          <div class="stat-value" id="sEmAndamento">—</div>
+          <div class="stat-value" id="sEmAndamento">â€”</div>
           <div class="stat-label">Em andamento</div>
         </div>
         <div class="stat-card amber">
           <div class="stat-icon">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
           </div>
-          <div class="stat-value" id="sNaoIniciado">—</div>
-          <div class="stat-label">Não iniciados</div>
+          <div class="stat-value" id="sNaoIniciado">â€”</div>
+          <div class="stat-label">NÃ£o iniciados</div>
         </div>
       </div>
 
@@ -218,7 +218,7 @@
                 <th>Status</th>
                 <th>Progresso</th>
                 <th>Etapa</th>
-                <th>Última atividade</th>
+                <th>Ãšltima atividade</th>
                 <th>Tarefas</th>
                 <th>Msgs</th>
               </tr>
@@ -236,24 +236,24 @@
       <div class="section-header">
         <div>
           <div class="section-title">Agenda de Consultorias</div>
-          <div class="section-sub">Publicar horários disponíveis e acompanhar reservas dos clientes</div>
+          <div class="section-sub">Publicar horÃ¡rios disponÃ­veis e acompanhar reservas dos clientes</div>
         </div>
         <button class="btn-primary agenda-slot-toolbar-btn" onclick="toggleSlotForm()">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Novo horário
+          Novo horÃ¡rio
         </button>
       </div>
 
       <!-- New slot form -->
       <div id="slotFormCard" class="agenda-slot-form" hidden>
-        <div class="agenda-slot-form-title">Publicar novo horário</div>
+        <div class="agenda-slot-form-title">Publicar novo horÃ¡rio</div>
         <div class="agenda-slot-form-grid">
           <div>
-            <label class="agenda-slot-form-label">Título</label>
+            <label class="agenda-slot-form-label">TÃ­tulo</label>
             <input id="slotTitle" type="text" value="Consultoria" class="portal-input agenda-slot-form-input">
           </div>
           <div>
-            <label class="agenda-slot-form-label">Data e hora início *</label>
+            <label class="agenda-slot-form-label">Data e hora inÃ­cio *</label>
             <input id="slotStart" type="datetime-local" class="portal-input agenda-slot-form-input">
           </div>
           <div>
@@ -261,20 +261,20 @@
             <input id="slotEnd" type="datetime-local" class="portal-input agenda-slot-form-input">
           </div>
           <div>
-            <label class="agenda-slot-form-label">Duração (min)</label>
+            <label class="agenda-slot-form-label">DuraÃ§Ã£o (min)</label>
             <input id="slotDuration" type="number" value="60" min="15" step="15" class="portal-input agenda-slot-form-input">
           </div>
           <div>
-            <label class="agenda-slot-form-label">Créditos necessários</label>
+            <label class="agenda-slot-form-label">CrÃ©ditos necessÃ¡rios</label>
             <input id="slotCredits" type="number" value="1" min="1" class="portal-input agenda-slot-form-input">
           </div>
           <div>
-            <label class="agenda-slot-form-label">Vagas máximas</label>
+            <label class="agenda-slot-form-label">Vagas mÃ¡ximas</label>
             <input id="slotMax" type="number" value="1" min="1" class="portal-input agenda-slot-form-input">
           </div>
         </div>
         <div class="agenda-slot-form-actions">
-          <button class="btn-primary agenda-slot-form-btn agenda-slot-form-btn-primary" onclick="createSlot()">Publicar horário</button>
+          <button class="btn-primary agenda-slot-form-btn agenda-slot-form-btn-primary" onclick="createSlot()">Publicar horÃ¡rio</button>
           <button class="btn-ghost agenda-slot-form-btn" onclick="toggleSlotForm()">Cancelar</button>
         </div>
       </div>
@@ -283,7 +283,7 @@
       <div id="adminSlotsList">
         <div class="empty-state">
           <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-          <p>Carregando horários...</p>
+          <p>Carregando horÃ¡rios...</p>
         </div>
       </div>
     </div>
@@ -305,43 +305,43 @@
       <div class="stats-grid stats-grid-3">
         <div class="stat-card green">
           <div class="stat-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
-          <div class="stat-value" id="finTotalRevenue">—</div>
+          <div class="stat-value" id="finTotalRevenue">â€”</div>
           <div class="stat-label">Receita total</div>
         </div>
         <div class="stat-card blue">
           <div class="stat-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div>
-          <div class="stat-value" id="finClientsPaid">—</div>
+          <div class="stat-value" id="finClientsPaid">â€”</div>
           <div class="stat-label">Clientes pagantes</div>
         </div>
         <div class="stat-card amber">
           <div class="stat-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></div>
-          <div class="stat-value" id="finTotalPayments">—</div>
+          <div class="stat-value" id="finTotalPayments">â€”</div>
           <div class="stat-label">Total de pagamentos</div>
         </div>
       </div>
 
       <!-- Clients table -->
       <div class="portal-card">
-        <div class="portal-card-header"><span class="portal-card-title">Clientes — histórico financeiro</span></div>
+        <div class="portal-card-header"><span class="portal-card-title">Clientes â€” histÃ³rico financeiro</span></div>
         <div id="finClientsList" class="admin-table-wrap">
           <div class="admin-finance-loading">Carregando...</div>
         </div>
       </div>
     </div>
 
-    <!-- FORMULÁRIOS (Professional Form Builder) -->
+    <!-- FORMULÃRIOS (Professional Form Builder) -->
     <div id="sec-formularios" class="tab-content">
 
-      <!-- ── VIEW: LIST ─────────────────────────────────────────────────── -->
+      <!-- â”€â”€ VIEW: LIST â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
       <div id="fb-view-list">
         <div class="section-header">
           <div>
-            <div class="section-title">Formulários</div>
-            <div class="section-sub">Crie diagnósticos, pesquisas e avaliações profissionais</div>
+            <div class="section-title">FormulÃ¡rios</div>
+            <div class="section-sub">Crie diagnÃ³sticos, pesquisas e avaliaÃ§Ãµes profissionais</div>
           </div>
           <button class="btn-primary admin-section-action-btn form-builder-list-action" onclick="fbOpenNewFormModal()">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            Novo Formulário
+            Novo FormulÃ¡rio
           </button>
         </div>
         <div id="fb-forms-grid" class="admin-card-grid">
@@ -349,22 +349,22 @@
         </div>
       </div>
 
-      <!-- ── VIEW: BUILDER ──────────────────────────────────────────────── -->
+      <!-- â”€â”€ VIEW: BUILDER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
       <div id="fb-view-builder" class="ui-hidden">
         <!-- Builder header -->
         <div class="journey-editor-toolbar">
           <button class="btn-ghost admin-compact-btn journey-editor-toolbar-btn" onclick="fbLoadFormsList()">
-            ← Todos os formulários
+            â† Todos os formulÃ¡rios
           </button>
-          <h1 id="fb-builder-title" class="journey-editor-title form-builder-title">—</h1>
+          <h1 id="fb-builder-title" class="journey-editor-title form-builder-title">â€”</h1>
           <button class="btn-ghost admin-compact-btn journey-editor-toolbar-btn" onclick="fbToggleSettings()">
-            ⚙️ Configurações
+            âš™ï¸ ConfiguraÃ§Ãµes
           </button>
           <button class="btn-ghost admin-compact-btn journey-editor-toolbar-btn" onclick="fbOpenAssignModal()">
-            👥 Atribuir clientes
+            ðŸ‘¥ Atribuir clientes
           </button>
           <button class="btn-ghost admin-compact-btn journey-editor-toolbar-btn" onclick="fbOpenStatsPanel()">
-            📊 Estatísticas
+            ðŸ“Š EstatÃ­sticas
           </button>
         </div>
 
@@ -372,12 +372,12 @@
         <div id="fb-settings-panel" class="form-builder-panel ui-hidden">
           <div class="form-builder-settings-grid">
             <div>
-              <label class="form-builder-field-label">Título</label>
-              <input id="fb-settings-title" class="portal-input" placeholder="Título do formulário">
+              <label class="form-builder-field-label">TÃ­tulo</label>
+              <input id="fb-settings-title" class="portal-input" placeholder="TÃ­tulo do formulÃ¡rio">
             </div>
             <div>
               <label class="form-builder-field-label">Status</label>
-              <select id="fb-settings-status" class="portal-input" aria-label="Status do formulário">
+              <select id="fb-settings-status" class="portal-input" aria-label="Status do formulÃ¡rio">
                 <option value="draft">Rascunho</option>
                 <option value="active">Publicado</option>
                 <option value="inactive">Arquivado</option>
@@ -386,15 +386,15 @@
             <button class="btn-primary admin-compact-btn form-builder-settings-save" onclick="fbSaveFormSettings()">Salvar</button>
           </div>
           <div class="form-builder-settings-desc">
-            <label class="form-builder-field-label">Descrição</label>
-            <input id="fb-settings-desc" class="portal-input" placeholder="Descrição (opcional)">
+            <label class="form-builder-field-label">DescriÃ§Ã£o</label>
+            <input id="fb-settings-desc" class="portal-input" placeholder="DescriÃ§Ã£o (opcional)">
           </div>
         </div>
 
         <!-- Stats panel (collapsible) -->
         <div id="fb-stats-panel" class="form-builder-panel ui-hidden">
           <div class="form-builder-stats-header">
-            <div class="journey-panel-title">Estatísticas do Formulário</div>
+            <div class="journey-panel-title">EstatÃ­sticas do FormulÃ¡rio</div>
             <button class="btn-ghost form-builder-mini-btn" onclick="fbOpenStatsPanel()">Atualizar</button>
           </div>
           <div id="fb-stats-content" class="form-builder-stats-grid">
@@ -412,7 +412,7 @@
           <!-- Left: Question palette -->
           <div class="form-builder-side-panel">
             <div class="form-builder-side-panel-header">
-              Tipos de questão
+              Tipos de questÃ£o
             </div>
             <div id="fb-palette" class="form-builder-palette">
               <!-- filled by fbRenderPalette() -->
@@ -422,8 +422,8 @@
           <!-- Center: Canvas -->
           <div class="form-builder-canvas" id="fb-canvas">
             <div class="form-builder-canvas-empty">
-              <div class="form-builder-canvas-empty-icon">📋</div>
-              <div class="form-builder-canvas-empty-copy">Clique em um tipo de questão para adicionar</div>
+              <div class="form-builder-canvas-empty-icon">ðŸ“‹</div>
+              <div class="form-builder-canvas-empty-copy">Clique em um tipo de questÃ£o para adicionar</div>
             </div>
           </div>
 
@@ -434,15 +434,15 @@
             </div>
             <div id="fb-props-panel" class="form-builder-props-panel">
               <div class="admin-empty-state-soft form-builder-props-empty">
-                <div class="form-builder-props-empty-icon">👈</div>
-                <div class="form-builder-props-empty-copy">Clique em uma questão para editar</div>
+                <div class="form-builder-props-empty-icon">ðŸ‘ˆ</div>
+                <div class="form-builder-props-empty-copy">Clique em uma questÃ£o para editar</div>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- ── VIEW: RESPONSES ────────────────────────────────────────────── -->
+      <!-- â”€â”€ VIEW: RESPONSES â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
       <div id="fb-view-responses" class="ui-hidden">
         <div class="section-header">
           <div>
@@ -451,10 +451,10 @@
           </div>
           <div class="admin-toolbar-actions">
             <button class="btn-ghost admin-compact-btn" onclick="fbExportResponsesCSV()">
-              📥 Exportar CSV
+              ðŸ“¥ Exportar CSV
             </button>
             <button class="btn-ghost admin-compact-btn" onclick="fbLoadFormsList()">
-              ← Voltar
+              â† Voltar
             </button>
           </div>
         </div>
@@ -470,12 +470,12 @@
     <!-- JORNADAS -->
     <div id="sec-jornadas" class="tab-content">
 
-      <!-- ── VIEW: LIST ──────────────────────────────────────────────────── -->
+      <!-- â”€â”€ VIEW: LIST â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
       <div id="jrn-view-list">
         <div class="section-header">
           <div>
             <div class="section-title">Jornadas</div>
-            <div class="section-sub">Crie trilhas de formulários e atribua a clientes específicos</div>
+            <div class="section-sub">Crie trilhas de formulÃ¡rios e atribua a clientes especÃ­ficos</div>
           </div>
           <button class="btn-primary admin-section-action-btn form-builder-list-action" onclick="jrnOpenNewModal()">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -487,14 +487,14 @@
         </div>
       </div>
 
-      <!-- ── VIEW: EDITOR ────────────────────────────────────────────────── -->
+      <!-- â”€â”€ VIEW: EDITOR â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
       <div id="jrn-view-editor" class="ui-hidden">
         <div class="journey-editor-toolbar">
-          <button class="btn-ghost admin-compact-btn journey-editor-toolbar-btn" onclick="jrnLoadList()">← Todas as jornadas</button>
-          <h1 id="jrn-editor-title" class="journey-editor-title">—</h1>
+          <button class="btn-ghost admin-compact-btn journey-editor-toolbar-btn" onclick="jrnLoadList()">â† Todas as jornadas</button>
+          <h1 id="jrn-editor-title" class="journey-editor-title">â€”</h1>
           <span id="jrn-editor-status-badge" class="badge badge-gray journey-editor-status"></span>
-          <button class="btn-ghost admin-compact-btn journey-editor-toolbar-btn" onclick="jrnOpenEditModal()">✏️ Editar</button>
-          <button class="btn-primary admin-compact-btn" onclick="jrnOpenAssignModal()">👥 Atribuir cliente</button>
+          <button class="btn-ghost admin-compact-btn journey-editor-toolbar-btn" onclick="jrnOpenEditModal()">âœï¸ Editar</button>
+          <button class="btn-primary admin-compact-btn" onclick="jrnOpenAssignModal()">ðŸ‘¥ Atribuir cliente</button>
         </div>
 
         <div class="journey-editor-grid">
@@ -514,17 +514,17 @@
           <div class="portal-card portal-card-body">
             <div class="journey-panel-title journey-panel-title-spaced">Clientes nesta jornada</div>
             <div id="jrn-assignments-list" class="journey-stack-list">
-              <div class="journey-empty-state journey-empty-state-sm">Nenhum cliente atribuído.</div>
+              <div class="journey-empty-state journey-empty-state-sm">Nenhum cliente atribuÃ­do.</div>
             </div>
           </div>
 
         </div>
       </div>
 
-      <!-- ── VIEW: PROGRESS ──────────────────────────────────────────────── -->
+      <!-- â”€â”€ VIEW: PROGRESS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
       <div id="jrn-view-progress" class="ui-hidden">
         <div class="journey-editor-toolbar journey-progress-toolbar">
-          <button class="btn-ghost admin-compact-btn journey-editor-toolbar-btn" id="jrn-progress-back-btn">← Voltar</button>
+          <button class="btn-ghost admin-compact-btn journey-editor-toolbar-btn" id="jrn-progress-back-btn">â† Voltar</button>
           <h1 id="jrn-progress-title" class="journey-editor-title">Progresso</h1>
         </div>
         <div id="jrn-progress-content" class="portal-card portal-card-body">
@@ -534,7 +534,7 @@
 
     </div><!-- /sec-jornadas -->
 
-    <!-- ── MODAL: New/Edit Journey ──────────────────────────────────────────── -->
+    <!-- â”€â”€ MODAL: New/Edit Journey â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
     <div id="jrn-modal-form" class="admin-modal-overlay journey-modal-overlay ui-hidden"
          onclick="if(event.target===this)this.classList.add('ui-hidden')">
       <div class="admin-modal journey-modal journey-modal-md">
@@ -545,8 +545,8 @@
             <input id="jrn-f-name" class="portal-input" placeholder="Ex: Onboarding Completo">
           </div>
           <div>
-            <label class="form-builder-field-label">Descrição</label>
-            <textarea id="jrn-f-desc" class="portal-input journey-modal-textarea" rows="2" placeholder="Descrição opcional"></textarea>
+            <label class="form-builder-field-label">DescriÃ§Ã£o</label>
+            <textarea id="jrn-f-desc" class="portal-input journey-modal-textarea" rows="2" placeholder="DescriÃ§Ã£o opcional"></textarea>
           </div>
           <div>
             <label class="form-builder-field-label">Status</label>
@@ -564,7 +564,7 @@
       </div>
     </div>
 
-    <!-- ── MODAL: Add Step ─────────────────────────────────────────────────── -->
+    <!-- â”€â”€ MODAL: Add Step â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
     <div id="jrn-modal-step" class="admin-modal-overlay journey-modal-overlay ui-hidden"
          onclick="if(event.target===this)this.classList.add('ui-hidden')">
       <div class="admin-modal journey-modal journey-modal-lg">
@@ -572,17 +572,17 @@
         <input type="hidden" id="jrn-step-editing-id">
         <div class="journey-modal-stack">
           <div>
-            <label class="form-builder-field-label">Título *</label>
-            <input id="jrn-step-title" class="portal-input" placeholder="Ex: Diagnóstico Inicial">
+            <label class="form-builder-field-label">TÃ­tulo *</label>
+            <input id="jrn-step-title" class="portal-input" placeholder="Ex: DiagnÃ³stico Inicial">
           </div>
           <div>
-            <label class="form-builder-field-label">Descrição</label>
+            <label class="form-builder-field-label">DescriÃ§Ã£o</label>
             <input id="jrn-step-desc" class="portal-input" placeholder="Opcional">
           </div>
           <div>
-            <label class="form-builder-field-label">Formulário vinculado</label>
-            <select id="jrn-step-form" class="portal-input" aria-label="Formulário vinculado">
-              <option value="">— Nenhum formulário —</option>
+            <label class="form-builder-field-label">FormulÃ¡rio vinculado</label>
+            <select id="jrn-step-form" class="portal-input" aria-label="FormulÃ¡rio vinculado">
+              <option value="">â€” Nenhum formulÃ¡rio â€”</option>
             </select>
           </div>
           <div class="journey-modal-checkbox-row">
@@ -597,7 +597,7 @@
       </div>
     </div>
 
-    <!-- ── MODAL: Assign client to Journey ─────────────────────────────────── -->
+    <!-- â”€â”€ MODAL: Assign client to Journey â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
     <div id="jrn-modal-assign" class="admin-modal-overlay journey-modal-overlay ui-hidden"
          onclick="if(event.target===this)this.classList.add('ui-hidden')">
       <div class="admin-modal journey-modal journey-modal-md">
@@ -610,7 +610,7 @@
             </select>
           </div>
           <div>
-            <label class="form-builder-field-label">Observações</label>
+            <label class="form-builder-field-label">ObservaÃ§Ãµes</label>
             <input id="jrn-assign-notes" class="portal-input" placeholder="Opcional">
           </div>
         </div>
@@ -621,43 +621,43 @@
       </div>
     </div>
 
-    <!-- ── MODAL: New Form ────────────────────────────────────────────────── -->
+    <!-- â”€â”€ MODAL: New Form â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
     <div id="fb-modal-new" class="admin-modal-overlay journey-modal-overlay ui-hidden">
       <div class="admin-modal journey-modal journey-modal-md">
-        <div class="journey-modal-title">Novo Formulário</div>
+        <div class="journey-modal-title">Novo FormulÃ¡rio</div>
         <div class="journey-modal-stack">
           <div>
-            <label class="form-builder-field-label">Título *</label>
-            <input id="fb-new-title" class="portal-input" placeholder="Ex: Diagnóstico Financeiro">
+            <label class="form-builder-field-label">TÃ­tulo *</label>
+            <input id="fb-new-title" class="portal-input" placeholder="Ex: DiagnÃ³stico Financeiro">
           </div>
           <div>
             <label class="form-builder-field-label">Tipo</label>
-            <select id="fb-new-type" class="portal-input" aria-label="Tipo de formulário">
-              <option value="diagnostico">Diagnóstico</option>
+            <select id="fb-new-type" class="portal-input" aria-label="Tipo de formulÃ¡rio">
+              <option value="diagnostico">DiagnÃ³stico</option>
               <option value="pesquisa">Pesquisa</option>
-              <option value="avaliacao">Avaliação</option>
+              <option value="avaliacao">AvaliaÃ§Ã£o</option>
               <option value="onboarding">Onboarding</option>
               <option value="outro">Outro</option>
             </select>
           </div>
           <div>
-            <label class="form-builder-field-label">Descrição</label>
-            <textarea id="fb-new-desc" class="portal-input journey-modal-textarea" rows="2" placeholder="Descreva o objetivo deste formulário..."></textarea>
+            <label class="form-builder-field-label">DescriÃ§Ã£o</label>
+            <textarea id="fb-new-desc" class="portal-input journey-modal-textarea" rows="2" placeholder="Descreva o objetivo deste formulÃ¡rio..."></textarea>
           </div>
         </div>
         <div class="admin-modal-actions journey-modal-actions journey-modal-actions-wide-gap">
           <button class="btn-ghost admin-modal-btn" onclick="fbCloseNewModal()">Cancelar</button>
-          <button class="btn-primary admin-modal-btn" onclick="fbSubmitNewForm()">Criar formulário →</button>
+          <button class="btn-primary admin-modal-btn" onclick="fbSubmitNewForm()">Criar formulÃ¡rio â†’</button>
         </div>
       </div>
     </div>
 
-    <!-- ── MODAL: Logic Editor ────────────────────────────────────────────── -->
+    <!-- â”€â”€ MODAL: Logic Editor â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
     <div id="fb-logic-modal" class="admin-modal-overlay journey-modal-overlay ui-hidden">
       <div class="admin-modal form-builder-modal form-builder-modal-lg">
         <div class="form-builder-modal-header">
-          <div class="form-builder-modal-title">🔀 Lógica Condicional</div>
-          <button onclick="fbCloseLogicModal()" class="form-builder-modal-close">×</button>
+          <div class="form-builder-modal-title">ðŸ”€ LÃ³gica Condicional</div>
+          <button onclick="fbCloseLogicModal()" class="form-builder-modal-close">Ã—</button>
         </div>
         <div id="fb-logic-rules" class="form-builder-logic-rules"></div>
         <div class="form-builder-logic-box">
@@ -665,14 +665,14 @@
           <div class="form-builder-logic-grid">
             <div>
               <label class="form-builder-logic-label">Operador</label>
-              <select id="fb-logic-op" class="portal-input form-builder-logic-control" aria-label="Operador lógico">
-                <option value="equals">É igual a</option>
+              <select id="fb-logic-op" class="portal-input form-builder-logic-control" aria-label="Operador lÃ³gico">
+                <option value="equals">Ã‰ igual a</option>
                 <option value="not_equals">Diferente de</option>
-                <option value="contains">Contém</option>
+                <option value="contains">ContÃ©m</option>
                 <option value="greater_than">Maior que</option>
                 <option value="less_than">Menor que</option>
                 <option value="is_answered">Foi respondida</option>
-                <option value="is_empty">Não foi respondida</option>
+                <option value="is_empty">NÃ£o foi respondida</option>
               </select>
             </div>
             <div>
@@ -680,28 +680,28 @@
               <input id="fb-logic-val" class="portal-input form-builder-logic-control" placeholder="Ex: Sim">
             </div>
             <div>
-              <label class="form-builder-logic-label">Ação</label>
-              <select id="fb-logic-action" class="portal-input form-builder-logic-control" aria-label="Ação da regra">
-                <option value="skip_to_page">Ir para página</option>
-                <option value="hide_question">Ocultar questão</option>
+              <label class="form-builder-logic-label">AÃ§Ã£o</label>
+              <select id="fb-logic-action" class="portal-input form-builder-logic-control" aria-label="AÃ§Ã£o da regra">
+                <option value="skip_to_page">Ir para pÃ¡gina</option>
+                <option value="hide_question">Ocultar questÃ£o</option>
               </select>
             </div>
           </div>
           <div class="form-builder-logic-target-wrap">
-            <label class="form-builder-logic-label">Página de destino (ID)</label>
-            <input id="fb-logic-target-page" type="number" class="portal-input form-builder-logic-control form-builder-logic-target" placeholder="ID da página">
+            <label class="form-builder-logic-label">PÃ¡gina de destino (ID)</label>
+            <input id="fb-logic-target-page" type="number" class="portal-input form-builder-logic-control form-builder-logic-target" placeholder="ID da pÃ¡gina">
           </div>
           <button class="btn-primary form-builder-logic-add-btn" onclick="fbAddLogicRule()">+ Adicionar regra</button>
         </div>
       </div>
     </div>
 
-    <!-- ── MODAL: Assign Clients ──────────────────────────────────────────── -->
+    <!-- â”€â”€ MODAL: Assign Clients â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
     <div id="fb-assign-modal" class="admin-modal-overlay journey-modal-overlay ui-hidden">
       <div class="admin-modal form-builder-modal form-builder-modal-md">
         <div class="form-builder-modal-header">
-          <div class="form-builder-modal-title">👥 Atribuir Clientes</div>
-          <button onclick="fbCloseAssignModal()" class="form-builder-modal-close">×</button>
+          <div class="form-builder-modal-title">ðŸ‘¥ Atribuir Clientes</div>
+          <button onclick="fbCloseAssignModal()" class="form-builder-modal-close">Ã—</button>
         </div>
         <div id="fb-assign-list" class="form-builder-assign-list"></div>
         <div class="form-builder-assign-row">
@@ -711,12 +711,12 @@
       </div>
     </div>
 
-    <!-- ── MODAL: Response detail ─────────────────────────────────────────── -->
+    <!-- â”€â”€ MODAL: Response detail â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
     <div id="fb-resp-detail-modal" class="admin-modal-overlay journey-modal-overlay ui-hidden">
       <div class="admin-modal form-builder-modal form-builder-modal-xl">
         <div class="form-builder-modal-header">
-          <div class="form-builder-modal-title">📊 Detalhes da Resposta</div>
-          <button onclick="fbCloseRespDetailModal()" class="form-builder-modal-close">×</button>
+          <div class="form-builder-modal-title">ðŸ“Š Detalhes da Resposta</div>
+          <button onclick="fbCloseRespDetailModal()" class="form-builder-modal-close">Ã—</button>
         </div>
         <div id="fb-resp-detail-body"></div>
       </div>
@@ -727,7 +727,7 @@
       <div class="section-header">
         <div>
           <div class="section-title">Log de Acesso</div>
-          <div class="section-sub">Últimas 500 entradas</div>
+          <div class="section-sub">Ãšltimas 500 entradas</div>
         </div>
         <button class="btn-ghost" onclick="loadLogs()">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/></svg>
@@ -740,7 +740,7 @@
             <thead>
               <tr>
                 <th>Data/Hora</th>
-                <th>Usuário</th>
+                <th>UsuÃ¡rio</th>
                 <th>Evento</th>
                 <th>IP</th>
                 <th>Detalhe</th>
@@ -754,16 +754,16 @@
       </div>
     </div>
 
-    <!-- ADMIN INVOICES (Cobranças) -->
+    <!-- ADMIN INVOICES (CobranÃ§as) -->
     <div id="sec-adminInvoices" class="tab-content">
       <div class="section-header">
         <div>
-          <div class="section-title">Cobranças Internas</div>
-          <div class="section-sub">Gerencie boletos e faturas bancárias</div>
+          <div class="section-title">CobranÃ§as Internas</div>
+          <div class="section-sub">Gerencie boletos e faturas bancÃ¡rias</div>
         </div>
         <button class="btn-primary admin-section-action-btn" onclick="openCreateInvoiceModal()">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Nova Cobrança
+          Nova CobranÃ§a
         </button>
       </div>
 
@@ -777,7 +777,7 @@
           <option value="cancelled">Cancelado</option>
         </select>
         <input type="date" id="invFilterFrom" onchange="loadAdminInvoices()" class="portal-input admin-filter-control admin-filter-date" placeholder="De"/>
-        <input type="date" id="invFilterTo" onchange="loadAdminInvoices()" class="portal-input admin-filter-control admin-filter-date" placeholder="Até"/>
+        <input type="date" id="invFilterTo" onchange="loadAdminInvoices()" class="portal-input admin-filter-control admin-filter-date" placeholder="AtÃ©"/>
         <button class="btn-ghost" onclick="loadAdminInvoices()">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/></svg>
           Atualizar
@@ -795,17 +795,17 @@
     <div id="sec-adminMarketplace" class="tab-content">
       <div class="section-header">
         <div>
-          <div class="section-title">Marketplace de Serviços</div>
-          <div class="section-sub">Catálogo de serviços e pedidos</div>
+          <div class="section-title">Marketplace de ServiÃ§os</div>
+          <div class="section-sub">CatÃ¡logo de serviÃ§os e pedidos</div>
         </div>
         <button class="btn-primary admin-section-action-btn" onclick="openCreateServiceModal()">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Novo Serviço
+          Novo ServiÃ§o
         </button>
       </div>
 
       <div class="portal-card admin-card-spaced">
-        <div class="portal-card-header"><span class="portal-card-title">Serviços Cadastrados</span></div>
+        <div class="portal-card-header"><span class="portal-card-title">ServiÃ§os Cadastrados</span></div>
         <div class="admin-table-wrap" id="adminServicesTableWrap">
           <div class="admin-data-state">Carregando...</div>
         </div>
@@ -824,7 +824,7 @@
       <div class="section-header">
         <div>
           <div class="section-title">Auditoria</div>
-          <div class="section-sub">Registro detalhado de ações no sistema</div>
+          <div class="section-sub">Registro detalhado de aÃ§Ãµes no sistema</div>
         </div>
         <div class="admin-toolbar-actions">
           <button class="btn-ghost" onclick="loadAuditLog()">
@@ -842,7 +842,7 @@
       <div class="admin-filter-bar">
         <select id="auditFilterType" onchange="loadAuditLog()" class="portal-select admin-filter-control" aria-label="Filtrar por tipo">
           <option value="">Todos os tipos</option>
-          <option value="invoice">Cobrança</option>
+          <option value="invoice">CobranÃ§a</option>
           <option value="task">Tarefa</option>
           <option value="document">Documento</option>
           <option value="service_order">Pedido</option>
@@ -862,78 +862,26 @@
   </main>
 </div>
 
-<!-- Client Drawer -->
-<div class="drawer-overlay" id="drawerOverlay" onclick="closeDrawer()"></div>
-<div class="drawer" id="clientDrawer">
-  <div class="drawer-header">
-    <div>
-      <div class="drawer-title" id="drawerTitle">Cliente</div>
-      <div class="drawer-subtitle" id="drawerSub"></div>
-    </div>
-    <div class="drawer-actions">
-      <button class="btn-ghost drawer-action-btn" onclick="exportClientXLS(_currentClientId)" title="Exportar dados em Excel">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        Exportar XLS
-      </button>
-      <button class="btn-ghost drawer-action-btn" onclick="exportClientPDF(_currentClientId)" title="Relatório executivo em PDF">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-        Exportar PDF
-      </button>
-      <button class="btn-ghost drawer-action-btn" onclick="impersonateClient(_currentClientId)" title="Visualizar portal como este cliente">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-        Ver como cliente
-      </button>
-      <button class="btn-ghost drawer-action-btn" onclick="adminEditClient(_currentClientId)" title="Editar dados do cliente (LGPD)">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-        Editar
-      </button>
-      <button class="btn-ghost drawer-action-btn" onclick="adminDeleteClient(_currentClientId)" title="Excluir conta do cliente" style="color:#dc2626">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
-        Excluir
-      </button>
-      <button class="drawer-close" onclick="closeDrawer()" aria-label="Fechar">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>
-    </div>
-  </div>
-  <div class="drawer-tabs">
-    <button class="drawer-tab active" onclick="switchDrawerTab('overview',this)">Visão Geral</button>
-    <button class="drawer-tab" onclick="switchDrawerTab('plan',this)">Business Plan</button>
-    <button class="drawer-tab" onclick="switchDrawerTab('tasks',this)">Tarefas</button>
-    <button class="drawer-tab" id="drawerTabMessages" onclick="switchDrawerTab('messages',this)">Mensagens</button>
-    <button class="drawer-tab" onclick="switchDrawerTab('agenda',this)">Agenda</button>
-    <button class="drawer-tab" onclick="switchDrawerTab('docs',this)">Documentos</button>
-    <button class="drawer-tab" onclick="switchDrawerTab('equipe',this)">Equipe</button>
-    <button class="drawer-tab" onclick="switchDrawerTab('organograma',this)">Organograma</button>
-    <button class="drawer-tab" onclick="switchDrawerTab('credores',this)">Credores</button>
-    <button class="drawer-tab" onclick="switchDrawerTab('fornecedores',this)">Fornecedores</button>
-    <button class="drawer-tab" onclick="switchDrawerTab('funcionarios',this)">Funcionários</button>
-    <button class="drawer-tab" onclick="switchDrawerTab('financeiro_client',this)">Financeiro</button>
-    <button class="drawer-tab" onclick="switchDrawerTab('data',this)">Dados</button>
-  </div>
-  <div class="drawer-body" id="drawerBody"></div>
-</div>
-
 <div class="toast" id="toast"></div>
 
-<script src="/js/admin-modal-manager.js?v=20260421b"></script>
+<script src="/js/admin-modal-manager.js?v=20260421e"></script>
 <script src="/js/admin-shell-core.js?v=20260421b"></script>
 
-<script src="/js/admin-agenda.js?v=20260421c"></script>
+<script src="/js/admin-agenda.js?v=20260421f"></script>
 <script src="/js/admin-audit-log.js?v=20260421b"></script>
 <script src="/js/admin-bootstrap.js?v=20260421b"></script>
-<script src="/js/admin-client-actions.js?v=20260421c"></script>
-<script src="/js/admin-client-actions-extended.js?v=20260421c"></script>
-<script src="/js/admin-finance.js?v=20260421b"></script>
+<script src="/js/admin-client-actions.js?v=20260421f"></script>
+<script src="/js/admin-client-actions-extended.js?v=20260421f"></script>
+<script src="/js/admin-finance.js?v=20260421e"></script>
 <script src="/js/admin-form-builder.js?v=20260421b"></script>
 <script src="/js/admin-notifications.js?v=20260421b"></script>
 <script src="/js/admin-invoices.js?v=20260421b"></script>
 <script src="/js/admin-marketplace.js?v=20260421b"></script>
-<script src="/js/admin-client-drawer-tabs-primary.js?v=20260421c"></script>
-<script src="/js/admin-client-drawer-tabs-secondary.js?v=20260421c"></script>
-<script src="/js/admin-client-drawer-tabs-tertiary.js?v=20260421c"></script>
-<script src="/js/admin-client-drawer-data.js?v=20260421c"></script>
-<script src="/js/admin-client-drawer.js?v=20260421d"></script>
+<script src="/js/client-detail-tabs-primary.js?v=20260421f"></script>
+<script src="/js/client-detail-tabs-secondary.js?v=20260421f"></script>
+<script src="/js/client-detail-tabs-tertiary.js?v=20260421f"></script>
+<script src="/js/client-detail-data.js?v=20260421f"></script>
+<script src="/js/client-detail-controller.js?v=20260421f"></script>
 <script src="/js/admin-init.js?v=20260421b"></script>
 
 <!-- Form Builder JS -->

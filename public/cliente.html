@@ -138,15 +138,15 @@
       <section class="client-page-hero">
         <div class="client-page-title-row">
           <div class="client-page-title-wrap">
-            <h1 class="client-page-title" id="drawerTitle">Carregando...</h1>
-            <p class="client-page-subtitle" id="drawerSub">Preparando dados do cliente</p>
+            <h1 class="client-page-title" id="clientPageTitle">Carregando...</h1>
+            <p class="client-page-subtitle" id="clientPageSubtitle">Preparando dados do cliente</p>
           </div>
           <div class="client-page-actions">
-            <button class="btn-ghost drawer-action-btn" onclick="exportClientXLS(_currentClientId)">Exportar XLS</button>
-            <button class="btn-ghost drawer-action-btn" onclick="exportClientPDF(_currentClientId)">Exportar PDF</button>
-            <button class="btn-ghost drawer-action-btn" onclick="impersonateClient(_currentClientId)">Ver como cliente</button>
-            <button class="btn-ghost drawer-action-btn" onclick="adminEditClient(_currentClientId)">Editar</button>
-            <button class="btn-ghost drawer-action-btn" onclick="adminDeleteClient(_currentClientId)" style="color:#dc2626">Excluir</button>
+            <button class="btn-ghost drawer-action-btn" onclick="exportClientXLS(REClientDetailState.currentClientId)">Exportar XLS</button>
+            <button class="btn-ghost drawer-action-btn" onclick="exportClientPDF(REClientDetailState.currentClientId)">Exportar PDF</button>
+            <button class="btn-ghost drawer-action-btn" onclick="impersonateClient(REClientDetailState.currentClientId)">Ver como cliente</button>
+            <button class="btn-ghost drawer-action-btn" onclick="adminEditClient(REClientDetailState.currentClientId)">Editar</button>
+            <button class="btn-ghost drawer-action-btn" onclick="adminDeleteClient(REClientDetailState.currentClientId)" style="color:#dc2626">Excluir</button>
           </div>
         </div>
 
@@ -174,21 +174,21 @@
 
       <section class="client-page-tabs-wrap">
         <div class="client-page-tabs" id="clientPageTabs">
-          <button class="client-page-tab active" data-client-tab="overview" onclick="switchDrawerTab('overview',this)">Visão Geral</button>
-          <button class="client-page-tab" data-client-tab="plan" onclick="switchDrawerTab('plan',this)">Business Plan</button>
-          <button class="client-page-tab" data-client-tab="tasks" onclick="switchDrawerTab('tasks',this)">Tarefas</button>
-          <button class="client-page-tab" data-client-tab="messages" id="drawerTabMessages" onclick="switchDrawerTab('messages',this)">Mensagens</button>
-          <button class="client-page-tab" data-client-tab="agenda" onclick="switchDrawerTab('agenda',this)">Agenda</button>
-          <button class="client-page-tab" data-client-tab="docs" onclick="switchDrawerTab('docs',this)">Documentos</button>
-          <button class="client-page-tab" data-client-tab="equipe" onclick="switchDrawerTab('equipe',this)">Equipe</button>
-          <button class="client-page-tab" data-client-tab="organograma" onclick="switchDrawerTab('organograma',this)">Organograma</button>
-          <button class="client-page-tab" data-client-tab="credores" onclick="switchDrawerTab('credores',this)">Credores</button>
-          <button class="client-page-tab" data-client-tab="fornecedores" onclick="switchDrawerTab('fornecedores',this)">Fornecedores</button>
-          <button class="client-page-tab" data-client-tab="funcionarios" onclick="switchDrawerTab('funcionarios',this)">Funcionários</button>
-          <button class="client-page-tab" data-client-tab="financeiro_client" onclick="switchDrawerTab('financeiro_client',this)">Financeiro</button>
-          <button class="client-page-tab" data-client-tab="data" onclick="switchDrawerTab('data',this)">Dados</button>
+          <button class="client-page-tab active" data-client-tab="overview" onclick="switchClientDetailTab('overview',this)">Visão Geral</button>
+          <button class="client-page-tab" data-client-tab="plan" onclick="switchClientDetailTab('plan',this)">Business Plan</button>
+          <button class="client-page-tab" data-client-tab="tasks" onclick="switchClientDetailTab('tasks',this)">Tarefas</button>
+          <button class="client-page-tab" data-client-tab="messages" id="drawerTabMessages" onclick="switchClientDetailTab('messages',this)">Mensagens</button>
+          <button class="client-page-tab" data-client-tab="agenda" onclick="switchClientDetailTab('agenda',this)">Agenda</button>
+          <button class="client-page-tab" data-client-tab="docs" onclick="switchClientDetailTab('docs',this)">Documentos</button>
+          <button class="client-page-tab" data-client-tab="equipe" onclick="switchClientDetailTab('equipe',this)">Equipe</button>
+          <button class="client-page-tab" data-client-tab="organograma" onclick="switchClientDetailTab('organograma',this)">Organograma</button>
+          <button class="client-page-tab" data-client-tab="credores" onclick="switchClientDetailTab('credores',this)">Credores</button>
+          <button class="client-page-tab" data-client-tab="fornecedores" onclick="switchClientDetailTab('fornecedores',this)">Fornecedores</button>
+          <button class="client-page-tab" data-client-tab="funcionarios" onclick="switchClientDetailTab('funcionarios',this)">Funcionários</button>
+          <button class="client-page-tab" data-client-tab="financeiro_client" onclick="switchClientDetailTab('financeiro_client',this)">Financeiro</button>
+          <button class="client-page-tab" data-client-tab="data" onclick="switchClientDetailTab('data',this)">Dados</button>
         </div>
-        <div class="client-page-body" id="drawerBody">
+        <div class="client-page-body" id="clientPageBody">
           <div class="empty-state"><p>Carregando cliente...</p></div>
         </div>
       </section>
@@ -198,17 +198,17 @@
 
 <div class="toast" id="toast"></div>
 
-<script src="./js/admin-modal-manager.js?v=20260421b"></script>
+<script src="./js/admin-modal-manager.js?v=20260421e"></script>
 <script src="./js/admin-shell-core.js?v=20260421b"></script>
-<script src="./js/admin-client-actions.js?v=20260421c"></script>
-<script src="./js/admin-client-actions-extended.js?v=20260421c"></script>
-<script src="./js/admin-agenda.js?v=20260421c"></script>
-<script src="./js/admin-client-drawer-tabs-primary.js?v=20260421c"></script>
-<script src="./js/admin-client-drawer-tabs-secondary.js?v=20260421c"></script>
-<script src="./js/admin-client-drawer-tabs-tertiary.js?v=20260421c"></script>
-<script src="./js/admin-client-drawer-data.js?v=20260421c"></script>
-<script src="./js/admin-client-page.js?v=20260421c"></script>
-<script src="./js/admin-client-drawer.js?v=20260421d"></script>
+<script src="./js/admin-client-actions.js?v=20260421f"></script>
+<script src="./js/admin-client-actions-extended.js?v=20260421f"></script>
+<script src="./js/admin-agenda.js?v=20260421f"></script>
+<script src="./js/client-detail-tabs-primary.js?v=20260421f"></script>
+<script src="./js/client-detail-tabs-secondary.js?v=20260421f"></script>
+<script src="./js/client-detail-tabs-tertiary.js?v=20260421f"></script>
+<script src="./js/client-detail-data.js?v=20260421f"></script>
+<script src="./js/client-detail-exports.js?v=20260421f"></script>
+<script src="./js/client-detail-controller.js?v=20260421f"></script>
 
 </body>
 </html>

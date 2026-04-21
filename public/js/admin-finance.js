@@ -59,13 +59,7 @@
   }
 
   function openClientFinanceiro(clientId) {
-    openClient(clientId);
-    setTimeout(() => {
-      const tabs = document.querySelectorAll('.drawer-tab');
-      tabs.forEach(tab => {
-        if (tab.textContent.trim() === 'Financeiro') tab.click();
-      });
-    }, 400);
+    window.location.href = 'cliente?id=' + encodeURIComponent(clientId) + '&tab=financeiro_client';
   }
 
   window.loadAdminFinanceiro = loadAdminFinanceiro;
