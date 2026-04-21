@@ -1,10 +1,13 @@
 const DEFAULT_LEGACY_API_BASE = 'https://api.recuperaempresas.com.br';
+const DEFAULT_WORKER_API_BASE = 'https://api-edge.recuperaempresas.com.br';
+const DEFAULT_WORKER_ROUTES = ['/api/admin/invoices', '/api/admin/journeys'];
 
 function trimBase(value) {
   return String(value || '').replace(/\/+$/, '');
 }
 
 function parseWorkerRoutes(value) {
+  if (!value) return DEFAULT_WORKER_ROUTES.slice();
   return String(value || '')
     .split(',')
     .map((item) => item.trim())
@@ -26,7 +29,7 @@ function matchesWorkerRoute(pathname, patterns) {
 
 function resolveTargetBase(pathname, env) {
   const legacyBase = trimBase(env.RE_API_BASE || DEFAULT_LEGACY_API_BASE);
-  const workerBase = trimBase(env.RE_API_WORKER_BASE);
+  const workerBase = trimBase(env.RE_API_WORKER_BASE || DEFAULT_WORKER_API_BASE);
   const workerRoutes = parseWorkerRoutes(env.RE_API_WORKER_ROUTES);
 
   if (workerBase && matchesWorkerRoute(pathname, workerRoutes)) return workerBase;
