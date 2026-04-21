@@ -273,6 +273,59 @@ async function handleClientBookings(request, context) {
   return json({ bookings });
 }
 
+async function handleClientTask(request, context) {
+  if (request.method !== 'POST') return methodNotAllowed();
+
+  const body = await readJson(request);
+  const title = String(body.title || '').trim();
+  const description = String(body.description || '').trim();
+  const dueDate = body.dueDate || null;
+  if (!title) return json({ error: 'Titulo obrigatorio.' }, { status: 400 });
+
+  const target = await maybeSingle(
+    context.sb
+      .from('re_users')
+      .select('id')
+      .eq('id', context.params.clientId)
+  );
+  if (!target) return json({ error: 'Cliente nao encontrado.' }, { status: 404 });
+
+  const { data: task, error } = await context.sb.from('re_tasks').insert({
+    user_id: context.params.clientId,
+    title,
+    description,
+    due_date: dueDate,
+    status: 'pendente',
+    created_by: context.user.id,
+  }).select().single();
+  if (error) return json({ error: error.message }, { status: 500 });
+
+  queueSideEffect(context, () => pushNotification(
+    context.sb,
+    context.params.clientId,
+    'task',
+    'Nova tarefa atribuida',
+    `${title}${description ? `: ${description.slice(0, 60)}` : ''}`,
+    'task',
+    task?.id,
+  ), 'admin-task-notification');
+
+  queueSideEffect(context, () => auditLog(
+    context.sb,
+    {
+      actorId: context.user.id,
+      actorEmail: context.user.email,
+      actorRole: 'admin',
+      entityType: 'task',
+      entityId: task?.id,
+      action: 'create',
+      after: { user_id: context.params.clientId, title, status: 'pendente' },
+    }
+  ), 'admin-task-audit');
+
+  return json({ success: true, task });
+}
+
 async function handleClientDocuments(request, context) {
   if (request.method === 'GET') {
     const documents = await listSafe(
@@ -1532,6 +1585,7 @@ export async function handleAdminReadModels(request, context) {
   if (pathname === '/api/admin/clients/bulk-action') return handleBulkClientAction(request, context);
   if (/^\/api\/admin\/client\/[^/]+$/.test(pathname)) return handleClientDetail(request, context);
   if (/^\/api\/admin\/client\/[^/]+\/bookings$/.test(pathname)) return handleClientBookings(request, context);
+  if (/^\/api\/admin\/client\/[^/]+\/task$/.test(pathname)) return handleClientTask(request, context);
   if (/^\/api\/admin\/client\/[^/]+\/documents(?:\/[^/]+)?$/.test(pathname)) return handleClientDocuments(request, context);
   if (/^\/api\/admin\/client\/[^/]+\/members$/.test(pathname)) return handleClientMembers(request, context);
   if (/^\/api\/admin\/client\/[^/]+\/suppliers$/.test(pathname)) return handleClientSuppliers(request, context);
