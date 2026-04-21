@@ -1,4 +1,4 @@
-'use strict';
+﻿'use strict';
 
 (function () {
   function secondaryLoading(message) {
@@ -22,7 +22,7 @@
       source: 'cache:/api/admin/client/:id',
       expectedKeys: ['messages'],
       actualPayload: { messages },
-      note: 'Deveria usar o array messages da rota base; ao abrir a guia, o POST de seen é apenas efeito colateral.',
+      note: 'Deveria usar o array messages da rota base; ao abrir a guia, o POST de seen Ã© apenas efeito colateral.',
     });
 
     if (currentClientId) {
@@ -33,15 +33,15 @@
     }
 
     const messageTemplates = [
-      { label: 'Solicitar dados pendentes', icon: '📋', text: 'Identificamos que algumas informações estão pendentes no seu cadastro. Para avançarmos na elaboração do Business Plan, precisamos que você complemente os dados do formulário de onboarding. Caso tenha dúvidas, estamos à disposição.' },
-      { label: 'Ajuste de documento', icon: '📄', text: 'O documento enviado apresenta algumas inconsistências. Solicitamos o reenvio com as seguintes correções:\n- Verificar período das informações\n- Incluir detalhamento solicitado\n\nAssim que o ajuste for realizado, daremos continuidade à análise.' },
-      { label: 'Atualização de etapa', icon: '📊', text: 'Informamos que estamos avançando na análise do seu processo. Atualmente, estamos na fase de estruturação do Business Plan. Caso haja qualquer atualização relevante sobre a situação da empresa, por favor nos comunique.' },
-      { label: 'Etapa aprovada', icon: '✅', text: 'Temos uma boa notícia! A etapa de diagnóstico foi concluída com sucesso. A partir de agora, seguiremos para a estruturação da estratégia de recuperação. Em breve entraremos em contato com os próximos passos.' },
-      { label: 'Agendar reunião', icon: '📅', text: 'Gostaríamos de agendar uma reunião para discutir o andamento do seu processo. Por favor, acesse a seção "Agenda" no portal e selecione um horário de sua preferência. Aguardamos sua confirmação.' },
+      { label: 'Solicitar dados pendentes', icon: 'ðŸ“‹', text: 'Identificamos que algumas informaÃ§Ãµes estÃ£o pendentes no seu cadastro. Para avanÃ§armos na elaboraÃ§Ã£o do Business Plan, precisamos que vocÃª complemente os dados do formulÃ¡rio de onboarding. Caso tenha dÃºvidas, estamos Ã  disposiÃ§Ã£o.' },
+      { label: 'Ajuste de documento', icon: 'ðŸ“„', text: 'O documento enviado apresenta algumas inconsistÃªncias. Solicitamos o reenvio com as seguintes correÃ§Ãµes:\n- Verificar perÃ­odo das informaÃ§Ãµes\n- Incluir detalhamento solicitado\n\nAssim que o ajuste for realizado, daremos continuidade Ã  anÃ¡lise.' },
+      { label: 'AtualizaÃ§Ã£o de etapa', icon: 'ðŸ“Š', text: 'Informamos que estamos avanÃ§ando na anÃ¡lise do seu processo. Atualmente, estamos na fase de estruturaÃ§Ã£o do Business Plan. Caso haja qualquer atualizaÃ§Ã£o relevante sobre a situaÃ§Ã£o da empresa, por favor nos comunique.' },
+      { label: 'Etapa aprovada', icon: 'âœ…', text: 'Temos uma boa notÃ­cia! A etapa de diagnÃ³stico foi concluÃ­da com sucesso. A partir de agora, seguiremos para a estruturaÃ§Ã£o da estratÃ©gia de recuperaÃ§Ã£o. Em breve entraremos em contato com os prÃ³ximos passos.' },
+      { label: 'Agendar reuniÃ£o', icon: 'ðŸ“…', text: 'GostarÃ­amos de agendar uma reuniÃ£o para discutir o andamento do seu processo. Por favor, acesse a seÃ§Ã£o "Agenda" no portal e selecione um horÃ¡rio de sua preferÃªncia. Aguardamos sua confirmaÃ§Ã£o.' },
     ];
 
     body.innerHTML = `
-      <div class="msg-templates-label">Mensagens rápidas</div>
+      <div class="msg-templates-label">Mensagens rÃ¡pidas</div>
       <div class="msg-templates">
         ${messageTemplates.map((template, index) => `
           <button class="msg-template-btn" onclick="applyMsgTemplate(${index})">
@@ -107,7 +107,7 @@
         <div class="cds-section-title">Agendamentos</div>
         <button onclick="openBookForClientFromDrawer('${currentClientId}')"
           class="btn-primary cds-new-booking-btn">
-          📅 Novo agendamento
+          ðŸ“… Novo agendamento
         </button>
       </div>`;
 
@@ -138,10 +138,10 @@
         <div class="${bookingClasses}">
           <div class="cds-booking-header-row">
             <div class="cds-booking-copy">
-              <div class="cds-booking-title">${slot.title || '—'}</div>
+              <div class="cds-booking-title">${slot.title || 'â€”'}</div>
               ${startsAt ? `<div class="cds-booking-time">
-                ${startsAt.toLocaleDateString('pt-BR')} às ${String(startsAt.getHours()).padStart(2,'0')}:${String(startsAt.getMinutes()).padStart(2,'0')}
-                ${endsAt ? `– ${String(endsAt.getHours()).padStart(2,'0')}:${String(endsAt.getMinutes()).padStart(2,'0')}` : ''}
+                ${startsAt.toLocaleDateString('pt-BR')} Ã s ${String(startsAt.getHours()).padStart(2,'0')}:${String(startsAt.getMinutes()).padStart(2,'0')}
+                ${endsAt ? `â€“ ${String(endsAt.getHours()).padStart(2,'0')}:${String(endsAt.getMinutes()).padStart(2,'0')}` : ''}
               </div>` : ''}
               ${booking.notes ? `<div class="cds-booking-note">${booking.notes}</div>` : ''}
               ${booking.cancel_reason ? `<div class="cds-booking-cancel-reason">Motivo: ${booking.cancel_reason}</div>` : ''}
@@ -150,13 +150,13 @@
           </div>
           ${booking.status === 'pending' ? `
           <div class="cds-booking-actions">
-            <button onclick="agendaConfirmBooking('${booking.id}');renderDrawerTab('agenda');" class="cds-action-btn cds-action-btn-confirm">✅ Confirmar</button>
-            <button onclick="agendaRescheduleBooking('${booking.id}','${clientName}')" class="cds-action-btn cds-action-btn-reschedule">↕️ Remarcar</button>
-            <button onclick="agendaCancelBooking('${booking.id}','${clientName}')" class="cds-action-btn cds-action-btn-cancel">❌ Cancelar</button>
+            <button onclick="agendaConfirmBooking('${booking.id}');renderClientDetailTab('agenda');" class="cds-action-btn cds-action-btn-confirm">âœ… Confirmar</button>
+            <button onclick="agendaRescheduleBooking('${booking.id}','${clientName}')" class="cds-action-btn cds-action-btn-reschedule">â†•ï¸ Remarcar</button>
+            <button onclick="agendaCancelBooking('${booking.id}','${clientName}')" class="cds-action-btn cds-action-btn-cancel">âŒ Cancelar</button>
           </div>` : booking.status === 'confirmed' ? `
           <div class="cds-booking-actions">
-            <button onclick="agendaRescheduleBooking('${booking.id}','${clientName}')" class="cds-action-btn cds-action-btn-reschedule">↕️ Remarcar</button>
-            <button onclick="agendaCancelBooking('${booking.id}','${clientName}')" class="cds-action-btn cds-action-btn-cancel">❌ Cancelar</button>
+            <button onclick="agendaRescheduleBooking('${booking.id}','${clientName}')" class="cds-action-btn cds-action-btn-reschedule">â†•ï¸ Remarcar</button>
+            <button onclick="agendaCancelBooking('${booking.id}','${clientName}')" class="cds-action-btn cds-action-btn-cancel">âŒ Cancelar</button>
           </div>` : ''}
         </div>`;
     }).join('');
@@ -165,27 +165,27 @@
   }
 
   const DOC_TYPE_LABELS = {
-    dre:'DRE', balanco:'Balanço', fluxo_caixa:'Fluxo de Caixa',
-    contrato_social:'Contrato Social', procuracao:'Procuração',
-    certidao:'Certidão', extrato:'Extrato', nota_fiscal:'NF', outros:'Outros',
+    dre:'DRE', balanco:'BalanÃ§o', fluxo_caixa:'Fluxo de Caixa',
+    contrato_social:'Contrato Social', procuracao:'ProcuraÃ§Ã£o',
+    certidao:'CertidÃ£o', extrato:'Extrato', nota_fiscal:'NF', outros:'Outros',
   };
   const DOC_STATUS_MAP = {
     pendente:          { label:'Pendente',          cls:'badge-gray'  },
-    em_analise:        { label:'Em análise',        cls:'badge-blue'  },
+    em_analise:        { label:'Em anÃ¡lise',        cls:'badge-blue'  },
     aprovado:          { label:'Aprovado',          cls:'badge-green' },
     reprovado:         { label:'Reprovado',         cls:'badge-red'   },
     ajuste_solicitado: { label:'Ajuste solicitado', cls:'badge-amber' },
   };
   const REQ_STATUS = {
     pending:   { label:'Aguardando envio', cls:'badge-amber' },
-    uploaded:  { label:'Enviado — revisar', cls:'badge-blue' },
+    uploaded:  { label:'Enviado â€” revisar', cls:'badge-blue' },
     approved:  { label:'Aprovado',         cls:'badge-green' },
     rejected:  { label:'Rejeitado',        cls:'badge-red'  },
     cancelled: { label:'Cancelado',        cls:'badge-gray' },
   };
   const ENTITY_LABELS = {
     company:'Empresa', member:'Membro', creditor:'Credor',
-    supplier:'Fornecedor', contract:'Contrato', employee:'Funcionário',
+    supplier:'Fornecedor', contract:'Contrato', employee:'FuncionÃ¡rio',
   };
 
   async function renderDocs(context) {
@@ -205,7 +205,7 @@
 
     function reqCard(r) {
       const st = REQ_STATUS[r.status] || REQ_STATUS.pending;
-      const deadline = r.deadline ? `<span style="font-size:11px;color:#9ca3af"> · Prazo: ${new Date(r.deadline+'T12:00:00').toLocaleDateString('pt-BR')}</span>` : '';
+      const deadline = r.deadline ? `<span style="font-size:11px;color:#9ca3af"> Â· Prazo: ${new Date(r.deadline+'T12:00:00').toLocaleDateString('pt-BR')}</span>` : '';
       const entity = (r.entity_type !== 'company' && r.entity_label)
         ? `<span style="font-size:11px;color:#6366f1;margin-left:4px">${ENTITY_LABELS[r.entity_type]}: ${escHtml(r.entity_label)}</span>` : '';
       const docLink = r.fulfilled_doc_id
@@ -232,23 +232,23 @@
 
     let html = `
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-        <div style="font-weight:700;font-size:14px">Solicitações de documentos</div>
+        <div style="font-weight:700;font-size:14px">SolicitaÃ§Ãµes de documentos</div>
         <button class="btn btn-sm btn-primary" onclick="adminRequestDoc('${currentClientId}')">+ Solicitar documento</button>
       </div>`;
 
     if (!requests.length) {
-      html += `<p style="font-size:13px;color:#9ca3af;margin-bottom:16px">Nenhuma solicitação criada.</p>`;
+      html += `<p style="font-size:13px;color:#9ca3af;margin-bottom:16px">Nenhuma solicitaÃ§Ã£o criada.</p>`;
     } else {
       if (pending.length) {
         html += `<div style="font-size:12px;font-weight:600;color:#d97706;margin-bottom:6px">Aguardando envio (${pending.length})</div>`;
         html += pending.map(reqCard).join('');
       }
       if (uploaded.length) {
-        html += `<div style="font-size:12px;font-weight:600;color:#1d4ed8;margin-top:10px;margin-bottom:6px">Enviados — aguardando revisão (${uploaded.length})</div>`;
+        html += `<div style="font-size:12px;font-weight:600;color:#1d4ed8;margin-top:10px;margin-bottom:6px">Enviados â€” aguardando revisÃ£o (${uploaded.length})</div>`;
         html += uploaded.map(reqCard).join('');
       }
       if (resolved.length) {
-        html += `<details style="margin-top:10px"><summary style="cursor:pointer;font-size:12px;color:#6b7280;font-weight:600">Histórico (${resolved.length})</summary>
+        html += `<details style="margin-top:10px"><summary style="cursor:pointer;font-size:12px;color:#6b7280;font-weight:600">HistÃ³rico (${resolved.length})</summary>
           <div style="margin-top:8px">${resolved.map(reqCard).join('')}</div></details>`;
       }
     }
@@ -260,7 +260,7 @@
     if (!documents.length) {
       html += `<div class="empty-state">
         <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-        <p>Cliente ainda não enviou documentos.</p>
+        <p>Cliente ainda nÃ£o enviou documentos.</p>
       </div>`;
     } else {
       html += documents.map(doc => {
@@ -274,7 +274,7 @@
           <div class="cds-doc-header">
             <div class="cds-doc-copy">
               <div class="cds-doc-name">${escHtml(doc.name)}</div>
-              <div class="cds-doc-meta">${typeLabel} · ${createdAt}${linkedReq ? ` · <span style="color:#6366f1">Ref: ${escHtml(linkedReq.name)}</span>` : ''}</div>
+              <div class="cds-doc-meta">${typeLabel} Â· ${createdAt}${linkedReq ? ` Â· <span style="color:#6366f1">Ref: ${escHtml(linkedReq.name)}</span>` : ''}</div>
             </div>
             <span class="badge ${status.cls}">${status.label}</span>
           </div>
@@ -290,7 +290,7 @@
             <button class="btn-sm btn-sm-approve" onclick="updateDocStatus('${doc.id}')">Salvar</button>
           </div>
           <div class="cds-doc-comment-wrap">
-            <input type="text" class="portal-input cds-doc-comment-input" id="docCmt_${doc.id}" placeholder="Comentário para o cliente (opcional)"/>
+            <input type="text" class="portal-input cds-doc-comment-input" id="docCmt_${doc.id}" placeholder="ComentÃ¡rio para o cliente (opcional)"/>
           </div>
           <div class="cds-doc-link-row">
             <a href="${(window.RE_API_BASE||'').replace(/\/+$/,'')}/api/documents/${doc.id}/file?token=${getToken()}"
@@ -315,7 +315,7 @@
     body.innerHTML = html;
   }
 
-  window.REAdminDrawerSecondaryTabs = {
+  window.REClientDetailSecondaryTabs = {
     async render(tab, context) {
       if (tab === 'messages') {
         renderMessages(context);
@@ -332,6 +332,7 @@
       return false;
     },
   };
+  window.REAdminDrawerSecondaryTabs = window.REClientDetailSecondaryTabs;
 
-console.info('[RE:admin-client-drawer-tabs-secondary] loaded');
+console.info('[RE:client-detail-tabs-secondary] loaded');
 })();

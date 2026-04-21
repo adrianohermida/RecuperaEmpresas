@@ -1,4 +1,4 @@
-'use strict';
+﻿'use strict';
 
 (function () {
   function tertiaryLoading(message) {
@@ -14,9 +14,9 @@
     return (cents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   }
 
-  function fmtDate(d) { return d ? new Date(d + 'T12:00:00').toLocaleDateString('pt-BR') : '—'; }
+  function fmtDate(d) { return d ? new Date(d + 'T12:00:00').toLocaleDateString('pt-BR') : 'â€”'; }
 
-  // ── Financeiro ────────────────────────────────────────────────────────────────
+  // â”€â”€ Financeiro â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   async function renderFinancial(context) {
     const { body, currentClientId } = context;
     body.innerHTML = tertiaryLoading('Carregando financeiro...');
@@ -35,7 +35,7 @@
           </div>
           <div class="stat-card cdt-summary-card">
             <div class="stat-value cdt-summary-value">${invoices.length}</div>
-            <div class="stat-label">Cobranças (${paid.length} pagas)</div>
+            <div class="stat-label">CobranÃ§as (${paid.length} pagas)</div>
           </div>
         </div>
         <div class="cdt-stack-list">
@@ -44,7 +44,7 @@
             const cls = isPaid ? 'badge-green' : 'badge-amber';
             return `<div class="cdt-invoice-card">
               <div class="cdt-invoice-copy">
-                <div class="cdt-invoice-title">${escHtml(inv.description || 'Cobrança')}</div>
+                <div class="cdt-invoice-title">${escHtml(inv.description || 'CobranÃ§a')}</div>
                 <div class="cdt-invoice-date">${window.REShared.formatDateBR(inv.date)}</div>
               </div>
               <div class="cdt-invoice-amount">${window.REShared.formatCurrencyBRL(parseFloat(inv.amount || 0))}</div>
@@ -58,7 +58,7 @@
     }
   }
 
-  // ── Equipe (enhanced: departments + invite + member docs) ────────────────────
+  // â”€â”€ Equipe (enhanced: departments + invite + member docs) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   async function renderTeam(context) {
     const { body, currentClientId } = context;
     body.innerHTML = tertiaryLoading('Carregando equipe...');
@@ -129,7 +129,7 @@
             <div class="cdt-member-name">${escHtml(m.name)}</div>
             <div class="cdt-member-email">${escHtml(m.email)}</div>
             ${m.job_title ? `<div style="font-size:11px;color:#6b7280">${escHtml(m.job_title)}</div>` : ''}
-            ${m.department_id ? `<div style="font-size:11px;color:#6366f1">📁 ${escHtml(deptMap[m.department_id] || 'Dept')}</div>` : ''}
+            ${m.department_id ? `<div style="font-size:11px;color:#6366f1">ðŸ“ ${escHtml(deptMap[m.department_id] || 'Dept')}</div>` : ''}
           </div>
           <span class="cdt-member-role ${roleTone(m.role)}">${roleLabels[m.role] || m.role}</span>
           <span class="cdt-member-status ${m.active ? 'cdt-member-status-active' : 'cdt-member-status-inactive'}">${m.active ? 'Ativo' : 'Inativo'}</span>
@@ -146,7 +146,7 @@
     body.innerHTML = html;
   }
 
-  // ── Organograma ───────────────────────────────────────────────────────────────
+  // â”€â”€ Organograma â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   async function renderOrgChart(context) {
     const { body, currentClientId } = context;
     body.innerHTML = tertiaryLoading('Carregando organograma...');
@@ -174,7 +174,7 @@
         <div class="org-node" style="--level:${level}">
           <div class="org-card" style="border-top:3px solid ${dept.color || '#6366f1'}">
             <div class="org-dept-name">${escHtml(dept.name)}</div>
-            ${manager ? `<div class="org-manager">👤 ${escHtml(manager.name)}${manager.job_title ? ' · ' + escHtml(manager.job_title) : ''}</div>` : ''}
+            ${manager ? `<div class="org-manager">ðŸ‘¤ ${escHtml(manager.name)}${manager.job_title ? ' Â· ' + escHtml(manager.job_title) : ''}</div>` : ''}
             <div class="org-members">${deptMembers.length} membro${deptMembers.length !== 1 ? 's' : ''}</div>
           </div>
           ${children.length ? `<div class="org-children">${children.map(c => buildNode(c, level + 1)).join('')}</div>` : ''}
@@ -202,11 +202,11 @@
           border-radius:10px;padding:14px 20px;text-align:center;margin-bottom:24px;
           font-weight:700;font-size:15px}
       </style>
-      <div class="org-company">🏢 Organograma da Empresa</div>`;
+      <div class="org-company">ðŸ¢ Organograma da Empresa</div>`;
 
     if (!depts.length) {
       html += `<div class="empty-state"><p>Nenhum departamento criado ainda.</p>
-        <button class="btn btn-primary btn-sm" onclick="switchDrawerTab('equipe',null)">Criar departamentos</button></div>`;
+        <button class="btn btn-primary btn-sm" onclick="switchClientDetailTab('equipe',null)">Criar departamentos</button></div>`;
     } else {
       html += `<div class="org-root">${roots.map(d => buildNode(d, 0)).join('')}</div>`;
     }
@@ -224,7 +224,7 @@
     body.innerHTML = html;
   }
 
-  // ── Credores ──────────────────────────────────────────────────────────────────
+  // â”€â”€ Credores â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   async function renderCreditors(context) {
     const { body, currentClientId } = context;
     body.innerHTML = tertiaryLoading('Carregando credores...');
@@ -240,7 +240,7 @@
     let html = `
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
         <div>
-          <div style="font-size:13px;color:#6b7280">Dívida total ativa</div>
+          <div style="font-size:13px;color:#6b7280">DÃ­vida total ativa</div>
           <div style="font-size:20px;font-weight:700;color:#dc2626">${total.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</div>
         </div>
         <button class="btn btn-primary btn-sm" onclick="adminAddCreditor('${currentClientId}')">+ Credor</button>
@@ -255,10 +255,10 @@
             <div style="display:flex;justify-content:space-between;align-items:flex-start">
               <div>
                 <div style="font-weight:600">${escHtml(c.name)}</div>
-                <div style="font-size:12px;color:#6b7280">${typeLabels[c.creditor_type] || c.creditor_type}${c.document ? ' · ' + escHtml(c.document) : ''}</div>
+                <div style="font-size:12px;color:#6b7280">${typeLabels[c.creditor_type] || c.creditor_type}${c.document ? ' Â· ' + escHtml(c.document) : ''}</div>
               </div>
               <div style="text-align:right">
-                <div style="font-weight:600;color:#dc2626">${c.current_balance != null ? parseFloat(c.current_balance).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}) : '—'}</div>
+                <div style="font-weight:600;color:#dc2626">${c.current_balance != null ? parseFloat(c.current_balance).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}) : 'â€”'}</div>
                 <span class="badge ${statusCls[c.status] || 'badge-gray'}">${statusLabels[c.status] || c.status}</span>
               </div>
             </div>
@@ -274,7 +274,7 @@
     body.innerHTML = html;
   }
 
-  // ── Fornecedores ─────────────────────────────────────────────────────────────
+  // â”€â”€ Fornecedores â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   async function renderSuppliers(context) {
     const { body, currentClientId } = context;
     body.innerHTML = tertiaryLoading('Carregando fornecedores...');
@@ -289,7 +289,7 @@
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
         <div>
           <div style="font-size:13px;color:#6b7280">Contratos ativos</div>
-          <div style="font-size:20px;font-weight:700;color:#1e3a5f">${fmtBRL(totalContractValue)}/mês</div>
+          <div style="font-size:20px;font-weight:700;color:#1e3a5f">${fmtBRL(totalContractValue)}/mÃªs</div>
         </div>
         <button class="btn btn-primary btn-sm" onclick="adminAddSupplier('${currentClientId}')">+ Fornecedor</button>
       </div>
@@ -305,7 +305,7 @@
             <div style="display:flex;justify-content:space-between">
               <div>
                 <div style="font-weight:600">${escHtml(s.name)}</div>
-                <div style="font-size:12px;color:#6b7280">${escHtml(s.category || '—')}${s.document ? ' · ' + escHtml(s.document) : ''}</div>
+                <div style="font-size:12px;color:#6b7280">${escHtml(s.category || 'â€”')}${s.document ? ' Â· ' + escHtml(s.document) : ''}</div>
               </div>
               <span class="badge ${s.status === 'active' ? 'badge-green' : 'badge-gray'}">${s.status === 'active' ? 'Ativo' : 'Inativo'}</span>
             </div>
@@ -325,14 +325,14 @@
             <div style="display:flex;justify-content:space-between;align-items:center">
               <div>
                 <div style="font-weight:500">${escHtml(c.title)}</div>
-                <div style="font-size:12px;color:#6b7280">${escHtml(supplierMap[c.supplier_id]?.name || '—')}</div>
+                <div style="font-size:12px;color:#6b7280">${escHtml(supplierMap[c.supplier_id]?.name || 'â€”')}</div>
               </div>
               <div style="text-align:right">
                 ${c.value_cents ? `<div style="font-weight:600">${fmtBRL(c.value_cents)}</div>` : ''}
                 <span class="badge ${c.status === 'active' ? 'badge-green' : c.status === 'expired' ? 'badge-red' : 'badge-gray'}">${c.status}</span>
               </div>
             </div>
-            ${c.end_date ? `<div style="font-size:11px;color:#9ca3af;margin-top:4px">Vigência até: ${fmtDate(c.end_date)}</div>` : ''}
+            ${c.end_date ? `<div style="font-size:11px;color:#9ca3af;margin-top:4px">VigÃªncia atÃ©: ${fmtDate(c.end_date)}</div>` : ''}
             <div style="display:flex;gap:6px;margin-top:8px">
               <button class="btn btn-xs btn-outline" onclick="adminContractDocs('${currentClientId}','${c.id}','${escHtml(c.title)}')">Docs</button>
               <button class="btn btn-xs btn-outline btn-danger" onclick="adminDeleteContract('${currentClientId}','${c.id}')">Excluir</button>
@@ -344,14 +344,14 @@
     body.innerHTML = html;
   }
 
-  // ── Funcionários ─────────────────────────────────────────────────────────────
+  // â”€â”€ FuncionÃ¡rios â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   async function renderEmployees(context) {
     const { body, currentClientId } = context;
-    body.innerHTML = tertiaryLoading('Carregando funcionários...');
+    body.innerHTML = tertiaryLoading('Carregando funcionÃ¡rios...');
     const res = await fetch(`/api/admin/client/${currentClientId}/employees`, { headers: authH() });
     const { employees = [], stats = {} } = res.ok ? await res.json() : {};
 
-    const empTypeLabels = { clt:'CLT', pj:'PJ', estagio:'Estágio', autonomo:'Autônomo', socio:'Sócio' };
+    const empTypeLabels = { clt:'CLT', pj:'PJ', estagio:'EstÃ¡gio', autonomo:'AutÃ´nomo', socio:'SÃ³cio' };
     const statusCls = { active:'badge-green', inactive:'badge-gray', terminated:'badge-red' };
 
     let html = `
@@ -362,7 +362,7 @@
         </div>
         <div class="stat-card cdt-summary-card">
           <div class="stat-value cdt-summary-value">${fmtBRL(stats.totalPayroll || 0)}</div>
-          <div class="stat-label">Folha (salários)</div>
+          <div class="stat-label">Folha (salÃ¡rios)</div>
         </div>
         <div class="stat-card cdt-summary-card">
           <div class="stat-value cdt-summary-value">${fmtBRL(stats.totalCost || 0)}</div>
@@ -370,11 +370,11 @@
         </div>
       </div>
       <div style="display:flex;justify-content:flex-end;margin-bottom:8px">
-        <button class="btn btn-primary btn-sm" onclick="adminAddEmployee('${currentClientId}')">+ Funcionário</button>
+        <button class="btn btn-primary btn-sm" onclick="adminAddEmployee('${currentClientId}')">+ FuncionÃ¡rio</button>
       </div>`;
 
     if (!employees.length) {
-      html += `<div class="empty-state"><p>Nenhum funcionário cadastrado.</p></div>`;
+      html += `<div class="empty-state"><p>Nenhum funcionÃ¡rio cadastrado.</p></div>`;
     } else {
       html += `<div class="cdt-stack-list">
         ${employees.map(e => `
@@ -383,13 +383,13 @@
               <div>
                 <div style="font-weight:600">${escHtml(e.name)}</div>
                 <div style="font-size:12px;color:#6b7280">
-                  ${escHtml(e.job_title || '—')} · ${empTypeLabels[e.employment_type] || e.employment_type}
-                  ${e.re_departments ? ' · ' + escHtml(e.re_departments.name) : ''}
+                  ${escHtml(e.job_title || 'â€”')} Â· ${empTypeLabels[e.employment_type] || e.employment_type}
+                  ${e.re_departments ? ' Â· ' + escHtml(e.re_departments.name) : ''}
                 </div>
                 ${e.admission_date ? `<div style="font-size:11px;color:#9ca3af">Admitido: ${fmtDate(e.admission_date)}</div>` : ''}
               </div>
               <div style="text-align:right">
-                <div style="font-weight:600">${e.salary_cents ? fmtBRL(e.salary_cents) : '—'}</div>
+                <div style="font-weight:600">${e.salary_cents ? fmtBRL(e.salary_cents) : 'â€”'}</div>
                 ${e.total_cost_cents ? `<div style="font-size:11px;color:#6b7280">Custo: ${fmtBRL(e.total_cost_cents)}</div>` : ''}
                 <span class="badge ${statusCls[e.status] || 'badge-gray'}">${e.status === 'active' ? 'Ativo' : e.status === 'terminated' ? 'Desligado' : 'Inativo'}</span>
               </div>
@@ -397,7 +397,7 @@
             <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:6px">
               ${e.has_vale_transporte ? '<span style="font-size:10px;background:#dbeafe;color:#1d4ed8;border-radius:4px;padding:2px 6px">VT</span>' : ''}
               ${e.has_vale_refeicao ? '<span style="font-size:10px;background:#d1fae5;color:#065f46;border-radius:4px;padding:2px 6px">VR</span>' : ''}
-              ${e.has_plano_saude ? '<span style="font-size:10px;background:#ede9fe;color:#5b21b6;border-radius:4px;padding:2px 6px">Saúde</span>' : ''}
+              ${e.has_plano_saude ? '<span style="font-size:10px;background:#ede9fe;color:#5b21b6;border-radius:4px;padding:2px 6px">SaÃºde</span>' : ''}
             </div>
             <div style="display:flex;gap:6px;margin-top:8px">
               <button class="btn btn-xs btn-outline" onclick="adminEditEmployee('${currentClientId}','${e.id}')">Editar</button>
@@ -410,7 +410,7 @@
     body.innerHTML = html;
   }
 
-  window.REAdminDrawerTertiaryTabs = {
+  window.REClientDetailTertiaryTabs = {
     async render(tab, context) {
       if (tab === 'financeiro_client') { await renderFinancial(context); return true; }
       if (tab === 'equipe')            { await renderTeam(context);      return true; }
@@ -421,6 +421,8 @@
       return false;
     },
   };
+  window.REAdminDrawerTertiaryTabs = window.REClientDetailTertiaryTabs;
 
-console.info('[RE:admin-client-drawer-tabs-tertiary] loaded');
+console.info('[RE:client-detail-tabs-tertiary] loaded');
 })();
+

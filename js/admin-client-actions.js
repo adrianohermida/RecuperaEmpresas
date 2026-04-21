@@ -2,11 +2,14 @@
 
 (function () {
   async function refreshCurrentClient() {
-    if (!_currentClientId) return null;
-    const response = await fetch(`/api/admin/client/${_currentClientId}`, { headers: authH() });
+    const clientId = window.REClientDetailState?.currentClientId || _currentClientId;
+    if (!clientId) return null;
+    const response = await fetch(`/api/admin/client/${clientId}`, { headers: authH() });
     if (!response.ok) return null;
-    _currentClientData = await response.json();
-    return _currentClientData;
+    const payload = await response.json();
+    if (window.REClientDetailState) window.REClientDetailState.currentClientData = payload;
+    _currentClientData = payload;
+    return payload;
   }
 
   async function updateChapterStatus(clientId, chapterId, status) {
@@ -19,7 +22,11 @@
     else showToast('Erro ao atualizar.', 'error');
 
     const refreshed = await fetch(`/api/admin/client/${clientId}`, { headers: authH() });
-    if (refreshed.ok) _currentClientData = await refreshed.json();
+    if (refreshed.ok) {
+      const payload = await refreshed.json();
+      if (window.REClientDetailState) window.REClientDetailState.currentClientData = payload;
+      _currentClientData = payload;
+    }
   }
 
   async function addTask() {
@@ -31,7 +38,8 @@
       return;
     }
 
-    const response = await fetch(`/api/admin/client/${_currentClientId}/task`, {
+    const clientId = window.REClientDetailState?.currentClientId || _currentClientId;
+    const response = await fetch(`/api/admin/client/${clientId}/task`, {
       method: 'POST',
       headers: authH(),
       body: JSON.stringify({ title, description, dueDate: dueDate || null }),
@@ -42,7 +50,7 @@
     }
 
     showToast('Tarefa criada!', 'success');
-    if (await refreshCurrentClient()) renderDrawerTab('tasks');
+    if (await refreshCurrentClient()) (window.renderClientDetailTab || renderDrawerTab)('tasks');
   }
 
   function applyMsgTemplate(index) {
@@ -61,12 +69,13 @@
     if (!text) return;
 
     input.value = '';
-    const response = await fetch(`/api/admin/client/${_currentClientId}/message`, {
+    const clientId = window.REClientDetailState?.currentClientId || _currentClientId;
+    const response = await fetch(`/api/admin/client/${clientId}/message`, {
       method: 'POST',
       headers: authH(),
       body: JSON.stringify({ text }),
     });
-    if (response.ok && await refreshCurrentClient()) renderDrawerTab('messages');
+    if (response.ok && await refreshCurrentClient()) (window.renderClientDetailTab || renderDrawerTab)('messages');
   }
 
   async function updateDocStatus(docId) {
@@ -76,7 +85,8 @@
 
     const status = statusEl.value;
     const comment = commentEl ? commentEl.value.trim() : '';
-    const response = await fetch(`/api/admin/client/${_currentClientId}/documents/${docId}`, {
+    const clientId = window.REClientDetailState?.currentClientId || _currentClientId;
+    const response = await fetch(`/api/admin/client/${clientId}/documents/${docId}`, {
       method: 'PUT',
       headers: authH(),
       body: JSON.stringify({ status, comment }),
@@ -88,7 +98,7 @@
 
     showToast('Status do documento atualizado.', 'success');
     if (commentEl) commentEl.value = '';
-    renderDrawerTab('docs');
+    (window.renderClientDetailTab || renderDrawerTab)('docs');
   }
 
   async function confirmApptDrawer(apptId) {
@@ -103,7 +113,7 @@
     }
 
     showToast('Reunião confirmada!', 'success');
-    if (await refreshCurrentClient()) renderDrawerTab('agenda');
+    if (await refreshCurrentClient()) (window.renderClientDetailTab || renderDrawerTab)('agenda');
   }
 
   function escHtml(str) {
