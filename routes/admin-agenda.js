@@ -34,7 +34,7 @@ const BOOKING_COLS = [
   'status', 'credits_spent', 'confirmed_at', 'cancel_reason', 'cancelled_by',
   'reschedule_reason', 'rescheduled_to_slot_id',
   'reschedule_requested_slot_id', 'reschedule_requested_at',
-  'external_contact', 'notes', 'no_show', 'created_at',
+  'notes', 'no_show', 'created_at',
   're_users(id,name,email,company)',
 ];
 
@@ -245,7 +245,7 @@ router.get('/api/admin/agenda/bookings', requireAdmin, async (req, res) => {
     let query = sb.from('re_bookings')
       .select(`id,slot_id,user_id,member_id,booker_name,booker_email,status,credits_spent,
                confirmed_at,cancel_reason,cancelled_by,reschedule_reason,rescheduled_to_slot_id,
-               reschedule_requested_slot_id,reschedule_requested_at,external_contact,notes,
+               reschedule_requested_slot_id,reschedule_requested_at,notes,
                no_show,created_at,
                re_users(id,name,email,company),
                re_agenda_slots(id,starts_at,ends_at,title,location,meet_link,duration_min)`)
