@@ -20,6 +20,16 @@ function fbEsc(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+function fbEscInlineJs(value) {
+  return String(value == null ? '' : value)
+    .replace(/\\/g, '\\\\')
+    .replace(/'/g, "\\'")
+    .replace(/\r/g, '\\r')
+    .replace(/\n/g, '\\n')
+    .replace(/\u2028/g, '\\u2028')
+    .replace(/\u2029/g, '\\u2029');
+}
+
 function fbSlugify(value) {
   return String(value || '')
     .normalize('NFD')
@@ -139,19 +149,21 @@ async function fbLoadFormsList() {
 
   grid.innerHTML = FB.forms.map(f => {
     const fid        = f.id;
+     const fidJs      = fbEscInlineJs(fid);
+     const titleJs    = fbEscInlineJs(f.title || '');
     const isSystem   = !!(f.is_system);
     const systemNote = f.settings?.system_note || '';
     const statusBadge = `<span class="badge ${STATUS_CLS[f.status] || 'badge-gray'}">${STATUS_LBL[f.status] || f.status}</span>`;
     const systemBadge = isSystem ? '<span class="badge form-builder-system-badge">Sistema</span>' : '';
     const actionBtns  = isSystem
-      ? `<button class="btn-primary form-builder-card-btn" onclick="fbOpenBuilder('${fid}',true)">${ICONS.eye(14)} Ver Perguntas</button>
-         <button class="btn-ghost form-builder-card-btn" onclick="fbOpenResponses('${fid}','${fbEsc(f.title)}')">${ICONS.barChart2(14)} Respostas</button>
-         <button class="btn-ghost form-builder-card-btn" onclick="fbOpenStatsPanel('${fid}')">${ICONS.trendingUp(14)} Estatísticas</button>`
-      : `<button class="btn-primary form-builder-card-btn" onclick="fbOpenBuilder('${fid}')">${ICONS.pencilSimple(14)} Editar</button>
-         <button class="btn-ghost form-builder-card-btn" onclick="fbOpenResponses('${fid}','${fbEsc(f.title)}')">${ICONS.barChart2(14)} Respostas</button>
-         <button class="btn-ghost form-builder-card-btn" onclick="fbOpenStatsPanel('${fid}')">${ICONS.trendingUp(14)} Estatísticas</button>
-         <button class="btn-ghost form-builder-card-btn" onclick="fbDuplicateForm('${fid}')">${ICONS.copy(14)} Duplicar</button>
-         <button class="btn-ghost form-builder-card-btn form-builder-card-btn-danger" onclick="fbDeleteForm('${fid}','${fbEsc(f.title)}')">${ICONS.trash2(14)} Excluir</button>`;
+      ? `<button class="btn-primary form-builder-card-btn" onclick="fbOpenBuilder('${fidJs}',true)">${ICONS.eye(14)} Ver Perguntas</button>
+        <button class="btn-ghost form-builder-card-btn" onclick="fbOpenResponses('${fidJs}','${titleJs}')">${ICONS.barChart2(14)} Respostas</button>
+        <button class="btn-ghost form-builder-card-btn" onclick="fbOpenStatsPanel('${fidJs}')">${ICONS.trendingUp(14)} Estatísticas</button>`
+      : `<button class="btn-primary form-builder-card-btn" onclick="fbOpenBuilder('${fidJs}')">${ICONS.pencilSimple(14)} Editar</button>
+        <button class="btn-ghost form-builder-card-btn" onclick="fbOpenResponses('${fidJs}','${titleJs}')">${ICONS.barChart2(14)} Respostas</button>
+        <button class="btn-ghost form-builder-card-btn" onclick="fbOpenStatsPanel('${fidJs}')">${ICONS.trendingUp(14)} Estatísticas</button>
+        <button class="btn-ghost form-builder-card-btn" onclick="fbDuplicateForm('${fidJs}')">${ICONS.copy(14)} Duplicar</button>
+        <button class="btn-ghost form-builder-card-btn form-builder-card-btn-danger" onclick="fbDeleteForm('${fidJs}','${titleJs}')">${ICONS.trash2(14)} Excluir</button>`;
     return `
     <div class="form-builder-list-card ${isSystem ? 'form-builder-list-card-system' : ''}">
       <div class="form-builder-list-card-header">
