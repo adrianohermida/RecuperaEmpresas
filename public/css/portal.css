@@ -6618,8 +6618,38 @@ body {
   .stats-grid-4,
   .stats-grid-3 { grid-template-columns: 1fr; }
   .stats-grid   { grid-template-columns: repeat(2, 1fr); }
+  .portal-main {
+    padding: 16px 12px 18px;
+  }
+  .portal-main > .tab-content.active,
+  .portal-main > .page-shell,
+  .portal-main > .page-shell-wide {
+    padding-top: 2px;
+  }
   .section-header { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .portal-main > .tab-content.active > .section-header:first-child,
+  .page-shell > .section-header:first-child,
+  .page-shell-wide > .section-header:first-child {
+    margin-bottom: 16px;
+  }
   .section-header .btn { width: 100%; justify-content: center; }
+}
+
+@media (max-width: 360px) {
+  .portal-main {
+    padding: 14px 10px 16px;
+  }
+  .portal-main > .tab-content.active,
+  .portal-main > .page-shell,
+  .portal-main > .page-shell-wide {
+    padding-top: 4px;
+  }
+  .portal-main > .tab-content.active > .section-header:first-child,
+  .page-shell > .section-header:first-child,
+  .page-shell-wide > .section-header:first-child {
+    gap: 8px;
+    margin-bottom: 14px;
+  }
 }
 
 /* ── Client drawer — fully responsive ───────────────────────────────────────── */
