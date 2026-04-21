@@ -1813,8 +1813,6 @@ body {
     font-size: 11px;
   }
 
-  }
-
   .form-builder-stats-header {
     flex-direction: column;
     align-items: stretch;
@@ -2378,6 +2376,7 @@ body {
 
   .agenda-book-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 640px) {
