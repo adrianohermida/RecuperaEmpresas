@@ -3,14 +3,17 @@
 (function () {
   const AVATAR_KEY = 're_admin_avatar';
 
-  function getToken() {
-    if (window.REShared?.getStoredToken) return window.REShared.getStoredToken();
-    return localStorage.getItem('re_token');
+  function getStoredAvatarKey(user) {
+    return user && user.isAdmin ? AVATAR_KEY : 're_client_avatar';
   }
 
   function authH() {
     if (window.REShared?.buildAuthHeaders) return window.REShared.buildAuthHeaders();
-    return { 'Content-Type': 'application/json', Authorization: 'Bearer ' + getToken() };
+    return { 'Content-Type': 'application/json' };
+  }
+
+  function getUserInitial(user) {
+    return (user?.name || user?.company || user?.email || '?').charAt(0).toUpperCase();
   }
 
   function applyAvatarToUI(src) {
@@ -19,37 +22,36 @@
     if (!avatarEl || !displayEl) return;
 
     if (src) {
-      avatarEl.style.backgroundImage = `url(${src})`;
-      avatarEl.style.backgroundSize = 'cover';
-      avatarEl.style.backgroundPosition = 'center';
-      avatarEl.textContent = '';
-
-      displayEl.style.backgroundImage = `url(${src})`;
-      displayEl.style.backgroundSize = 'cover';
-      displayEl.style.backgroundPosition = 'center';
-      displayEl.textContent = '';
-
-      const removeBtn = document.getElementById('removeAvatarBtn');
-      if (removeBtn) removeBtn.style.display = '';
-    } else {
-      avatarEl.style.backgroundImage = '';
-      displayEl.style.backgroundImage = '';
-      const removeBtn = document.getElementById('removeAvatarBtn');
-      if (removeBtn) removeBtn.style.display = 'none';
+      [avatarEl, displayEl].forEach(function (element) {
+        element.style.backgroundImage = 'url(' + src + ')';
+        element.style.backgroundSize = 'cover';
+        element.style.backgroundPosition = 'center';
+        element.textContent = '';
+      });
+      document.getElementById('removeAvatarBtn')?.style.removeProperty('display');
+      return;
     }
+
+    [avatarEl, displayEl].forEach(function (element) {
+      element.style.backgroundImage = '';
+    });
+    document.getElementById('removeAvatarBtn')?.style.setProperty('display', 'none');
   }
 
   window.handleAvatarUpload = function (input) {
     const file = input.files?.[0];
+    const user = window.REShared?.getStoredUser?.() || {};
+    const avatarKey = getStoredAvatarKey(user);
     if (!file) return;
     if (file.size > 2 * 1024 * 1024) {
       showToast('A foto deve ter no máximo 2 MB.', 'error');
       return;
     }
+
     const reader = new FileReader();
-    reader.onload = function (e) {
-      const dataUrl = e.target.result;
-      localStorage.setItem(AVATAR_KEY, dataUrl);
+    reader.onload = function (event) {
+      const dataUrl = event.target.result;
+      localStorage.setItem(avatarKey, dataUrl);
       applyAvatarToUI(dataUrl);
       showToast('Foto atualizada.', 'success');
     };
@@ -57,30 +59,29 @@
   };
 
   window.removeAvatar = function () {
-    localStorage.removeItem(AVATAR_KEY);
+    const user = window.REShared?.getStoredUser?.() || {};
+    const avatarKey = getStoredAvatarKey(user);
+    localStorage.removeItem(avatarKey);
+    applyAvatarToUI('');
+    const initial = getUserInitial(user);
     const avatarEl = document.getElementById('userAvatar');
     const displayEl = document.getElementById('profileAvatarDisplay');
-    if (avatarEl) {
-      avatarEl.style.backgroundImage = '';
-      avatarEl.textContent = (document.getElementById('userName')?.textContent || '?')[0].toUpperCase();
-    }
-    if (displayEl) {
-      displayEl.style.backgroundImage = '';
-      displayEl.textContent = (document.getElementById('userName')?.textContent || '?')[0].toUpperCase();
-    }
-    const removeBtn = document.getElementById('removeAvatarBtn');
-    if (removeBtn) removeBtn.style.display = 'none';
+    if (avatarEl) avatarEl.textContent = initial;
+    if (displayEl) displayEl.textContent = initial;
     showToast('Foto removida.', 'success');
   };
 
-  window.saveProfile = async function (e) {
-    e.preventDefault();
+  window.saveProfile = async function (event) {
+    event.preventDefault();
     const name = document.getElementById('profileName')?.value.trim();
     const phone = document.getElementById('profilePhone')?.value.trim();
-    if (!name) { showToast('Informe seu nome.', 'error'); return; }
+    if (!name) {
+      showToast('Informe seu nome.', 'error');
+      return;
+    }
 
-    const btn = document.getElementById('saveProfileBtn');
-    if (btn) btn.disabled = true;
+    const button = document.getElementById('saveProfileBtn');
+    if (button) button.disabled = true;
 
     try {
       const response = await fetch('/api/auth/profile', {
@@ -90,34 +91,45 @@
       });
       if (!response.ok) throw new Error('response not ok');
       const data = await response.json();
-      const updatedName = data.user?.name || name;
-      const userNameEl = document.getElementById('userName');
-      const dropupNameEl = document.getElementById('dropupUserName');
-      const avatarEl = document.getElementById('userAvatar');
-      if (userNameEl) userNameEl.textContent = updatedName;
-      if (dropupNameEl) dropupNameEl.textContent = updatedName;
-      const savedAvatar = localStorage.getItem(AVATAR_KEY);
-      if (!savedAvatar && avatarEl) avatarEl.textContent = updatedName[0].toUpperCase();
+      const updatedUser = data.user || {};
+      const updatedName = updatedUser.name || name;
+      if (window.REShared?.storeAuthUser) {
+        window.REShared.storeAuthUser(Object.assign({}, window.REShared.getStoredUser?.() || {}, updatedUser));
+      }
+      document.getElementById('userName').textContent = updatedName;
+      document.getElementById('dropupUserName').textContent = updatedName;
+      if (!localStorage.getItem(getStoredAvatarKey(updatedUser))) {
+        document.getElementById('userAvatar').textContent = updatedName.charAt(0).toUpperCase();
+      }
       showToast('Perfil atualizado.', 'success');
-    } catch {
+    } catch (error) {
       showToast('Erro ao salvar perfil.', 'error');
     } finally {
-      if (btn) btn.disabled = false;
+      if (button) button.disabled = false;
     }
   };
 
-  window.savePassword = async function (e) {
-    e.preventDefault();
+  window.savePassword = async function (event) {
+    event.preventDefault();
     const current = document.getElementById('currentPassword')?.value;
     const next = document.getElementById('newPassword')?.value;
     const confirm = document.getElementById('confirmPassword')?.value;
 
-    if (!current || !next) { showToast('Preencha todos os campos.', 'error'); return; }
-    if (next.length < 8) { showToast('A nova senha deve ter ao menos 8 caracteres.', 'error'); return; }
-    if (next !== confirm) { showToast('As senhas não coincidem.', 'error'); return; }
+    if (!current || !next) {
+      showToast('Preencha todos os campos.', 'error');
+      return;
+    }
+    if (next.length < 8) {
+      showToast('A nova senha deve ter ao menos 8 caracteres.', 'error');
+      return;
+    }
+    if (next !== confirm) {
+      showToast('As senhas não coincidem.', 'error');
+      return;
+    }
 
-    const btn = document.getElementById('savePasswordBtn');
-    if (btn) btn.disabled = true;
+    const button = document.getElementById('savePasswordBtn');
+    if (button) button.disabled = true;
 
     try {
       const response = await fetch('/api/auth/change-password', {
@@ -125,77 +137,56 @@
         headers: authH(),
         body: JSON.stringify({ currentPassword: current, newPassword: next }),
       });
-      const data = await response.json().catch(() => ({}));
+      const data = await response.json().catch(function () { return {}; });
       if (!response.ok) throw new Error(data.error || 'response not ok');
+
       document.getElementById('currentPassword').value = '';
       document.getElementById('newPassword').value = '';
       document.getElementById('confirmPassword').value = '';
       showToast('Senha atualizada.', 'success');
-    } catch (err) {
-      showToast(err.message || 'Erro ao atualizar senha.', 'error');
+    } catch (error) {
+      showToast(error.message || 'Erro ao atualizar senha.', 'error');
     } finally {
-      if (btn) btn.disabled = false;
+      if (button) button.disabled = false;
     }
   };
 
-  async function initPerfil() {
-    let response;
-    try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 55000);
-      response = await fetch('/api/auth/verify', {
-        headers: authH(),
-        signal: controller.signal,
-      });
-      clearTimeout(timeout);
-    } catch {
-      window.REShared.redirectToRoute('login', { search: 'err=timeout' });
-      return;
-    }
+  function fillProfile(user) {
+    const displayName = user.name || user.company || user.email || 'Usuário';
+    const initial = getUserInitial(user);
 
-    if (!response.ok) { window.REShared.redirectToRoute('login'); return; }
+    document.getElementById('userName').textContent = displayName;
+    document.getElementById('dropupUserName').textContent = displayName;
+    document.getElementById('dropupUserEmail').textContent = user.email || 'Sem e-mail';
+    document.getElementById('profileName').value = user.name || user.company || '';
+    document.getElementById('profileEmail').value = user.email || '';
+    document.getElementById('userAvatar').textContent = initial;
+    document.getElementById('profileAvatarDisplay').textContent = initial;
 
-    let user;
-    try {
-      const body = await response.json();
-      user = body.user;
-      if (!user) throw new Error('missing user');
-      if (window.REShared?.storeAuthUser) window.REShared.storeAuthUser(user);
-    } catch {
-      window.REShared.redirectToRoute('login', { search: 'err=parse' });
-      return;
-    }
-
-    if (!user.isAdmin) { window.REShared.redirectToRoute('dashboard'); return; }
-
-    const userName = document.getElementById('userName');
-    const userAvatar = document.getElementById('userAvatar');
-    const dropupUserName = document.getElementById('dropupUserName');
-    const dropupUserEmail = document.getElementById('dropupUserEmail');
-    const profileAvatarDisplay = document.getElementById('profileAvatarDisplay');
-    const profileName = document.getElementById('profileName');
-    const profileEmail = document.getElementById('profileEmail');
-
-    if (userName) userName.textContent = user.name || user.email;
-    if (dropupUserName) dropupUserName.textContent = user.name || user.email;
-    if (dropupUserEmail) dropupUserEmail.textContent = user.email || '';
-    if (profileName) profileName.value = user.name || '';
-    if (profileEmail) profileEmail.value = user.email || '';
-
-    const initials = (user.name || user.email || '?')[0].toUpperCase();
-    if (userAvatar) userAvatar.textContent = initials;
-    if (profileAvatarDisplay) profileAvatarDisplay.textContent = initials;
-
-    const savedAvatar = localStorage.getItem(AVATAR_KEY);
+    const savedAvatar = localStorage.getItem(getStoredAvatarKey(user));
     if (savedAvatar) applyAvatarToUI(savedAvatar);
+  }
 
+  async function initPerfil() {
+    const session = await window.REShared.verifySession({ timeoutMs: 55000 }).catch(function () {
+      return { ok: false, status: 0 };
+    });
+
+    if (!session.ok || !session.user) {
+      window.REShared.redirectToRoute('login');
+      return;
+    }
+
+    const user = session.user;
+    window.REShared.applyPortalAccountShell(user, { section: 'home' });
+    fillProfile(user);
     document.getElementById('authGuard')?.remove();
   }
 
   if (document.readyState === 'complete') {
     initPerfil();
   } else {
-    window.addEventListener('load', initPerfil);
+    window.addEventListener('load', initPerfil, { once: true });
   }
 
   console.info('[RE:perfil-init] loaded');

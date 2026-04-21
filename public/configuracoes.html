@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="robots" content="noindex, nofollow"/>
+  <title>Configurações — Recupera Empresas</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
+  <link rel="stylesheet" href="./css/portal.css?v=20260421g"/>
+  <script src="./js/config.js?v=20260420a"></script>
+  <script src="./js/runtime-diagnostics.js?v=20260418f"></script>
+  <script src="./js/api-base.js?v=20260418e"></script>
+  <script src="./js/shared-utils.js?v=20260421g"></script>
+</head>
+<body>
+<div id="authGuard" class="auth-guard">
+  <div class="auth-guard-content">
+    <svg width="44" height="36" viewBox="0 0 44 36" fill="none" class="auth-guard-logo">
+      <rect x="0"  y="26" width="8" height="10" rx="4" fill="#4B9EFF"/>
+      <rect x="12" y="18" width="8" height="18" rx="4" fill="#2B7FFF"/>
+      <rect x="24" y="10" width="8" height="26" rx="4" fill="#1A56DB"/>
+      <rect x="36" y="2"  width="8" height="34" rx="4" fill="#1244AB"/>
+    </svg>
+    <div class="auth-guard-message">Verificando acesso...</div>
+  </div>
+</div>
+
+<header class="header">
+  <div class="header-inner">
+    <div class="logo">
+      <svg width="36" height="30" viewBox="0 0 44 36" fill="none">
+        <rect x="0"  y="26" width="8" height="10" rx="4" fill="#4B9EFF"/>
+        <rect x="12" y="18" width="8" height="18" rx="4" fill="#2B7FFF"/>
+        <rect x="24" y="10" width="8" height="26" rx="4" fill="#1A56DB"/>
+        <rect x="36" y="2"  width="8" height="34" rx="4" fill="#1244AB"/>
+      </svg>
+      <div>
+        <div class="logo-text">Recupera Empresas</div>
+        <div class="logo-sub" id="shellLogoSub">Painel do Consultor</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <span class="admin-badge" id="shellRoleBadge">Admin</span>
+      <button class="menu-toggle" id="menuToggle" onclick="toggleSidebar()" aria-label="Abrir menu">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<div class="sidebar-backdrop" id="sidebarBackdrop" onclick="closeSidebar()"></div>
+
+<div class="portal-layout">
+  <nav class="sidebar" id="appSidebar">
+    <div class="sidebar-nav">
+      <div class="sidebar-section">
+        <div class="sidebar-label" id="shellNavLabel">Visão Geral</div>
+        <a href="/admin" class="sidebar-link" id="shellPrimaryLinkOne">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          <span data-shell-label>Clientes</span>
+        </a>
+        <a href="/admin?section=agenda" class="sidebar-link" id="shellPrimaryLinkTwo">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          <span data-shell-label>Agenda</span>
+        </a>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-label">Conta</div>
+        <a href="/perfil" class="sidebar-link">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          Meu Perfil
+        </a>
+        <a href="/configuracoes" class="sidebar-link active">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          Configurações
+        </a>
+      </div>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="user-dropup" id="userDropup" role="menu">
+        <div class="user-dropup-header">
+          <div class="user-dropup-name" id="dropupUserName">—</div>
+          <div class="user-dropup-email" id="dropupUserEmail">—</div>
+        </div>
+        <a href="/perfil" class="user-dropup-item" role="menuitem">Meu Perfil</a>
+        <a href="/configuracoes" class="user-dropup-item" role="menuitem">Configurações</a>
+        <hr class="user-dropup-divider"/>
+        <button class="user-dropup-item danger" onclick="logout()" role="menuitem">Sair</button>
+      </div>
+      <button class="user-menu-btn" id="userMenuBtn" onclick="toggleUserDropup()" aria-expanded="false" aria-haspopup="true">
+        <div class="user-menu-avatar" id="userAvatar">?</div>
+        <div class="user-menu-info">
+          <div class="user-menu-name" id="userName">Carregando...</div>
+          <div class="user-menu-role" id="userMenuRole">Consultor Admin</div>
+        </div>
+        <svg class="user-menu-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <polyline points="18 15 12 9 6 15"/>
+        </svg>
+      </button>
+    </div>
+  </nav>
+
+  <main class="portal-main">
+    <div class="page-shell">
+      <div class="section-header">
+        <div>
+          <div class="section-title">Configurações</div>
+          <div class="section-sub">Preferências do painel e notificações</div>
+        </div>
+        <a href="/admin" class="btn btn-secondary" id="accountBackLink">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+          Voltar ao painel
+        </a>
+      </div>
+
+      <div class="page-section">
+        <div class="page-section-title">Notificações</div>
+        <div class="page-section-sub">Escolha quando e como receber alertas.</div>
+
+        <div class="page-toggle-row">
+          <div>
+            <div class="page-toggle-label">Novas mensagens</div>
+            <div class="page-toggle-desc">Notificação no navegador ao receber mensagens não lidas</div>
+          </div>
+          <label class="page-toggle">
+            <input type="checkbox" id="notifMessages" onchange="saveSetting('notifMessages', this.checked)"/>
+            <span class="page-toggle-track"></span>
+          </label>
+        </div>
+
+        <div class="page-toggle-row">
+          <div>
+            <div class="page-toggle-label">Novos cadastros</div>
+            <div class="page-toggle-desc">Alerta ao registrar novo cliente no portal</div>
+          </div>
+          <label class="page-toggle">
+            <input type="checkbox" id="notifNewClients" onchange="saveSetting('notifNewClients', this.checked)"/>
+            <span class="page-toggle-track"></span>
+          </label>
+        </div>
+
+        <div class="page-toggle-row">
+          <div>
+            <div class="page-toggle-label">Atualizações de etapas</div>
+            <div class="page-toggle-desc">Notificar quando houver avanço no processo</div>
+          </div>
+          <label class="page-toggle">
+            <input type="checkbox" id="notifSteps" onchange="saveSetting('notifSteps', this.checked)"/>
+            <span class="page-toggle-track"></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="page-section">
+        <div class="page-section-title">Aparência</div>
+        <div class="page-section-sub">Preferências visuais do painel.</div>
+
+        <div class="page-toggle-row">
+          <div>
+            <div class="page-toggle-label">Compactar tabelas</div>
+            <div class="page-toggle-desc">Reduz o espaçamento entre linhas para mostrar mais conteúdo</div>
+          </div>
+          <label class="page-toggle">
+            <input type="checkbox" id="prefCompactTable" onchange="saveSetting('prefCompactTable', this.checked)"/>
+            <span class="page-toggle-track"></span>
+          </label>
+        </div>
+
+        <div class="page-toggle-row">
+          <div>
+            <div class="page-toggle-label">Exibir barras de progresso</div>
+            <div class="page-toggle-desc">Mostra indicadores visuais de progresso nas listas</div>
+          </div>
+          <label class="page-toggle">
+            <input type="checkbox" id="prefShowProgress" onchange="saveSetting('prefShowProgress', this.checked)" checked/>
+            <span class="page-toggle-track"></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="page-section page-danger-zone">
+        <div class="page-section-title">Sessões</div>
+        <div class="page-section-sub">Use com cuidado ao encerrar acessos ativos.</div>
+
+        <div class="page-danger-row">
+          <div>
+            <div class="page-danger-label">Encerrar todas as sessões</div>
+            <div class="page-danger-desc">Desconecta sua conta de todos os dispositivos</div>
+          </div>
+          <button class="btn btn-danger-outline" onclick="revokeAllSessions()">Encerrar sessões</button>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="./js/admin-shell-core.js?v=20260421g"></script>
+<script src="./js/configuracoes-init.js?v=20260421g"></script>
+</body>
+</html>
