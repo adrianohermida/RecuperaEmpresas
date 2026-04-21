@@ -112,7 +112,7 @@ function fpRenderInput(q) {
       return `<div class="fp-rating-wrap" id="${id}-wrap">
         ${[1,2,3,4,5].map(v => `<button type="button" data-rating="${q.id}" data-val="${v}"
           onclick="fpSelectRating(${q.id}, ${v})"
-          class="fp-rating-btn">★</button>`).join('')}
+          class="fp-rating-btn">${ICONS.star(18)}</button>`).join('')}
         <input type="hidden" id="${id}">
       </div>`;
     case 'yes_no':
@@ -132,7 +132,7 @@ function fpRenderInput(q) {
     case 'file_upload':
       return `<div class="fp-upload-dropzone"
           onclick="document.getElementById('${id}').click()">
-        <div class="fp-upload-icon">📎</div>
+        <div class="fp-upload-icon">${ICONS.upload(20)}</div>
         <div class="fp-upload-copy">Clique para selecionar o arquivo</div>
         <input type="file" id="${id}" class="fp-upload-input" onchange="fpFileChange(${q.id}, this)">
         <div id="fpfile-name-${q.id}" class="fp-upload-file-name"></div>

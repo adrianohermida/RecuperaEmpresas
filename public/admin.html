@@ -6,11 +6,12 @@
   <meta name="robots" content="noindex, nofollow"/>
   <title>Painel do Consultor — Recupera Empresas</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
-  <link rel="stylesheet" href="/css/portal.css?v=20260421n"/>
+  <link rel="stylesheet" href="/css/portal.css?v=20260421r"/>
   <script src="/js/config.js?v=20260420a"></script>
   <script src="/js/runtime-diagnostics.js?v=20260420a"></script>
   <script src="/js/api-base.js?v=20260420a"></script>
   <script src="/js/shared-utils.js?v=20260421n"></script>
+  <script src="/js/portal-header.js?v=20260421r" defer></script>
   <!-- Sempre use assets absolutos /css/ e /js/ para evitar conflitos de cache e duplicidade. -->
 </head>
 <body>
@@ -28,50 +29,21 @@
   </div>
 </div>
 
-<!-- Header -->
-<header class="header">
-  <div class="header-inner">
-    <div class="logo">
-      <svg width="36" height="30" viewBox="0 0 44 36" fill="none">
-        <rect x="0"  y="26" width="8" height="10" rx="4" fill="#4B9EFF"/>
-        <rect x="12" y="18" width="8" height="18" rx="4" fill="#2B7FFF"/>
-        <rect x="24" y="10" width="8" height="26" rx="4" fill="#1A56DB"/>
-        <rect x="36" y="2"  width="8" height="34" rx="4" fill="#1244AB"/>
-      </svg>
-      <div>
-        <div class="logo-text">Recupera Empresas</div>
-        <div class="logo-sub">Painel do Consultor</div>
-      </div>
-    </div>
-    <div class="header-right">
-      <span class="admin-badge">Admin</span>
-      <!-- Admin Notification Bell -->
-      <div class="admin-notif-wrap" id="adminNotifBellWrap">
-        <button id="adminNotifBell" class="admin-notif-bell" onclick="toggleAdminNotifDropdown()" title="Notificações">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>
-          </svg>
-          <span id="adminNotifBadge" class="admin-notif-badge">0</span>
-        </button>
-        <div id="adminNotifDropdown" class="admin-notif-dropdown">
-          <div class="admin-notif-dropdown-header">
-            <span class="admin-notif-dropdown-title">Notificações do Admin</span>
-            <button class="admin-notif-mark-all" onclick="adminMarkAllNotifRead()">Marcar todas lidas</button>
-          </div>
-          <div id="adminNotifList" class="admin-notif-list">
-            <div class="admin-notif-empty">Carregando...</div>
-          </div>
-        </div>
-      </div>
-      <!-- Hamburger: mobile only -->
-      <button class="menu-toggle" id="menuToggle" onclick="toggleSidebar()" aria-label="Abrir menu">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-          <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
-        </svg>
-      </button>
-    </div>
-  </div>
-</header>
+<div
+  data-shell-header
+  data-home-href="/admin"
+  data-logo-label="Abrir painel do consultor"
+  data-logo-sub="Painel do Consultor"
+  data-page-kicker="Operação"
+  data-page-title="Console do consultor"
+  data-mobile-title="Consultor"
+  data-badge="Admin"
+  data-notification-variant="admin"
+  data-user-role="Consultor Admin"
+  data-account-kicker="Conta do consultor"
+  data-profile-href="/perfil"
+  data-settings-href="/configuracoes"
+></div>
 
 <!-- Sidebar backdrop (mobile) -->
 <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="closeSidebar()"></div>
@@ -124,50 +96,6 @@
       </div>
     </div><!-- /sidebar-nav -->
 
-    <!-- Sidebar footer: user avatar + dropup -->
-    <div class="sidebar-footer">
-      <!-- Dropup menu (renders upward) -->
-      <div class="user-dropup" id="userDropup" role="menu" aria-labelledby="userMenuBtn">
-        <div class="user-dropup-header">
-          <div class="user-dropup-kicker">Conta do consultor</div>
-          <div class="user-dropup-name" id="dropupUserName">—</div>
-          <div class="user-dropup-email" id="dropupUserEmail">—</div>
-        </div>
-        <a href="perfil.html" class="user-dropup-item" role="menuitem">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-          <span class="user-dropup-item-copy">
-            <span class="user-dropup-item-label">Meu Perfil</span>
-            <span class="user-dropup-item-meta">Dados públicos, bio e assinatura</span>
-          </span>
-        </a>
-        <a href="configuracoes.html" class="user-dropup-item" role="menuitem">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-          <span class="user-dropup-item-copy">
-            <span class="user-dropup-item-label">Configurações</span>
-            <span class="user-dropup-item-meta">Preferências e segurança da conta</span>
-          </span>
-        </a>
-        <hr class="user-dropup-divider"/>
-        <button class="user-dropup-item danger" onclick="logout()" role="menuitem">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-          <span class="user-dropup-item-copy">
-            <span class="user-dropup-item-label">Sair</span>
-            <span class="user-dropup-item-meta">Encerrar a sessão atual</span>
-          </span>
-        </button>
-      </div>
-      <!-- Trigger button -->
-      <button class="user-menu-btn" id="userMenuBtn" onclick="toggleUserDropup(event)" aria-expanded="false" aria-haspopup="true" aria-controls="userDropup">
-        <div class="user-menu-avatar" id="userAvatar">?</div>
-        <div class="user-menu-info">
-          <div class="user-menu-name" id="userName">Carregando...</div>
-          <div class="user-menu-role">Consultor Admin</div>
-        </div>
-        <svg class="user-menu-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-          <polyline points="18 15 12 9 6 15"/>
-        </svg>
-      </button>
-    </div><!-- /sidebar-footer -->
 
   </nav>
 
