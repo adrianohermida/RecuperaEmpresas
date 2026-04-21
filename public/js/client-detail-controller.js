@@ -82,7 +82,7 @@
   function setActionLinks(clientId) {
     const adminBackLink = document.getElementById('clientPageBackLink');
     if (adminBackLink) {
-      adminBackLink.href = 'admin.html';
+      adminBackLink.href = '/admin';
     }
     const docsLink = document.getElementById('clientDocsShortcut');
     if (docsLink) docsLink.href = '#docs';
@@ -191,7 +191,7 @@
     if (!id) return;
     if (!isClientPageMode()) {
       const nextTab = arguments.length > 1 && arguments[1] ? String(arguments[1]) : 'overview';
-      window.location.href = 'cliente?id=' + encodeURIComponent(id) + '&tab=' + encodeURIComponent(nextTab);
+      window.location.href = '/cliente?id=' + encodeURIComponent(id) + '&tab=' + encodeURIComponent(nextTab);
       return;
     }
 
@@ -210,7 +210,7 @@
     detailState.currentClientId = null;
     detailState.currentClientData = null;
     if (isClientPageMode()) {
-      window.location.href = 'admin.html';
+      window.location.href = '/admin';
     }
   }
 

@@ -114,6 +114,9 @@ createHtmlRouteAlias('reset-password.html', path.join('reset-password', 'index.h
 createHtmlRouteAlias('oauth-consent.html', path.join('oauth', 'consent', 'index.html'));
 createHtmlRouteAlias('dashboard.html', path.join('dashboard', 'index.html'));
 createHtmlRouteAlias('admin.html', path.join('admin', 'index.html'));
+createHtmlRouteAlias('perfil.html', path.join('perfil', 'index.html'));
+createHtmlRouteAlias('configuracoes.html', path.join('configuracoes', 'index.html'));
+createHtmlRouteAlias('cliente.html', path.join('cliente', 'index.html'));
 // Sempre mantenha aliases únicos e documente a decisão para evitar regressão.
 
 // Root files are now reserved for the marketing/landing experience on GitHub Pages.

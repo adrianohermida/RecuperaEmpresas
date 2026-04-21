@@ -14,6 +14,9 @@
     resetPassword: '/reset-password',
     dashboard: '/dashboard',
     admin: '/admin',
+    perfil: '/perfil',
+    configuracoes: '/configuracoes',
+    cliente: '/cliente',
     onboarding: '/index.html'
   };
 
