@@ -202,7 +202,7 @@
   function configureFreshchatShell(options) {
     window.fcSettings = {
       token: window.RE_FRESHCHAT_TOKEN,
-      host: 'https://msdk.freshchat.com',
+      host: window.RE_FRESHCHAT_HOST || 'https://msdk.freshchat.com',
       siteId: window.RE_FRESHCHAT_SITE_ID,
       config: {
         headerProperty: {
@@ -233,8 +233,12 @@
     await getFreshchatScriptPromise();
     await pollFreshchatReady(30);
 
+    var response = await fetch('/api/freshchat-token', { headers: authH(false) });
+    var data = await readJsonSafe(response);
+    if (!response.ok || !data.token) throw new Error(data.error || 'Erro ao autenticar Freshchat.');
+
     var names = buildFreshchatName(user);
-    window.fcWidget.setExternalId(user.id || user.email);
+    window.fcWidget.setExternalId(data.external_id || user.id || user.email);
     window.fcWidget.user.setFirstName(names.firstName);
     window.fcWidget.user.setLastName(names.lastName);
     window.fcWidget.user.setEmail(user.email || '');
@@ -247,13 +251,20 @@
         company: user.company || '',
         app: 'Recupera Empresas — Operador'
       });
+
+      await new Promise(function (resolve, reject) {
+        window.fcWidget.authenticate({
+          token: data.token,
+          callback: function (error) {
+            if (error) reject(error);
+            else resolve();
+          }
+        });
+      });
+
       window.__reFreshchatBootKey = bootKey;
       return true;
     }
-
-    var response = await fetch('/api/freshchat-token', { headers: authH(false) });
-    var data = await readJsonSafe(response);
-    if (!response.ok || !data.token) throw new Error(data.error || 'Erro ao autenticar Freshchat.');
 
     window.fcWidget.user.setProperties({
       role: user.company_id ? 'membro' : 'cliente',

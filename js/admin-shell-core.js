@@ -127,7 +127,7 @@ function showSection(name, el) {
   document.getElementById('sec-' + name)?.classList.add('active');
   if (el) el.classList.add('active');
   if (name === 'logs') loadLogs();
-  if (name === 'agenda') loadAdminAgenda();
+  if (name === 'agenda') { loadAdminAgenda(); if (typeof loadAvailabilityPanel === 'function') loadAvailabilityPanel(); }
   if (name === 'financeiro') loadAdminFinanceiro();
   if (name === 'formularios') loadFormBuilder();
   if (name === 'adminInvoices') loadAdminInvoices();

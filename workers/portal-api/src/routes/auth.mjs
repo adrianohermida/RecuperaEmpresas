@@ -56,6 +56,55 @@ function getAdminEmails(env) {
     .filter(Boolean);
 }
 
+const FRESHCHAT_ADMIN_BY_EMAIL = {
+  'adrianohermida@gmail.com': '127000492713',
+  'camilagbhmaia@gmail.com': '127000525188',
+};
+
+function splitName(name) {
+  const full = String(name || '').trim();
+  const parts = full.split(/\s+/).filter(Boolean);
+  return {
+    firstName: parts[0] || '',
+    lastName: parts.slice(1).join(' '),
+  };
+}
+
+function getFreshchatJwtSecret(env) {
+  return String(env.FRESHCHAT_JWT_WIDGET || env.FRESHCHAT_JWT_SECRET || '').trim();
+}
+
+function resolveFreshchatExternalId(user) {
+  const email = String(user?.email || '').toLowerCase().trim();
+  return FRESHCHAT_ADMIN_BY_EMAIL[email] || String(user?.id || user?.email || '').trim();
+}
+
+export async function handleFreshchatToken(request, context) {
+  if (request.method !== 'GET') return methodNotAllowed();
+
+  const secret = getFreshchatJwtSecret(context.env);
+  if (!secret) {
+    return json({ error: 'Freshchat JWT não configurado.' }, { status: 503 });
+  }
+
+  const externalId = resolveFreshchatExternalId(context.user);
+  const email = String(context.user?.email || '').trim();
+  const names = splitName(context.user?.name || context.user?.full_name || '');
+  const now = Math.floor(Date.now() / 1000);
+
+  const token = await signJwt({
+    sub: externalId,
+    external_id: externalId,
+    email,
+    first_name: names.firstName,
+    last_name: names.lastName,
+    iat: now,
+    exp: now + 24 * 60 * 60,
+  }, secret);
+
+  return json({ token, external_id: externalId });
+}
+
 function getAuthRedirects(env) {
   const baseUrl = getBaseUrl(env).replace(/\/+$/, '');
   return {

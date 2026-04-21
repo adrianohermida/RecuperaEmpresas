@@ -920,10 +920,7 @@ async function initFreshchat(user) {
     document.getElementById('equipeNavBtn')?.classList.remove('ui-hidden');
   }
 
-  // Init Freshchat after widget loads (skip when impersonating)
-  if (!isImpersonating && window.RE_ENABLE_FRESHCHAT && window.RE_FRESHCHAT_TOKEN && window.RE_FRESHCHAT_SITE_ID) {
-    setTimeout(() => initFreshchat(user), 2000);
-  }
+  // O widget Freshdesk do portal cliente inicia via script de load no fim da página.
 
   // Polling de mensagens — inicia automaticamente se a aba de mensagens estiver ativa
   if (document.getElementById('sec-messages')?.classList.contains('active')) {
@@ -951,29 +948,15 @@ async function initFreshchat(user) {
 <script src="/js/form-player.js?v=20260421s"></script>
 
 <script>
-  if (window.RE_ENABLE_FRESHCHAT && window.RE_FRESHCHAT_TOKEN && window.RE_FRESHCHAT_SITE_ID) {
-    window.fcSettings = {
-      token:  window.RE_FRESHCHAT_TOKEN,
-      host:   'https://msdk.freshchat.com',
-      siteId: window.RE_FRESHCHAT_SITE_ID,
-      config: {
-        headerProperty: { appName: 'Recupera Empresas', backgroundColor: '#1e3a5f', foregroundColor: '#ffffff' },
-        content: {
-          placeholders: { search_field: 'Buscar...', reply_field: 'Escreva sua mensagem...' },
-          actions:      { csat_yes: 'Sim', csat_no: 'Não' },
-          headers:      { chat: 'Suporte', chat_help: 'Fale com nossa equipe de consultores.' }
-        }
-      }
-    };
+function initFreshdesk() {
+  window.fdWidget.init({
+    token: "01KNPXYJ04R918TJ5N8JQ4SQGS",
+    host: "https://recuperaempresas-support.freshdesk.com",
+    widgetId: "01KNPXYMGGC0AE5Z819T8PVDWG"
+  });
+}
 
-    (function loadFreshchatWidget() {
-      var script = document.createElement('script');
-      script.src = '//fw-cdn.com/16078787/7064112.js';
-      script.setAttribute('chat', 'true');
-      script.async = true;
-      document.body.appendChild(script);
-    })();
-  }
+function initialize(i,t){var e;i.getElementById(t)?initFreshdesk():((e=i.createElement("script")).id=t,e.async=!0,e.src="https://recuperaempresas-support.freshdesk.com/webchat/js/widget.js",e.onload=initFreshdesk,i.head.appendChild(e))}function initiateCall(){initialize(document,"Freshdesk-js-sdk")}window.addEventListener?window.addEventListener("load",initiateCall,!1):window.attachEvent("load",initiateCall,!1);
 </script>
 
 <div class="dashboard-sidebar-backdrop" id="dashSidebarBackdrop" onclick="window.closeDashSidebar()"></div>

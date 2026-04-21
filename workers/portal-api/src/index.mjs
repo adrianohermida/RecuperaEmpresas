@@ -1,6 +1,6 @@
 import { requireAdmin, requireAuth } from './lib/auth.mjs';
 import { applyCors, json, noContent, notFound } from './lib/http.mjs';
-import { handleAuth, handleAdminImpersonate } from './routes/auth.mjs';
+import { handleAuth, handleAdminImpersonate, handleFreshchatToken } from './routes/auth.mjs';
 import { handleAdminSystem } from './routes/admin-system.mjs';
 import { handleAdminReadModels } from './routes/admin-read-models.mjs';
 import { handleAppointments } from './routes/appointments.mjs';
@@ -27,6 +27,10 @@ function match(pathname, pattern) {
 async function routeAuthenticated(request, env, pathname, executionCtx) {
   const auth = await requireAuth(request, env);
   if (!auth.ok) return auth.response;
+
+  if (pathname === '/api/freshchat-token') {
+    return handleFreshchatToken(request, { ...auth, env, executionCtx });
+  }
 
   const clientPortalResponse = await handleClientPortal(request, { ...auth, env, executionCtx });
   if (clientPortalResponse) return clientPortalResponse;

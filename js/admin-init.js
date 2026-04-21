@@ -14,7 +14,7 @@
 
     window.fcSettings = {
       token: window.RE_FRESHCHAT_TOKEN,
-      host: 'https://msdk.freshchat.com',
+      host: window.RE_FRESHCHAT_HOST || 'https://msdk.freshchat.com',
       siteId: window.RE_FRESHCHAT_SITE_ID,
       config: {
         headerProperty: { appName: 'Recupera Empresas — Operador', backgroundColor: '#1e3a5f', foregroundColor: '#ffffff' },

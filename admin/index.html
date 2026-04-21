@@ -229,6 +229,9 @@
         </button>
       </div>
 
+      <!-- Camila availability panel -->
+      <div id="agendaAvailabilityPanel" class="agenda-avail-panel"></div>
+
       <!-- New slot form -->
       <div id="slotFormCard" class="agenda-slot-form" hidden>
         <div class="agenda-slot-form-title">Publicar novo horário</div>
@@ -256,6 +259,23 @@
           <div>
             <label class="agenda-slot-form-label">Vagas máximas</label>
             <input id="slotMax" type="number" value="1" min="1" class="portal-input agenda-slot-form-input">
+          </div>
+          <div>
+            <label class="agenda-slot-form-label">Modalidade</label>
+            <select id="slotLocation" class="portal-input agenda-slot-form-input">
+              <option value="online">Online (Google Meet)</option>
+              <option value="presencial">Presencial</option>
+              <option value="hibrido">Híbrido</option>
+            </select>
+          </div>
+          <div>
+            <label class="agenda-slot-form-label">Link da reunião (opcional)</label>
+            <input id="slotMeetingLink" type="url" placeholder="https://meet.google.com/..." class="portal-input agenda-slot-form-input">
+            <small style="color:#6B7280;font-size:11px">Gerado automaticamente pelo Google Calendar se deixado em branco</small>
+          </div>
+          <div style="grid-column:1/-1">
+            <label class="agenda-slot-form-label">Descrição / observações (opcional)</label>
+            <textarea id="slotDescription" rows="2" placeholder="Pauta, preparação necessária…" class="portal-input agenda-slot-form-input" style="resize:vertical"></textarea>
           </div>
         </div>
         <div class="agenda-slot-form-actions">
