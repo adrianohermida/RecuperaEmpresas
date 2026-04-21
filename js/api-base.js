@@ -130,14 +130,20 @@
     }
   }
 
+  function isRetriablePostPath(pathname) {
+    return pathname === '/api/support/ticket';
+  }
+
   function canRetryViaPublicApi(url, resolvedUrl, method, status) {
     if (Number(status) !== 530) return false;
-    if (!/^(GET|HEAD|OPTIONS)$/i.test(String(method || 'GET'))) return false;
     if (trimBase(window.RE_API_BASE)) return false;
 
     try {
       var parsed = new URL(resolvedUrl, window.location.href);
-      return parsed.origin === window.location.origin && parsed.pathname.indexOf('/api/') === 0;
+      var normalizedMethod = String(method || 'GET').toUpperCase();
+      var allowedMethod = /^(GET|HEAD|OPTIONS)$/i.test(normalizedMethod)
+        || (normalizedMethod === 'POST' && isRetriablePostPath(parsed.pathname));
+      return allowedMethod && parsed.origin === window.location.origin && parsed.pathname.indexOf('/api/') === 0;
     } catch (error) {
       return false;
     }

@@ -44,5 +44,20 @@
 /oauth/consent/*
   Cache-Control: no-store
 
+/dashboard
+  Cache-Control: no-store
+
+/dashboard/*
+  Cache-Control: no-store
+
 /js/config.js
+  Cache-Control: no-store
+
+/js/api-base.js
+  Cache-Control: no-store
+
+/js/runtime-diagnostics.js
+  Cache-Control: no-store
+
+/js/shared-utils.js
   Cache-Control: no-store
