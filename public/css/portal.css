@@ -7086,3 +7086,154 @@ body {
     width: auto;
   }
 }
+
+/* ================================================================
+   RE-CORE RESPONSIVENESS PATCH — Sprint 2
+   Normaliza breakpoints, corrige touch targets, NPS, safe-area
+   ================================================================ */
+
+/* ── Breakpoints canônicos: 480 / 768 / 960 / 1200 ────────────── */
+
+/* Touch targets mínimos 44px */
+.fp-scale-btn,
+.fp-nps-btn,
+.fp-rating-btn,
+.fp-choice-btn,
+.fp-yesno-btn {
+  min-width: 44px !important;
+  min-height: 44px !important;
+  touch-action: manipulation;
+}
+
+/* NPS grid responsivo — overflow corrigido */
+.fp-nps-grid {
+  display: grid !important;
+  grid-template-columns: repeat(6, 1fr) !important;
+  gap: 6px !important;
+}
+
+@media (min-width: 480px) {
+  .fp-nps-grid {
+    grid-template-columns: repeat(11, 1fr) !important;
+    gap: 4px !important;
+  }
+}
+
+/* Safe-area para dispositivos com notch */
+.app-sidebar,
+.admin-sidebar {
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 16px);
+}
+
+.portal-bottom-nav {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Touch-action global em botões interativos */
+button,
+[role="button"],
+.btn,
+.btn-primary,
+.btn-ghost,
+.btn-outline,
+a[href] {
+  touch-action: manipulation;
+}
+
+/* Dashboard hamburger button */
+.dashboard-menu-toggle {
+  display: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 8px;
+  color: var(--gray-600, #4b5563);
+  touch-action: manipulation;
+  min-width: 44px;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (max-width: 768px) {
+  .dashboard-menu-toggle {
+    display: flex;
+  }
+}
+
+/* Sidebar overlay backdrop para dashboard mobile */
+.dashboard-sidebar-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 199;
+  transition: opacity 0.2s ease;
+}
+
+.dashboard-sidebar-backdrop.open {
+  display: block;
+}
+
+/* Dashboard sidebar mobile behavior */
+@media (max-width: 768px) {
+  .dashboard-sidebar,
+  #dashSidebar {
+    position: fixed !important;
+    top: 0 !important;
+    left: -280px !important;
+    height: 100vh !important;
+    width: 260px !important;
+    z-index: 200 !important;
+    transition: left 0.25s ease !important;
+    box-shadow: 2px 0 12px rgba(0,0,0,0.15) !important;
+  }
+
+  .dashboard-sidebar.mobile-open,
+  #dashSidebar.mobile-open {
+    left: 0 !important;
+  }
+}
+
+/* Tabelas com scroll horizontal em mobile */
+@media (max-width: 768px) {
+  .table-responsive-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .admin-table th:nth-child(n+4),
+  .admin-table td:nth-child(n+4) {
+    display: none;
+  }
+
+  .admin-table th:nth-child(n+4).always-show,
+  .admin-table td:nth-child(n+4).always-show {
+    display: table-cell;
+  }
+}
+
+/* Fluid typography base */
+@media (max-width: 480px) {
+  :root {
+    font-size: 15px;
+  }
+
+  .page-title,
+  .section-title {
+    font-size: 1.25rem;
+  }
+}

@@ -336,4 +336,58 @@ function stopMsgPolling() {
   clearInterval(_msgPollTimer);
   _msgPollTimer = null;
 }
+// ── Dashboard sidebar mobile controls ────────────────────────────────────────
+// Uses #appSidebar (real sidebar ID in dashboard.html), #dashSidebarBackdrop,
+// and #dashMenuToggle. Exposed on window so inline onclick handlers can call them.
+
+function openDashSidebar() {
+  const sidebar  = document.getElementById('appSidebar');
+  const backdrop = document.getElementById('dashSidebarBackdrop');
+  const toggle   = document.getElementById('dashMenuToggle');
+  if (sidebar)  sidebar.classList.add('mobile-open');
+  if (backdrop) backdrop.classList.add('open');
+  if (toggle)   toggle.setAttribute('aria-expanded', 'true');
+  document.body.classList.add('sidebar-open');
+}
+
+function closeDashSidebar() {
+  const sidebar  = document.getElementById('appSidebar');
+  const backdrop = document.getElementById('dashSidebarBackdrop');
+  const toggle   = document.getElementById('dashMenuToggle');
+  if (sidebar)  sidebar.classList.remove('mobile-open');
+  if (backdrop) backdrop.classList.remove('open');
+  if (toggle)   toggle.setAttribute('aria-expanded', 'false');
+  document.body.classList.remove('sidebar-open');
+}
+
+function toggleDashSidebar() {
+  const sidebar = document.getElementById('appSidebar');
+  if (!sidebar) return;
+  if (sidebar.classList.contains('mobile-open')) {
+    closeDashSidebar();
+  } else {
+    openDashSidebar();
+  }
+}
+
+window.openDashSidebar  = openDashSidebar;
+window.closeDashSidebar = closeDashSidebar;
+window.toggleDashSidebar = toggleDashSidebar;
+
+// Close on Escape key
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeDashSidebar();
+});
+
+// Close on resize above 768px
+(function() {
+  let _dashResizeTimer = null;
+  window.addEventListener('resize', function() {
+    clearTimeout(_dashResizeTimer);
+    _dashResizeTimer = setTimeout(function() {
+      if (window.innerWidth > 768) closeDashSidebar();
+    }, 120);
+  });
+})();
+
 console.info('[RE:dashboard-core] loaded');
