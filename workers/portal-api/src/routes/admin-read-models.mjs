@@ -514,6 +514,75 @@ async function handleInvoices(request, context) {
 }
 
 async function handleServices(request, context) {
+  const pathname = new URL(request.url).pathname;
+  const serviceId = pathname.match(/^\/api\/admin\/services(?:\/(?<id>[^/]+))?$/)?.groups?.id || null;
+
+  if (!serviceId && request.method === 'POST') {
+    const body = await readJson(request);
+    if (!body.name || !body.price_cents) return json({ error: 'name e price_cents sao obrigatorios.' }, { status: 400 });
+
+    const parsedPriceCents = parseInt(body.price_cents, 10);
+    const parsedPrice = parsedPriceCents / 100;
+    const { data: service, error } = await context.sb
+      .from('re_services')
+      .insert({
+        name: body.name,
+        title: body.name,
+        description: body.description || null,
+        category: body.category || null,
+        price_cents: parsedPriceCents,
+        price: parsedPrice,
+        delivery_days: body.delivery_days || null,
+        features: body.features || null,
+        featured: !!body.featured,
+        journey_id: body.journey_id || null,
+        active: true,
+        created_by: context.user.id,
+      })
+      .select('id,name,title,description,category,price_cents,price,delivery_days,features,featured,journey_id,active,created_by,created_at,updated_at')
+      .single();
+    if (error) return json({ error: error.message }, { status: 500 });
+
+    queueSideEffect(context, () => auditLog(context.sb, {
+      actorId: context.user.id,
+      actorEmail: context.user.email,
+      actorRole: 'admin',
+      entityType: 'service',
+      entityId: service.id,
+      action: 'create',
+      after: { name: body.name, price_cents: parsedPriceCents },
+    }), 'audit-log');
+
+    return json({ success: true, service });
+  }
+
+  if (serviceId && request.method === 'PUT') {
+    const body = await readJson(request);
+    const updates = {};
+    if (body.active !== undefined) updates.active = body.active;
+    if (body.name !== undefined) {
+      updates.name = body.name;
+      updates.title = body.name;
+    }
+    if (body.description !== undefined) updates.description = body.description;
+    if (body.price_cents !== undefined) {
+      updates.price_cents = parseInt(body.price_cents, 10);
+      updates.price = parseInt(body.price_cents, 10) / 100;
+    }
+    if (body.category !== undefined) updates.category = body.category;
+    if (body.featured !== undefined) updates.featured = body.featured;
+    if (body.journey_id !== undefined) updates.journey_id = body.journey_id || null;
+
+    const { data: service, error } = await context.sb
+      .from('re_services')
+      .update(updates)
+      .eq('id', serviceId)
+      .select('id,name,title,description,category,price_cents,price,delivery_days,features,featured,journey_id,active,created_by,created_at,updated_at')
+      .single();
+    if (error) return json({ error: error.message }, { status: 500 });
+    return json({ success: true, service });
+  }
+
   if (request.method !== 'GET') return methodNotAllowed();
   const services = await list(
     context.sb
@@ -526,6 +595,69 @@ async function handleServices(request, context) {
 }
 
 async function handleServiceOrders(request, context) {
+  const pathname = new URL(request.url).pathname;
+  const orderId = pathname.match(/^\/api\/admin\/service-orders(?:\/(?<id>[^/]+))?$/)?.groups?.id || null;
+
+  if (orderId && request.method === 'PUT') {
+    const body = await readJson(request);
+    const updates = { updated_at: new Date().toISOString() };
+    if (body.status !== undefined) updates.status = body.status;
+    if (body.admin_notes !== undefined) updates.admin_notes = body.admin_notes;
+    if (body.delivered_at !== undefined) updates.delivered_at = body.delivered_at;
+    if (body.status === 'active') updates.activated_at = new Date().toISOString();
+    if (body.status === 'delivered') updates.completed_at = new Date().toISOString();
+    if (body.status === 'cancelled') updates.cancelled_at = new Date().toISOString();
+
+    const { data: order, error } = await context.sb
+      .from('re_service_orders')
+      .update(updates)
+      .eq('id', orderId)
+      .select()
+      .single();
+    if (error) return json({ error: error.message }, { status: 500 });
+
+    const orderDetails = await maybeSingle(
+      context.sb.from('re_service_orders').select('user_id,re_services(id,name,title,journey_id)').eq('id', orderId)
+    );
+    const serviceName = orderDetails?.re_services?.name || orderDetails?.re_services?.title || 'Servico';
+
+    if (body.status === 'active' && orderDetails?.re_services?.journey_id && orderDetails?.user_id) {
+      queueSideEffect(context, () => context.sb.from('re_journey_assignments').upsert({
+        journey_id: orderDetails.re_services.journey_id,
+        user_id: orderDetails.user_id,
+        assigned_by: context.user.id,
+        status: 'active',
+        notes: `Ativado pelo consultor via pedido de servico "${serviceName}"`,
+      }, { onConflict: 'journey_id,user_id' }), 'journey-assignment');
+    }
+
+    if (body.status === 'active') {
+      queueSideEffect(context, () => pushNotification(
+        context.sb,
+        orderDetails?.user_id,
+        'service',
+        'Servico ativo!',
+        `"${serviceName}" foi ativado. Acesse Jornadas para ver as etapas.`,
+        'service_order',
+        orderId
+      ), 'service-order-notification');
+    }
+
+    if (body.status === 'delivered') {
+      queueSideEffect(context, () => pushNotification(
+        context.sb,
+        orderDetails?.user_id,
+        'service',
+        'Servico entregue!',
+        `"${serviceName}" foi concluido e entregue.`,
+        'service_order',
+        orderId
+      ), 'service-order-notification');
+    }
+
+    return json({ success: true, order });
+  }
+
   if (request.method !== 'GET') return methodNotAllowed();
   const orders = await list(
     context.sb
@@ -839,8 +971,8 @@ export async function handleAdminReadModels(request, context) {
   if (pathname === '/api/admin/form-config') return handleFormConfig(request, context);
   if (/^\/api\/admin\/audit-log(?:\/export)?$/.test(pathname)) return handleAuditLog(request, context);
   if (/^\/api\/admin\/invoices(?:\/.*)?$/.test(pathname)) return handleInvoices(request, context);
-  if (pathname === '/api/admin/services') return handleServices(request, context);
-  if (pathname === '/api/admin/service-orders') return handleServiceOrders(request, context);
+  if (/^\/api\/admin\/services(?:\/[^/]+)?$/.test(pathname)) return handleServices(request, context);
+  if (/^\/api\/admin\/service-orders(?:\/[^/]+)?$/.test(pathname)) return handleServiceOrders(request, context);
   if (/^\/api\/admin\/forms(?:\/[^/]+)?$/.test(pathname)) return handleForms(request, context);
   if (/^\/api\/admin\/journeys(?:\/.*)?$/.test(pathname)) return handleJourneys(request, context);
   if (pathname === '/api/admin/agenda/slots') return handleAgendaSlots(request, context);
