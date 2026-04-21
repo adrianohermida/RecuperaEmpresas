@@ -447,12 +447,50 @@ async function fbSaveFormSettings() {
   } else fbToast('Erro ao salvar.','error');
 }
 
+function fbHasRecaptchaSiteKey() {
+  return Boolean(String(window.RE_GOOGLE_RECAPTCHA_SITE_KEY || '').trim());
+}
+
+function fbUpdatePublicSettingsState() {
+  const title = document.getElementById('fb-settings-title')?.value.trim() || FB.currentForm?.title || 'formulario';
+  const slugInput = document.getElementById('fb-settings-public-slug');
+  const urlInput = document.getElementById('fb-settings-public-url');
+  const captchaToggle = document.getElementById('fb-settings-public-captcha');
+  const warning = document.getElementById('fb-settings-public-captcha-warning');
+
+  if (slugInput) {
+    const normalizedSlug = fbSlugify(slugInput.value || title || 'formulario');
+    slugInput.value = normalizedSlug;
+    if (urlInput) urlInput.value = `${location.origin}/formulario/${normalizedSlug}`;
+  }
+
+  if (warning) {
+    const showWarning = captchaToggle?.checked === true && !fbHasRecaptchaSiteKey();
+    warning.classList.toggle('ui-hidden', !showWarning);
+  }
+}
+
+function fbBindPublicSettingsListeners() {
+  const panel = document.getElementById('fb-settings-panel');
+  if (!panel || panel.dataset.publicBindingsReady === 'true') return;
+
+  ['fb-settings-title', 'fb-settings-public-slug', 'fb-settings-public-captcha'].forEach((id) => {
+    const element = document.getElementById(id);
+    if (!element) return;
+    const eventName = element.tagName === 'INPUT' && element.type === 'checkbox' ? 'change' : 'input';
+    element.addEventListener(eventName, fbUpdatePublicSettingsState);
+  });
+
+  panel.dataset.publicBindingsReady = 'true';
+}
+
 function fbToggleSettings() {
   const p = document.getElementById('fb-settings-panel');
   if (!p) return;
   const show = p.classList.contains('ui-hidden');
   p.classList.toggle('ui-hidden', !show);
   if (show && FB.currentForm) {
+    fbBindPublicSettingsListeners();
     const publicConfig = (FB.currentForm.settings || {}).public || {};
     document.getElementById('fb-settings-title').value  = FB.currentForm.title || '';
     document.getElementById('fb-settings-desc').value   = FB.currentForm.description || '';
@@ -463,7 +501,6 @@ function fbToggleSettings() {
     document.getElementById('fb-settings-public-captcha').checked = publicConfig.require_captcha === true;
     document.getElementById('fb-settings-public-slug').value = publicConfig.slug || fbSlugify(FB.currentForm.title || 'formulario');
     document.getElementById('fb-settings-public-layout').value = publicConfig.layout || 'focus';
-    const publicUrl = `${location.origin}/formulario/${document.getElementById('fb-settings-public-slug').value}`;
-    document.getElementById('fb-settings-public-url').value = publicUrl;
+    fbUpdatePublicSettingsState();
   }
 }

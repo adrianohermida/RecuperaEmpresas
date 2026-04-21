@@ -59,11 +59,13 @@ copyIfExists(
   path.join(distDir, 'vendor', 'supabase', 'supabase.js')
 );
 
-// Cloudflare Pages should publish the portal with the legacy API origin set and
-// only opt specific routes into the Worker canary via RE_API_WORKER_ROUTES.
+// Static portal deployments must point to the public API host by default.
+// When Express serves /js/config.js dynamically it can still override this to
+// same-origin for the single-origin runtime.
 const defaultWorkerApiBase = '';
 const defaultWorkerApiRoutes = [];
-const apiBase = process.env.RE_API_BASE || '';
+const defaultApiBase = 'https://api.recuperaempresas.com.br';
+const apiBase = process.env.RE_API_BASE || defaultApiBase;
 const workerApiBase = process.env.RE_API_WORKER_BASE || defaultWorkerApiBase;
 const workerApiRoutes = (process.env.RE_API_WORKER_ROUTES || defaultWorkerApiRoutes.join(','))
   .split(',')
