@@ -174,6 +174,9 @@ async function routeAdmin(request, env, pathname, executionCtx) {
   params = match(pathname, /^\/api\/admin\/(?<resource>logs|stats)$/);
   if (params) return handleAdminSystem(request, { ...auth, env, executionCtx, params, scope: 'admin' });
 
+  params = match(pathname, /^\/api\/admin\/(?<resource>freshchat)\/(?<action>identity)$/);
+  if (params) return handleAdminSystem(request, { ...auth, env, executionCtx, params, scope: 'admin' });
+
   return notFound();
 }
 

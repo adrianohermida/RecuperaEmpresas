@@ -47,6 +47,92 @@
     });
   }
 
+  // ─── Sub-tab navigation ─────────────────────────────────────────────────────
+
+  let _currentAgendaTab = 'availability';
+
+  function switchAgendaTab(name) {
+    const tabs   = ['availability', 'slots', 'bookings'];
+    tabs.forEach(t => {
+      const btn   = document.getElementById(`agendaTab-${t}`);
+      const panel = document.getElementById(`agendaPanel-${t}`);
+      if (btn)   btn.classList.toggle('agenda-tab-active', t === name);
+      if (panel) panel.hidden = (t !== name);
+    });
+    _currentAgendaTab = name;
+    if (name === 'bookings')     loadAllBookings();
+    if (name === 'slots')        loadAdminAgenda();
+    if (name === 'availability') loadAvailabilityPanel();
+  }
+
+  // ─── All bookings flat list ──────────────────────────────────────────────────
+
+  async function loadAllBookings() {
+    const el = document.getElementById('adminAllBookings');
+    if (!el) return;
+    el.innerHTML = '<div class="agenda-loading-state">Carregando...</div>';
+
+    const status = document.getElementById('agendaBookingStatusFilter')?.value || '';
+    const url    = '/api/admin/agenda/bookings' + (status ? `?status=${encodeURIComponent(status)}` : '');
+    const res    = await fetch(url, { headers: authH() });
+    const data   = await readAdminResponse(res);
+
+    if (!res.ok) {
+      el.innerHTML = `<div class="empty-state"><p>${data.error || 'Erro ao carregar.'}</p></div>`;
+      return;
+    }
+
+    const bookings = data.bookings || [];
+    if (!bookings.length) {
+      el.innerHTML = '<div class="empty-state"><p>Nenhuma reserva encontrada.</p></div>';
+      return;
+    }
+
+    el.innerHTML = `<div class="agenda-all-bookings-list">
+      ${bookings.map(b => {
+        const slot       = b.re_agenda_slots || {};
+        const clientName = (b.booker_name || b.re_users?.name || b.re_users?.email || 'Cliente').replace(/'/g, '&#39;');
+        const clientNamePlain = clientName.replace(/<[^>]+>/g,'').trim();
+        const isNoShow   = b.no_show;
+        const statusKey  = isNoShow ? 'no_show' : b.status;
+        const badge      = BOOKING_STATUS_MAP[statusKey] || { className: 'agenda-booking-badge-default', label: statusKey };
+        const slotDate   = slot.starts_at ? fmtDt(slot.starts_at) : '—';
+        const meetUrl    = slot.meet_link || null;
+
+        let actions = '';
+        if (b.status === 'pending') {
+          actions = `
+            <button onclick="agendaConfirmBooking('${b.id}')" class="agenda-booking-action agenda-booking-action-confirm">✅ Confirmar</button>
+            <button onclick="agendaCancelBooking('${b.id}','${clientNamePlain}')" class="agenda-booking-action agenda-booking-action-cancel">❌ Cancelar</button>`;
+        } else if (b.status === 'confirmed') {
+          const slotPast = slot.starts_at ? new Date(slot.starts_at) < new Date() : false;
+          actions = `
+            <button onclick="agendaRescheduleBooking('${b.id}','${clientNamePlain}')" class="agenda-booking-action agenda-booking-action-reschedule">↕️ Remarcar</button>
+            <button onclick="agendaCancelBooking('${b.id}','${clientNamePlain}')" class="agenda-booking-action agenda-booking-action-cancel">❌ Cancelar</button>
+            ${slotPast && !isNoShow ? `<button onclick="agendaMarkNoShow('${b.id}','${clientNamePlain}')" class="agenda-booking-action agenda-booking-action-noshow">👻 Não compareceu</button>` : ''}`;
+        } else if (b.status === 'pending_reschedule') {
+          actions = `
+            <button onclick="agendaApproveReschedule('${b.id}','${clientNamePlain}')" class="agenda-booking-action agenda-booking-action-confirm">✅ Aprovar</button>
+            <button onclick="agendaRejectReschedule('${b.id}','${clientNamePlain}')" class="agenda-booking-action agenda-booking-action-cancel">❌ Rejeitar</button>`;
+        }
+
+        return `
+        <div class="agenda-all-booking-row${b.status === 'pending_reschedule' ? ' agenda-booking-row-highlight' : ''}">
+          <div class="agenda-all-booking-main">
+            <div class="agenda-all-booking-client">${clientName}</div>
+            <div class="agenda-all-booking-slot">${slot.title || 'Consultoria'} · ${slotDate}</div>
+            ${meetUrl ? `<a href="${meetUrl}" target="_blank" class="agenda-slot-link" style="font-size:11px">🔗 Meet</a>` : ''}
+            ${b.notes ? `<div class="agenda-booking-note">${b.notes}</div>` : ''}
+          </div>
+          <div class="agenda-all-booking-actions">
+            <span class="agenda-booking-badge ${badge.className}">${badge.label}</span>
+            ${actions}
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
+  }
+
   // ─── Slot list ──────────────────────────────────────────────────────────────
 
   async function loadAdminAgenda() {
@@ -179,29 +265,56 @@
       container.innerHTML = '<div class="agenda-avail-warn">⚠️ Agenda Google não disponível.</div>';
       return;
     }
-    const { days = [] } = await response.json();
+    // Backend returns { free_windows: { "YYYY-MM-DD": [{start,end},...], ... }, busy_intervals: [...] }
+    // Transform into array for rendering
+    const payload = await response.json();
+    const freeWindows = payload.free_windows || {};
+    const days = Object.entries(freeWindows)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, windows]) => ({ date, windows }));
 
     if (!days.length) {
-      container.innerHTML = '<div class="agenda-avail-empty">Nenhuma disponibilidade nos próximos 7 dias.</div>';
+      container.innerHTML = '<div class="agenda-avail-empty">Agenda Google sem janelas livres nos próximos dias. Verifique a integração ou os compromissos cadastrados.</div>';
       return;
     }
 
+    const fmt = d => `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+
     container.innerHTML = `
-      <div class="agenda-avail-title">🗓 Janelas livres — próximos 7 dias</div>
+      <div class="agenda-avail-title">🗓 Janelas livres de Camila — próximos dias</div>
       <div class="agenda-avail-grid">
         ${days.map(day => `
           <div class="agenda-avail-day">
             <div class="agenda-avail-day-header">${new Date(day.date + 'T12:00:00').toLocaleDateString('pt-BR', { weekday:'short', day:'2-digit', month:'short' })}</div>
-            ${day.windows.length
-              ? day.windows.map(w => {
-                  const s = new Date(w.start);
-                  const e = new Date(w.end);
-                  const fmt = d => `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
-                  return `<div class="agenda-avail-window">${fmt(s)} – ${fmt(e)}</div>`;
+            ${(day.windows || []).length
+              ? (day.windows || []).map(w => {
+                  const s = new Date(w.start), e = new Date(w.end);
+                  return `<div class="agenda-avail-window" title="Clique para pré-preencher horário"
+                    onclick="_prefillSlotFromWindow('${day.date}','${w.start}','${w.end}')"
+                    style="cursor:pointer">
+                    ${fmt(s)} – ${fmt(e)}
+                  </div>`;
                 }).join('')
               : '<div class="agenda-avail-busy">Dia ocupado</div>'}
           </div>`).join('')}
       </div>`;
+  }
+
+  // ─── Prefill slot form from a free window click ─────────────────────────────
+
+  function prefillSlotFromWindow(dateStr, startIso, endIso) {
+    const formCard = document.getElementById('slotFormCard');
+    if (formCard.hidden) formCard.hidden = false;
+    const toLocal = iso => new Date(iso).toISOString().slice(0, 16);
+    document.getElementById('slotStart').value = toLocal(startIso);
+    document.getElementById('slotEnd').value   = toLocal(endIso);
+    // Sync duration field
+    const diffMin = Math.round((new Date(endIso) - new Date(startIso)) / 60000);
+    const durEl = document.getElementById('slotDuration');
+    if (durEl) durEl.value = Math.min(diffMin, 120); // cap at 120 min as default
+    formCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    document.getElementById('slotTitle').focus();
+    showToast('Horário pré-preenchido a partir da janela livre.', 'success');
   }
 
   // ─── Slot form ──────────────────────────────────────────────────────────────
@@ -254,7 +367,7 @@
         max_bookings: maxBookings,
         duration_min: durationMin,
         location,
-        meeting_link: meetingLink,
+        meet_link: meetingLink,
         description,
       }),
     });
@@ -278,10 +391,15 @@
 
   // ─── Booking actions ────────────────────────────────────────────────────────
 
+  function _refreshActivePanel() {
+    if (_currentAgendaTab === 'bookings') loadAllBookings();
+    else loadAdminAgenda();
+  }
+
   async function agendaConfirmBooking(bookingId) {
     const response = await fetch(`/api/admin/agenda/bookings/${bookingId}/confirm`, { method: 'PUT', headers: authH() });
     const payload  = await readAdminResponse(response);
-    if (response.ok) { showToast('Reserva confirmada! E-mail enviado ao cliente.', 'success'); loadAdminAgenda(); return; }
+    if (response.ok) { showToast('Reserva confirmada! E-mail enviado ao cliente.', 'success'); _refreshActivePanel(); return; }
     showToast(payload.error || 'Erro ao confirmar.', 'error');
   }
 
@@ -294,7 +412,7 @@
       body: JSON.stringify({ reason: reason.trim() }),
     });
     const payload = await readAdminResponse(response);
-    if (response.ok) { showToast('Reserva cancelada e cliente notificado.', 'success'); loadAdminAgenda(); return; }
+    if (response.ok) { showToast('Reserva cancelada e cliente notificado.', 'success'); _refreshActivePanel(); return; }
     showToast(payload.error || 'Erro ao cancelar.', 'error');
   }
 
@@ -302,7 +420,7 @@
     if (!confirm(`Marcar ${clientName || 'este cliente'} como não compareceu?`)) return;
     const response = await fetch(`/api/admin/agenda/bookings/${bookingId}/no-show`, { method: 'PUT', headers: authH() });
     const payload  = await readAdminResponse(response);
-    if (response.ok) { showToast('Marcado como não compareceu.', 'success'); loadAdminAgenda(); return; }
+    if (response.ok) { showToast('Marcado como não compareceu.', 'success'); _refreshActivePanel(); return; }
     showToast(payload.error || 'Erro.', 'error');
   }
 
@@ -310,7 +428,7 @@
     if (!confirm(`Aprovar pedido de remarcação de ${clientName || 'este cliente'}?`)) return;
     const response = await fetch(`/api/admin/agenda/bookings/${bookingId}/approve-reschedule`, { method: 'PUT', headers: authH() });
     const payload  = await readAdminResponse(response);
-    if (response.ok) { showToast('Remarcação aprovada e cliente notificado.', 'success'); loadAdminAgenda(); return; }
+    if (response.ok) { showToast('Remarcação aprovada e cliente notificado.', 'success'); _refreshActivePanel(); return; }
     showToast(payload.error || 'Erro ao aprovar.', 'error');
   }
 
@@ -323,7 +441,7 @@
       body: JSON.stringify({ reason: reason.trim() }),
     });
     const payload = await readAdminResponse(response);
-    if (response.ok) { showToast('Pedido rejeitado e cliente notificado.', 'success'); loadAdminAgenda(); return; }
+    if (response.ok) { showToast('Pedido rejeitado e cliente notificado.', 'success'); _refreshActivePanel(); return; }
     showToast(payload.error || 'Erro ao rejeitar.', 'error');
   }
 
@@ -372,7 +490,7 @@
     if (response.ok) {
       window.REAdminModal?.closeById?.('rescheduleModal', 'admin-agenda:reschedule-submit');
       showToast('Agendamento remarcado e cliente notificado.', 'success');
-      loadAdminAgenda();
+      _refreshActivePanel();
       return;
     }
     showToast(payload.error || 'Erro ao remarcar.', 'error');
@@ -461,7 +579,7 @@
     if (response.ok) {
       window.REAdminModal?.closeById?.('bookForClientModal', 'admin-agenda:book-for-client-submit');
       showToast('Agendamento criado e confirmado!', 'success');
-      loadAdminAgenda();
+      _refreshActivePanel();
       return;
     }
     showToast(payload.error || 'Erro ao agendar.', 'error');
@@ -522,6 +640,8 @@
 
   window.loadAdminAgenda           = loadAdminAgenda;
   window.loadAvailabilityPanel     = loadAvailabilityPanel;
+  window.switchAgendaTab           = switchAgendaTab;
+  window.loadAllBookings           = loadAllBookings;
   window.toggleSlotForm            = toggleSlotForm;
   window.createSlot                = createSlot;
   window.deleteSlot                = deleteSlot;
@@ -537,6 +657,7 @@
   window._submitBookForClient      = submitBookForClient;
   window.openBookForClientFromDrawer = openBookForClientFromDrawer;
   window._submitBookFromDrawer     = submitBookFromDrawer;
+  window._prefillSlotFromWindow    = prefillSlotFromWindow;
 
   console.info('[RE:admin-agenda] loaded');
 })();

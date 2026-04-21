@@ -221,74 +221,115 @@
       <div class="section-header">
         <div>
           <div class="section-title">Agenda de Consultorias</div>
-          <div class="section-sub">Publicar horários disponíveis e acompanhar reservas dos clientes</div>
+          <div class="section-sub">Visualize a disponibilidade, publique horários e gerencie reservas</div>
         </div>
-        <button class="btn-primary agenda-slot-toolbar-btn" onclick="toggleSlotForm()">
+        <button class="btn-primary agenda-slot-toolbar-btn" onclick="switchAgendaTab('slots');toggleSlotForm()">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           Novo horário
         </button>
       </div>
 
-      <!-- Camila availability panel -->
-      <div id="agendaAvailabilityPanel" class="agenda-avail-panel"></div>
+      <!-- Agenda sub-tab strip -->
+      <div class="agenda-tab-strip">
+        <button id="agendaTab-availability" class="agenda-tab agenda-tab-active" onclick="switchAgendaTab('availability')">
+          🗓 Disponibilidade de Camila
+        </button>
+        <button id="agendaTab-slots" class="agenda-tab" onclick="switchAgendaTab('slots')">
+          📋 Horários &amp; Reservas
+        </button>
+        <button id="agendaTab-bookings" class="agenda-tab" onclick="switchAgendaTab('bookings')">
+          📌 Todas as Reservas
+        </button>
+      </div>
 
-      <!-- New slot form -->
-      <div id="slotFormCard" class="agenda-slot-form" hidden>
-        <div class="agenda-slot-form-title">Publicar novo horário</div>
-        <div class="agenda-slot-form-grid">
-          <div>
-            <label class="agenda-slot-form-label">Título</label>
-            <input id="slotTitle" type="text" value="Consultoria" class="portal-input agenda-slot-form-input">
-          </div>
-          <div>
-            <label class="agenda-slot-form-label">Data e hora início *</label>
-            <input id="slotStart" type="datetime-local" class="portal-input agenda-slot-form-input">
-          </div>
-          <div>
-            <label class="agenda-slot-form-label">Data e hora fim *</label>
-            <input id="slotEnd" type="datetime-local" class="portal-input agenda-slot-form-input">
-          </div>
-          <div>
-            <label class="agenda-slot-form-label">Duração (min)</label>
-            <input id="slotDuration" type="number" value="60" min="15" step="15" class="portal-input agenda-slot-form-input">
-          </div>
-          <div>
-            <label class="agenda-slot-form-label">Créditos necessários</label>
-            <input id="slotCredits" type="number" value="1" min="1" class="portal-input agenda-slot-form-input">
-          </div>
-          <div>
-            <label class="agenda-slot-form-label">Vagas máximas</label>
-            <input id="slotMax" type="number" value="1" min="1" class="portal-input agenda-slot-form-input">
-          </div>
-          <div>
-            <label class="agenda-slot-form-label">Modalidade</label>
-            <select id="slotLocation" class="portal-input agenda-slot-form-input">
-              <option value="online">Online (Google Meet)</option>
-              <option value="presencial">Presencial</option>
-              <option value="hibrido">Híbrido</option>
-            </select>
-          </div>
-          <div>
-            <label class="agenda-slot-form-label">Link da reunião (opcional)</label>
-            <input id="slotMeetingLink" type="url" placeholder="https://meet.google.com/..." class="portal-input agenda-slot-form-input">
-            <small style="color:#6B7280;font-size:11px">Gerado automaticamente pelo Google Calendar se deixado em branco</small>
-          </div>
-          <div style="grid-column:1/-1">
-            <label class="agenda-slot-form-label">Descrição / observações (opcional)</label>
-            <textarea id="slotDescription" rows="2" placeholder="Pauta, preparação necessária…" class="portal-input agenda-slot-form-input" style="resize:vertical"></textarea>
-          </div>
-        </div>
-        <div class="agenda-slot-form-actions">
-          <button class="btn-primary agenda-slot-form-btn agenda-slot-form-btn-primary" onclick="createSlot()">Publicar horário</button>
-          <button class="btn-ghost agenda-slot-form-btn" onclick="toggleSlotForm()">Cancelar</button>
+      <!-- TAB: Disponibilidade -->
+      <div id="agendaPanel-availability" class="agenda-tab-panel">
+        <div id="agendaAvailabilityPanel" class="agenda-avail-panel">
+          <div class="agenda-loading-state">Carregando disponibilidade...</div>
         </div>
       </div>
 
-      <!-- Slots list -->
-      <div id="adminSlotsList">
-        <div class="empty-state">
-          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-          <p>Carregando horários...</p>
+      <!-- TAB: Horários & Reservas -->
+      <div id="agendaPanel-slots" class="agenda-tab-panel" hidden>
+        <!-- New slot form -->
+        <div id="slotFormCard" class="agenda-slot-form" hidden>
+          <div class="agenda-slot-form-title">Publicar novo horário</div>
+          <div class="agenda-slot-form-grid">
+            <div>
+              <label class="agenda-slot-form-label">Título</label>
+              <input id="slotTitle" type="text" value="Consultoria" class="portal-input agenda-slot-form-input">
+            </div>
+            <div>
+              <label class="agenda-slot-form-label">Data e hora início *</label>
+              <input id="slotStart" type="datetime-local" class="portal-input agenda-slot-form-input">
+            </div>
+            <div>
+              <label class="agenda-slot-form-label">Data e hora fim *</label>
+              <input id="slotEnd" type="datetime-local" class="portal-input agenda-slot-form-input">
+            </div>
+            <div>
+              <label class="agenda-slot-form-label">Duração (min)</label>
+              <input id="slotDuration" type="number" value="60" min="15" step="15" class="portal-input agenda-slot-form-input">
+            </div>
+            <div>
+              <label class="agenda-slot-form-label">Créditos necessários</label>
+              <input id="slotCredits" type="number" value="1" min="1" class="portal-input agenda-slot-form-input">
+            </div>
+            <div>
+              <label class="agenda-slot-form-label">Vagas máximas</label>
+              <input id="slotMax" type="number" value="1" min="1" class="portal-input agenda-slot-form-input">
+            </div>
+            <div>
+              <label class="agenda-slot-form-label">Modalidade</label>
+              <select id="slotLocation" class="portal-input agenda-slot-form-input">
+                <option value="online">Online (Google Meet)</option>
+                <option value="presencial">Presencial</option>
+                <option value="hibrido">Híbrido</option>
+              </select>
+            </div>
+            <div>
+              <label class="agenda-slot-form-label">Link da reunião (opcional)</label>
+              <input id="slotMeetingLink" type="url" placeholder="https://meet.google.com/..." class="portal-input agenda-slot-form-input">
+              <small style="color:#6B7280;font-size:11px">Gerado automaticamente pelo Google Calendar se deixado em branco</small>
+            </div>
+            <div style="grid-column:1/-1">
+              <label class="agenda-slot-form-label">Descrição / observações (opcional)</label>
+              <textarea id="slotDescription" rows="2" placeholder="Pauta, preparação necessária…" class="portal-input agenda-slot-form-input" style="resize:vertical"></textarea>
+            </div>
+          </div>
+          <div class="agenda-slot-form-actions">
+            <button class="btn-primary agenda-slot-form-btn agenda-slot-form-btn-primary" onclick="createSlot()">Publicar horário</button>
+            <button class="btn-ghost agenda-slot-form-btn" onclick="toggleSlotForm()">Cancelar</button>
+          </div>
+        </div>
+        <!-- Slots list -->
+        <div id="adminSlotsList">
+          <div class="empty-state">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            <p>Carregando horários...</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB: Todas as Reservas -->
+      <div id="agendaPanel-bookings" class="agenda-tab-panel" hidden>
+        <!-- Filter bar -->
+        <div class="agenda-bookings-filter-bar">
+          <select id="agendaBookingStatusFilter" class="portal-input agenda-bookings-filter-select" onchange="loadAllBookings()">
+            <option value="">Todos os status</option>
+            <option value="pending">Pendente</option>
+            <option value="confirmed">Confirmado</option>
+            <option value="pending_reschedule">Aguard. remarcação</option>
+            <option value="cancelled">Cancelado</option>
+            <option value="rescheduled">Remarcado</option>
+          </select>
+          <button class="btn-ghost agenda-bookings-filter-refresh" onclick="loadAllBookings()">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+            Atualizar
+          </button>
+        </div>
+        <div id="adminAllBookings">
+          <div class="agenda-loading-state">Carregando reservas...</div>
         </div>
       </div>
     </div>
@@ -926,9 +967,9 @@
 <div class="toast" id="toast"></div>
 
 <script src="/js/admin-modal-manager.js?v=20260421n"></script>
-<script src="/js/admin-shell-core.js?v=20260421n"></script>
+<script src="/js/admin-shell-core.js?v=20260421p"></script>
 
-<script src="/js/admin-agenda.js?v=20260421f"></script>
+<script src="/js/admin-agenda.js?v=20260421g"></script>
 <script src="/js/admin-audit-log.js?v=20260421b"></script>
 <script src="/js/admin-bootstrap.js?v=20260421m"></script>
 <script src="/js/admin-client-actions.js?v=20260421v"></script>

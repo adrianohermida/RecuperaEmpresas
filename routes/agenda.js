@@ -265,25 +265,33 @@ router.delete('/api/agenda/cancel-slot/:slotId', requireAuth, async (req, res) =
 // Client requests to move to a different slot (admin must approve)
 router.post('/api/agenda/book/:bookingId/request-reschedule', requireAuth, async (req, res) => {
   const userId = req.user.id;
-  const { newSlotId } = req.body;
-  if (!newSlotId) return res.status(400).json({ error: 'newSlotId é obrigatório.' });
+  // Accept both snake_case (frontend) and camelCase for compatibility
+  const targetSlotId = req.body.new_slot_id || req.body.newSlotId;
+  const reason       = req.body.reason || null;
+  if (!targetSlotId) return res.status(400).json({ error: 'new_slot_id é obrigatório.' });
 
   const { data: booking } = await sb.from('re_bookings')
     .select('*').eq('id', req.params.bookingId).eq('user_id', userId).single();
   if (!booking) return res.status(404).json({ error: 'Reserva não encontrada.' });
   if (!['pending', 'confirmed'].includes(booking.status))
-    return res.status(400).json({ error: 'Reserva não pode ser remarcada.' });
+    return res.status(400).json({ error: 'Reserva não pode ser remarcada neste status.' });
 
-  const { data: newSlot } = await sb.from('re_agenda_slots').select('*').eq('id', newSlotId).single();
-  if (!newSlot) return res.status(404).json({ error: 'Novo slot não encontrado.' });
+  const { data: newSlot } = await sb.from('re_agenda_slots').select('*').eq('id', targetSlotId).single();
+  if (!newSlot) return res.status(404).json({ error: 'Horário solicitado não encontrado.' });
   if (new Date(newSlot.starts_at) < new Date())
-    return res.status(400).json({ error: 'O novo horário já passou.' });
+    return res.status(400).json({ error: 'O horário solicitado já passou.' });
+
+  // Store reason in notes if provided (no dedicated column yet)
+  const notesUpdate = reason
+    ? `${booking.notes ? booking.notes + '\n' : ''}[Motivo remarcação]: ${reason}`
+    : booking.notes;
 
   await sb.from('re_bookings').update({
     status:                        'pending_reschedule',
-    reschedule_requested_slot_id:  newSlotId,
+    reschedule_requested_slot_id:  targetSlotId,
     reschedule_requested_at:       new Date().toISOString(),
     reschedule_reject_reason:      null,
+    notes:                         notesUpdate,
     updated_at:                    new Date().toISOString(),
   }).eq('id', booking.id);
 

@@ -3987,6 +3987,25 @@ body {
   background: #EDE9FE;
   color: #7C3AED;
 }
+.dashboard-slot-status-reschedule {
+  background: #FFF7ED;
+  color: #C2410C;
+}
+.dashboard-slot-action-reschedule {
+  padding: 6px 10px;
+  border: 1px solid #FCD34D;
+  background: #FFFBEB;
+  color: #92400E;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.dashboard-slot-note-reschedule {
+  background: #FFF7ED;
+  color: #C2410C;
+  border-left: 3px solid #F97316;
+}
 .dashboard-slot-note {
   margin-top: 8px;
   padding: 8px 12px;
