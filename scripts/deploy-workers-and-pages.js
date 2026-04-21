@@ -5,23 +5,29 @@
 const { execSync } = require('child_process');
 const path = require('path');
 
-function run(cmd, cwd = process.cwd()) {
+function run(cmd, cwd = process.cwd(), env = process.env) {
   console.log(`\n$ ${cmd}`);
-  execSync(cmd, { stdio: 'inherit', cwd });
+  execSync(cmd, { stdio: 'inherit', cwd, env });
 }
 
 try {
   const rootDir = path.join(__dirname, '..');
+  const productionBuildEnv = {
+    ...process.env,
+    RE_API_BASE: '',
+    RE_API_WORKER_BASE: '',
+    RE_API_WORKER_ROUTES: '',
+  };
 
   // Gera o build do portal com o config.js atualizado.
-  run('npm run build', rootDir);
+  run('npm run build', rootDir, productionBuildEnv);
 
   // Deploy Worker (ajuste o path se necessário)
   const workerDir = path.join(__dirname, '../workers/portal-api');
   run('npx wrangler deploy', workerDir);
 
   // Deploy Pages a partir de dist para evitar publicar assets stale da raiz.
-  run('npx wrangler pages deploy dist --project-name=recuperaempresas --branch gh-pages', rootDir);
+  run('npx wrangler pages deploy dist --project-name=recuperaempresas --branch gh-pages', rootDir, productionBuildEnv);
 
   console.log('\n✅ Deploy do Worker e Pages concluído!');
 } catch (e) {

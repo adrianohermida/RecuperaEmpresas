@@ -4,7 +4,7 @@ pages_build_output_dir = "dist"
 compatibility_date = "2026-04-17"
 
 [vars]
-RE_API_BASE = "https://api.recuperaempresas.com.br"
+RE_API_BASE = ""
 RE_ENABLE_FRESHCHAT = "false"
 VITE_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJpaWFqam1uemdhZ250aXFxc2hzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYxNzY0ODUsImV4cCI6MjA5MTc1MjQ4NX0.zyOFjVFIBJem5FZmXBD-ya78RheD_a-YHetibyVvXcI"
 VITE_SUPABASE_URL = "https://riiajjmnzgagntiqqshs.supabase.co"
