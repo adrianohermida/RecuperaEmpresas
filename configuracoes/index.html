@@ -6,13 +6,14 @@
   <meta name="robots" content="noindex, nofollow"/>
   <title>Configurações — Recupera Empresas</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
-  <link rel="stylesheet" href="./css/portal.css?v=20260421g"/>
+  <link rel="stylesheet" href="./css/portal.css?v=20260421r"/>
   <script src="./js/config.js?v=20260420a"></script>
   <script src="./js/runtime-diagnostics.js?v=20260418f"></script>
   <script src="./js/api-base.js?v=20260418e"></script>
   <script src="./js/shared-utils.js?v=20260421g"></script>
   <script src="./js/portal-ui.js?v=20260421h"></script>
   <script src="./js/account-data.js?v=20260421h"></script>
+  <script src="./js/portal-header.js?v=20260421r" defer></script>
 </head>
 <body>
 <div id="authGuard" class="auth-guard">
@@ -27,30 +28,21 @@
   </div>
 </div>
 
-<header class="header">
-  <div class="header-inner">
-    <div class="logo">
-      <svg width="36" height="30" viewBox="0 0 44 36" fill="none">
-        <rect x="0"  y="26" width="8" height="10" rx="4" fill="#4B9EFF"/>
-        <rect x="12" y="18" width="8" height="18" rx="4" fill="#2B7FFF"/>
-        <rect x="24" y="10" width="8" height="26" rx="4" fill="#1A56DB"/>
-        <rect x="36" y="2"  width="8" height="34" rx="4" fill="#1244AB"/>
-      </svg>
-      <div>
-        <div class="logo-text">Recupera Empresas</div>
-        <div class="logo-sub" id="shellLogoSub">Painel do Consultor</div>
-      </div>
-    </div>
-    <div class="header-right">
-      <span class="admin-badge" id="shellRoleBadge">Admin</span>
-      <button class="menu-toggle" id="menuToggle" onclick="toggleSidebar()" aria-label="Abrir menu">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-          <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
-        </svg>
-      </button>
-    </div>
-  </div>
-</header>
+<div
+  data-shell-header
+  data-home-href="/admin"
+  data-logo-label="Abrir painel do consultor"
+  data-logo-sub="Painel do Consultor"
+  data-page-kicker="Conta"
+  data-page-title="Configurações"
+  data-mobile-title="Ajustes"
+  data-badge="Admin"
+  data-notification-variant="admin"
+  data-user-role="Consultor Admin"
+  data-account-kicker="Conta do consultor"
+  data-profile-href="/perfil"
+  data-settings-href="/configuracoes"
+></div>
 
 <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="closeSidebar()"></div>
 
@@ -81,28 +73,6 @@
       </div>
     </div>
 
-    <div class="sidebar-footer">
-      <div class="user-dropup" id="userDropup" role="menu">
-        <div class="user-dropup-header">
-          <div class="user-dropup-name" id="dropupUserName">—</div>
-          <div class="user-dropup-email" id="dropupUserEmail">—</div>
-        </div>
-        <a href="/perfil" class="user-dropup-item" role="menuitem">Meu Perfil</a>
-        <a href="/configuracoes" class="user-dropup-item" role="menuitem">Configurações</a>
-        <hr class="user-dropup-divider"/>
-        <button class="user-dropup-item danger" onclick="logout()" role="menuitem">Sair</button>
-      </div>
-      <button class="user-menu-btn" id="userMenuBtn" onclick="toggleUserDropup()" aria-expanded="false" aria-haspopup="true">
-        <div class="user-menu-avatar" id="userAvatar">?</div>
-        <div class="user-menu-info">
-          <div class="user-menu-name" id="userName">Carregando...</div>
-          <div class="user-menu-role" id="userMenuRole">Consultor Admin</div>
-        </div>
-        <svg class="user-menu-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-          <polyline points="18 15 12 9 6 15"/>
-        </svg>
-      </button>
-    </div>
   </nav>
 
   <main class="portal-main">
@@ -259,6 +229,7 @@
 <div class="toast" id="toast"></div>
 
 <script src="./js/admin-shell-core.js?v=20260421g"></script>
+<script src="./js/admin-notifications.js?v=20260421r"></script>
 <script src="./js/configuracoes-init.js?v=20260421h"></script>
 </body>
 </html>

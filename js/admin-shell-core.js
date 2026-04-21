@@ -81,10 +81,14 @@ function closeSidebar() {
   document.getElementById('sidebarBackdrop')?.classList.remove('open');
 }
 
+function getUserMenuShell() {
+  return document.querySelector('[data-user-menu-shell]') || document.querySelector('.sidebar-footer');
+}
+
 function setUserDropupState(open, options) {
   var dropup = document.getElementById('userDropup');
   var btn = document.getElementById('userMenuBtn');
-  var footer = document.querySelector('.sidebar-footer');
+  var footer = getUserMenuShell();
   dropup?.classList.toggle('open', !!open);
   btn?.setAttribute('aria-expanded', String(!!open));
   footer?.classList.toggle('menu-open', !!open);
@@ -102,7 +106,7 @@ function toggleUserDropup(event) {
 }
 
 document.addEventListener('click', function (e) {
-  var footer = document.querySelector('.sidebar-footer');
+  var footer = getUserMenuShell();
   if (footer && !footer.contains(e.target)) {
     setUserDropupState(false);
   }

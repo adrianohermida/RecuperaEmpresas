@@ -82,7 +82,17 @@
     if (props.centerTemplateHtml) {
       return [
         '<div class="header-center header-center-template">',
+        props.pageTitle || props.mobileTitle
+          ? '  <div class="header-center-mobile">'
+            + '    <div class="header-page-summary">'
+            + (props.pageKicker ? '      <div class="header-page-kicker">' + escapeHtml(props.pageKicker) + '</div>' : '')
+            + '      <div class="header-page-title">' + escapeHtml(props.pageTitle || props.mobileTitle || '') + '</div>'
+            + '    </div>'
+            + '  </div>'
+          : '',
+        '  <div class="header-center-desktop">',
         props.centerTemplateHtml,
+        '  </div>',
         '</div>'
       ].join('');
     }

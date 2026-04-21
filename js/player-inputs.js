@@ -112,7 +112,7 @@ function fpRenderInput(q) {
       return `<div class="fp-rating-wrap" id="${id}-wrap">
         ${[1,2,3,4,5].map(v => `<button type="button" data-rating="${q.id}" data-val="${v}"
           onclick="fpSelectRating(${q.id}, ${v})"
-          class="fp-rating-btn">★</button>`).join('')}
+          class="fp-rating-btn">${ICONS.star(18)}</button>`).join('')}
         <input type="hidden" id="${id}">
       </div>`;
     case 'yes_no':
@@ -120,19 +120,19 @@ function fpRenderInput(q) {
         <button type="button" data-yn="${q.id}" data-val="sim"
           onclick="fpSelectYesNo(${q.id}, 'sim')"
           class="fp-yesno-btn">
-          ✅ Sim
+          ${ICONS.check(16)} Sim
         </button>
         <button type="button" data-yn="${q.id}" data-val="nao"
           onclick="fpSelectYesNo(${q.id}, 'nao')"
           class="fp-yesno-btn">
-          ❌ Não
+          ${ICONS.x(16)} Não
         </button>
         <input type="hidden" id="${id}">
       </div>`;
     case 'file_upload':
       return `<div class="fp-upload-dropzone"
           onclick="document.getElementById('${id}').click()">
-        <div class="fp-upload-icon">📎</div>
+        <div class="fp-upload-icon">${ICONS.upload(20)}</div>
         <div class="fp-upload-copy">Clique para selecionar o arquivo</div>
         <input type="file" id="${id}" class="fp-upload-input" onchange="fpFileChange(${q.id}, this)">
         <div id="fpfile-name-${q.id}" class="fp-upload-file-name"></div>

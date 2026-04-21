@@ -3,6 +3,8 @@
 
 let _notifInterval = null;
 let _notifOpen     = false;
+let _notifLastMarkup = '';
+let _notifLastUnread = null;
 
 function toggleNotifDropdown() {
   const dd = document.getElementById('notifDropdown');
@@ -26,20 +28,29 @@ function escHtmlD(s) {
 async function loadNotifications() {
   const listEl  = document.getElementById('notifList');
   const badgeEl = document.getElementById('notifBadge');
+  if (!listEl || !badgeEl) return;
   try {
     const res = await fetch('/api/notifications?limit=20', { headers: authH() });
     if (!res.ok) return;
     const { notifications = [], unread_count = 0 } = await res.json();
 
-    if (unread_count > 0) {
-      badgeEl.classList.add('admin-notif-badge-visible');
-      badgeEl.textContent = unread_count > 99 ? '99+' : unread_count;
-    } else {
-      badgeEl.classList.remove('admin-notif-badge-visible');
+    if (_notifLastUnread !== unread_count) {
+      if (unread_count > 0) {
+        badgeEl.classList.add('admin-notif-badge-visible');
+        badgeEl.textContent = unread_count > 99 ? '99+' : unread_count;
+      } else {
+        badgeEl.classList.remove('admin-notif-badge-visible');
+      }
+      _notifLastUnread = unread_count;
     }
 
+    let markup = '';
     if (!notifications.length) {
-      listEl.innerHTML = '<div class="admin-notif-empty">Nenhuma notificação.</div>';
+      markup = '<div class="admin-notif-empty">Nenhuma notificação.</div>';
+      if (markup !== _notifLastMarkup) {
+        listEl.innerHTML = markup;
+        _notifLastMarkup = markup;
+      }
       return;
     }
 
@@ -48,7 +59,7 @@ async function loadNotifications() {
       appointment: '📅', service: '🛒', info: 'ℹ️',
     };
 
-    listEl.innerHTML = notifications.map(n => {
+    markup = notifications.map(n => {
       const ts  = new Date(n.created_at).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
       const unr = !n.read;
       const dataAttrs = [
@@ -66,6 +77,11 @@ async function loadNotifications() {
         ${unr ? '<div class="admin-notif-item-dot"></div>' : ''}
       </button>`;
     }).join('');
+
+    if (markup !== _notifLastMarkup) {
+      listEl.innerHTML = markup;
+      _notifLastMarkup = markup;
+    }
   } catch (e) {
     console.warn('[NOTIF]', e.message);
   }

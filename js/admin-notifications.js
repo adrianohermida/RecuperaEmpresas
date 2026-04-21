@@ -4,6 +4,8 @@
   const iconMap = { message: '💬', task: '✅', payment: '💰', plan: '📋', appointment: '📅', service: '🛒', info: 'ℹ️' };
   let adminNotifOpen = false;
   let adminNotifInterval = null;
+  let adminNotifLastMarkup = '';
+  let adminNotifLastUnreadCount = null;
 
   function toggleAdminNotifDropdown() {
     const dropdown = document.getElementById('adminNotifDropdown');
@@ -49,21 +51,34 @@
   async function loadAdminNotifications() {
     const listEl = document.getElementById('adminNotifList');
     const badgeEl = document.getElementById('adminNotifBadge');
+    if (!listEl || !badgeEl) return;
     try {
       const response = await fetch('/api/notifications?limit=20', { headers: authH() });
       if (!response.ok) return;
       const { notifications = [], unread_count: unreadCount = 0 } = await response.json();
-      if (unreadCount > 0) {
-        badgeEl.classList.add('admin-notif-badge-visible');
-        badgeEl.textContent = unreadCount > 99 ? '99+' : unreadCount;
-      } else {
-        badgeEl.classList.remove('admin-notif-badge-visible');
+      if (adminNotifLastUnreadCount !== unreadCount) {
+        if (unreadCount > 0) {
+          badgeEl.classList.add('admin-notif-badge-visible');
+          badgeEl.textContent = unreadCount > 99 ? '99+' : unreadCount;
+        } else {
+          badgeEl.classList.remove('admin-notif-badge-visible');
+        }
+        adminNotifLastUnreadCount = unreadCount;
       }
+      let markup = '';
       if (!notifications.length) {
-        listEl.innerHTML = renderEmptyState('Nenhuma notificação.');
+        markup = renderEmptyState('Nenhuma notificação.');
+        if (markup !== adminNotifLastMarkup) {
+          listEl.innerHTML = markup;
+          adminNotifLastMarkup = markup;
+        }
         return;
       }
-      listEl.innerHTML = notifications.map(renderNotificationItem).join('');
+      markup = notifications.map(renderNotificationItem).join('');
+      if (markup !== adminNotifLastMarkup) {
+        listEl.innerHTML = markup;
+        adminNotifLastMarkup = markup;
+      }
     } catch (error) {
       console.warn('[ADMIN NOTIF]', error.message);
     }
@@ -95,6 +110,16 @@
   window.adminReadNotif = adminReadNotif;
   window.adminMarkAllNotifRead = adminMarkAllNotifRead;
   window.startAdminNotifPolling = startAdminNotifPolling;
+
+  function autoStartAdminNotifications() {
+    if (document.getElementById('adminNotifBellWrap')) startAdminNotifPolling();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', autoStartAdminNotifications, { once: true });
+  } else {
+    autoStartAdminNotifications();
+  }
 
 console.info('[RE:admin-notifications] loaded');
 })();

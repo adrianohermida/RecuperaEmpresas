@@ -83,7 +83,7 @@ function fbRenderCanvas() {
 
   if (!FB.currentPage) {
     canvas.innerHTML = `<div class="form-builder-canvas-empty">
-      <div class="form-builder-canvas-empty-icon">📄</div>
+      <div class="form-builder-canvas-empty-icon">${ICONS.fileText(32)}</div>
       <div class="form-builder-canvas-empty-copy">${FB.readOnly ? 'Nenhuma página.' : 'Nenhuma página. Clique em "+ Página" para criar.'}</div>
     </div>`;
     return;
@@ -93,14 +93,14 @@ function fbRenderCanvas() {
 
   if (!questions.length) {
     canvas.innerHTML = `<div class="form-builder-canvas-empty">
-      <div class="form-builder-canvas-empty-icon">❓</div>
+      <div class="form-builder-canvas-empty-icon">${ICONS.helpCircle(32)}</div>
       <div class="form-builder-canvas-empty-copy">${FB.readOnly ? 'Nenhuma questão nesta página.' : 'Nenhuma questão nesta página.<br>Arraste um tipo da paleta ou clique para adicionar.'}</div>
     </div>`;
     return;
   }
 
   canvas.innerHTML = questions.map((q, i) => {
-    const typeInfo = QB_TYPES.find(t => t.type === q.type) || { icon:'❓', label: q.type };
+    const typeInfo = QB_TYPES.find(t => t.type === q.type) || { icon: ICONS.helpCircle(16), label: q.type };
     const isActive = FB.selectedQ === q.id;
     return `
         <div class="fb-question-card ${isActive ? 'fb-q-active' : ''}"
@@ -122,14 +122,14 @@ function fbRenderCanvas() {
         ${FB.readOnly ? '' : `<div class="fb-question-card-actions">
           <button onclick="event.stopPropagation();fbMoveQuestion(${q.id},'up')" title="Mover para cima"
             class="fb-question-card-action-btn"
-            ${i === 0 ? 'disabled' : ''}>↑</button>
+            ${i === 0 ? 'disabled' : ''}>${ICONS.arrowUp(14)}</button>
           <button onclick="event.stopPropagation();fbMoveQuestion(${q.id},'down')" title="Mover para baixo"
             class="fb-question-card-action-btn"
-            ${i === questions.length-1 ? 'disabled' : ''}>↓</button>
+            ${i === questions.length-1 ? 'disabled' : ''}>${ICONS.arrowDown(14)}</button>
           <button onclick="event.stopPropagation();fbDuplicateQuestion(${q.id})" title="Duplicar"
-            class="fb-question-card-action-btn">⧉</button>
+            class="fb-question-card-action-btn">${ICONS.copy(14)}</button>
           <button onclick="event.stopPropagation();fbDeleteQuestion(${q.id})" title="Excluir"
-            class="fb-question-card-action-btn fb-question-card-action-delete">🗑</button>
+            class="fb-question-card-action-btn fb-question-card-action-delete">${ICONS.trash2(14)}</button>
         </div>`}
       </div>
       ${fbRenderQuestionPreview(q)}
@@ -217,14 +217,14 @@ function fbRenderQuestionPreview(q) {
   if (q.type === 'scale' || q.type === 'nps' || q.type === 'rating') {
     const max = q.type === 'rating' ? 5 : (q.type === 'nps' ? 10 : (q.settings?.max || 10));
     return `<div class="fb-question-preview-wrap fb-question-preview-scale-row">
-      ${Array.from({length: Math.min(max,10)}, (_,i) => `<button disabled class="fb-question-preview-scale-btn">${q.type==='rating'?'★':i+(q.type==='nps'?0:1)}</button>`).join('')}
+      ${Array.from({length: Math.min(max,10)}, (_,i) => `<button disabled class="fb-question-preview-scale-btn">${q.type==='rating' ? ICONS.star(12) : i+(q.type==='nps'?0:1)}</button>`).join('')}
       ${max > 10 ? `<span class="fb-question-preview-scale-more">...</span>` : ''}
     </div>`;
   }
   if (q.type === 'yes_no')
-    return `<div class="fb-question-preview-wrap fb-question-preview-binary-row"><button disabled class="fb-question-preview-binary-btn">✅ Sim</button><button disabled class="fb-question-preview-binary-btn">❌ Não</button></div>`;
+    return `<div class="fb-question-preview-wrap fb-question-preview-binary-row"><button disabled class="fb-question-preview-binary-btn">${ICONS.check(14)} Sim</button><button disabled class="fb-question-preview-binary-btn">${ICONS.x(14)} Não</button></div>`;
   if (q.type === 'file_upload')
-    return `<div class="fb-question-preview-wrap"><div class="fb-question-preview-upload">📎 Clique ou arraste o arquivo aqui</div></div>`;
+    return `<div class="fb-question-preview-wrap"><div class="fb-question-preview-upload">${ICONS.paperclip(14)} Clique ou arraste o arquivo aqui</div></div>`;
   if (q.type === 'score')
     return `<div class="fb-question-preview-wrap"><div class="fp-score-card"><div class="fp-score-value">84%</div><div class="fp-score-meta">Painel de score em tempo real</div></div></div>`;
   if (q.type === 'calculated')
