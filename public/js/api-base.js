@@ -8,8 +8,14 @@
  * `window.RE_API_WORKER_ROUTES`.
  */
 (function () {
+  var PUBLIC_API_FALLBACK_BASE = 'https://api.recuperaempresas.com.br';
+
   function trimBase(value) {
     return String(value || '').replace(/\/+$/, '');
+  }
+
+  function getFallbackApiBase() {
+    return trimBase(window.RE_API_BASE) || PUBLIC_API_FALLBACK_BASE;
   }
 
   function parseWorkerRoutes(value) {
@@ -124,6 +130,24 @@
     }
   }
 
+  function canRetryViaPublicApi(url, resolvedUrl, method, status) {
+    if (Number(status) !== 530) return false;
+    if (!/^(GET|HEAD|OPTIONS)$/i.test(String(method || 'GET'))) return false;
+    if (trimBase(window.RE_API_BASE)) return false;
+
+    try {
+      var parsed = new URL(resolvedUrl, window.location.href);
+      return parsed.origin === window.location.origin && parsed.pathname.indexOf('/api/') === 0;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  function buildFallbackUrl(resolvedUrl) {
+    var parsed = new URL(resolvedUrl, window.location.href);
+    return getFallbackApiBase() + parsed.pathname + parsed.search;
+  }
+
   // Patch window.fetch
   var _fetch = window.fetch.bind(window);
   window.fetch = function (url, opts) {
@@ -134,7 +158,20 @@
     if (!requestOptions.credentials && shouldIncludeCredentials(url, resolvedUrl)) {
       requestOptions.credentials = 'include';
     }
-    return _fetch(resolvedUrl, requestOptions).catch(function (error) {
+    if (canRetryViaPublicApi(url, resolvedUrl, method, 530)) {
+      requestOptions.__reApiSuppress530Diagnostics = true;
+    }
+    return _fetch(resolvedUrl, requestOptions).then(function (response) {
+      if (!canRetryViaPublicApi(url, resolvedUrl, method, response.status)) return response;
+
+      var fallbackUrl = buildFallbackUrl(resolvedUrl);
+      var retryOptions = Object.assign({}, requestOptions);
+      delete retryOptions.__reApiSuppress530Diagnostics;
+      if (!retryOptions.credentials && shouldIncludeCredentials(url, fallbackUrl)) {
+        retryOptions.credentials = 'include';
+      }
+      return _fetch(fallbackUrl, retryOptions);
+    }).catch(function (error) {
       reportApiFailure({
         url: resolvedUrl,
         originalUrl: url,

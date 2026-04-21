@@ -314,6 +314,9 @@
     window.fetch = function (input, init) {
       return originalFetch(input, init).then(function (response) {
         try {
+          if (init && init.__reApiSuppress530Diagnostics === true && Number(response.status) === 530) {
+            return response;
+          }
           var info = classifyObservedHttp({
             url: typeof input === 'string' ? input : (input && input.url) || '',
             status: response.status
