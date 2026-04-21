@@ -66,9 +66,57 @@ router.put('/api/admin/journeys/:id', requireAdmin, async (req, res) => {
 
 router.delete('/api/admin/journeys/:id', requireAdmin, async (req, res) => {
   try {
-    const { data: journey } = await sb.from('re_journeys').select('is_system').eq('id', req.params.id).maybeSingle();
+    const journeyId = req.params.id;
+    const { data: journey } = await sb.from('re_journeys').select('is_system').eq('id', journeyId).maybeSingle();
     if (journey?.is_system) return res.status(403).json({ error: 'Jornadas do sistema não podem ser excluídas.' });
-    await sb.from('re_journeys').delete().eq('id', req.params.id);
+
+    const [{ data: steps, error: stepsListError }, { data: assignments, error: assignmentsListError }] = await Promise.all([
+      sb.from('re_journey_steps').select('id').eq('journey_id', journeyId),
+      sb.from('re_journey_assignments').select('id').eq('journey_id', journeyId),
+    ]);
+
+    if (stepsListError) throw stepsListError;
+    if (assignmentsListError) throw assignmentsListError;
+
+    const stepIds = (steps || []).map((step) => step.id).filter(Boolean);
+    const assignmentIds = (assignments || []).map((assignment) => assignment.id).filter(Boolean);
+
+    const { error: unlinkServicesError } = await sb.from('re_services')
+      .update({ journey_id: null })
+      .eq('journey_id', journeyId);
+    if (unlinkServicesError) throw unlinkServicesError;
+
+    if (assignmentIds.length) {
+      const { error: completionsByAssignmentError } = await sb.from('re_journey_step_completions')
+        .delete()
+        .in('assignment_id', assignmentIds);
+      if (completionsByAssignmentError) throw completionsByAssignmentError;
+    }
+
+    if (stepIds.length) {
+      const { error: completionsByStepError } = await sb.from('re_journey_step_completions')
+        .delete()
+        .in('step_id', stepIds);
+      if (completionsByStepError) throw completionsByStepError;
+    }
+
+    if (assignmentIds.length) {
+      const { error: assignmentsError } = await sb.from('re_journey_assignments')
+        .delete()
+        .eq('journey_id', journeyId);
+      if (assignmentsError) throw assignmentsError;
+    }
+
+    if (stepIds.length) {
+      const { error: stepsError } = await sb.from('re_journey_steps')
+        .delete()
+        .eq('journey_id', journeyId);
+      if (stepsError) throw stepsError;
+    }
+
+    const { error: journeyDeleteError } = await sb.from('re_journeys').delete().eq('id', journeyId);
+    if (journeyDeleteError) throw journeyDeleteError;
+
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: e.message });
