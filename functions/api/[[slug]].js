@@ -14,6 +14,7 @@ const DEFAULT_WORKER_ROUTES = [
   '/api/admin/audit-log',
   '/api/admin/invoices',
   '/api/admin/journeys',
+  '/api/admin/impersonate',
   '/api/admin/services',
   '/api/admin/service-orders',
   '/api/notifications'

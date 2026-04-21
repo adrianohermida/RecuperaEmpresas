@@ -735,18 +735,168 @@ async function logout(request, env) {
   return clearAppSession(json({ success: true }), request, env);
 }
 
+function asObject(value) {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+}
+
+function sanitizeText(value, maxLength = 1000) {
+  return String(value || '').trim().slice(0, maxLength);
+}
+
+function sanitizeTagList(values) {
+  const list = Array.isArray(values)
+    ? values
+    : String(values || '')
+        .split(',')
+        .map((item) => item.trim())
+        .filter(Boolean);
+  return [...new Set(list.map((item) => sanitizeText(item, 40)).filter(Boolean))].slice(0, 24);
+}
+
+function sanitizeSocialLinks(value) {
+  const input = asObject(value);
+  return {
+    linkedin: sanitizeText(input.linkedin, 200),
+    instagram: sanitizeText(input.instagram, 200),
+    website: sanitizeText(input.website, 200),
+    whatsapp: sanitizeText(input.whatsapp, 60),
+  };
+}
+
+function sanitizeAvatarDataUrl(value) {
+  const dataUrl = String(value || '').trim();
+  if (!dataUrl) return '';
+  if (!/^data:image\/(png|jpeg|jpg|webp);base64,/i.test(dataUrl)) return '';
+  if (dataUrl.length > 900000) return '';
+  return dataUrl;
+}
+
+function sanitizeTenantLinks(value) {
+  const items = Array.isArray(value) ? value : [];
+  return items
+    .map((item) => {
+      const record = asObject(item);
+      return {
+        type: sanitizeText(record.type, 40),
+        label: sanitizeText(record.label, 120),
+        tenant_id: sanitizeText(record.tenant_id || record.tenantId, 80),
+        role: sanitizeText(record.role, 60),
+      };
+    })
+    .filter((item) => item.type || item.label || item.tenant_id)
+    .slice(0, 12);
+}
+
+function normalizeProfileState(profile) {
+  const input = asObject(profile);
+  return {
+    phone: sanitizeText(input.phone, 40),
+    bio: sanitizeText(input.bio, 1200),
+    qualifications: sanitizeText(input.qualifications, 1600),
+    competencies: sanitizeTagList(input.competencies),
+    social_links: sanitizeSocialLinks(input.social_links || input.socialLinks),
+    signature_html: sanitizeText(input.signature_html || input.signatureHtml, 12000),
+    avatar_data_url: sanitizeAvatarDataUrl(input.avatar_data_url || input.avatarDataUrl),
+    tenant_links: sanitizeTenantLinks(input.tenant_links || input.tenantLinks),
+  };
+}
+
+function normalizePreferencesState(preferences) {
+  const input = asObject(preferences);
+  return {
+    notifMessages: input.notifMessages !== false,
+    notifNewClients: input.notifNewClients !== false,
+    notifSteps: input.notifSteps !== false,
+    prefCompactTable: !!input.prefCompactTable,
+    prefShowProgress: input.prefShowProgress !== false,
+    prefOpenKanbanByDefault: input.prefOpenKanbanByDefault !== false,
+    prefCollapseFiltersOnMobile: input.prefCollapseFiltersOnMobile !== false,
+  };
+}
+
+async function loadPortalState(sb, userId) {
+  const { data } = await sb.from('re_onboarding').select('*').eq('user_id', userId).maybeSingle();
+  const payload = asObject(data?.data);
+  return {
+    onboarding: data || null,
+    profile: normalizeProfileState(payload.portal_profile),
+    preferences: normalizePreferencesState(payload.portal_preferences),
+  };
+}
+
+async function savePortalState(sb, userId, patch) {
+  const current = await loadPortalState(sb, userId);
+  const nextProfile = patch.profile
+    ? normalizeProfileState({ ...current.profile, ...patch.profile })
+    : current.profile;
+  const nextPreferences = patch.preferences
+    ? normalizePreferencesState({ ...current.preferences, ...patch.preferences })
+    : current.preferences;
+  const currentData = asObject(current.onboarding?.data);
+
+  await sb.from('re_onboarding').upsert({
+    user_id: userId,
+    step: current.onboarding?.step ?? 1,
+    status: current.onboarding?.status ?? 'nao_iniciado',
+    completed: current.onboarding?.completed ?? false,
+    data: {
+      ...currentData,
+      portal_profile: nextProfile,
+      portal_preferences: nextPreferences,
+    },
+    last_activity: new Date().toISOString(),
+    completed_at: current.onboarding?.completed_at ?? null,
+  }, { onConflict: 'user_id' });
+
+  return { profile: nextProfile, preferences: nextPreferences };
+}
+
 async function updateProfile(request, env) {
-  if (request.method !== 'PATCH') return methodNotAllowed();
   const auth = await requireAuth(request, env);
   if (!auth.ok) return auth.response;
+  if (request.method === 'GET') {
+    const state = await loadPortalState(auth.sb, auth.user.id);
+    return json({
+      success: true,
+      user: safeUser(auth.user, env),
+      profile: state.profile,
+      preferences: state.preferences,
+    });
+  }
+  if (request.method !== 'PATCH') return methodNotAllowed();
+
   const body = await readJson(request);
-  const updates = {};
-  if (body.name !== undefined) updates.name = String(body.name || '').trim();
-  if (body.phone !== undefined) updates.phone = String(body.phone || '').trim();
-  if (!Object.keys(updates).length) return json({ error: 'Nenhum campo para atualizar.' }, { status: 400 });
-  const { error } = await auth.sb.from('re_users').update(updates).eq('id', auth.user.id);
-  if (error) return json({ error: 'Erro ao salvar perfil.' }, { status: 500 });
-  return json({ success: true });
+  const name = body.name !== undefined ? String(body.name || '').trim() : null;
+  if (name !== null) {
+    if (!name) return json({ error: 'Informe o nome.' }, { status: 400 });
+    const { error } = await auth.sb.from('re_users').update({
+      name,
+      updated_at: new Date().toISOString(),
+    }).eq('id', auth.user.id);
+    if (error) return json({ error: 'Erro ao salvar dados principais.' }, { status: 500 });
+    auth.user.name = name;
+  }
+
+  const state = await savePortalState(auth.sb, auth.user.id, {
+    profile: body.profile || {
+      phone: body.phone,
+      bio: body.bio,
+      qualifications: body.qualifications,
+      competencies: body.competencies,
+      social_links: body.social_links || body.socialLinks,
+      signature_html: body.signature_html || body.signatureHtml,
+      avatar_data_url: body.avatar_data_url || body.avatarDataUrl,
+      tenant_links: body.tenant_links || body.tenantLinks,
+    },
+    preferences: body.preferences,
+  });
+
+  return json({
+    success: true,
+    user: safeUser(auth.user, env),
+    profile: state.profile,
+    preferences: state.preferences,
+  });
 }
 
 async function changePassword(request, env) {

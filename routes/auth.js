@@ -7,6 +7,7 @@ const { findUserById } = require('../lib/db');
 const { logAccess } = require('../lib/logging');
 const { createFreshdeskContact, createFreshdeskTicket } = require('../lib/crm');
 const { syncFreshsalesContact } = require('../lib/crm');
+const { loadPortalUserState, savePortalUserState } = require('../lib/portal-user-state');
 
 // ─── OAuth PKCE store (in-memory, TTL 10 min) ─────────────────────────────────
 const _pkceStore = new Map();
@@ -112,6 +113,62 @@ router.post('/api/auth/login', async (req, res) => {
   } catch(e) {
     console.error('[LOGIN]', e.message);
     res.status(500).json({ error: 'Erro interno.' });
+  }
+});
+
+router.get('/api/auth/profile', requireAuth, async (req, res) => {
+  try {
+    const state = await loadPortalUserState(req.user.id);
+    res.json({
+      success: true,
+      user: safeUser(req.user),
+      profile: state.profile,
+      preferences: state.preferences,
+    });
+  } catch (error) {
+    console.error('[PROFILE GET]', error.message);
+    res.status(500).json({ error: 'Erro ao carregar perfil.' });
+  }
+});
+
+router.patch('/api/auth/profile', requireAuth, async (req, res) => {
+  try {
+    const body = req.body || {};
+    const name = body.name !== undefined ? String(body.name || '').trim() : null;
+
+    if (name !== null) {
+      if (!name) return res.status(400).json({ error: 'Informe o nome.' });
+      const { error } = await sb.from('re_users').update({
+        name,
+        updated_at: new Date().toISOString(),
+      }).eq('id', req.user.id);
+      if (error) return res.status(500).json({ error: 'Erro ao salvar dados principais.' });
+      req.user.name = name;
+    }
+
+    const state = await savePortalUserState(req.user.id, {
+      profile: body.profile || {
+        phone: body.phone,
+        bio: body.bio,
+        qualifications: body.qualifications,
+        competencies: body.competencies,
+        social_links: body.social_links || body.socialLinks,
+        signature_html: body.signature_html || body.signatureHtml,
+        avatar_data_url: body.avatar_data_url || body.avatarDataUrl,
+        tenant_links: body.tenant_links || body.tenantLinks,
+      },
+      preferences: body.preferences,
+    });
+
+    res.json({
+      success: true,
+      user: safeUser(req.user),
+      profile: state.profile,
+      preferences: state.preferences,
+    });
+  } catch (error) {
+    console.error('[PROFILE PATCH]', error.message);
+    res.status(500).json({ error: 'Erro ao salvar perfil.' });
   }
 });
 

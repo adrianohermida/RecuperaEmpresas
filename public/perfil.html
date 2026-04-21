@@ -11,6 +11,8 @@
   <script src="./js/runtime-diagnostics.js?v=20260418f"></script>
   <script src="./js/api-base.js?v=20260418e"></script>
   <script src="./js/shared-utils.js?v=20260421g"></script>
+  <script src="./js/portal-ui.js?v=20260421h"></script>
+  <script src="./js/account-data.js?v=20260421h"></script>
 </head>
 <body>
 <div id="authGuard" class="auth-guard">
@@ -108,7 +110,7 @@
       <div class="section-header">
         <div>
           <div class="section-title">Meu Perfil</div>
-          <div class="section-sub">Gerencie suas informações pessoais</div>
+          <div class="section-sub">Identidade profissional, assinatura e contexto multi-tenant do seu acesso</div>
         </div>
         <a href="/admin" class="btn btn-secondary" id="accountBackLink">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
@@ -116,64 +118,143 @@
         </a>
       </div>
 
-      <div class="page-section">
-        <div class="page-section-title">Foto de perfil</div>
-        <div class="page-section-sub">Esta foto aparece no menu lateral. Recomendado: imagem quadrada, mínimo 200x200 px.</div>
-        <div class="page-avatar-wrap">
-          <div class="page-avatar-img" id="profileAvatarDisplay">?</div>
+      <div class="account-layout">
+        <aside class="account-hero card-surface">
+          <div class="account-hero-top">
+            <div class="page-avatar-img account-avatar-lg" id="profileAvatarDisplay">?</div>
+            <div class="account-hero-meta">
+              <div class="account-hero-name" id="profileHeroName">Carregando...</div>
+              <div class="account-hero-role" id="profileHeroRole">Acesso em preparação</div>
+              <div class="account-hero-email" id="profileHeroEmail">—</div>
+            </div>
+          </div>
           <div class="page-avatar-actions">
             <label class="btn btn-secondary" for="avatarFileInput" style="cursor:pointer;">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-              Enviar foto
+              Trocar avatar
             </label>
             <input type="file" id="avatarFileInput" accept="image/*" style="display:none;" onchange="handleAvatarUpload(this)"/>
-            <button class="btn btn-ghost" id="removeAvatarBtn" onclick="removeAvatar()" style="display:none;">Remover foto</button>
+            <button class="btn btn-ghost" id="removeAvatarBtn" onclick="removeAvatar()" style="display:none;">Remover</button>
           </div>
+          <p class="account-help-text">O upload já recorta automaticamente para um quadrado central e persiste no seu espaço de conta.</p>
+          <div class="account-stat-grid">
+            <div class="account-stat-card">
+              <span class="account-stat-label">Perfil</span>
+              <strong id="profileCompletionLabel">Base</strong>
+            </div>
+            <div class="account-stat-card">
+              <span class="account-stat-label">Competências</span>
+              <strong id="profileCompetencyCount">0</strong>
+            </div>
+            <div class="account-stat-card">
+              <span class="account-stat-label">Tenants</span>
+              <strong id="profileTenantCount">0</strong>
+            </div>
+          </div>
+          <div class="account-tenant-panel" id="tenantSummaryPanel"></div>
+        </aside>
+
+        <div class="account-content-stack">
+          <section class="page-section card-surface">
+            <div class="page-section-title">Identidade profissional</div>
+            <div class="page-section-sub">Dados públicos do seu usuário, bio curta e canais de contato.</div>
+            <form id="profileForm" onsubmit="saveProfile(event)">
+              <div class="page-field-row">
+                <div class="form-group">
+                  <label class="form-label" for="profileName">Nome completo</label>
+                  <input class="form-input" type="text" id="profileName" placeholder="Seu nome" autocomplete="name"/>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="profilePhone">Telefone</label>
+                  <input class="form-input" type="tel" id="profilePhone" placeholder="(11) 99999-9999" autocomplete="tel"/>
+                </div>
+              </div>
+              <div class="page-field-row">
+                <div class="form-group">
+                  <label class="form-label" for="profileEmail">E-mail</label>
+                  <input class="form-input" type="email" id="profileEmail" placeholder="seu@email.com" autocomplete="email" readonly/>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="profileQualifications">Qualificações</label>
+                  <input class="form-input" type="text" id="profileQualifications" placeholder="Ex.: Contador consultivo, especialista fiscal"/>
+                </div>
+              </div>
+              <div class="page-field-row full">
+                <div class="form-group">
+                  <label class="form-label" for="profileBio">Mini-biografia</label>
+                  <textarea class="form-input account-textarea" id="profileBio" placeholder="Apresente seu foco de atuação, segmentos atendidos e estilo de atendimento."></textarea>
+                </div>
+              </div>
+              <div class="page-field-row full">
+                <div class="form-group">
+                  <label class="form-label" for="profileCompetencies">Competências</label>
+                  <input class="form-input" type="text" id="profileCompetencies" placeholder="Separe por vírgula: fiscal, societário, onboarding, cobrança"/>
+                  <div class="field-hint">As competências são exibidas como tags e ajudam a identificar contexto operacional.</div>
+                </div>
+              </div>
+              <div class="page-field-row">
+                <div class="form-group">
+                  <label class="form-label" for="socialLinkedin">LinkedIn</label>
+                  <input class="form-input" type="url" id="socialLinkedin" placeholder="https://linkedin.com/in/..."/>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="socialInstagram">Instagram</label>
+                  <input class="form-input" type="url" id="socialInstagram" placeholder="https://instagram.com/..."/>
+                </div>
+              </div>
+              <div class="page-field-row">
+                <div class="form-group">
+                  <label class="form-label" for="socialWebsite">Site</label>
+                  <input class="form-input" type="url" id="socialWebsite" placeholder="https://suaempresa.com.br"/>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="socialWhatsapp">WhatsApp</label>
+                  <input class="form-input" type="text" id="socialWhatsapp" placeholder="5511999999999"/>
+                </div>
+              </div>
+              <div class="page-field-row full">
+                <div class="form-group">
+                  <label class="form-label">Assinatura de e-mail</label>
+                  <div class="signature-toolbar" id="signatureToolbar">
+                    <button type="button" class="btn btn-secondary btn-sm" data-cmd="bold">Negrito</button>
+                    <button type="button" class="btn btn-secondary btn-sm" data-cmd="italic">Itálico</button>
+                    <button type="button" class="btn btn-secondary btn-sm" data-cmd="insertUnorderedList">Lista</button>
+                  </div>
+                  <div class="signature-editor" id="profileSignatureEditor" contenteditable="true"></div>
+                </div>
+              </div>
+              <div class="account-form-actions">
+                <button class="btn btn-primary" type="submit" id="saveProfileBtn">Salvar perfil</button>
+              </div>
+            </form>
+          </section>
+
+          <section class="page-section card-surface">
+            <div class="page-section-title">Segurança da conta</div>
+            <div class="page-section-sub">Troque sua senha sem sair do fluxo de trabalho.</div>
+            <form id="passwordForm" onsubmit="savePassword(event)">
+              <div class="page-field-row">
+                <div class="form-group">
+                  <label class="form-label" for="currentPassword">Senha atual</label>
+                  <input class="form-input" type="password" id="currentPassword" placeholder="••••••••" autocomplete="current-password"/>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="newPassword">Nova senha</label>
+                  <input class="form-input" type="password" id="newPassword" placeholder="••••••••" autocomplete="new-password"/>
+                </div>
+              </div>
+              <div class="page-field-row full">
+                <div class="form-group">
+                  <label class="form-label" for="confirmPassword">Confirmar nova senha</label>
+                  <input class="form-input" type="password" id="confirmPassword" placeholder="••••••••" autocomplete="new-password"/>
+                </div>
+              </div>
+              <div class="account-form-actions">
+                <button class="btn btn-primary" type="submit" id="savePasswordBtn">Atualizar senha</button>
+              </div>
+            </form>
+          </section>
         </div>
-      </div>
-
-      <div class="page-section">
-        <div class="page-section-title">Informações pessoais</div>
-        <div class="page-section-sub">Seu nome e contato exibidos no sistema.</div>
-        <form id="profileForm" onsubmit="saveProfile(event)">
-          <div class="form-group" style="max-width:440px;">
-            <label class="form-label" for="profileName">Nome completo</label>
-            <input class="form-input" type="text" id="profileName" placeholder="Seu nome" autocomplete="name"/>
-          </div>
-          <div class="form-group" style="max-width:440px;">
-            <label class="form-label" for="profileEmail">E-mail</label>
-            <input class="form-input" type="email" id="profileEmail" placeholder="seu@email.com" autocomplete="email" readonly style="opacity:.6;cursor:not-allowed;" title="O e-mail não pode ser alterado aqui"/>
-          </div>
-          <div class="form-group" style="max-width:440px;">
-            <label class="form-label" for="profilePhone">Telefone</label>
-            <input class="form-input" type="tel" id="profilePhone" placeholder="(11) 99999-9999" autocomplete="tel"/>
-          </div>
-          <div style="margin-top:20px;">
-            <button class="btn btn-primary" type="submit" id="saveProfileBtn">Salvar alterações</button>
-          </div>
-        </form>
-      </div>
-
-      <div class="page-section">
-        <div class="page-section-title">Alterar senha</div>
-        <div class="page-section-sub">Escolha uma senha forte de pelo menos 8 caracteres.</div>
-        <form id="passwordForm" onsubmit="savePassword(event)">
-          <div class="form-group" style="max-width:440px;">
-            <label class="form-label" for="currentPassword">Senha atual</label>
-            <input class="form-input" type="password" id="currentPassword" placeholder="••••••••" autocomplete="current-password"/>
-          </div>
-          <div class="form-group" style="max-width:440px;">
-            <label class="form-label" for="newPassword">Nova senha</label>
-            <input class="form-input" type="password" id="newPassword" placeholder="••••••••" autocomplete="new-password"/>
-          </div>
-          <div class="form-group" style="max-width:440px;">
-            <label class="form-label" for="confirmPassword">Confirmar nova senha</label>
-            <input class="form-input" type="password" id="confirmPassword" placeholder="••••••••" autocomplete="new-password"/>
-          </div>
-          <div style="margin-top:20px;">
-            <button class="btn btn-primary" type="submit" id="savePasswordBtn">Atualizar senha</button>
-          </div>
-        </form>
       </div>
     </div>
   </main>
@@ -182,6 +263,6 @@
 <div class="toast" id="toast"></div>
 
 <script src="./js/admin-shell-core.js?v=20260421g"></script>
-<script src="./js/perfil-init.js?v=20260421g"></script>
+<script src="./js/perfil-init.js?v=20260421h"></script>
 </body>
 </html>

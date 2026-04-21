@@ -5817,3 +5817,345 @@ body {
     flex-direction: column;
   }
 }
+
+.page-shell {
+  max-width: 1180px;
+}
+
+.card-surface {
+  background:
+    radial-gradient(circle at top left, rgba(59, 130, 246, 0.08), transparent 34%),
+    linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+}
+
+.account-layout {
+  display: grid;
+  grid-template-columns: minmax(280px, 340px) minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.account-layout-settings {
+  grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
+}
+
+.account-hero {
+  position: sticky;
+  top: 88px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.account-hero-top {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.account-avatar-lg {
+  width: 88px;
+  height: 88px;
+  font-size: 30px;
+}
+
+.account-hero-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.account-hero-meta.compact {
+  gap: 6px;
+}
+
+.account-hero-name {
+  font-size: 22px;
+  line-height: 1.15;
+  font-weight: 800;
+  color: var(--dark);
+}
+
+.account-hero-role,
+.account-hero-email,
+.account-help-text,
+.account-help-item,
+.field-hint,
+.tenant-member-meta {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.account-help-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.account-help-item,
+.account-note-card,
+.account-empty-state {
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  background: rgba(248, 250, 252, 0.9);
+}
+
+.account-note-title,
+.tenant-member-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--dark);
+  margin-bottom: 6px;
+}
+
+.account-note-line {
+  font-size: 13px;
+  color: var(--text);
+}
+
+.account-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.account-stat-grid.single-column {
+  grid-template-columns: 1fr;
+}
+
+.account-stat-card {
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.05);
+}
+
+.account-stat-card strong {
+  display: block;
+  margin-top: 6px;
+  font-size: 18px;
+  color: var(--dark);
+}
+
+.account-stat-label {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
+
+.account-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.account-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(37, 99, 235, 0.08);
+  color: #1d4ed8;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.account-content-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.account-form-actions,
+.account-section-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 18px;
+}
+
+.account-textarea {
+  min-height: 120px;
+  resize: vertical;
+}
+
+.signature-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.signature-editor {
+  min-height: 160px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: #fff;
+  outline: none;
+}
+
+.signature-editor:focus {
+  border-color: rgba(37, 99, 235, 0.35);
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.08);
+}
+
+.tenant-team-list {
+  display: grid;
+  gap: 12px;
+}
+
+.tenant-member-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 18px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.94);
+}
+
+.tenant-member-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.btn-sm {
+  padding: 7px 12px;
+  font-size: 12px;
+}
+
+.portal-ui-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(15, 23, 42, 0.46);
+  backdrop-filter: blur(6px);
+}
+
+.portal-ui-modal,
+.portal-ui-drawer {
+  width: min(100%, 720px);
+  max-height: calc(100vh - 48px);
+  overflow: auto;
+  border-radius: 22px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  box-shadow: 0 32px 80px rgba(15, 23, 42, 0.22);
+}
+
+.portal-ui-drawer-overlay {
+  justify-content: flex-end;
+}
+
+.portal-ui-drawer {
+  width: min(100%, 560px);
+  height: calc(100vh - 48px);
+}
+
+.portal-ui-drawer-left {
+  margin-right: auto;
+}
+
+.portal-ui-modal-head,
+.portal-ui-drawer-head,
+.portal-ui-modal-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 22px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.16);
+}
+
+.portal-ui-modal-actions {
+  justify-content: flex-end;
+  border-top: 1px solid rgba(148, 163, 184, 0.16);
+  border-bottom: none;
+}
+
+.portal-ui-modal-body,
+.portal-ui-drawer-body {
+  padding: 20px 22px;
+}
+
+.portal-ui-modal-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--dark);
+}
+
+.portal-ui-modal-sub {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+.portal-ui-close {
+  width: 38px;
+  height: 38px;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--dark);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+@media (max-width: 960px) {
+  .account-layout,
+  .account-layout-settings {
+    grid-template-columns: 1fr;
+  }
+
+  .account-hero {
+    position: static;
+  }
+}
+
+@media (max-width: 768px) {
+  .account-stat-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .tenant-member-card {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .tenant-member-actions,
+  .account-form-actions,
+  .account-section-actions {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .tenant-member-actions .btn,
+  .account-form-actions .btn,
+  .account-section-actions .btn {
+    flex: 1;
+    justify-content: center;
+  }
+
+  .portal-ui-overlay {
+    padding: 12px;
+  }
+
+  .portal-ui-modal,
+  .portal-ui-drawer {
+    max-height: calc(100vh - 24px);
+    border-radius: 18px;
+  }
+}
