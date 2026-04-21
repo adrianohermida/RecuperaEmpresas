@@ -277,39 +277,70 @@ const app = {
     collectStepData(state.step);
     if (!validateStep(state.step)) return;
 
-    // Send completed step data to server
-    await notifyStepComplete(state.step);
-
     const idx = ACTIVE_STEP_IDS.indexOf(state.step);
     if (idx !== -1 && idx < ACTIVE_STEP_IDS.length - 1) {
-      state.step = ACTIVE_STEP_IDS[idx + 1];
+      const nextStepId = ACTIVE_STEP_IDS[idx + 1];
+      await notifyStepComplete(state.step, nextStepId);
+      state.step = nextStepId;
       renderStep(state.step);
       saveToLS();
+      await saveProgressRemote({ step: state.step, status: 'em_andamento', data: state.data }, { silent: true });
     }
   },
-  prevStep() {
+  async prevStep() {
     collectStepData(state.step);
     const idx = ACTIVE_STEP_IDS.indexOf(state.step);
     if (idx > 0) {
       state.step = ACTIVE_STEP_IDS[idx - 1];
       renderStep(state.step);
       saveToLS();
+      await saveProgressRemote({ step: state.step, status: 'em_andamento', data: state.data }, { silent: true });
     }
   },
-  saveProgress() {
+  async saveProgress() {
     collectStepData(state.step);
     saveToLS();
+    const ok = await saveProgressRemote({
+      step: state.step,
+      status: state.step > 1 ? 'em_andamento' : 'nao_iniciado',
+      data: state.data
+    }, { silent: true });
+    if (!ok) {
+      showToast('Salvamos neste navegador. A sincronização online vai tentar novamente.', 'warning', 5000);
+      return;
+    }
     showToast('Progresso salvo! Você pode fechar e continuar depois.', 'success', 4000);
   }
 };
 
 // ─── Per-step API notification ────────────────────────────────────────────────
-async function notifyStepComplete(stepNum) {
+async function saveProgressRemote(payload, options = {}) {
+  try {
+    const response = await fetch('/api/progress', {
+      method: 'PUT',
+      headers: authHeaders(),
+      body: JSON.stringify(payload)
+    });
+    if (!response.ok) {
+      console.warn('Progress sync failed:', response.status);
+      return false;
+    }
+    const json = await response.json();
+    if (json?.progress?.step) state.step = json.progress.step;
+    if (json?.progress?.data) Object.assign(state.data, json.progress.data);
+    return true;
+  } catch (e) {
+    if (!options.silent) console.warn('Progress sync failed:', e.message);
+    return false;
+  }
+}
+
+async function notifyStepComplete(stepNum, nextStep) {
   try {
     await fetch('/api/step-complete', {
       method: 'POST',
       headers: authHeaders(),
-      body: JSON.stringify({ stepNum, allData: state.data })
+      body: JSON.stringify({ stepNum, nextStep, allData: state.data })
     });
   } catch (e) { console.warn('Step notify failed:', e.message); }
 }
@@ -455,8 +486,10 @@ function showSuccessScreen() {
       const serverProgress = await pRes.json();
       // If already completed, go to dashboard
       if (serverProgress.completed) { window.REShared.redirectToRoute('dashboard'); return; }
-      if (serverProgress.step > 1 && serverProgress.data) {
+      if (serverProgress.data) {
         Object.assign(state.data, serverProgress.data);
+      }
+      if (serverProgress.step > 1) {
         // Snap to nearest active step if saved step is now disabled
         const savedStep = serverProgress.step;
         state.step = ACTIVE_STEP_IDS.includes(savedStep)

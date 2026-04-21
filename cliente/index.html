@@ -6,13 +6,17 @@
   <meta name="robots" content="noindex, nofollow"/>
   <title>Cliente - Recupera Empresas</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
-  <link rel="stylesheet" href="./css/portal.css?v=20260421l"/>
+  <link rel="stylesheet" href="./css/portal.css?v=20260421m"/>
   <script src="./js/config.js?v=20260420a"></script>
   <script src="./js/runtime-diagnostics.js?v=20260420a"></script>
   <script src="./js/api-base.js?v=20260420a"></script>
   <script src="./js/shared-utils.js?v=20260421k"></script>
   <style>
     .client-detail-page { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+    .client-header-inner { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 520px) auto; gap: 18px; align-items: center; }
+    .client-header-search { min-width: 0; }
+    .client-header-search .search-input { width: 100%; max-width: none; }
+    .client-header-right { justify-content: flex-end; }
     .client-detail-hero { border: 1px solid #dbe7ff; border-radius: 22px; padding: 20px; background: linear-gradient(135deg, #f8fbff 0%, #eef4ff 100%); }
     .client-detail-hero-row { display: flex; flex-direction: column; gap: 14px; }
     .client-detail-title-wrap { min-width: 0; }
@@ -39,6 +43,15 @@
     @media (min-width: 1180px) {
       .client-detail-summary-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     }
+    @media (max-width: 1024px) {
+      .client-header-inner { grid-template-columns: minmax(0, 1fr) auto; }
+      .client-header-search { grid-column: 1 / -1; order: 3; }
+    }
+    @media (max-width: 640px) {
+      .client-header-inner { gap: 12px; }
+      .client-header-right { gap: 8px; }
+      .client-detail-actions { display: grid; grid-template-columns: 1fr; }
+    }
   </style>
 </head>
 <body>
@@ -55,8 +68,8 @@
 </div>
 
 <header class="header">
-  <div class="header-inner">
-    <div class="logo">
+  <div class="header-inner client-header-inner">
+    <a class="logo" href="/admin" aria-label="Voltar ao painel do consultor">
       <svg width="36" height="30" viewBox="0 0 44 36" fill="none">
         <rect x="0" y="26" width="8" height="10" rx="4" fill="#4B9EFF"/>
         <rect x="12" y="18" width="8" height="18" rx="4" fill="#2B7FFF"/>
@@ -65,10 +78,37 @@
       </svg>
       <div>
         <div class="logo-text">Recupera Empresas</div>
-        <div class="logo-sub">Cliente 360°</div>
+        <div class="logo-sub">Cliente 360&#176;</div>
       </div>
-    </div>
-    <div class="header-right">
+    </a>
+    <form class="client-header-search" onsubmit="return clientPageSearch(event)">
+      <label class="search-wrap" aria-label="Busca global de clientes">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <input id="clientGlobalSearch" class="search-input" type="search" placeholder="Buscar cliente, e-mail ou empresa" autocomplete="off"/>
+      </label>
+    </form>
+    <div class="header-right client-header-right">
+      <div class="admin-notif-wrap" id="adminNotifBellWrap">
+        <button id="adminNotifBell" class="admin-notif-bell" onclick="toggleAdminNotifDropdown()" type="button" aria-label="Notificações">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+          </svg>
+          <span id="adminNotifBadge" class="admin-notif-badge">0</span>
+        </button>
+        <div id="adminNotifDropdown" class="admin-notif-dropdown">
+          <div class="admin-notif-dropdown-header">
+            <span class="admin-notif-dropdown-title">Notifica&ccedil;&otilde;es</span>
+            <button class="admin-notif-mark-all" onclick="adminMarkAllNotifRead()" type="button">Marcar todas</button>
+          </div>
+          <div id="adminNotifList" class="admin-notif-list">
+            <div class="admin-notif-empty">Carregando...</div>
+          </div>
+        </div>
+      </div>
       <span class="admin-badge">Admin</span>
       <button class="menu-toggle" id="menuToggle" onclick="toggleSidebar()" aria-label="Abrir menu">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
@@ -87,7 +127,7 @@
   <nav class="sidebar" id="appSidebar">
     <div class="sidebar-nav">
       <div class="sidebar-section">
-        <div class="sidebar-label">Navegação</div>
+        <div class="sidebar-label">Navega&ccedil;&atilde;o</div>
         <a href="/admin" class="sidebar-link active">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
           Clientes
@@ -130,7 +170,7 @@
           <div class="user-dropup-email" id="dropupUserEmail">-</div>
         </div>
         <a href="/perfil" class="user-dropup-item" role="menuitem">Meu Perfil</a>
-        <a href="/configuracoes" class="user-dropup-item" role="menuitem">Configurações</a>
+        <a href="/configuracoes" class="user-dropup-item" role="menuitem">Configura&ccedil;&otilde;es</a>
         <hr class="user-dropup-divider"/>
         <button class="user-dropup-item danger" onclick="logout()" role="menuitem">Sair</button>
       </div>
@@ -193,7 +233,7 @@
 
       <section class="client-detail-tabs-shell">
         <div class="client-detail-tabs" id="clientPageTabs">
-          <button class="client-detail-tab active" data-client-tab="overview" onclick="switchClientDetailTab('overview',this)">Visão Geral</button>
+          <button class="client-detail-tab active" data-client-tab="overview" onclick="switchClientDetailTab('overview',this)">Vis&atilde;o Geral</button>
           <button class="client-detail-tab" data-client-tab="plan" onclick="switchClientDetailTab('plan',this)">Business Plan</button>
           <button class="client-detail-tab" data-client-tab="tasks" onclick="switchClientDetailTab('tasks',this)">Tarefas</button>
           <button class="client-detail-tab" data-client-tab="messages" id="drawerTabMessages" onclick="switchClientDetailTab('messages',this)">Mensagens</button>
@@ -203,7 +243,7 @@
           <button class="client-detail-tab" data-client-tab="organograma" onclick="switchClientDetailTab('organograma',this)">Organograma</button>
           <button class="client-detail-tab" data-client-tab="credores" onclick="switchClientDetailTab('credores',this)">Credores</button>
           <button class="client-detail-tab" data-client-tab="fornecedores" onclick="switchClientDetailTab('fornecedores',this)">Fornecedores</button>
-          <button class="client-detail-tab" data-client-tab="funcionarios" onclick="switchClientDetailTab('funcionarios',this)">Funcionários</button>
+          <button class="client-detail-tab" data-client-tab="funcionarios" onclick="switchClientDetailTab('funcionarios',this)">Funcion&aacute;rios</button>
           <button class="client-detail-tab" data-client-tab="financeiro_client" onclick="switchClientDetailTab('financeiro_client',this)">Financeiro</button>
           <button class="client-detail-tab" data-client-tab="data" onclick="switchClientDetailTab('data',this)">Dados</button>
         </div>
@@ -217,16 +257,17 @@
 
 <div class="toast" id="toast"></div>
 
-<script src="./js/admin-modal-manager.js?v=20260421k"></script>
-<script src="./js/admin-shell-core.js?v=20260421k"></script>
-<script src="./js/admin-client-actions.js?v=20260421k"></script>
-<script src="./js/admin-client-actions-extended.js?v=20260421k"></script>
-<script src="./js/admin-agenda.js?v=20260421k"></script>
-<script src="./js/client-detail-tabs-primary.js?v=20260421k"></script>
-<script src="./js/client-detail-tabs-secondary.js?v=20260421k"></script>
-<script src="./js/client-detail-tabs-tertiary.js?v=20260421k"></script>
-<script src="./js/client-detail-data.js?v=20260421k"></script>
-<script src="./js/client-detail-exports.js?v=20260421k"></script>
-<script src="./js/client-detail-controller.js?v=20260421k"></script>
+<script src="./js/admin-modal-manager.js?v=20260421m"></script>
+<script src="./js/admin-shell-core.js?v=20260421m"></script>
+<script src="./js/admin-notifications.js?v=20260421m"></script>
+<script src="./js/admin-client-actions.js?v=20260421m"></script>
+<script src="./js/admin-client-actions-extended.js?v=20260421m"></script>
+<script src="./js/admin-agenda.js?v=20260421m"></script>
+<script src="./js/client-detail-tabs-primary.js?v=20260421m"></script>
+<script src="./js/client-detail-tabs-secondary.js?v=20260421m"></script>
+<script src="./js/client-detail-tabs-tertiary.js?v=20260421m"></script>
+<script src="./js/client-detail-data.js?v=20260421m"></script>
+<script src="./js/client-detail-exports.js?v=20260421m"></script>
+<script src="./js/client-detail-controller.js?v=20260421m"></script>
 </body>
 </html>

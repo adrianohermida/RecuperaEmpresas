@@ -90,6 +90,18 @@
     if (agendaLink) agendaLink.href = '#agenda';
   }
 
+  function clientPageSearch(event) {
+    if (event) event.preventDefault();
+    const input = document.getElementById('clientGlobalSearch');
+    const query = String(input?.value || '').trim();
+    if (!query) {
+      input?.focus();
+      return false;
+    }
+    window.location.href = '/admin?q=' + encodeURIComponent(query);
+    return false;
+  }
+
   function updatePageHeader(user) {
     const title = getTitleElement();
     const subtitle = getSubtitleElement();
@@ -316,6 +328,7 @@
     document.body.dataset.reAdminAuthReady = '1';
     document.getElementById('authGuard')?.remove();
     window.REAdminModal?.init?.();
+    window.startAdminNotifPolling?.();
 
     const params = new URLSearchParams(window.location.search);
     const clientId = params.get('id');
@@ -355,6 +368,7 @@
   window.closeDrawer = closeClientDetail;
   window.switchDrawerTab = switchClientDetailTab;
   window.renderDrawerTab = renderClientDetailTab;
+  window.clientPageSearch = clientPageSearch;
 
   document.addEventListener('DOMContentLoaded', function () {
     initClientPage().catch(function (error) {

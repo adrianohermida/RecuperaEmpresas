@@ -305,11 +305,10 @@ const app = {
       status: state.step > 1 ? 'em_andamento' : 'nao_iniciado',
       data: state.data
     }, { silent: true });
-    if (ok) {
-      showToast('Progresso salvo! Você pode fechar e continuar depois.', 'success', 4000);
+    if (!ok) {
+      showToast('Salvamos neste navegador. A sincronização online vai tentar novamente.', 'warning', 5000);
       return;
     }
-    showToast('Salvamos neste navegador. A sincronização online vai tentar novamente.', 'warning', 5000);
     showToast('Progresso salvo! Você pode fechar e continuar depois.', 'success', 4000);
   }
 };
