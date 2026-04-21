@@ -27,11 +27,12 @@ function matchesWorkerRoute(pathname, patterns) {
   });
 }
 
-function resolveTargetBase(pathname, env) {
+function resolveTargetBase(pathname, method, env) {
   const legacyBase = trimBase(env.RE_API_BASE || DEFAULT_LEGACY_API_BASE);
   const workerBase = trimBase(env.RE_API_WORKER_BASE || DEFAULT_WORKER_API_BASE);
   const workerRoutes = parseWorkerRoutes(env.RE_API_WORKER_ROUTES);
 
+  if (workerBase && method === 'DELETE' && /^\/api\/admin\/client\/[^/]+$/.test(pathname)) return workerBase;
   if (workerBase && matchesWorkerRoute(pathname, workerRoutes)) return workerBase;
   if (legacyBase) return legacyBase;
   if (workerBase) return workerBase;
@@ -41,7 +42,7 @@ function resolveTargetBase(pathname, env) {
 export async function onRequest(context) {
   const { request, env } = context;
   const incomingUrl = new URL(request.url);
-  const targetBase = resolveTargetBase(incomingUrl.pathname, env);
+  const targetBase = resolveTargetBase(incomingUrl.pathname, request.method, env);
 
   const targetUrl = new URL(`${incomingUrl.pathname}${incomingUrl.search}`, `${targetBase}/`);
 
