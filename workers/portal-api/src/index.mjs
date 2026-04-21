@@ -101,7 +101,7 @@ async function routeAdmin(request, env, pathname, executionCtx) {
   params = match(pathname, /^\/api\/admin\/audit-log(?:\/(?<action>export))?$/);
   if (params) return handleAdminReadModels(request, { ...auth, env, executionCtx, params, scope: 'admin' });
 
-  params = match(pathname, /^\/api\/admin\/invoices(?:\/(?<id>[^/]+)\/(?<action>pdf))?$/);
+  params = match(pathname, /^\/api\/admin\/invoices(?:\/(?<rest>.*))?$/);
   if (params) return handleAdminReadModels(request, { ...auth, env, executionCtx, params, scope: 'admin' });
 
   params = match(pathname, /^\/api\/admin\/services$/);
@@ -113,7 +113,7 @@ async function routeAdmin(request, env, pathname, executionCtx) {
   params = match(pathname, /^\/api\/admin\/forms(?:\/(?<id>[^/]+))?$/);
   if (params) return handleAdminReadModels(request, { ...auth, env, executionCtx, params, scope: 'admin' });
 
-  params = match(pathname, /^\/api\/admin\/journeys(?:\/(?<id>[^/]+)(?:\/(?<action>assignments)(?:\/(?<asnId>[^/]+)\/progress)?)?)?$/);
+  params = match(pathname, /^\/api\/admin\/journeys(?:\/(?<rest>.*))?$/);
   if (params) return handleAdminReadModels(request, { ...auth, env, executionCtx, params, scope: 'admin' });
 
   params = match(pathname, /^\/api\/admin\/agenda\/slots$/);

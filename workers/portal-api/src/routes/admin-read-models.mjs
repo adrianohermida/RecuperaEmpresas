@@ -1,4 +1,5 @@
-import { json, methodNotAllowed } from '../lib/http.mjs';
+import { auditLog, emailWrapper, getBaseUrl, pushNotification, queueSideEffect, sendMail } from '../lib/effects.mjs';
+import { json, methodNotAllowed, readJson } from '../lib/http.mjs';
 
 const FORM_CONFIG_DEFAULTS = {
   steps: [
@@ -321,8 +322,164 @@ async function handleAuditLog(request, context) {
 }
 
 async function handleInvoices(request, context) {
-  if (request.method !== 'GET') return methodNotAllowed();
   const url = new URL(request.url);
+  const pathname = url.pathname;
+  const invoiceMatch = pathname.match(/^\/api\/admin\/invoices(?:\/(?<id>[^/]+)(?:\/(?<action>pdf|send-email))?)?$/);
+  const invoiceId = invoiceMatch?.groups?.id || null;
+  const action = invoiceMatch?.groups?.action || null;
+
+  if (!invoiceId && request.method === 'POST') {
+    const body = await readJson(request);
+    if (!body.user_id || !body.description || !body.amount_cents || !body.due_date) {
+      return json({ error: 'user_id, description, amount_cents e due_date sao obrigatorios.' }, { status: 400 });
+    }
+
+    const invoiceUser = await maybeSingle(
+      context.sb.from('re_users').select('id,email,name,company').eq('id', body.user_id)
+    );
+    if (!invoiceUser) {
+      return json({ error: 'Cliente informado nao foi encontrado para a cobranca.' }, { status: 400 });
+    }
+
+    const { data: invoice, error } = await context.sb.from('re_invoices').insert({
+      user_id: body.user_id,
+      description: String(body.description).trim(),
+      amount_cents: Number.parseInt(body.amount_cents, 10),
+      due_date: body.due_date,
+      status: 'pending',
+      payment_method: body.payment_method || 'boleto',
+      bank_data: body.bank_data || null,
+      notes: body.notes || null,
+      created_by: context.user.id,
+    }).select('*').single();
+    if (error) return json({ error: error.message }, { status: 500 });
+
+    queueSideEffect(context, async () => {
+      await pushNotification(
+        context.sb,
+        body.user_id,
+        'payment',
+        'Nova cobranca disponivel',
+        `${invoice.description} — vencimento: ${new Date(`${invoice.due_date}T12:00:00`).toLocaleDateString('pt-BR')}`,
+        'invoice',
+        invoice.id
+      );
+
+      await auditLog(context.sb, {
+        actorId: context.user.id,
+        actorEmail: context.user.email,
+        actorRole: 'admin',
+        entityType: 'invoice',
+        entityId: invoice.id,
+        action: 'create',
+        after: {
+          user_id: invoice.user_id,
+          description: invoice.description,
+          amount_cents: invoice.amount_cents,
+          due_date: invoice.due_date,
+        },
+      });
+    }, 'admin-invoice-create');
+
+    return json({ success: true, invoice });
+  }
+
+  if (invoiceId && request.method === 'PUT') {
+    const body = await readJson(request);
+    const before = await maybeSingle(context.sb.from('re_invoices').select('*').eq('id', invoiceId));
+    if (!before) return json({ error: 'Boleto nao encontrado.' }, { status: 404 });
+
+    const updates = {};
+    if (body.status !== undefined) updates.status = body.status;
+    if (body.paid_at !== undefined) updates.paid_at = body.paid_at;
+    if (body.notes !== undefined) updates.notes = body.notes;
+    if (body.bank_data !== undefined) updates.bank_data = body.bank_data;
+
+    const { data: invoice, error } = await context.sb.from('re_invoices').update(updates).eq('id', invoiceId).select('*').single();
+    if (error) return json({ error: error.message }, { status: 500 });
+
+    queueSideEffect(context, async () => {
+      if (updates.status && updates.status !== before.status) {
+        const labels = {
+          paid: 'Pagamento confirmado',
+          overdue: 'Boleto vencido',
+          cancelled: 'Boleto cancelado',
+        };
+        if (labels[updates.status]) {
+          await pushNotification(context.sb, before.user_id, 'payment', labels[updates.status], before.description, 'invoice', invoiceId);
+        }
+      }
+
+      await auditLog(context.sb, {
+        actorId: context.user.id,
+        actorEmail: context.user.email,
+        actorRole: 'admin',
+        entityType: 'invoice',
+        entityId: invoiceId,
+        action: 'update',
+        before,
+        after: updates,
+      });
+    }, 'admin-invoice-update');
+
+    return json({ success: true, invoice });
+  }
+
+  if (invoiceId && request.method === 'DELETE') {
+    const before = await maybeSingle(context.sb.from('re_invoices').select('*').eq('id', invoiceId));
+    if (!before) return json({ error: 'Boleto nao encontrado.' }, { status: 404 });
+
+    const { error } = await context.sb.from('re_invoices').update({ status: 'cancelled' }).eq('id', invoiceId);
+    if (error) return json({ error: error.message }, { status: 500 });
+
+    queueSideEffect(context, () => auditLog(context.sb, {
+      actorId: context.user.id,
+      actorEmail: context.user.email,
+      actorRole: 'admin',
+      entityType: 'invoice',
+      entityId: invoiceId,
+      action: 'cancel',
+      before: { status: before.status },
+      after: { status: 'cancelled' },
+    }), 'admin-invoice-cancel');
+
+    return json({ success: true });
+  }
+
+  if (invoiceId && action === 'send-email' && request.method === 'POST') {
+    const invoice = await maybeSingle(
+      context.sb.from('re_invoices').select('*,re_users!re_invoices_user_id_fkey(name,email)').eq('id', invoiceId)
+    );
+    if (!invoice) return json({ error: 'Boleto nao encontrado.' }, { status: 404 });
+
+    const client = invoice.re_users || {};
+    const amountFormatted = ((invoice.amount_cents || 0) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    const dueFormatted = new Date(`${invoice.due_date}T12:00:00`).toLocaleDateString('pt-BR');
+    const portalUrl = `${getBaseUrl(context.env)}/dashboard.html`;
+
+    queueSideEffect(context, async () => {
+      await sendMail(context.env, {
+        to: client.email,
+        subject: `Boleto disponivel: ${invoice.description}`,
+        html: emailWrapper('Nova cobranca disponivel', `
+          <p>Ola, ${client.name || 'Cliente'}!</p>
+          <p>Uma nova cobranca foi disponibilizada no seu portal:</p>
+          <ul>
+            <li><strong>Descricao:</strong> ${invoice.description}</li>
+            <li><strong>Valor:</strong> ${amountFormatted}</li>
+            <li><strong>Vencimento:</strong> ${dueFormatted}</li>
+          </ul>
+          <p><a href="${portalUrl}">Acessar portal</a></p>
+        `),
+      });
+      await context.sb.from('re_invoices').update({ email_sent_at: new Date().toISOString() }).eq('id', invoiceId);
+    }, 'admin-invoice-email');
+
+    return json({ success: true });
+  }
+
+  if (request.method !== 'GET') return methodNotAllowed();
+
   const status = url.searchParams.get('status');
   const userId = url.searchParams.get('user_id');
   const from = url.searchParams.get('from');
@@ -343,9 +500,9 @@ async function handleInvoices(request, context) {
   const { data, error, count } = await query;
   if (error) throw error;
 
-  if (context.params.id && context.params.action === 'pdf') {
-    const invoice = (data || []).find((item) => item.id === context.params.id)
-      || await maybeSingle(context.sb.from('re_invoices').select('*').eq('id', context.params.id));
+  if (invoiceId && action === 'pdf') {
+    const invoice = (data || []).find((item) => item.id === invoiceId)
+      || await maybeSingle(context.sb.from('re_invoices').select('*').eq('id', invoiceId));
     if (!invoice) return json({ error: 'Boleto nao encontrado.' }, { status: 404 });
     return json({
       error: 'Geracao de PDF ainda nao portada para o Worker.',
@@ -431,8 +588,148 @@ async function handleForms(request, context) {
 }
 
 async function handleJourneys(request, context) {
+  const pathname = new URL(request.url).pathname;
+  const journeyMatch = pathname.match(/^\/api\/admin\/journeys(?:\/(?<id>[^/]+)(?:\/(?<section>steps|assignments)(?:\/(?<itemId>[^/]+)(?:\/(?<subaction>progress|complete-step))?)?)?)?$/);
+  const id = journeyMatch?.groups?.id || null;
+  const section = journeyMatch?.groups?.section || null;
+  const itemId = journeyMatch?.groups?.itemId || null;
+  const subaction = journeyMatch?.groups?.subaction || null;
+
+  if (!id && request.method === 'POST') {
+    const body = await readJson(request);
+    if (!body.name) return json({ error: 'Nome e obrigatorio.' }, { status: 400 });
+    const { data, error } = await context.sb.from('re_journeys').insert({
+      name: body.name,
+      description: body.description || null,
+      status: body.status || 'draft',
+      created_by: context.user.id,
+    }).select().single();
+    if (error) return json({ error: error.message }, { status: 500 });
+    return json(data);
+  }
+
+  if (id && !section && request.method === 'PUT') {
+    const body = await readJson(request);
+    const updates = {};
+    if (body.name !== undefined) updates.name = body.name;
+    if (body.description !== undefined) updates.description = body.description;
+    if (body.status !== undefined) updates.status = body.status;
+    const { data, error } = await context.sb.from('re_journeys').update(updates).eq('id', id).select().single();
+    if (error) return json({ error: error.message }, { status: 500 });
+    return json(data);
+  }
+
+  if (id && !section && request.method === 'DELETE') {
+    const journey = await maybeSingle(context.sb.from('re_journeys').select('is_system').eq('id', id));
+    if (journey?.is_system) return json({ error: 'Jornadas do sistema nao podem ser excluidas.' }, { status: 403 });
+    const { error } = await context.sb.from('re_journeys').delete().eq('id', id);
+    if (error) return json({ error: error.message }, { status: 500 });
+    return json({ success: true });
+  }
+
+  if (id && section === 'steps' && !itemId && request.method === 'POST') {
+    const body = await readJson(request);
+    if (!body.title) return json({ error: 'Titulo da etapa e obrigatorio.' }, { status: 400 });
+    const { count } = await context.sb.from('re_journey_steps').select('id', { count: 'exact', head: true }).eq('journey_id', id);
+    const { data, error } = await context.sb.from('re_journey_steps').insert({
+      journey_id: id,
+      form_id: body.form_id || null,
+      title: body.title,
+      description: body.description || null,
+      order_index: count || 0,
+      is_optional: !!body.is_optional,
+      unlock_condition: body.unlock_condition || {},
+    }).select().single();
+    if (error) return json({ error: error.message }, { status: 500 });
+    return json(data);
+  }
+
+  if (id && section === 'steps' && itemId === 'reorder' && request.method === 'POST') {
+    const body = await readJson(request);
+    if (!Array.isArray(body.order)) return json({ error: 'order deve ser um array.' }, { status: 400 });
+    for (const entry of body.order) {
+      await context.sb.from('re_journey_steps').update({ order_index: entry.order_index }).eq('id', entry.id).eq('journey_id', id);
+    }
+    return json({ success: true });
+  }
+
+  if (id && section === 'steps' && itemId && request.method === 'PUT') {
+    const body = await readJson(request);
+    const updates = {};
+    if (body.title !== undefined) updates.title = body.title;
+    if (body.description !== undefined) updates.description = body.description;
+    if (body.form_id !== undefined) updates.form_id = body.form_id || null;
+    if (body.is_optional !== undefined) updates.is_optional = !!body.is_optional;
+    if (body.order_index !== undefined) updates.order_index = body.order_index;
+    if (body.unlock_condition !== undefined) updates.unlock_condition = body.unlock_condition;
+    const { data, error } = await context.sb.from('re_journey_steps').update(updates).eq('id', itemId).eq('journey_id', id).select().single();
+    if (error) return json({ error: error.message }, { status: 500 });
+    return json(data);
+  }
+
+  if (id && section === 'steps' && itemId && request.method === 'DELETE') {
+    const { error } = await context.sb.from('re_journey_steps').delete().eq('id', itemId).eq('journey_id', id);
+    if (error) return json({ error: error.message }, { status: 500 });
+    return json({ success: true });
+  }
+
+  if (id && section === 'assignments' && !itemId && request.method === 'POST') {
+    const body = await readJson(request);
+    if (!body.user_id) return json({ error: 'user_id e obrigatorio.' }, { status: 400 });
+    const { data, error } = await context.sb.from('re_journey_assignments').upsert({
+      journey_id: id,
+      user_id: body.user_id,
+      assigned_by: context.user.id,
+      status: 'active',
+      notes: body.notes || null,
+    }, { onConflict: 'journey_id,user_id' }).select().single();
+    if (error) return json({ error: error.message }, { status: 500 });
+    return json(data);
+  }
+
+  if (id && section === 'assignments' && itemId && !subaction && request.method === 'PUT') {
+    const body = await readJson(request);
+    const updates = {};
+    if (body.status !== undefined) updates.status = body.status;
+    if (body.notes !== undefined) updates.notes = body.notes;
+    if (body.current_step_index !== undefined) updates.current_step_index = body.current_step_index;
+    if (body.status === 'completed') updates.completed_at = new Date().toISOString();
+    const { data, error } = await context.sb.from('re_journey_assignments').update(updates).eq('id', itemId).select().single();
+    if (error) return json({ error: error.message }, { status: 500 });
+    return json(data);
+  }
+
+  if (id && section === 'assignments' && itemId && !subaction && request.method === 'DELETE') {
+    const { error } = await context.sb.from('re_journey_assignments').delete().eq('id', itemId).eq('journey_id', id);
+    if (error) return json({ error: error.message }, { status: 500 });
+    return json({ success: true });
+  }
+
+  if (id && section === 'assignments' && itemId && subaction === 'complete-step' && request.method === 'POST') {
+    const body = await readJson(request);
+    if (!body.step_id) return json({ error: 'step_id e obrigatorio.' }, { status: 400 });
+
+    await context.sb.from('re_journey_step_completions').upsert({
+      assignment_id: itemId,
+      step_id: body.step_id,
+      form_response_id: body.form_response_id || null,
+      notes: body.notes || null,
+      completed_at: new Date().toISOString(),
+    }, { onConflict: 'assignment_id,step_id' });
+
+    const steps = await list(context.sb.from('re_journey_steps').select('id,order_index').eq('journey_id', id).order('order_index'));
+    const completedIdx = steps.findIndex((step) => step.id === body.step_id);
+    const nextIdx = completedIdx + 1;
+    if (nextIdx < steps.length) {
+      await context.sb.from('re_journey_assignments').update({ current_step_index: nextIdx }).eq('id', itemId);
+    } else {
+      await context.sb.from('re_journey_assignments').update({ status: 'completed', completed_at: new Date().toISOString() }).eq('id', itemId);
+    }
+    return json({ success: true });
+  }
+
   if (request.method !== 'GET') return methodNotAllowed();
-  const { id, asnId } = context.params;
+  const asnId = section === 'assignments' ? itemId : null;
 
   if (!id) {
     const journeys = await list(context.sb.from('re_journeys').select('*').order('created_at', { ascending: false }));
@@ -460,7 +757,7 @@ async function handleJourneys(request, context) {
     });
   }
 
-  if (context.params.action === 'assignments') {
+  if (section === 'assignments' && !asnId) {
     const assignments = await list(
       context.sb.from('re_journey_assignments').select('*,re_users(id,name,email,company)').eq('journey_id', id).order('assigned_at', { ascending: false })
     );
@@ -541,11 +838,11 @@ export async function handleAdminReadModels(request, context) {
   if (pathname === '/api/admin/financial') return handleFinancial(request, context);
   if (pathname === '/api/admin/form-config') return handleFormConfig(request, context);
   if (/^\/api\/admin\/audit-log(?:\/export)?$/.test(pathname)) return handleAuditLog(request, context);
-  if (/^\/api\/admin\/invoices(?:\/[^/]+\/pdf)?$/.test(pathname)) return handleInvoices(request, context);
+  if (/^\/api\/admin\/invoices(?:\/.*)?$/.test(pathname)) return handleInvoices(request, context);
   if (pathname === '/api/admin/services') return handleServices(request, context);
   if (pathname === '/api/admin/service-orders') return handleServiceOrders(request, context);
   if (/^\/api\/admin\/forms(?:\/[^/]+)?$/.test(pathname)) return handleForms(request, context);
-  if (/^\/api\/admin\/journeys(?:\/[^/]+(?:\/assignments(?:\/[^/]+\/progress)?)?)?$/.test(pathname)) return handleJourneys(request, context);
+  if (/^\/api\/admin\/journeys(?:\/.*)?$/.test(pathname)) return handleJourneys(request, context);
   if (pathname === '/api/admin/agenda/slots') return handleAgendaSlots(request, context);
 
   return null;
