@@ -3333,6 +3333,47 @@ body {
 .agenda-slot-link-wrap {
   font-size: 11px; margin-top: 3px;
 }
+/* ─── Agenda sub-tab strip ─────────────────────────────────────────────────── */
+.agenda-tab-strip {
+  display: flex; gap: 4px; margin-bottom: 20px;
+  border-bottom: 2px solid #E2E8F0; padding-bottom: 0;
+}
+.agenda-tab {
+  padding: 8px 16px; font-size: 13px; font-weight: 600;
+  color: #64748B; background: none; border: none; cursor: pointer;
+  border-bottom: 2px solid transparent; margin-bottom: -2px;
+  border-radius: 6px 6px 0 0; transition: color .15s, border-color .15s;
+}
+.agenda-tab:hover { color: #1e3a5f; }
+.agenda-tab.agenda-tab-active {
+  color: #1A56DB; border-bottom-color: #1A56DB; background: #EFF6FF;
+}
+.agenda-tab-panel { /* each panel is shown/hidden via hidden attr */ }
+
+/* ─── All-bookings flat list ───────────────────────────────────────────────── */
+.agenda-bookings-filter-bar {
+  display: flex; gap: 8px; align-items: center; margin-bottom: 16px; flex-wrap: wrap;
+}
+.agenda-bookings-filter-select {
+  max-width: 220px; font-size: 13px;
+}
+.agenda-bookings-filter-refresh {
+  font-size: 12px; padding: 6px 12px; display: flex; align-items: center; gap: 5px;
+}
+.agenda-all-bookings-list {
+  display: flex; flex-direction: column; gap: 8px;
+}
+.agenda-all-booking-row {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+  background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 12px 14px;
+  flex-wrap: wrap;
+}
+.agenda-all-booking-main { flex: 1; min-width: 0; }
+.agenda-all-booking-client { font-weight: 600; font-size: 13px; color: #1e3a5f; }
+.agenda-all-booking-slot { font-size: 12px; color: #64748B; margin-top: 2px; }
+.agenda-all-booking-actions {
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap; flex-shrink: 0;
+}
 .agenda-slot-link {
   color: #1e3a5f; text-decoration: none;
 }
@@ -3431,7 +3472,14 @@ body {
   margin-bottom: 20px;
 }
 .agenda-avail-title {
-  font-size: 13px; font-weight: 600; color: #1e3a5f; margin-bottom: 10px;
+  font-size: 13px; font-weight: 600; color: #1e3a5f; margin-bottom: 4px;
+  display: flex; align-items: center; gap: 8px;
+}
+.agenda-avail-connected {
+  font-size: 11px; font-weight: 600; color: #16A34A;
+}
+.agenda-avail-hint {
+  font-size: 11px; color: #94A3B8; margin-bottom: 10px;
 }
 .agenda-avail-grid {
   display: flex; flex-wrap: wrap; gap: 8px;

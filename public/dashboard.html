@@ -948,12 +948,51 @@ async function initFreshchat(user) {
 <script src="/js/form-player.js?v=20260421s"></script>
 
 <script>
-function initFreshdesk() {
-  window.fdWidget.init({
-    token: "01KNPXYJ04R918TJ5N8JQ4SQGS",
-    host: "https://recuperaempresas-support.freshdesk.com",
-    widgetId: "01KNPXYMGGC0AE5Z819T8PVDWG"
-  });
+async function initFreshdesk() {
+  try {
+    // Obter token JWT para autenticação
+    const tokenRes = await fetch('/api/freshchat-token', {
+      method: 'GET',
+      headers: {
+        'Authorization': 'Bearer ' + (window.REShared?.getStoredToken?.() || localStorage.getItem('re_token')),
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    if (!tokenRes.ok) {
+      console.warn('[RE:Freshdesk] Failed to obtain JWT token:', tokenRes.status);
+      // Fallback: inicializar sem JWT (apenas com token público)
+      window.fdWidget.init({
+        token: "01KNPXYJ04R918TJ5N8JQ4SQGS",
+        host: "https://recuperaempresas-support.freshdesk.com",
+        widgetId: "01KNPXYMGGC0AE5Z819T8PVDWG"
+      });
+      return;
+    }
+    
+    const tokenData = await tokenRes.json();
+    if (!tokenData.token) {
+      console.warn('[RE:Freshdesk] No JWT token in response');
+      return;
+    }
+    
+    // Inicializar com JWT token
+    window.fdWidget.init({
+      token: "01KNPXYJ04R918TJ5N8JQ4SQGS",
+      host: "https://recuperaempresas-support.freshdesk.com",
+      widgetId: "01KNPXYMGGC0AE5Z819T8PVDWG",
+      jwtAuthToken: tokenData.token
+    });
+    
+  } catch (error) {
+    console.warn('[RE:Freshdesk] Error initializing Freshdesk:', error);
+    // Fallback
+    window.fdWidget.init({
+      token: "01KNPXYJ04R918TJ5N8JQ4SQGS",
+      host: "https://recuperaempresas-support.freshdesk.com",
+      widgetId: "01KNPXYMGGC0AE5Z819T8PVDWG"
+    });
+  }
 }
 
 function initialize(i,t){var e;i.getElementById(t)?initFreshdesk():((e=i.createElement("script")).id=t,e.async=!0,e.src="https://recuperaempresas-support.freshdesk.com/webchat/js/widget.js",e.onload=initFreshdesk,i.head.appendChild(e))}function initiateCall(){initialize(document,"Freshdesk-js-sdk")}window.addEventListener?window.addEventListener("load",initiateCall,!1):window.attachEvent("load",initiateCall,!1);
