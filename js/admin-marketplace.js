@@ -43,6 +43,11 @@
             </tr></thead>
             <tbody>${services.map(service => {
               const serviceName = service.name || service.title || '—';
+              const serviceIdJs = mktEscInline(service.id);
+              const serviceNameJs = mktEscInline(serviceName);
+              const categoryJs = mktEscInline(service.category || '');
+              const descriptionJs = mktEscInline(service.description || '');
+              const journeyIdJs = mktEscInline(service.journey_id || '');
               const price = ((service.price_cents || Math.round((service.price || 0) * 100)) / 100)
                 .toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
               const journeyName = service.journey_id ? (journeyMap[service.journey_id] || service.journey_id) : '—';
@@ -53,9 +58,9 @@
                 <td class="mkt-table-price">${price}</td>
                 <td><span class="badge ${service.active ? 'badge-green' : 'badge-gray'}">${service.active ? 'Ativo' : 'Inativo'}</span></td>
                 <td class="mkt-table-actions">
-                  <button onclick="openEditServiceModal('${service.id}','${escHtml(serviceName)}','${escHtml(service.category || '')}','${escHtml(service.description || '')}',${service.price_cents || Math.round((service.price || 0) * 100)},'${service.journey_id || ''}')"
+                  <button onclick="openEditServiceModal('${serviceIdJs}','${serviceNameJs}','${categoryJs}','${descriptionJs}',${service.price_cents || Math.round((service.price || 0) * 100)},'${journeyIdJs}')"
                     class="mkt-action-btn">Editar</button>
-                  <button onclick="toggleService('${service.id}',${!service.active})"
+                  <button onclick="toggleService('${serviceIdJs}',${!service.active})"
                     class="mkt-action-btn">
                     ${service.active ? 'Desativar' : 'Ativar'}
                   </button>
@@ -240,3 +245,13 @@
 
 console.info('[RE:admin-marketplace] loaded');
 })();
+
+function mktEscInline(value) {
+  return String(value == null ? '' : value)
+    .replace(/\\/g, '\\\\')
+    .replace(/'/g, "\\'")
+    .replace(/\r/g, '\\r')
+    .replace(/\n/g, '\\n')
+    .replace(/\u2028/g, '\\u2028')
+    .replace(/\u2029/g, '\\u2029');
+}

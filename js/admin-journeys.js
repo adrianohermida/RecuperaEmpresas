@@ -73,7 +73,7 @@
         </div>
         <div class="jrn-list-card-actions">
           <button class="btn-primary jrn-action-btn" onclick="event.stopPropagation();jrnOpenEditor('${journey.id}')">Gerenciar</button>
-          <button class="btn-ghost jrn-action-btn jrn-action-btn-danger" onclick="event.stopPropagation();jrnDelete('${journey.id}','${jrnEsc(journey.name)}')">Excluir</button>
+          <button class="btn-ghost jrn-action-btn jrn-action-btn-danger" onclick="event.stopPropagation();jrnDelete('${jrnEscInline(journey.id)}','${jrnEscInline(journey.name)}')">Excluir</button>
         </div>
       </div>
     `).join('');
@@ -118,10 +118,10 @@
           ${step.is_optional ? '<div class="jrn-step-optional">Opcional</div>' : ''}
         </div>
         <div class="jrn-step-actions">
-          <button class="btn-ghost jrn-mini-btn" onclick="jrnEditStep('${step.id}','${jrnEsc(step.title)}','${jrnEsc(step.description || '')}','${step.form_id || ''}',${step.is_optional})">✏️</button>
-          <button class="btn-ghost jrn-mini-btn jrn-mini-btn-danger" onclick="jrnDeleteStep('${step.id}')">🗑️</button>
-          ${index > 0 ? `<button class="btn-ghost jrn-mini-btn" onclick="jrnMoveStep('${step.id}','up')">↑</button>` : ''}
-          ${index < steps.length - 1 ? `<button class="btn-ghost jrn-mini-btn" onclick="jrnMoveStep('${step.id}','down')">↓</button>` : ''}
+          <button class="btn-ghost jrn-mini-btn" onclick="jrnEditStep('${jrnEscInline(step.id)}','${jrnEscInline(step.title)}','${jrnEscInline(step.description || '')}','${jrnEscInline(step.form_id || '')}',${step.is_optional})">✏️</button>
+          <button class="btn-ghost jrn-mini-btn jrn-mini-btn-danger" onclick="jrnDeleteStep('${jrnEscInline(step.id)}')">🗑️</button>
+          ${index > 0 ? `<button class="btn-ghost jrn-mini-btn" onclick="jrnMoveStep('${jrnEscInline(step.id)}','up')">↑</button>` : ''}
+          ${index < steps.length - 1 ? `<button class="btn-ghost jrn-mini-btn" onclick="jrnMoveStep('${jrnEscInline(step.id)}','down')">↓</button>` : ''}
         </div>
       </div>
     `).join('');
@@ -153,8 +153,8 @@
           <div class="jrn-assignment-email">${jrnEsc(user.email || '')}</div>
         </div>
         <span class="jrn-status-pill ${jrnStatusClass(assignment.status)}">${statusLabel[assignment.status] || assignment.status}</span>
-        <button class="btn-ghost jrn-mini-btn" onclick="jrnViewProgress('${id}','${assignment.id}','${jrnEsc(user.name || user.email || '')}')">Ver progresso</button>
-        <button class="btn-ghost jrn-mini-btn jrn-mini-btn-danger" onclick="jrnRemoveAssignment('${id}','${assignment.id}')">✕</button>
+        <button class="btn-ghost jrn-mini-btn" onclick="jrnViewProgress('${jrnEscInline(id)}','${jrnEscInline(assignment.id)}','${jrnEscInline(user.name || user.email || '')}')">Ver progresso</button>
+        <button class="btn-ghost jrn-mini-btn jrn-mini-btn-danger" onclick="jrnRemoveAssignment('${jrnEscInline(id)}','${jrnEscInline(assignment.id)}')">✕</button>
       </div>`;
     }).join('');
   }
@@ -195,7 +195,7 @@
               <div class="jrn-progress-step-title">${jrnEsc(step.title)}</div>
               ${step.completed_at ? `<div class="jrn-progress-step-meta jrn-progress-step-meta-done">Concluído em ${new Date(step.completed_at).toLocaleString('pt-BR')}</div>` : '<div class="jrn-progress-step-meta">Pendente</div>'}
             </div>
-            ${!step.completed ? `<button class="btn-ghost jrn-mini-btn" onclick="jrnMarkStepDone('${journeyId}','${assignmentId}','${step.id}','${clientName}')">Marcar concluído</button>` : ''}
+            ${!step.completed ? `<button class="btn-ghost jrn-mini-btn" onclick="jrnMarkStepDone('${jrnEscInline(journeyId)}','${jrnEscInline(assignmentId)}','${jrnEscInline(step.id)}','${jrnEscInline(clientName)}')">Marcar concluído</button>` : ''}
           </div>
         `).join('')}
       </div>`;
@@ -237,6 +237,16 @@
 
   function jrnEsc(value) {
     return String(value || '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
+  }
+
+  function jrnEscInline(value) {
+    return String(value == null ? '' : value)
+      .replace(/\\/g, '\\\\')
+      .replace(/'/g, "\\'")
+      .replace(/\r/g, '\\r')
+      .replace(/\n/g, '\\n')
+      .replace(/\u2028/g, '\\u2028')
+      .replace(/\u2029/g, '\\u2029');
   }
 
   function jrnOpenNewModal() {
