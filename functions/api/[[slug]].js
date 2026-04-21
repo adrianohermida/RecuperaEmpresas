@@ -1,19 +1,61 @@
-export async function onRequest(context) {
-  const { request, params } = context;
-  const incomingUrl = new URL(request.url);
+function trimBase(value) {
+  return String(value || '').replace(/\/+$/, '');
+}
 
-  // Reconstroi o path a partir de params.slug (array)
-  const path = params.slug ? params.slug.join('/') : '';
-  const workerUrl = `https://api-edge.recuperaempresas.com.br/api/${path}${incomingUrl.search}`;
+function parseWorkerRoutes(value) {
+  return String(value || '')
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
 
-  // Clona a requisição para o novo destino
-  const newRequest = new Request(workerUrl, {
-    method: request.method,
-    headers: request.headers,
-    body: request.body,
+function patternToRegex(pattern) {
+  const escaped = pattern.replace(/[.+?^${}()|[\]\\]/g, '\\$&');
+  const wildcarded = escaped.replace(/\*/g, '[^/]+');
+  return new RegExp(`^${wildcarded}(?:$|/.*)`);
+}
+
+function matchesWorkerRoute(pathname, patterns) {
+  return patterns.some((pattern) => {
+    if (pattern.includes('*')) return patternToRegex(pattern).test(pathname);
+    return pathname === pattern || pathname.startsWith(`${pattern}/`);
   });
+}
 
-  // Faz o fetch para o Worker
-  const response = await fetch(newRequest);
-  return response;
+function resolveTargetBase(pathname, env) {
+  const legacyBase = trimBase(env.RE_API_BASE);
+  const workerBase = trimBase(env.RE_API_WORKER_BASE);
+  const workerRoutes = parseWorkerRoutes(env.RE_API_WORKER_ROUTES);
+
+  if (workerBase && matchesWorkerRoute(pathname, workerRoutes)) return workerBase;
+  if (legacyBase) return legacyBase;
+  if (workerBase) return workerBase;
+  return '';
+}
+
+export async function onRequest(context) {
+  const { request, env } = context;
+  const incomingUrl = new URL(request.url);
+  const targetBase = resolveTargetBase(incomingUrl.pathname, env);
+
+  if (!targetBase) {
+    return Response.json(
+      {
+        error: 'API origin not configured for Cloudflare Pages.',
+        expected: ['RE_API_BASE', 'RE_API_WORKER_BASE'],
+      },
+      { status: 503 }
+    );
+  }
+
+  const targetUrl = new URL(`${incomingUrl.pathname}${incomingUrl.search}`, `${targetBase}/`);
+
+  if (targetUrl.origin === incomingUrl.origin) {
+    return Response.json(
+      { error: 'Pages API proxy target would recurse into itself.' },
+      { status: 500 }
+    );
+  }
+
+  return fetch(new Request(targetUrl.toString(), request));
 }

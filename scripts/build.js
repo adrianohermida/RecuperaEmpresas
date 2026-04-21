@@ -59,9 +59,8 @@ copyIfExists(
   path.join(distDir, 'vendor', 'supabase', 'supabase.js')
 );
 
-// Portal production should prefer same-origin `/api/*` through Cloudflare Pages
-// Functions. Only set Worker overrides explicitly for diagnostics or a controlled
-// split-origin environment.
+// Cloudflare Pages should publish the portal with the legacy API origin set and
+// only opt specific routes into the Worker canary via RE_API_WORKER_ROUTES.
 const defaultWorkerApiBase = '';
 const defaultWorkerApiRoutes = [];
 const apiBase = process.env.RE_API_BASE || '';
