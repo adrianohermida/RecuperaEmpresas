@@ -660,7 +660,9 @@ router.get('/api/admin/forms/:id/responses/:responseId', requireAdmin, async (re
   try {
     const { data: response } = await sb.from('re_form_responses')
       .select('*,re_users!re_form_responses_user_id_fkey(name,email,company)')
-      .eq('id', req.params.responseId).single();
+      .eq('id', req.params.responseId)
+      .eq('form_id', req.params.id)
+      .single();
     if (!response) return res.status(404).json({ error: 'Resposta não encontrada.' });
     const { data: answers } = await sb.from('re_form_answers')
       .select('*,re_form_questions(label,type)')

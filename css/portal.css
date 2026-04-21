@@ -6632,6 +6632,79 @@ body {
   .page-shell-wide > .section-header:first-child {
     margin-bottom: 16px;
   }
+  .stats-grid {
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .stat-card {
+    min-height: 124px;
+    padding: 16px 14px;
+  }
+  .stat-icon {
+    width: 36px;
+    height: 36px;
+    margin-bottom: 10px;
+  }
+  .stat-value {
+    font-size: 24px;
+  }
+  .stat-label {
+    font-size: 12px;
+    line-height: 1.3;
+  }
+  .portal-card {
+    margin-bottom: 14px;
+  }
+  .portal-card-header {
+    padding: 14px 16px;
+  }
+  .portal-card-body,
+  .dashboard-card-body-default {
+    padding: 16px;
+  }
+  .progress-ring-wrap {
+    gap: 14px;
+    padding: 16px;
+  }
+  .progress-pct {
+    font-size: 30px;
+  }
+  .dashboard-action-wrap {
+    margin-top: 12px;
+  }
+  .admin-bulk-toolbar {
+    gap: 12px;
+    margin: 14px 0;
+    padding: 14px;
+    border-radius: 16px;
+  }
+  .admin-bulk-toolbar-title {
+    font-size: 13px;
+  }
+  .admin-bulk-toolbar-sub {
+    font-size: 12px;
+    line-height: 1.35;
+  }
+  .admin-bulk-toolbar-actions {
+    gap: 6px;
+  }
+  .admin-clients-module-grid {
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .admin-clients-module-card {
+    min-height: 112px;
+    padding: 14px;
+    border-radius: 16px;
+  }
+  .admin-clients-module-title {
+    font-size: 14px;
+  }
+  .admin-clients-module-sub {
+    font-size: 12px;
+    line-height: 1.4;
+    margin-top: 4px;
+  }
   .section-header .btn { width: 100%; justify-content: center; }
 }
 
@@ -6649,6 +6722,80 @@ body {
   .page-shell-wide > .section-header:first-child {
     gap: 8px;
     margin-bottom: 14px;
+  }
+  .stats-grid {
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .stat-card {
+    min-height: 116px;
+    padding: 14px 12px;
+    border-radius: 14px;
+  }
+  .stat-icon {
+    width: 32px;
+    height: 32px;
+    margin-bottom: 8px;
+  }
+  .stat-icon svg {
+    width: 18px;
+    height: 18px;
+  }
+  .stat-value {
+    font-size: 22px;
+  }
+  .stat-label {
+    font-size: 11px;
+    margin-top: 3px;
+  }
+  .portal-card {
+    margin-bottom: 12px;
+    border-radius: 14px;
+  }
+  .portal-card-header {
+    padding: 12px 14px;
+  }
+  .portal-card-title {
+    font-size: 14px;
+  }
+  .portal-card-body,
+  .dashboard-card-body-default {
+    padding: 14px;
+  }
+  .progress-ring-wrap {
+    gap: 12px;
+    padding: 14px;
+  }
+  .progress-pct {
+    font-size: 28px;
+  }
+  .progress-step,
+  .dashboard-inline-link {
+    font-size: 12px;
+  }
+  .admin-bulk-toolbar {
+    gap: 10px;
+    margin: 12px 0;
+    padding: 12px;
+    border-radius: 14px;
+  }
+  .admin-bulk-toolbar-actions {
+    gap: 5px;
+  }
+  .admin-clients-module-grid {
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .admin-clients-module-card {
+    min-height: 104px;
+    padding: 12px;
+    border-radius: 14px;
+  }
+  .admin-clients-module-title {
+    font-size: 13px;
+  }
+  .admin-clients-module-sub {
+    font-size: 11px;
   }
 }
 
