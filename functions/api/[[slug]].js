@@ -2,6 +2,8 @@ const DEFAULT_LEGACY_API_BASE = 'https://api.recuperaempresas.com.br';
 const DEFAULT_WORKER_API_BASE = 'https://api-edge.recuperaempresas.com.br';
 const DEFAULT_WORKER_ROUTES = [
   '/api/auth',
+  '/api/company/members',
+  '/api/company/members/*',
   '/api/admin/clients',
   '/api/admin/client/*',
   '/api/admin/messages/unread',

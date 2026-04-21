@@ -116,6 +116,9 @@ createHtmlRouteAlias('admin.html', path.join('admin', 'index.html'));
 createHtmlRouteAlias('perfil.html', path.join('perfil', 'index.html'));
 createHtmlRouteAlias('configuracoes.html', path.join('configuracoes', 'index.html'));
 createHtmlRouteAlias('cliente.html', path.join('cliente', 'index.html'));
+createHtmlRouteAlias('suporte-admin.html', path.join('suporte-admin', 'index.html'));
+createHtmlRouteAlias('tarefas-admin.html', path.join('tarefas-admin', 'index.html'));
+createHtmlRouteAlias('documentos-admin.html', path.join('documentos-admin', 'index.html'));
 // Sempre mantenha aliases únicos e documente a decisão para evitar regressão.
 
 // Keep the branch root aligned with the portal build because some Cloudflare

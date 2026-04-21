@@ -26,8 +26,8 @@ try {
   const workerDir = path.join(__dirname, '../workers/portal-api');
   run('npx wrangler deploy', workerDir);
 
-  // Deploy Pages a partir de dist para evitar publicar assets stale da raiz.
-  run('npx wrangler pages deploy dist --project-name=recuperaempresas --branch gh-pages', rootDir, productionBuildEnv);
+  // Deploy Pages a partir de dist em ambos os projetos que servem o portal.
+  run('node scripts/deploy-portal-pages.js', rootDir, productionBuildEnv);
 
   console.log('\n✅ Deploy do Worker e Pages concluído!');
 } catch (e) {

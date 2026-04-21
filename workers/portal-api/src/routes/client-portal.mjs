@@ -808,6 +808,25 @@ async function handleCompanyMembers(request, context) {
     return json({ success: true, member });
   }
 
+  const memberPasswordMatch = pathname.match(/^\/api\/company\/members\/(?<id>[^/]+)\/reset-password$/);
+  if (memberPasswordMatch && request.method === 'POST') {
+    if (!isOwner(context)) return json({ error: 'Apenas o titular pode redefinir senhas.' }, { status: 403 });
+    const body = await readJson(request);
+    const password = String(body.password || '');
+    if (password.length < 8) return json({ error: 'Senha deve ter ao menos 8 caracteres.' }, { status: 400 });
+
+    const member = await maybeSingle(
+      context.sb
+        .from('re_company_users')
+        .update({ password_hash: await bcrypt.hash(password, 10) })
+        .eq('id', memberPasswordMatch.groups.id)
+        .eq('company_id', ownerId)
+        .select('id')
+    );
+    if (!member) return json({ error: 'Membro não encontrado.' }, { status: 404 });
+    return json({ success: true });
+  }
+
   const memberMatch = pathname.match(/^\/api\/company\/members\/(?<id>[^/]+)$/);
   if (memberMatch && request.method === 'PUT') {
     if (!isOwner(context)) return json({ error: 'Apenas o titular pode editar membros.' }, { status: 403 });

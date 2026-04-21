@@ -23,6 +23,7 @@ const mirroredHtmlFiles = [
   'cliente.html',
   'configuracoes.html',
   'dashboard.html',
+  'documentos-admin.html',
   'forgot-password.html',
   'index.html',
   'login.html',
@@ -30,6 +31,8 @@ const mirroredHtmlFiles = [
   'perfil.html',
   'register.html',
   'reset-password.html'
+  , 'suporte-admin.html'
+  , 'tarefas-admin.html'
 ];
 
 const mirroredRouteAliases = [
@@ -37,12 +40,15 @@ const mirroredRouteAliases = [
   { file: 'cliente.html', routeDir: path.join('cliente', 'index.html') },
   { file: 'configuracoes.html', routeDir: path.join('configuracoes', 'index.html') },
   { file: 'dashboard.html', routeDir: path.join('dashboard', 'index.html') },
+  { file: 'documentos-admin.html', routeDir: path.join('documentos-admin', 'index.html') },
   { file: 'forgot-password.html', routeDir: path.join('forgot-password', 'index.html') },
   { file: 'login.html', routeDir: path.join('login', 'index.html') },
   { file: 'oauth-consent.html', routeDir: path.join('oauth', 'consent', 'index.html') },
   { file: 'perfil.html', routeDir: path.join('perfil', 'index.html') },
   { file: 'register.html', routeDir: path.join('register', 'index.html') },
-  { file: 'reset-password.html', routeDir: path.join('reset-password', 'index.html') }
+  { file: 'reset-password.html', routeDir: path.join('reset-password', 'index.html') },
+  { file: 'suporte-admin.html', routeDir: path.join('suporte-admin', 'index.html') },
+  { file: 'tarefas-admin.html', routeDir: path.join('tarefas-admin', 'index.html') }
 ];
 
 const mirroredAssetDirs = ['css', 'js'];
