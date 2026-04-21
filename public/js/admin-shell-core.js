@@ -121,6 +121,7 @@ function showSection(name, el) {
 
 var _allClients = [];
 var _clientSelection = new Set();
+var _openClientActionMenuId = null;
 var _clientFilters = {
   query: '',
   status: 'all',
@@ -128,6 +129,50 @@ var _clientFilters = {
   hasPendingTasks: false,
   hasUnread: false,
 };
+
+function getClientAccountState(client) {
+  return client?.accountState === 'archived' ? 'archived' : 'active';
+}
+
+function setAdminFlashToast(payload) {
+  try {
+    sessionStorage.setItem('re_admin_flash_toast', JSON.stringify(payload || {}));
+  } catch (_error) {}
+}
+
+function consumeAdminFlashToast() {
+  try {
+    var raw = sessionStorage.getItem('re_admin_flash_toast');
+    if (!raw) return;
+    sessionStorage.removeItem('re_admin_flash_toast');
+    var payload = JSON.parse(raw);
+    if (payload?.message) showToast(payload.message, payload.type || 'success');
+  } catch (_error) {}
+}
+
+function closeAllClientActionMenus() {
+  document.querySelectorAll('.admin-client-menu.open').forEach(function (menu) {
+    menu.classList.remove('open');
+  });
+  _openClientActionMenuId = null;
+}
+
+function toggleClientActionMenu(event, clientId) {
+  event.preventDefault();
+  event.stopPropagation();
+  var target = document.getElementById('clientActionMenu_' + clientId);
+  if (!target) return;
+  var willOpen = _openClientActionMenuId !== clientId || !target.classList.contains('open');
+  closeAllClientActionMenus();
+  if (willOpen) {
+    target.classList.add('open');
+    _openClientActionMenuId = clientId;
+  }
+}
+
+document.addEventListener('click', function () {
+  closeAllClientActionMenus();
+});
 
 function getFilteredClients() {
   var query = String(_clientFilters.query || '').toLowerCase();
@@ -204,6 +249,7 @@ function renderClientTable(clients) {
 
   tbody.innerHTML = clients.map(function (client) {
     var status = STATUS_LABELS[client.status] || STATUS_LABELS.nao_iniciado;
+    var accountState = getClientAccountState(client);
     var progress = client.completed ? 100 : client.progress;
     var lastActivity = client.lastActivity ? new Date(client.lastActivity).toLocaleDateString('pt-BR') : '—';
     var unread = _unreadMsgs[client.id] || 0;
@@ -217,7 +263,7 @@ function renderClientTable(clients) {
       </td>
       <td>
         <button class="admin-client-primary-link" type="button" onclick="openClient('${client.id}')">
-          <div class="company-cell">${client.company || client.name}</div>
+          <div class="company-cell">${client.company || client.name}${accountState === 'archived' ? ' <span class="badge badge-amber">Arquivado</span>' : ''}</div>
           <div class="email-cell">${client.email}</div>
         </button>
       </td>
@@ -237,6 +283,17 @@ function renderClientTable(clients) {
           <button class="btn btn-secondary btn-sm" type="button" onclick="window.location.href='/suporte-admin?ids=${client.id}'">Suporte</button>
           <button class="btn btn-secondary btn-sm" type="button" onclick="window.location.href='/tarefas-admin?ids=${client.id}'">Tarefas</button>
           <button class="btn btn-secondary btn-sm" type="button" onclick="window.location.href='/documentos-admin?ids=${client.id}'">Docs</button>
+          <div class="admin-client-menu-wrap">
+            <button class="btn btn-ghost btn-sm admin-client-menu-trigger" type="button" aria-label="Abrir menu de ações" onclick="toggleClientActionMenu(event, '${client.id}')">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
+            </button>
+            <div class="admin-client-menu" id="clientActionMenu_${client.id}">
+              <button type="button" class="admin-client-menu-item" onclick="assignClientFromList('${client.id}')">Atribuir tarefa</button>
+              <button type="button" class="admin-client-menu-item" onclick="toggleClientArchiveState('${client.id}', ${accountState !== 'archived'})">${accountState === 'archived' ? 'Ativar' : 'Arquivar'}</button>
+              <button type="button" class="admin-client-menu-item" onclick="adminEditClient('${client.id}')">Editar</button>
+              <button type="button" class="admin-client-menu-item danger" onclick="adminDeleteClient('${client.id}')">Excluir</button>
+            </div>
+          </div>
         </div>
       </td>
     </tr>`;
@@ -283,6 +340,86 @@ function openBulkClientPage(kind) {
     documents: '/documentos-admin',
   };
   window.location.href = pathMap[kind] + '?ids=' + encodeURIComponent(selected.map(function (client) { return client.id; }).join(','));
+}
+
+function assignClientFromList(clientId) {
+  closeAllClientActionMenus();
+  window.location.href = '/tarefas-admin?ids=' + encodeURIComponent(clientId);
+}
+
+function bulkAssignClients() {
+  openBulkClientPage('tasks');
+}
+
+async function applyBulkClientAction(action, options) {
+  var selected = getSelectedClients();
+  if (!selected.length) {
+    showToast('Selecione ao menos um cliente.', 'error');
+    return false;
+  }
+  var response = await fetch('/api/admin/clients/bulk-action', {
+    method: 'POST',
+    headers: authH(),
+    body: JSON.stringify({
+      action: action,
+      ids: selected.map(function (client) { return client.id; }),
+      confirm: options?.confirm || undefined,
+    }),
+  });
+  var data = await readAdminResponse(response);
+  if (!response.ok) {
+    showToast(data.error || 'Erro ao aplicar ação em lote.', 'error');
+    return false;
+  }
+  _clientSelection.clear();
+  if (typeof window.loadAdminData === 'function') await window.loadAdminData();
+  showToast(data.message || 'Ação aplicada.', 'success');
+  return true;
+}
+
+function bulkSetClientArchiveState(archived) {
+  return applyBulkClientAction(archived ? 'archive' : 'activate');
+}
+
+function bulkDeleteClients() {
+  var selected = getSelectedClients();
+  if (!selected.length) {
+    showToast('Selecione ao menos um cliente.', 'error');
+    return;
+  }
+  var wrapper = document.createElement('div');
+  wrapper.innerHTML = [
+    '<div class="account-empty-state" style="margin-bottom:12px">Você está prestes a excluir ' + selected.length + ' cliente(s). Todos os dados serão removidos de forma irreversível.</div>',
+    '<label class="admin-confirm-check">',
+    '  <input type="checkbox" id="bulkDeleteConfirmCheck"/>',
+    '  <span>Confirmo a exclusão definitiva dos clientes selecionados.</span>',
+    '</label>'
+  ].join('');
+
+  window.REPortalUI.useModal({
+    title: 'Excluir clientes em lote',
+    subtitle: 'Ação irreversível com notificação ao cliente.',
+    content: wrapper,
+    actions: [{
+      label: 'Cancelar'
+    }, {
+      label: 'Excluir clientes',
+      tone: 'danger',
+      onClick: async function () {
+        if (!wrapper.querySelector('#bulkDeleteConfirmCheck')?.checked) {
+          showToast('Marque a confirmação antes de excluir.', 'error');
+          return false;
+        }
+        return applyBulkClientAction('delete', { confirm: 'CONFIRMAR_EXCLUSAO' });
+      }
+    }]
+  });
+}
+
+function toggleClientArchiveState(clientId, archived) {
+  closeAllClientActionMenus();
+  _clientSelection = new Set([clientId]);
+  return applyBulkClientAction(archived ? 'archive' : 'activate');
 }
 
 function copySelectedClientEmails() {
@@ -409,6 +546,13 @@ window.copySelectedClientEmails = copySelectedClientEmails;
 window.exportSelectedClients = exportSelectedClients;
 window.openBulkClientPage = openBulkClientPage;
 window.openClientFilters = openClientFilters;
+window.assignClientFromList = assignClientFromList;
+window.bulkAssignClients = bulkAssignClients;
+window.bulkSetClientArchiveState = bulkSetClientArchiveState;
+window.bulkDeleteClients = bulkDeleteClients;
+window.toggleClientArchiveState = toggleClientArchiveState;
+window.toggleClientActionMenu = toggleClientActionMenu;
+window.consumeAdminFlashToast = consumeAdminFlashToast;
 
 console.info('[RE:admin-shell-core] loaded');
 

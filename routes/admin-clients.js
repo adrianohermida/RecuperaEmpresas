@@ -6,8 +6,32 @@ const { sb } = require('../lib/config');
 const { requireAdmin } = require('../lib/auth');
 const { safeUser } = require('../lib/auth');
 const { findUserById, readOnboarding, readTasks, readPlan, readMessages, readAppointments,
-        saveChapterStatus, insertMessage, PLAN_CHAPTERS } = require('../lib/db');
+        saveChapterStatus, insertMessage, PLAN_CHAPTERS, saveOnboarding } = require('../lib/db');
 const { pushNotification, auditLog } = require('../lib/logging');
+
+function getClientAccountState(onboarding) {
+  const data = onboarding?.data || {};
+  const portalFlags = data.portal_flags || {};
+  return portalFlags.account_state === 'archived' ? 'archived' : 'active';
+}
+
+async function persistClientAccountState(userId, archived) {
+  const onboarding = await readOnboarding(userId);
+  const nextData = Object.assign({}, onboarding?.data || {}, {
+    portal_flags: Object.assign({}, onboarding?.data?.portal_flags || {}, {
+      account_state: archived ? 'archived' : 'active',
+      archived_at: archived ? new Date().toISOString() : null,
+    }),
+  });
+  await saveOnboarding(userId, {
+    step: onboarding?.step || 1,
+    status: onboarding?.status || 'nao_iniciado',
+    completed: onboarding?.completed || false,
+    data: nextData,
+    last_activity: onboarding?.last_activity || new Date().toISOString(),
+    completedAt: onboarding?.completed_at || null,
+  });
+}
 
 router.get('/api/admin/clients', requireAdmin, async (req, res) => {
   const { data: users } = await sb.from('re_users').select('*')
@@ -19,6 +43,7 @@ router.get('/api/admin/clients', requireAdmin, async (req, res) => {
       id: u.id, name: u.name || '', email: u.email, company: u.company || '',
       createdAt: u.created_at, freshdeskTicketId: u.freshdesk_ticket_id,
       step: ob.step || 1, status: ob.status || 'nao_iniciado',
+      accountState: getClientAccountState(ob),
       completed: ob.completed || false,
       progress: Math.round(((ob.step || 1) - 1) / 14 * 100),
       lastActivity: ob.last_activity || u.created_at,
@@ -44,10 +69,42 @@ router.get('/api/admin/client/:id', requireAdmin, async (req, res) => {
   res.json({
     user: safeUser(user),
     onboarding,
+    accountState: getClientAccountState(onboarding),
     tasks,
     plan,
     messages,
     appointments,
+  });
+});
+
+router.post('/api/admin/clients/bulk-action', requireAdmin, async (req, res) => {
+  const action = String(req.body?.action || '').trim();
+  const ids = Array.isArray(req.body?.ids) ? req.body.ids.map(String).map(v => v.trim()).filter(Boolean) : [];
+  if (!ids.length) return res.status(400).json({ error: 'Selecione ao menos um cliente.' });
+
+  if (action === 'delete') {
+    if (req.body?.confirm !== 'CONFIRMAR_EXCLUSAO') {
+      return res.status(400).json({ error: 'Confirmação obrigatória para exclusão em lote.' });
+    }
+    const { data: users, error } = await sb.from('re_users').select('id,email,name,company,is_admin').in('id', ids);
+    if (error) return res.status(500).json({ error: error.message });
+    const targets = (users || []).filter(user => !user.is_admin);
+    if (!targets.length) return res.status(404).json({ error: 'Nenhum cliente elegível para exclusão.' });
+    const targetIds = targets.map(user => user.id);
+    const { error: deleteError } = await sb.from('re_users').delete().in('id', targetIds);
+    if (deleteError) return res.status(500).json({ error: deleteError.message });
+    return res.json({ success: true, count: targetIds.length, message: targetIds.length + ' cliente(s) excluído(s) com sucesso.' });
+  }
+
+  if (action !== 'archive' && action !== 'activate') {
+    return res.status(400).json({ error: 'Ação em lote inválida.' });
+  }
+
+  await Promise.all(ids.map(id => persistClientAccountState(id, action === 'archive')));
+  return res.json({
+    success: true,
+    count: ids.length,
+    message: ids.length + ' cliente(s) ' + (action === 'archive' ? 'arquivado(s).' : 'ativado(s).'),
   });
 });
 

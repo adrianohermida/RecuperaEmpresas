@@ -71,6 +71,34 @@ async function readOnboarding(sb, userId) {
   };
 }
 
+function getClientAccountState(onboarding) {
+  const data = onboarding?.data || {};
+  const portalFlags = data.portal_flags || {};
+  return portalFlags.account_state === 'archived' ? 'archived' : 'active';
+}
+
+async function persistClientAccountState(sb, userId, archived) {
+  const onboarding = await readOnboarding(sb, userId);
+  const nextData = {
+    ...(onboarding?.data || {}),
+    portal_flags: {
+      ...(onboarding?.data?.portal_flags || {}),
+      account_state: archived ? 'archived' : 'active',
+      archived_at: archived ? new Date().toISOString() : null,
+    },
+  };
+  const { error } = await sb.from('re_onboarding').upsert({
+    user_id: userId,
+    step: onboarding?.step || 1,
+    status: onboarding?.status || 'nao_iniciado',
+    completed: Boolean(onboarding?.completed),
+    data: nextData,
+    last_activity: onboarding?.last_activity || new Date().toISOString(),
+    completed_at: onboarding?.completed_at || null,
+  }, { onConflict: 'user_id' });
+  if (error) throw error;
+}
+
 async function readTasks(sb, userId) {
   return list(sb.from('re_tasks').select('*').eq('user_id', userId).order('created_at'));
 }
@@ -117,6 +145,7 @@ async function handleClients(request, context) {
       freshdeskTicketId: user.freshdesk_ticket_id || null,
       step: onboarding.step || 1,
       status: onboarding.status || 'nao_iniciado',
+      accountState: getClientAccountState(onboarding),
       completed: Boolean(onboarding.completed),
       progress: Math.round((((onboarding.step || 1) - 1) / 14) * 100),
       lastActivity: onboarding.last_activity || user.created_at,
@@ -175,7 +204,38 @@ async function handleClientDetail(request, context) {
     readAppointments(context.sb, user.id),
   ]);
 
-  return json({ user, onboarding, tasks, plan, messages, appointments });
+  return json({ user, onboarding, accountState: getClientAccountState(onboarding), tasks, plan, messages, appointments });
+}
+
+async function handleBulkClientAction(request, context) {
+  if (request.method !== 'POST') return methodNotAllowed();
+  const body = await readJson(request);
+  const action = String(body.action || '').trim();
+  const ids = Array.isArray(body.ids) ? body.ids.map((id) => String(id || '').trim()).filter(Boolean) : [];
+  if (!ids.length) return json({ error: 'Selecione ao menos um cliente.' }, { status: 400 });
+
+  if (action === 'delete') {
+    if (body.confirm !== 'CONFIRMAR_EXCLUSAO') {
+      return json({ error: 'Confirmação obrigatória para exclusão em lote.' }, { status: 400 });
+    }
+    const users = await listSafe(context.sb.from('re_users').select('id,is_admin').in('id', ids), []);
+    const targetIds = users.filter((user) => !user.is_admin).map((user) => user.id);
+    if (!targetIds.length) return json({ error: 'Nenhum cliente elegível para exclusão.' }, { status: 404 });
+    const { error } = await context.sb.from('re_users').delete().in('id', targetIds);
+    if (error) return json({ error: error.message }, { status: 500 });
+    return json({ success: true, count: targetIds.length, message: `${targetIds.length} cliente(s) excluído(s) com sucesso.` });
+  }
+
+  if (action !== 'archive' && action !== 'activate') {
+    return json({ error: 'Ação em lote inválida.' }, { status: 400 });
+  }
+
+  await Promise.all(ids.map((id) => persistClientAccountState(context.sb, id, action === 'archive')));
+  return json({
+    success: true,
+    count: ids.length,
+    message: `${ids.length} cliente(s) ${action === 'archive' ? 'arquivado(s).' : 'ativado(s).'}`,
+  });
 }
 
 async function handleClientBookings(request, context) {
@@ -1412,6 +1472,7 @@ export async function handleAdminReadModels(request, context) {
   const pathname = new URL(request.url).pathname;
 
   if (pathname === '/api/admin/clients') return handleClients(request, context);
+  if (pathname === '/api/admin/clients/bulk-action') return handleBulkClientAction(request, context);
   if (/^\/api\/admin\/client\/[^/]+$/.test(pathname)) return handleClientDetail(request, context);
   if (/^\/api\/admin\/client\/[^/]+\/bookings$/.test(pathname)) return handleClientBookings(request, context);
   if (/^\/api\/admin\/client\/[^/]+\/documents$/.test(pathname)) return handleClientDocuments(request, context);

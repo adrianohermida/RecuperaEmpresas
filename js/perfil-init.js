@@ -7,6 +7,19 @@
   let tenantMembers = [];
   let pendingAvatarDataUrl = '';
 
+  function renderCompetencyPreview() {
+    var container = document.getElementById('profileCompetencyPreview');
+    if (!container) return;
+    var tags = window.REAccountData.splitTags(document.getElementById('profileCompetencies')?.value);
+    if (!tags.length) {
+      container.innerHTML = '<span class="account-chip account-chip-muted">Nenhuma competência destacada ainda</span>';
+      return;
+    }
+    container.innerHTML = tags.map(function (tag) {
+      return '<span class="account-chip">' + tag + '</span>';
+    }).join('');
+  }
+
   function authH() {
     if (window.REShared?.buildAuthHeaders) return window.REShared.buildAuthHeaders();
     return { 'Content-Type': 'application/json' };
@@ -105,6 +118,7 @@
     syncHeader();
     renderMetrics();
     renderTenantSummary();
+    renderCompetencyPreview();
   }
 
   window.handleAvatarUpload = async function (input) {
@@ -243,9 +257,14 @@
         tenantMembers = await window.REAccountData.listCompanyMembers().catch(function () { return []; });
       }
       renderProfileState();
+      window.REAccountData.bootFreshchat(currentUser).catch(function (error) {
+        console.warn('[Freshchat:perfil]', error?.message || error);
+      });
     } catch (_error) {
       showToast('Não foi possível carregar o perfil completo.', 'error');
     }
+
+    document.getElementById('profileCompetencies')?.addEventListener('input', renderCompetencyPreview);
 
     document.getElementById('authGuard')?.remove();
   }

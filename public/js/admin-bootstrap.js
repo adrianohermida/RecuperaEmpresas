@@ -228,6 +228,7 @@
 
     try {
       await loadAdminData();
+      if (typeof consumeAdminFlashToast === 'function') consumeAdminFlashToast();
     } catch (err) {
       console.error('[RE:admin-bootstrap] loadAdminData error:', err.message);
     }

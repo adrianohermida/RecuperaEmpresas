@@ -5978,6 +5978,60 @@ body {
   margin-top: 18px;
 }
 
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--dark);
+}
+
+.form-input {
+  width: 100%;
+  min-height: 46px;
+  padding: 12px 14px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.96);
+  color: var(--dark);
+  font-size: 14px;
+  line-height: 1.4;
+  box-sizing: border-box;
+  transition: border-color .16s ease, box-shadow .16s ease, background .16s ease;
+}
+
+.form-input::placeholder {
+  color: #94a3b8;
+}
+
+.form-input:hover {
+  border-color: rgba(96, 165, 250, 0.34);
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: rgba(37, 99, 235, 0.55);
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.08);
+}
+
+.form-input[readonly] {
+  background: rgba(248, 250, 252, 0.92);
+  color: #475569;
+}
+
+.account-form-chip-list {
+  margin-top: 10px;
+}
+
+.account-chip-muted {
+  background: rgba(148, 163, 184, 0.12);
+  color: #64748b;
+}
+
 .account-textarea {
   min-height: 120px;
   resize: vertical;
@@ -6250,6 +6304,77 @@ body {
 
 .admin-client-actions-col {
   width: 220px;
+}
+
+.admin-client-menu-wrap {
+  position: relative;
+}
+
+.admin-client-menu-trigger {
+  min-width: 40px;
+  padding-inline: 10px;
+}
+
+.admin-client-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 190px;
+  padding: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 18px 38px rgba(15, 23, 42, 0.14);
+  display: none;
+  z-index: 30;
+}
+
+.admin-client-menu.open {
+  display: grid;
+  gap: 4px;
+}
+
+.admin-client-menu-item {
+  width: 100%;
+  border: none;
+  background: transparent;
+  padding: 10px 12px;
+  border-radius: 10px;
+  text-align: left;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--dark);
+  cursor: pointer;
+}
+
+.admin-client-menu-item:hover {
+  background: rgba(37, 99, 235, 0.08);
+  color: #1d4ed8;
+}
+
+.admin-client-menu-item.danger {
+  color: #dc2626;
+}
+
+.admin-client-menu-item.danger:hover {
+  background: rgba(220, 38, 38, 0.08);
+  color: #b91c1c;
+}
+
+.admin-confirm-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  background: rgba(248, 250, 252, 0.9);
+  font-size: 13px;
+  color: var(--text);
+}
+
+.admin-confirm-check input {
+  margin-top: 2px;
 }
 
 .admin-client-primary-link {

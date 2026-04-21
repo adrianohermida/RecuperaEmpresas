@@ -144,7 +144,140 @@
     });
   }
 
+  function isFreshchatEnabled() {
+    return !!(window.RE_ENABLE_FRESHCHAT && window.RE_FRESHCHAT_TOKEN && window.RE_FRESHCHAT_SITE_ID);
+  }
+
+  function getFreshchatScriptPromise() {
+    if (window.__reFreshchatScriptPromise) return window.__reFreshchatScriptPromise;
+    window.__reFreshchatScriptPromise = new Promise(function (resolve, reject) {
+      if (typeof window.fcWidget !== 'undefined') {
+        resolve(window.fcWidget);
+        return;
+      }
+      var existing = document.querySelector('script[data-re-freshchat="true"]');
+      if (existing) {
+        existing.addEventListener('load', function () { resolve(window.fcWidget); }, { once: true });
+        existing.addEventListener('error', reject, { once: true });
+        return;
+      }
+      var script = document.createElement('script');
+      script.src = '//fw-cdn.com/16078787/7064112.js';
+      script.setAttribute('chat', 'true');
+      script.setAttribute('data-re-freshchat', 'true');
+      script.async = true;
+      script.onload = function () { resolve(window.fcWidget); };
+      script.onerror = reject;
+      document.body.appendChild(script);
+    });
+    return window.__reFreshchatScriptPromise;
+  }
+
+  function pollFreshchatReady(attempts) {
+    return new Promise(function (resolve, reject) {
+      function check(remaining) {
+        if (typeof window.fcWidget !== 'undefined') {
+          resolve(window.fcWidget);
+          return;
+        }
+        if (remaining <= 0) {
+          reject(new Error('Freshchat widget não ficou pronto a tempo.'));
+          return;
+        }
+        setTimeout(function () { check(remaining - 1); }, 500);
+      }
+      check(attempts || 30);
+    });
+  }
+
+  function buildFreshchatName(user) {
+    var fullName = String(user?.name || user?.full_name || user?.company || user?.email || '').trim();
+    var parts = fullName.split(/\s+/).filter(Boolean);
+    return {
+      firstName: parts[0] || '',
+      lastName: parts.slice(1).join(' '),
+    };
+  }
+
+  function configureFreshchatShell(options) {
+    window.fcSettings = {
+      token: window.RE_FRESHCHAT_TOKEN,
+      host: 'https://msdk.freshchat.com',
+      siteId: window.RE_FRESHCHAT_SITE_ID,
+      config: {
+        headerProperty: {
+          appName: options?.appName || 'Recupera Empresas',
+          backgroundColor: '#1e3a5f',
+          foregroundColor: '#ffffff'
+        },
+        content: {
+          placeholders: {
+            search_field: 'Buscar conversa...',
+            reply_field: options?.replyPlaceholder || 'Escreva sua mensagem...'
+          }
+        }
+      }
+    };
+  }
+
+  async function bootFreshchat(user) {
+    if (!isFreshchatEnabled() || !user) return false;
+    var bootKey = [user.id || user.email || 'unknown', user.isAdmin ? 'consultor' : 'cliente', user.company_id || user.id || 'tenant'].join('::');
+    if (window.__reFreshchatBootKey === bootKey && typeof window.fcWidget !== 'undefined') return true;
+
+    configureFreshchatShell({
+      appName: user.isAdmin ? 'Recupera Empresas — Operador' : 'Recupera Empresas',
+      replyPlaceholder: user.isAdmin ? 'Responder...' : 'Escreva sua mensagem...'
+    });
+
+    await getFreshchatScriptPromise();
+    await pollFreshchatReady(30);
+
+    var names = buildFreshchatName(user);
+    window.fcWidget.setExternalId(user.id || user.email);
+    window.fcWidget.user.setFirstName(names.firstName);
+    window.fcWidget.user.setLastName(names.lastName);
+    window.fcWidget.user.setEmail(user.email || '');
+
+    if (user.isAdmin) {
+      window.fcWidget.user.setProperties({
+        role: 'consultor',
+        scope: user.company_id ? 'tenant-member' : 'admin-global',
+        tenant_id: user.company_id || user.id || '',
+        company: user.company || '',
+        app: 'Recupera Empresas — Operador'
+      });
+      window.__reFreshchatBootKey = bootKey;
+      return true;
+    }
+
+    var response = await fetch('/api/freshchat-token', { headers: authH(false) });
+    var data = await readJsonSafe(response);
+    if (!response.ok || !data.token) throw new Error(data.error || 'Erro ao autenticar Freshchat.');
+
+    window.fcWidget.user.setProperties({
+      role: user.company_id ? 'membro' : 'cliente',
+      tenant_id: user.company_id || user.id || '',
+      company: user.company || '',
+      plan: user.company_id ? 'tenant-member' : 'tenant-owner'
+    });
+
+    await new Promise(function (resolve, reject) {
+      window.fcWidget.authenticate({
+        token: data.token,
+        callback: function (error) {
+          if (error) reject(error);
+          else resolve();
+        }
+      });
+    });
+
+    window.__reFreshchatBootKey = bootKey;
+    return true;
+  }
+
   window.REAccountData = {
+    bootFreshchat: bootFreshchat,
     centerCropImage: centerCropImage,
     deleteCompanyMember: deleteCompanyMember,
     ensureSignatureEditor: ensureSignatureEditor,

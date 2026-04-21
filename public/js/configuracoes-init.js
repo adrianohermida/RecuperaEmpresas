@@ -277,6 +277,9 @@
       syncHeader();
       applyPrefsToUI(currentPreferences);
       await reloadMembers();
+      window.REAccountData.bootFreshchat(currentUser).catch(function (error) {
+        console.warn('[Freshchat:configuracoes]', error?.message || error);
+      });
     } catch (_error) {
       showToast('Não foi possível carregar as configurações completas.', 'error');
     }

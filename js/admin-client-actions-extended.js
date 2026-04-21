@@ -54,6 +54,28 @@
     closeModal(id);
   }
 
+  function setAdminFlashToast(payload) {
+    try {
+      sessionStorage.setItem('re_admin_flash_toast', JSON.stringify(payload || {}));
+    } catch (_error) {}
+  }
+
+  function refreshAdminClientsSurface() {
+    if (typeof window.loadAdminData === 'function') return window.loadAdminData();
+    if (typeof loadAdminData === 'function') return loadAdminData();
+    return Promise.resolve();
+  }
+
+  function returnToClientsIndex(message, type) {
+    setAdminFlashToast({ message: message, type: type || 'success' });
+    window.location.href = '/admin?section=clients';
+  }
+
+  function toggleDeleteClientConfirm(checked, buttonId) {
+    const button = document.getElementById(buttonId || 'deleteClientConfirmBtn');
+    if (button) button.disabled = !checked;
+  }
+
   function fmtBRL(cents) { return (cents/100).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
   function fmtDate(d) { return d ? new Date(d+'T12:00:00').toLocaleDateString('pt-BR') : '—'; }
 
@@ -740,10 +762,12 @@
         <strong>Ação irreversível.</strong> Esta operação excluirá a conta e todos os dados do cliente.
         O cliente será notificado por e-mail conforme a LGPD.
       </div>
-      <p style="font-size:13px;margin-bottom:10px">Digite <code>CONFIRMAR_EXCLUSAO</code> para confirmar:</p>
-      <input id="deleteConfirmText" class="form-control" placeholder="CONFIRMAR_EXCLUSAO">`,
+      <label class="admin-confirm-check">
+        <input id="deleteConfirmCheck" type="checkbox" onchange="toggleDeleteClientConfirm(this.checked, 'deleteClientConfirmBtn')">
+        <span>Confirmo a exclusão definitiva da conta do cliente e de todos os dados associados.</span>
+      </label>`,
       `<button class="btn-ghost admin-modal-btn" onclick="closeModal('deleteClientModal')">Cancelar</button>
-       <button class="btn btn-danger admin-modal-btn" onclick="_submitDeleteClient()">Excluir conta</button>`,
+       <button class="btn btn-danger admin-modal-btn" id="deleteClientConfirmBtn" disabled onclick="_submitDeleteClient()">Excluir conta</button>`,
       'sm'
     );
   }
@@ -754,9 +778,9 @@
       showToast('Cliente não identificado para exclusão.', 'error');
       return;
     }
-    const text = document.getElementById('deleteConfirmText')?.value.trim();
-    if (text !== 'CONFIRMAR_EXCLUSAO') {
-      showToast('Digite o texto de confirmação exato.', 'error'); return;
+    const confirmed = !!document.getElementById('deleteConfirmCheck')?.checked;
+    if (!confirmed) {
+      showToast('Marque a confirmação antes de excluir.', 'error'); return;
     }
     const res = await fetch(`/api/admin/client/${effectiveClientId}`, {
       method: 'DELETE', headers: authH(),
@@ -767,10 +791,12 @@
     showToast('Conta excluída com sucesso.', 'success');
     window.REPendingDeleteClientId = null;
     closeModal('deleteClientModal');
+    if (document.getElementById('clientPageLayout')) {
+      returnToClientsIndex('Conta excluída com sucesso.', 'success');
+      return;
+    }
     if (typeof closeDrawer === 'function') closeDrawer();
-    // Reload client list
-    if (typeof loadAdminClients === 'function') loadAdminClients();
-    else location.reload();
+    await refreshAdminClientsSurface();
   }
 
   // ═══════════════════════════════════════════════════════════════════════════════
@@ -973,6 +999,7 @@
     _saveEmployee,
     _submitEditClient,
     _submitDeleteClient,
+    toggleDeleteClientConfirm,
     uploadEntityDoc,
     deleteEntityDoc,
     // public API
