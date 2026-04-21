@@ -11,6 +11,8 @@
   <script src="./js/runtime-diagnostics.js?v=20260418f"></script>
   <script src="./js/api-base.js?v=20260418e"></script>
   <script src="./js/shared-utils.js?v=20260421g"></script>
+  <script src="./js/portal-ui.js?v=20260421h"></script>
+  <script src="./js/account-data.js?v=20260421h"></script>
 </head>
 <body>
 <div id="authGuard" class="auth-guard">
@@ -108,7 +110,7 @@
       <div class="section-header">
         <div>
           <div class="section-title">Configurações</div>
-          <div class="section-sub">Preferências do painel e notificações</div>
+          <div class="section-sub">Preferências do painel, operação mobile e gestão da equipe do tenant</div>
         </div>
         <a href="/admin" class="btn btn-secondary" id="accountBackLink">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
@@ -116,81 +118,138 @@
         </a>
       </div>
 
-      <div class="page-section">
-        <div class="page-section-title">Notificações</div>
-        <div class="page-section-sub">Escolha quando e como receber alertas.</div>
-
-        <div class="page-toggle-row">
-          <div>
-            <div class="page-toggle-label">Novas mensagens</div>
-            <div class="page-toggle-desc">Notificação no navegador ao receber mensagens não lidas</div>
+      <div class="account-layout account-layout-settings">
+        <aside class="account-hero card-surface">
+          <div class="account-hero-meta compact">
+            <div class="account-hero-name" id="settingsHeroName">Carregando...</div>
+            <div class="account-hero-role" id="settingsHeroRole">Conta</div>
+            <div class="account-hero-email" id="settingsHeroEmail">—</div>
           </div>
-          <label class="page-toggle">
-            <input type="checkbox" id="notifMessages" onchange="saveSetting('notifMessages', this.checked)"/>
-            <span class="page-toggle-track"></span>
-          </label>
-        </div>
-
-        <div class="page-toggle-row">
-          <div>
-            <div class="page-toggle-label">Novos cadastros</div>
-            <div class="page-toggle-desc">Alerta ao registrar novo cliente no portal</div>
+          <div class="account-stat-grid single-column">
+            <div class="account-stat-card">
+              <span class="account-stat-label">Membros ativos</span>
+              <strong id="settingsMembersCount">0</strong>
+            </div>
+            <div class="account-stat-card">
+              <span class="account-stat-label">Permissão</span>
+              <strong id="settingsAccessLabel">—</strong>
+            </div>
           </div>
-          <label class="page-toggle">
-            <input type="checkbox" id="notifNewClients" onchange="saveSetting('notifNewClients', this.checked)"/>
-            <span class="page-toggle-track"></span>
-          </label>
-        </div>
-
-        <div class="page-toggle-row">
-          <div>
-            <div class="page-toggle-label">Atualizações de etapas</div>
-            <div class="page-toggle-desc">Notificar quando houver avanço no processo</div>
+          <div class="account-help-stack">
+            <div class="account-help-item">As preferências abaixo persistem no backend e acompanham sua sessão em qualquer dispositivo.</div>
+            <div class="account-help-item">A gestão da equipe respeita o papel do tenant: titular edita, membro visualiza.</div>
           </div>
-          <label class="page-toggle">
-            <input type="checkbox" id="notifSteps" onchange="saveSetting('notifSteps', this.checked)"/>
-            <span class="page-toggle-track"></span>
-          </label>
-        </div>
-      </div>
+        </aside>
 
-      <div class="page-section">
-        <div class="page-section-title">Aparência</div>
-        <div class="page-section-sub">Preferências visuais do painel.</div>
+        <div class="account-content-stack">
+          <section class="page-section card-surface">
+            <div class="page-section-title">Notificações</div>
+            <div class="page-section-sub">Escolha quando e como receber alertas.</div>
 
-        <div class="page-toggle-row">
-          <div>
-            <div class="page-toggle-label">Compactar tabelas</div>
-            <div class="page-toggle-desc">Reduz o espaçamento entre linhas para mostrar mais conteúdo</div>
-          </div>
-          <label class="page-toggle">
-            <input type="checkbox" id="prefCompactTable" onchange="saveSetting('prefCompactTable', this.checked)"/>
-            <span class="page-toggle-track"></span>
-          </label>
-        </div>
+            <div class="page-toggle-row">
+              <div>
+                <div class="page-toggle-label">Novas mensagens</div>
+                <div class="page-toggle-desc">Notificação no navegador ao receber mensagens não lidas</div>
+              </div>
+              <label class="page-toggle">
+                <input type="checkbox" id="notifMessages" onchange="saveSetting('notifMessages', this.checked)"/>
+                <span class="page-toggle-track"></span>
+              </label>
+            </div>
 
-        <div class="page-toggle-row">
-          <div>
-            <div class="page-toggle-label">Exibir barras de progresso</div>
-            <div class="page-toggle-desc">Mostra indicadores visuais de progresso nas listas</div>
-          </div>
-          <label class="page-toggle">
-            <input type="checkbox" id="prefShowProgress" onchange="saveSetting('prefShowProgress', this.checked)" checked/>
-            <span class="page-toggle-track"></span>
-          </label>
-        </div>
-      </div>
+            <div class="page-toggle-row">
+              <div>
+                <div class="page-toggle-label">Novos cadastros</div>
+                <div class="page-toggle-desc">Alerta ao registrar novo cliente no portal</div>
+              </div>
+              <label class="page-toggle">
+                <input type="checkbox" id="notifNewClients" onchange="saveSetting('notifNewClients', this.checked)"/>
+                <span class="page-toggle-track"></span>
+              </label>
+            </div>
 
-      <div class="page-section page-danger-zone">
-        <div class="page-section-title">Sessões</div>
-        <div class="page-section-sub">Use com cuidado ao encerrar acessos ativos.</div>
+            <div class="page-toggle-row">
+              <div>
+                <div class="page-toggle-label">Atualizações de etapas</div>
+                <div class="page-toggle-desc">Notificar quando houver avanço no processo</div>
+              </div>
+              <label class="page-toggle">
+                <input type="checkbox" id="notifSteps" onchange="saveSetting('notifSteps', this.checked)"/>
+                <span class="page-toggle-track"></span>
+              </label>
+            </div>
+          </section>
 
-        <div class="page-danger-row">
-          <div>
-            <div class="page-danger-label">Encerrar todas as sessões</div>
-            <div class="page-danger-desc">Desconecta sua conta de todos os dispositivos</div>
-          </div>
-          <button class="btn btn-danger-outline" onclick="revokeAllSessions()">Encerrar sessões</button>
+          <section class="page-section card-surface">
+            <div class="page-section-title">Experiência do painel</div>
+            <div class="page-section-sub">Comportamento visual e operação em listas, kanban e filtros.</div>
+
+            <div class="page-toggle-row">
+              <div>
+                <div class="page-toggle-label">Compactar tabelas</div>
+                <div class="page-toggle-desc">Reduz o espaçamento entre linhas para mostrar mais conteúdo</div>
+              </div>
+              <label class="page-toggle">
+                <input type="checkbox" id="prefCompactTable" onchange="saveSetting('prefCompactTable', this.checked)"/>
+                <span class="page-toggle-track"></span>
+              </label>
+            </div>
+
+            <div class="page-toggle-row">
+              <div>
+                <div class="page-toggle-label">Exibir barras de progresso</div>
+                <div class="page-toggle-desc">Mantém indicadores visuais em listas e jornadas</div>
+              </div>
+              <label class="page-toggle">
+                <input type="checkbox" id="prefShowProgress" onchange="saveSetting('prefShowProgress', this.checked)"/>
+                <span class="page-toggle-track"></span>
+              </label>
+            </div>
+
+            <div class="page-toggle-row">
+              <div>
+                <div class="page-toggle-label">Abrir kanban por padrão</div>
+                <div class="page-toggle-desc">Usa a visualização em colunas como primeira escolha</div>
+              </div>
+              <label class="page-toggle">
+                <input type="checkbox" id="prefOpenKanbanByDefault" onchange="saveSetting('prefOpenKanbanByDefault', this.checked)"/>
+                <span class="page-toggle-track"></span>
+              </label>
+            </div>
+
+            <div class="page-toggle-row">
+              <div>
+                <div class="page-toggle-label">Recolher filtros no mobile</div>
+                <div class="page-toggle-desc">Favorece a área útil das listas em telas menores</div>
+              </div>
+              <label class="page-toggle">
+                <input type="checkbox" id="prefCollapseFiltersOnMobile" onchange="saveSetting('prefCollapseFiltersOnMobile', this.checked)"/>
+                <span class="page-toggle-track"></span>
+              </label>
+            </div>
+          </section>
+
+          <section class="page-section card-surface">
+            <div class="page-section-title">Equipe do tenant</div>
+            <div class="page-section-sub">Convide, ajuste função, suspenda acesso e reorganize o contexto da empresa.</div>
+            <div class="account-section-actions">
+              <button class="btn btn-secondary" type="button" id="openInviteMemberBtn" onclick="openInviteMemberDrawer()">Adicionar membro</button>
+            </div>
+            <div class="tenant-team-list" id="tenantMembersList"></div>
+          </section>
+
+          <section class="page-section page-danger-zone">
+            <div class="page-section-title">Sessões</div>
+            <div class="page-section-sub">Use com cuidado ao encerrar acessos ativos.</div>
+
+            <div class="page-danger-row">
+              <div>
+                <div class="page-danger-label">Encerrar todas as sessões</div>
+                <div class="page-danger-desc">Desconecta sua conta de todos os dispositivos</div>
+              </div>
+              <button class="btn btn-danger-outline" onclick="revokeAllSessions()">Encerrar sessões</button>
+            </div>
+          </section>
         </div>
       </div>
     </div>
@@ -200,6 +259,6 @@
 <div class="toast" id="toast"></div>
 
 <script src="./js/admin-shell-core.js?v=20260421g"></script>
-<script src="./js/configuracoes-init.js?v=20260421g"></script>
+<script src="./js/configuracoes-init.js?v=20260421h"></script>
 </body>
 </html>
