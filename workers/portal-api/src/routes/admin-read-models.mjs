@@ -1539,6 +1539,59 @@ async function handleJourneys(request, context) {
   return json({ ...journey, steps });
 }
 
+async function handleCamilaAvailability(request, context) {
+  if (request.method !== 'GET') return methodNotAllowed();
+
+  // Check if Google Calendar is configured
+  const { gcFreeBusy, computeFreeWindows } = require('../../lib/calendar');
+  
+  // Try to get a token to see if it's configured
+  const { _gcAccessToken } = require('../../lib/calendar');
+  const token = await _gcAccessToken();
+  
+  if (!token) {
+    return json({ unconfigured: true }, { status: 503 });
+  }
+
+  try {
+    // Get free/busy for next 10 weekdays
+    const now = new Date();
+    const timeMin = now.toISOString();
+    const timeMax = new Date(now.getTime() + 10 * 24 * 60 * 60 * 1000).toISOString();
+
+    const busyIntervals = await gcFreeBusy(timeMin, timeMax);
+
+    // Generate free windows for the next 5 weekdays
+    const freeWindows = {};
+    let daysProcessed = 0;
+    let currentDate = new Date(now);
+
+    while (daysProcessed < 5) {
+      const dateStr = currentDate.toISOString().split('T')[0];
+      const dayOfWeek = currentDate.getDay();
+
+      // Skip weekends (0=Sunday, 6=Saturday)
+      if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+        const windows = computeFreeWindows(busyIntervals, dateStr);
+        if (windows.length > 0) {
+          freeWindows[dateStr] = windows;
+        }
+        daysProcessed++;
+      }
+
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    return json({
+      free_windows: freeWindows,
+      calendar_connected: true,
+    });
+  } catch (err) {
+    console.error('[CamilaAvailability] Error:', err.message);
+    return json({ error: 'Erro ao carregar disponibilidade do calendário' }, { status: 500 });
+  }
+}
+
 async function handleAgendaSlots(request, context) {
   if (request.method !== 'GET') return methodNotAllowed();
   const url = new URL(request.url);
@@ -1613,6 +1666,7 @@ export async function handleAdminReadModels(request, context) {
   if (/^\/api\/admin\/forms(?:\/.*)?$/.test(pathname)) return handleForms(request, context);
   if (/^\/api\/admin\/journeys(?:\/.*)?$/.test(pathname)) return handleJourneys(request, context);
   if (pathname === '/api/admin/agenda/slots') return handleAgendaSlots(request, context);
+  if (pathname === '/api/admin/agenda/camila-availability') return handleCamilaAvailability(request, context);
 
   return null;
 }
