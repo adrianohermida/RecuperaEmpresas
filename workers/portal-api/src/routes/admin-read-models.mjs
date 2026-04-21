@@ -127,6 +127,42 @@ async function handleClients(request, context) {
 }
 
 async function handleClientDetail(request, context) {
+  if (request.method === 'DELETE') {
+    const body = await readJson(request);
+    if (body.confirm !== 'CONFIRMAR_EXCLUSAO') {
+      return json({ error: 'Para excluir, envie { confirm: "CONFIRMAR_EXCLUSAO" } no body.' }, { status: 400 });
+    }
+
+    const user = await findUserById(context.sb, context.params.clientId);
+    if (!user) return json({ error: 'Cliente nao encontrado.' }, { status: 404 });
+    if (user.is_admin) return json({ error: 'Nao e possivel excluir uma conta admin.' }, { status: 403 });
+
+    queueSideEffect(context, () => auditLog(context.sb, {
+      actorId: context.user.id,
+      actorEmail: context.user.email,
+      actorRole: 'admin',
+      entityType: 're_users',
+      entityId: context.params.clientId,
+      action: 'delete',
+      before: { email: user.email, company: user.company },
+    }), 'audit-log');
+
+    const { error } = await context.sb.from('re_users').delete().eq('id', context.params.clientId);
+    if (error) return json({ error: error.message }, { status: 500 });
+
+    queueSideEffect(context, () => sendMail(context.env, {
+      to: user.email,
+      subject: 'Conta encerrada - Recupera Empresas',
+      html: emailWrapper('Conta encerrada',
+        `<p>Ola, ${user.name || user.email}!</p>
+         <p>Sua conta no portal Recupera Empresas foi encerrada pelo consultor responsavel.</p>
+         <p>Todos os seus dados foram removidos conforme a LGPD.</p>
+         <p>Se tiver duvidas, entre em contato com nossa equipe.</p>`),
+    }), 'delete-account-email');
+
+    return json({ success: true, message: 'Conta excluida com sucesso.' });
+  }
+
   if (request.method !== 'GET') return methodNotAllowed();
   const user = await findUserById(context.sb, context.params.clientId);
   if (!user) return json({ error: 'Cliente nao encontrado.' }, { status: 404 });

@@ -4,6 +4,13 @@
 (function () {
   function esc(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
+  function resolveClientId(candidate) {
+    if (candidate && candidate !== 'null' && candidate !== 'undefined') return candidate;
+    const stateId = window.REClientDetailState?.currentClientId || window._currentClientId;
+    if (stateId && stateId !== 'null' && stateId !== 'undefined') return stateId;
+    return new URLSearchParams(window.location.search).get('id');
+  }
+
   function closeModal(id) {
     if (window.REAdminModal?.closeById) {
       window.REAdminModal.closeById(id, 'admin-client-actions:close');
@@ -703,6 +710,11 @@
   }
 
   async function adminDeleteClient(clientId) {
+    const effectiveClientId = resolveClientId(clientId);
+    if (!effectiveClientId) {
+      showToast('Cliente não identificado para exclusão.', 'error');
+      return;
+    }
     openModal('deleteClientModal', 'Excluir conta do cliente',
       `<div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:12px;margin-bottom:14px;font-size:13px">
         <strong>Ação irreversível.</strong> Esta operação excluirá a conta e todos os dados do cliente.
@@ -711,17 +723,22 @@
       <p style="font-size:13px;margin-bottom:10px">Digite <code>CONFIRMAR_EXCLUSAO</code> para confirmar:</p>
       <input id="deleteConfirmText" class="form-control" placeholder="CONFIRMAR_EXCLUSAO">`,
       `<button class="btn-ghost admin-modal-btn" onclick="closeModal('deleteClientModal')">Cancelar</button>
-       <button class="btn btn-danger admin-modal-btn" onclick="_submitDeleteClient('${clientId}')">Excluir conta</button>`,
+       <button class="btn btn-danger admin-modal-btn" onclick="_submitDeleteClient('${effectiveClientId}')">Excluir conta</button>`,
       'sm'
     );
   }
 
   async function _submitDeleteClient(clientId) {
+    const effectiveClientId = resolveClientId(clientId);
+    if (!effectiveClientId) {
+      showToast('Cliente não identificado para exclusão.', 'error');
+      return;
+    }
     const text = document.getElementById('deleteConfirmText')?.value.trim();
     if (text !== 'CONFIRMAR_EXCLUSAO') {
       showToast('Digite o texto de confirmação exato.', 'error'); return;
     }
-    const res = await fetch(`/api/admin/client/${clientId}`, {
+    const res = await fetch(`/api/admin/client/${effectiveClientId}`, {
       method: 'DELETE', headers: authH(),
       body: JSON.stringify({ confirm: 'CONFIRMAR_EXCLUSAO' }),
     });
