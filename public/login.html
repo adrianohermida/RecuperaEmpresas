@@ -4,18 +4,16 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <meta name="robots" content="noindex, nofollow"/>
-  <title>Login â€” Recupera Empresas</title>
+  <title>Login — Recupera Empresas</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
-  <link rel="stylesheet" href="/css/auth.css"/>
+  <link rel="stylesheet" href="/css/auth.css?v=20260421h"/>
   <script src="/js/config.js?v=20260420a"></script>
   <script src="/js/runtime-diagnostics.js?v=20260420a"></script>
   <script src="/js/api-base.js?v=20260420a"></script>
-  <script src="/js/shared-utils.js?v=20260420c"></script>
+  <script src="/js/shared-utils.js?v=20260421g"></script>
   <script>
     window.__reLoadSupabaseCdn = function () {
-      if (window.supabase) return;
-      var existing = document.getElementById('reSupabaseFallback');
-      if (existing) return;
+      if (window.supabase || document.getElementById('reSupabaseFallback')) return;
       var script = document.createElement('script');
       script.id = 'reSupabaseFallback';
       script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.103.0/dist/umd/supabase.js';
@@ -26,92 +24,51 @@
   <script src="/vendor/supabase/supabase.js?v=20260420a" onerror="window.__reLoadSupabaseCdn && window.__reLoadSupabaseCdn()"></script>
 </head>
 <body>
-<div class="auth-layout">
-
-  <!-- Brand panel -->
-  <div class="auth-brand">
-    <div class="brand-logo">
-      <svg width="44" height="36" viewBox="0 0 44 36" fill="none">
-        <rect x="0"  y="26" width="8" height="10" rx="4" fill="#4B9EFF"/>
-        <rect x="12" y="18" width="8" height="18" rx="4" fill="#2B7FFF"/>
-        <rect x="24" y="10" width="8" height="26" rx="4" fill="#1A56DB"/>
-        <rect x="36" y="2"  width="8" height="34" rx="4" fill="#1244AB"/>
-      </svg>
-      <div class="brand-logo-text">
-        Recupera Empresas
-        <span>PORTAL DO CLIENTE</span>
-      </div>
-    </div>
-
-    <h1 class="brand-heading">
-      ReestruturaÃ§Ã£o empresarial <em>com estratÃ©gia</em>
-    </h1>
-    <p class="brand-sub">
-      Acesse o portal para preencher os dados da sua empresa e iniciar o processo de Business Plan e recuperaÃ§Ã£o financeira.
-    </p>
-
-    <div class="brand-features">
-      <div class="brand-feature">
-        <div class="brand-feature-icon">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#60A5FA" stroke-width="2">
-            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-          </svg>
-        </div>
-        Dados protegidos pela LGPD (Lei 13.709/2018)
-      </div>
-      <div class="brand-feature">
-        <div class="brand-feature-icon">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#60A5FA" stroke-width="2">
-            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
-          </svg>
-        </div>
-        Progresso salvo automaticamente
-      </div>
-      <div class="brand-feature">
-        <div class="brand-feature-icon">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#60A5FA" stroke-width="2">
-            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-            <circle cx="9" cy="7" r="4"/>
-            <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
-          </svg>
-        </div>
-        Equipe especializada acompanha sua jornada
-      </div>
-      <div class="brand-feature">
-        <div class="brand-feature-icon">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#60A5FA" stroke-width="2">
-            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
-            <line x1="8" y1="21" x2="16" y2="21"/>
-            <line x1="12" y1="17" x2="12" y2="21"/>
-          </svg>
-        </div>
-        AnÃ¡lise integrada com Business Plan
-      </div>
-    </div>
-
-    <div class="brand-footer">
-      Â© 2025 Recupera Empresas Â· recuperaempresas.com.br
-    </div>
-  </div>
-
-  <!-- Form panel -->
-  <div class="auth-panel">
-    <div class="auth-card">
-      <h1 class="auth-card-title">Bem-vindo de volta</h1>
-      <p class="auth-card-subtitle">Acesse o portal para continuar o seu onboarding</p>
-
-      <!-- Success (email confirmed, etc.) -->
-      <div class="alert alert-success" id="alertSuccess">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="auth-alert-icon">
-          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
+<div class="auth-shell">
+  <section class="auth-hero">
+    <div class="auth-hero-inner">
+      <div class="auth-brand-mark">
+        <svg width="44" height="36" viewBox="0 0 44 36" fill="none">
+          <rect x="0"  y="26" width="8" height="10" rx="4" fill="#4B9EFF"/>
+          <rect x="12" y="18" width="8" height="18" rx="4" fill="#2B7FFF"/>
+          <rect x="24" y="10" width="8" height="26" rx="4" fill="#1A56DB"/>
+          <rect x="36" y="2"  width="8" height="34" rx="4" fill="#1244AB"/>
         </svg>
+        <div>
+          <div class="auth-brand-title">Recupera Empresas</div>
+          <div class="auth-brand-subtitle">Portal de acesso</div>
+        </div>
+      </div>
+
+      <div class="auth-hero-copy">
+        <p class="auth-kicker">Reestruturação empresarial</p>
+        <h1>Business Plan, operação 360° e autenticação confiável em uma única jornada.</h1>
+        <p>
+          Entre para acompanhar onboarding, documentos, tarefas, agenda, mensagens e a evolução
+          da estratégia de recuperação da empresa.
+        </p>
+      </div>
+
+      <div class="auth-feature-list">
+        <div class="auth-feature-item">Dados protegidos com autenticação centralizada</div>
+        <div class="auth-feature-item">Acompanhamento contínuo da equipe consultiva</div>
+        <div class="auth-feature-item">Fluxo preparado para mobile, tablet e desktop</div>
+      </div>
+    </div>
+  </section>
+
+  <main class="auth-main">
+    <div class="auth-card">
+      <div class="auth-card-header">
+        <h2>Entrar</h2>
+        <p>Acesse o portal para continuar seu processo.</p>
+      </div>
+
+      <div class="alert alert-success" id="alertSuccess">
         <span id="alertSuccessMsg"></span>
       </div>
 
       <div class="alert alert-error" id="alertError">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="auth-alert-icon">
-          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-        </svg>
         <span id="alertErrorMsg"></span>
       </div>
 
@@ -124,13 +81,13 @@
 
         <div class="form-group">
           <label class="form-label auth-label-row" for="password">
-            Senha
-            <a href="/forgot-password" class="auth-inline-link auth-inline-link-muted">Esqueci a senha</a>
+            <span>Senha</span>
+            <a href="/forgot-password" class="auth-inline-link">Esqueci a senha</a>
           </label>
           <div class="form-control-wrap">
-            <input class="form-control" type="password" id="password" placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" autocomplete="current-password"/>
-            <button type="button" class="toggle-password" onclick="togglePwd('password',this)" title="Mostrar/ocultar senha">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="eye-icon">
+            <input class="form-control" type="password" id="password" placeholder="••••••••" autocomplete="current-password"/>
+            <button type="button" class="toggle-password" id="togglePasswordBtn" aria-label="Mostrar ou ocultar senha">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
                 <circle cx="12" cy="12" r="3"/>
               </svg>
@@ -139,432 +96,290 @@
           <div class="field-error" id="err_password"></div>
         </div>
 
-        <button type="submit" class="btn-auth" id="btnLogin">
-          Entrar no Portal
-        </button>
+        <button type="submit" class="btn-auth" id="btnLogin">Entrar no portal</button>
       </form>
 
       <div class="auth-links">
-        NÃ£o tem conta?
+        Não tem conta?
         <a href="/register">Criar acesso</a>
       </div>
     </div>
-  </div>
+  </main>
 </div>
 
 <script>
-function togglePwd(id, btn) {
-  const inp = document.getElementById(id);
-  const showing = inp.type === 'text';
-  inp.type = showing ? 'password' : 'text';
-  btn.classList.toggle('toggle-password-active', !showing);
-}
+(function () {
+  'use strict';
 
-function showError(id, msg) {
-  const el = document.getElementById('err_' + id);
-  const inp = document.getElementById(id);
-  if (el) { el.textContent = msg; el.classList.add('show'); }
-  if (inp) inp.classList.add('is-error');
-}
-function clearErrors() {
-  document.querySelectorAll('.field-error').forEach(e => { e.textContent = ''; e.classList.remove('show'); });
-  document.querySelectorAll('.is-error').forEach(e => e.classList.remove('is-error'));
-  document.getElementById('alertError').classList.remove('show');
-}
-
-const REDIRECT_LOCK_KEY = 're_auth_redirect_lock';
-const REDIRECT_LOCK_TTL = 12000;
-
-function clearRedirectLock() {
-  sessionStorage.removeItem(REDIRECT_LOCK_KEY);
-}
-
-function sanitizeReturnTo(rawValue) {
-  if (!rawValue || typeof rawValue !== 'string') return '';
-  if (!rawValue.startsWith('/')) return '';
-  if (rawValue.startsWith('//')) return '';
-
-  try {
-    const url = new URL(rawValue, window.location.origin);
-    if (url.origin !== window.location.origin) return '';
-    const blockedPaths = new Set(['/login', '/register', '/forgot-password', '/reset-password']);
-    if (blockedPaths.has(url.pathname)) return '';
-    if (url.pathname === window.location.pathname && url.search === window.location.search) return '';
-    return url.pathname + url.search + url.hash;
-  } catch (error) {
-    return '';
-  }
-}
-
-function beginRedirect(target) {
-  if (!target) return false;
-
-  try {
-    const now = Date.now();
-    const last = JSON.parse(sessionStorage.getItem(REDIRECT_LOCK_KEY) || 'null');
-    if (last && last.target === target && now - Number(last.at || 0) < REDIRECT_LOCK_TTL) {
-      console.warn('[LOGIN] duplicate redirect suppressed', target);
-      return false;
-    }
-    sessionStorage.setItem(REDIRECT_LOCK_KEY, JSON.stringify({ target, at: now }));
-  } catch (error) {
-    // Best effort only.
-  }
-
-  return true;
-}
-
-function redirectAfterAuth(user, options) {
-  const opts = options || {};
-  const target = sanitizeReturnTo(opts.returnTo || new URLSearchParams(window.location.search).get('returnTo') || '');
-
-  if (target) {
-    if (beginRedirect(target)) {
-      window.location.replace(target);
-    }
-    return;
-  }
-
-  const fallback = user && user.isAdmin ? window.REShared.getRoute('admin') : window.REShared.getRoute('dashboard');
-  if (beginRedirect(fallback)) {
-    window.REShared.redirectToUserHome(user);
-  }
-}
-
-// â”€â”€ Supabase client (browser-side) â€” persists session automatically â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-const _sbUrl  = (window.VITE_SUPABASE_URL || window.RE_SUPABASE_URL || 'https://riiajjmnzgagntiqqshs.supabase.co').replace(/\/$/, '');
-const _sbAnon = window.VITE_SUPABASE_ANON_KEY || window.RE_SUPABASE_ANON || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJpaWFqam1uemdhZ250aXFxc2hzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYxNzY0ODUsImV4cCI6MjA5MTc1MjQ4NX0.zyOFjVFIBJem5FZmXBD-ya78RheD_a-YHetibyVvXcI';
-const _sb     = (_sbUrl && _sbAnon && window.supabase)
-  ? window.supabase.createClient(_sbUrl, _sbAnon, { auth: { persistSession: true, autoRefreshToken: true } })
-  : null;
-
-async function requestApiJson(url, options) {
-  if (typeof window.apiJsonRequest === 'function') {
-    return window.apiJsonRequest(url, options);
-  }
-
-  const response = await fetch(url, options);
-  return {
-    ok: response.ok,
-    status: response.status,
-    data: await window.readApiResponse(response)
-  };
-}
-
-function reportLoginIssue(code, details) {
-  if (!window.REDiagnostics || typeof window.REDiagnostics.reportIssue !== 'function') return;
-  window.REDiagnostics.reportIssue('error', code, details || {});
-}
-
-async function diagnoseOauthRuntime() {
+  var REDIRECT_LOCK_KEY = 're_auth_redirect_lock';
+  var REDIRECT_LOCK_TTL = 12000;
   var params = new URLSearchParams(window.location.search);
-  var returnTo = params.get('returnTo') || '';
-  var isOauthContext = params.get('err') === 'oauth' || returnTo.indexOf('/oauth/consent') === 0;
 
-  try {
-    var result = await requestApiJson('/api/auth/oauth/status', {
-      method: 'GET',
-      diagnostics: {
-        operation: 'oauth.status',
-        expected: {
-          method: 'GET',
-          route: '/api/auth/oauth/status',
-          expectedResponse: '200 com configured=true e nenhuma variÃ¡vel ausente para o Worker OAuth',
-          sourceFile: 'public/login.html'
-        }
-      }
-    });
-    var payload = result.data || {};
-    if (payload.configured) return;
-
-    var missingItems = Array.isArray(payload.missing) ? payload.missing : [];
-    reportLoginIssue('oauth-worker-misconfigured', {
-      summary: missingItems.length
-        ? 'O Worker OAuth respondeu, mas estÃ¡ mal configurado: faltam ' + missingItems.join(', ') + '.'
-        : 'O Worker OAuth respondeu, mas a configuraÃ§Ã£o publicada ainda estÃ¡ incompleta.',
-      expected: payload.expected || {
-        route: '/api/auth/oauth/status',
-        required: ['OAUTH_CLIENT_ID', 'JWT_SECRET', 'VITE_SUPABASE_URL', 'VITE_SUPABASE_ANON_KEY']
-      },
-      identified: payload.identified || {
-        missing: missingItems
-      },
-      missing: missingItems,
-      isOauthContext: isOauthContext,
-      sourceFile: 'public/login.html'
-    });
-  } catch (error) {
-    reportLoginIssue(isOauthContext ? 'oauth-worker-status-unreachable' : 'oauth-worker-status-check-failed', {
-      summary: 'O portal tentou diagnosticar o Worker OAuth, mas nem a rota de status respondeu corretamente.',
-      expected: {
-        route: '/api/auth/oauth/status',
-        sourceFile: 'public/login.html'
-      },
-      identified: {
-        message: error && error.message ? error.message : 'oauth status probe failed'
-      }
+  function getSupabaseClient() {
+    var url = (window.VITE_SUPABASE_URL || window.RE_SUPABASE_URL || '').replace(/\/$/, '');
+    var anon = window.VITE_SUPABASE_ANON_KEY || window.RE_SUPABASE_ANON || '';
+    if (!url || !anon || !window.supabase) return null;
+    return window.supabase.createClient(url, anon, {
+      auth: { persistSession: true, autoRefreshToken: true }
     });
   }
-}
 
-document.getElementById('loginForm').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  clearErrors();
-  clearRedirectLock();
+  var supabaseClient = getSupabaseClient();
 
-  const email    = document.getElementById('email').value.trim();
-  const password = document.getElementById('password').value;
-  let valid = true;
-
-  if (!email)    { showError('email', 'Informe o e-mail.'); valid = false; }
-  if (!password) { showError('password', 'Informe a senha.'); valid = false; }
-  if (!valid) return;
-
-  const btn = document.getElementById('btnLogin');
-  btn.disabled = true;
-  btn.innerHTML = '<div class="spinner"></div> Entrando...';
-
-  try {
-    let result = await requestApiJson('/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
-      diagnostics: {
-        operation: 'auth.login.owner',
-        expected: {
-          method: 'POST',
-          route: '/api/auth/login',
-          expectedResponse: '200 com token, user e opcionalmente supabase_session; ou 401 com error',
-          sourceFile: 'public/login.html'
-        }
-      }
-    });
-    let json = result.data || {};
-
-    // If owner login failed, attempt member login
-    if (!json.success && !json.token) {
-      const result2 = await requestApiJson('/api/auth/member-login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-        diagnostics: {
-          operation: 'auth.login.member',
-          expected: {
-            method: 'POST',
-            route: '/api/auth/member-login',
-            expectedResponse: '200 com token e user; ou 401 com error',
-            sourceFile: 'public/login.html'
-          }
-        }
-      });
-      const json2 = result2.data || {};
-      if (json2.token) {
-        json = { success: true, token: json2.token, user: json2.user, supabase_session: json2.supabase_session };
-        result = result2;
-      }
-    }
-
-    if (json.token || json.success) {
-      if (_sb && json.supabase_session?.access_token && json.supabase_session?.refresh_token) {
-        const { error: setSessionErr } = await _sb.auth.setSession({
-          access_token: json.supabase_session.access_token,
-          refresh_token: json.supabase_session.refresh_token,
-        });
-        if (setSessionErr) {
-          console.warn('[LOGIN] supabase-js setSession:', setSessionErr.message);
-          reportLoginIssue('login-supabase-session-failed', {
-            summary: 'O login da API funcionou, mas a sessÃ£o Supabase no navegador falhou.',
-            expected: {
-              action: 'persistir sessÃ£o Supabase para o fluxo /oauth/consent',
-              sourceFile: 'public/login.html'
-            },
-            identified: {
-              message: setSessionErr.message
-            }
-          });
-        }
-      }
-
-      if (window.REShared?.storeAuthUser) window.REShared.storeAuthUser(json.user);
-      else localStorage.setItem('re_user', JSON.stringify(json.user || {}));
-
-      // If we were redirected here from the OAuth consent page, go back there.
-      redirectAfterAuth(json.user);
-    } else {
-      const msg = json.error || 'Credenciais invÃ¡lidas.';
-      // Email not confirmed â€” offer to resend
-      if (msg.toLowerCase().includes('not confirmed') || msg.toLowerCase().includes('confirmar')) {
-        document.getElementById('alertErrorMsg').innerHTML =
-          'Confirme seu e-mail antes de entrar. ' +
-          '<a href="#" id="resendLink" class="auth-inline-link-danger">Reenviar confirmaÃ§Ã£o</a>';
-        document.getElementById('resendLink')?.addEventListener('click', async (ev) => {
-          ev.preventDefault();
-          await requestApiJson('/api/auth/resend-confirmation', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email })
-          });
-          document.getElementById('alertErrorMsg').textContent = 'E-mail de confirmaÃ§Ã£o reenviado. Verifique sua caixa de entrada.';
-        });
-      } else {
-        document.getElementById('alertErrorMsg').textContent = msg;
-      }
-      document.getElementById('alertError').classList.add('show');
-      btn.disabled = false;
-      btn.textContent = 'Entrar no Portal';
-    }
-  } catch {
-    reportLoginIssue('login-request-threw', {
-      summary: 'A tentativa de login lanÃ§ou exceÃ§Ã£o antes de concluir o fluxo de autenticaÃ§Ã£o.',
-      expected: {
-        action: 'receber resposta JSON dos endpoints /api/auth/login e /api/auth/member-login',
-        sourceFile: 'public/login.html'
-      }
-    });
-    document.getElementById('alertErrorMsg').textContent = 'Erro de conexÃ£o. Tente novamente.';
-    document.getElementById('alertError').classList.add('show');
-    btn.disabled = false;
-    btn.textContent = 'Entrar no Portal';
+  function showSuccess(message) {
+    var element = document.getElementById('alertSuccess');
+    document.getElementById('alertSuccessMsg').textContent = message;
+    element.classList.add('show');
   }
-});
 
-// â”€â”€ Handle URL params & hash tokens on page load â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-(async () => {
-  const params      = new URLSearchParams(window.location.search);
-  const hash        = Object.fromEntries(new URLSearchParams(window.location.hash.slice(1)));
-  const accessToken = hash.access_token || '';
-  const hashType    = hash.type         || '';
+  function showError(message) {
+    var element = document.getElementById('alertError');
+    document.getElementById('alertErrorMsg').textContent = message;
+    element.classList.add('show');
+  }
 
-  // Came back from OAuth callback â€” server already exchanged code, passes portal token in hash
-  if (hash.oauth_user && (hash.oauth === '1' || hash.oauth_token)) {
+  function clearAlerts() {
+    document.getElementById('alertSuccess').classList.remove('show');
+    document.getElementById('alertError').classList.remove('show');
+    document.getElementById('alertSuccessMsg').textContent = '';
+    document.getElementById('alertErrorMsg').textContent = '';
+  }
+
+  function setFieldError(id, message) {
+    var error = document.getElementById('err_' + id);
+    var input = document.getElementById(id);
+    if (error) {
+      error.textContent = message;
+      error.classList.add('show');
+    }
+    if (input) input.classList.add('is-error');
+  }
+
+  function clearFieldErrors() {
+    document.querySelectorAll('.field-error').forEach(function (node) {
+      node.textContent = '';
+      node.classList.remove('show');
+    });
+    document.querySelectorAll('.is-error').forEach(function (node) {
+      node.classList.remove('is-error');
+    });
+  }
+
+  function sanitizeReturnTo(rawValue) {
+    if (!rawValue || typeof rawValue !== 'string') return '';
+    if (!rawValue.startsWith('/') || rawValue.startsWith('//')) return '';
+
     try {
-      const user = JSON.parse(decodeURIComponent(hash.oauth_user || '{}'));
-      if (_sb && hash.oauth_access_token && hash.oauth_refresh_token) {
-        const { error: oauthSessionErr } = await _sb.auth.setSession({
-          access_token: decodeURIComponent(hash.oauth_access_token),
-          refresh_token: decodeURIComponent(hash.oauth_refresh_token),
-        });
-        if (oauthSessionErr) {
-          reportLoginIssue('oauth-callback-session-failed', {
-            summary: 'O callback OAuth retornou ao login, mas a sessÃ£o Supabase nÃ£o foi persistida.',
-            expected: {
-              action: 'persistir access_token e refresh_token retornados pelo callback OAuth',
-              sourceFile: 'public/login.html'
-            },
-            identified: {
-              message: oauthSessionErr.message
-            }
-          });
-        }
-      }
-      if (window.REShared?.storeAuthUser) window.REShared.storeAuthUser(user);
-      else localStorage.setItem('re_user', JSON.stringify(user || {}));
-      history.replaceState(null, '', window.location.pathname + window.location.search);
-      redirectAfterAuth(user, { returnTo: params.get('returnTo') });
-      return;
+      var url = new URL(rawValue, window.location.origin);
+      var blocked = new Set(['/login', '/register', '/forgot-password', '/reset-password']);
+      if (url.origin !== window.location.origin) return '';
+      if (blocked.has(url.pathname)) return '';
+      if (url.pathname === window.location.pathname && url.search === window.location.search) return '';
+      return url.pathname + url.search + url.hash;
     } catch (error) {
-      reportLoginIssue('oauth-callback-hash-parse-failed', {
-        summary: 'O login recebeu hash OAuth, mas falhou ao interpretar os dados retornados.',
-        expected: {
-          action: 'hash contendo oauth_token, oauth_user e opcionalmente oauth_access_token/oauth_refresh_token',
-          sourceFile: 'public/login.html'
-        },
-        identified: {
-          message: error && error.message ? error.message : 'falha ao ler hash OAuth',
-          hashKeys: Object.keys(hash)
-        }
-      });
+      return '';
     }
   }
 
-  // Came back from email confirmation link â†’ auto-login with the hash tokens
-  if (accessToken && (hashType === 'signup' || hashType === 'magiclink')) {
+  function clearRedirectLock() {
+    sessionStorage.removeItem(REDIRECT_LOCK_KEY);
+  }
+
+  function beginRedirect(target) {
+    if (!target) return false;
     try {
-      const result = await requestApiJson('/api/auth/confirm', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ access_token: accessToken, refresh_token: hash.refresh_token || '' }),
-        diagnostics: {
-          operation: 'auth.confirm',
-          expected: {
-            method: 'POST',
-            route: '/api/auth/confirm',
-            expectedResponse: '200 com token e user apÃ³s confirmaÃ§Ã£o de e-mail',
-            sourceFile: 'public/login.html'
-          }
-        }
-      });
-      const json = result.data || {};
-      if (json.success && json.user) {
-        if (window.REShared?.storeAuthUser) window.REShared.storeAuthUser(json.user);
-        else localStorage.setItem('re_user', JSON.stringify(json.user || {}));
-        redirectAfterAuth(json.user);
-        return;
+      var now = Date.now();
+      var last = JSON.parse(sessionStorage.getItem(REDIRECT_LOCK_KEY) || 'null');
+      if (last && last.target === target && now - Number(last.at || 0) < REDIRECT_LOCK_TTL) {
+        return false;
       }
-    } catch {}
-    // Auto-login failed â€” fall back to showing a success message so they log in manually
-    showSuccess('E-mail confirmado! FaÃ§a login para continuar.');
-  } else if (params.get('confirmed') === '1') {
-    showSuccess('E-mail confirmado com sucesso! FaÃ§a login para continuar.');
-  } else if (params.get('invited') === '1') {
-    showSuccess('Convite confirmado. Defina sua senha e entre na plataforma.');
-  } else if (params.get('magic') === '1') {
-    showSuccess('Magic link enviado. Abra o e-mail e use o link para entrar.');
-  } else if (params.get('email_changed') === '1') {
-    showSuccess('AlteraÃ§Ã£o de e-mail confirmada com sucesso.');
-  } else if (params.get('reauthenticated') === '1') {
-    showSuccess('ReautenticaÃ§Ã£o concluÃ­da com sucesso.');
-  } else if (params.get('err') === 'timeout') {
-    document.getElementById('alertErrorMsg').textContent =
-      'O servidor demorou para responder. Tente fazer login novamente.';
-    document.getElementById('alertError').classList.add('show');
-  } else if (params.get('err') === 'oauth') {
-    const desc = params.get('desc') || 'Erro na autorizaÃ§Ã£o OAuth.';
-    document.getElementById('alertErrorMsg').textContent =
-      desc === 'session_expired_retry'
-        ? 'SessÃ£o OAuth expirada. Inicie o fluxo novamente.'
-        : `Erro OAuth: ${desc}`;
-    document.getElementById('alertError').classList.add('show');
+      sessionStorage.setItem(REDIRECT_LOCK_KEY, JSON.stringify({ target: target, at: now }));
+    } catch (error) {}
+    return true;
   }
-})();
 
-diagnoseOauthRuntime().catch(function () {});
-if (window.REDiagnostics && typeof window.REDiagnostics.dumpAuthState === 'function') {
-  window.REDiagnostics.dumpAuthState('login-load', {
-    sourceFile: 'public/login.html'
-  });
-}
-
-function showSuccess(msg) {
-  const el = document.getElementById('alertSuccess');
-  document.getElementById('alertSuccessMsg').textContent = msg;
-  el.classList.add('show');
-}
-
-// Redirect if already logged in
-(async () => {
-  try {
-    const result = await window.REShared.verifySession({ allowAnonymous: true, timeoutMs: 20000 });
-    if (window.REDiagnostics && typeof window.REDiagnostics.reportIssue === 'function') {
-      window.REDiagnostics.reportIssue(result.ok ? 'info' : 'warn', 'login-verify-probe-result', {
-        sourceFile: 'public/login.html',
-        summary: result.ok && result.data && result.data.user
-          ? 'A pÃ¡gina de login encontrou uma sessÃ£o vÃ¡lida e vai redirecionar o usuÃ¡rio.'
-          : 'A pÃ¡gina de login nÃ£o encontrou sessÃ£o ativa, entÃ£o continuarÃ¡ exibindo o formulÃ¡rio.',
-        identified: {
-          status: result.status,
-          valid: result.data && result.data.valid,
-          authenticated: result.data && result.data.authenticated
-        }
-      });
+  function redirectAfterAuth(user, options) {
+    var target = sanitizeReturnTo((options && options.returnTo) || params.get('returnTo') || '');
+    if (target) {
+      if (beginRedirect(target)) window.location.replace(target);
+      return;
     }
-    if (result.ok && result.user) {
-      redirectAfterAuth(result.user);
-    } else {
+
+    var fallback = user && user.isAdmin ? window.REShared.getRoute('admin') : window.REShared.getRoute('dashboard');
+    if (beginRedirect(fallback)) {
+      window.location.replace(fallback);
+    }
+  }
+
+  async function requestApiJson(url, options) {
+    if (typeof window.apiJsonRequest === 'function') {
+      return window.apiJsonRequest(url, options);
+    }
+    var response = await fetch(url, options);
+    return {
+      ok: response.ok,
+      status: response.status,
+      data: await window.readApiResponse(response)
+    };
+  }
+
+  async function persistSupabaseSession(session) {
+    if (!supabaseClient || !session || !session.access_token || !session.refresh_token) return;
+    await supabaseClient.auth.setSession({
+      access_token: session.access_token,
+      refresh_token: session.refresh_token
+    }).catch(function () {});
+  }
+
+  async function handleUrlMessages() {
+    if (params.get('confirmed') === '1') showSuccess('E-mail confirmado com sucesso. Faça login para continuar.');
+    else if (params.get('invited') === '1') showSuccess('Convite confirmado. Defina sua senha e entre na plataforma.');
+    else if (params.get('magic') === '1') showSuccess('Magic link enviado. Abra o e-mail e use o link para entrar.');
+    else if (params.get('email_changed') === '1') showSuccess('Alteração de e-mail confirmada com sucesso.');
+    else if (params.get('reauthenticated') === '1') showSuccess('Reautenticação concluída com sucesso.');
+    else if (params.get('err') === 'timeout') showError('O servidor demorou para responder. Tente novamente.');
+    else if (params.get('err') === 'oauth') showError('Erro na autorização OAuth. Refaça o login para continuar.');
+
+    var hashParams = Object.fromEntries(new URLSearchParams(window.location.hash.slice(1)));
+    if (hashParams.oauth_user && (hashParams.oauth === '1' || hashParams.oauth_token)) {
+      try {
+        var user = JSON.parse(decodeURIComponent(hashParams.oauth_user));
+        await persistSupabaseSession({
+          access_token: decodeURIComponent(hashParams.oauth_access_token || ''),
+          refresh_token: decodeURIComponent(hashParams.oauth_refresh_token || '')
+        });
+        if (window.REShared?.storeAuthUser) window.REShared.storeAuthUser(user);
+        history.replaceState(null, '', window.location.pathname + window.location.search);
+        redirectAfterAuth(user, { returnTo: params.get('returnTo') });
+        return true;
+      } catch (error) {
+        showError('Falha ao concluir o retorno OAuth. Faça login novamente.');
+      }
+    }
+
+    if (hashParams.access_token && (hashParams.type === 'signup' || hashParams.type === 'magiclink')) {
+      try {
+        var result = await requestApiJson('/api/auth/confirm', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            access_token: hashParams.access_token,
+            refresh_token: hashParams.refresh_token || ''
+          })
+        });
+        var payload = result.data || {};
+        if (result.ok && payload.user) {
+          await persistSupabaseSession(payload.supabase_session);
+          if (window.REShared?.storeAuthUser) window.REShared.storeAuthUser(payload.user);
+          history.replaceState(null, '', window.location.pathname + window.location.search);
+          redirectAfterAuth(payload.user);
+          return true;
+        }
+      } catch (error) {}
+      showSuccess('E-mail confirmado. Faça login para continuar.');
+    }
+
+    return false;
+  }
+
+  async function verifyExistingSession() {
+    try {
+      var result = await window.REShared.verifySession({ allowAnonymous: true, timeoutMs: 20000 });
+      if (result.ok && result.user) {
+        redirectAfterAuth(result.user);
+        return true;
+      }
+      clearRedirectLock();
+    } catch (error) {
       clearRedirectLock();
     }
-  } catch {
-    clearRedirectLock();
-    /* server offline or slow - stay on login page */
+    return false;
   }
+
+  async function submitLogin(event) {
+    event.preventDefault();
+    clearAlerts();
+    clearFieldErrors();
+    clearRedirectLock();
+
+    var email = document.getElementById('email').value.trim();
+    var password = document.getElementById('password').value;
+    var valid = true;
+
+    if (!email) {
+      setFieldError('email', 'Informe o e-mail.');
+      valid = false;
+    }
+    if (!password) {
+      setFieldError('password', 'Informe a senha.');
+      valid = false;
+    }
+    if (!valid) return;
+
+    var button = document.getElementById('btnLogin');
+    button.disabled = true;
+    button.textContent = 'Entrando...';
+
+    try {
+      var result = await requestApiJson('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email, password: password })
+      });
+      var payload = result.data || {};
+
+      if ((!result.ok || (!payload.success && !payload.token)) && payload.error) {
+        var memberResult = await requestApiJson('/api/auth/member-login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: email, password: password })
+        });
+        if (memberResult.ok && memberResult.data && memberResult.data.token) {
+          result = memberResult;
+          payload = {
+            success: true,
+            token: memberResult.data.token,
+            user: memberResult.data.user,
+            supabase_session: memberResult.data.supabase_session
+          };
+        }
+      }
+
+      if (result.ok && (payload.success || payload.token) && payload.user) {
+        await persistSupabaseSession(payload.supabase_session);
+        if (window.REShared?.storeAuthUser) window.REShared.storeAuthUser(payload.user);
+        redirectAfterAuth(payload.user);
+        return;
+      }
+
+      var message = payload.error || 'Credenciais inválidas.';
+      if (message.toLowerCase().includes('confirm')) {
+        showError('Confirme seu e-mail antes de entrar.');
+      } else {
+        showError(message);
+      }
+    } catch (error) {
+      showError('Erro de conexão. Tente novamente.');
+    } finally {
+      button.disabled = false;
+      button.textContent = 'Entrar no portal';
+    }
+  }
+
+  document.getElementById('togglePasswordBtn').addEventListener('click', function () {
+    var input = document.getElementById('password');
+    var showing = input.type === 'text';
+    input.type = showing ? 'password' : 'text';
+    this.classList.toggle('toggle-password-active', !showing);
+  });
+
+  document.getElementById('loginForm').addEventListener('submit', submitLogin);
+
+  (async function initLogin() {
+    var consumed = await handleUrlMessages();
+    if (consumed) return;
+    await verifyExistingSession();
+  })();
 })();
 </script>
 </body>

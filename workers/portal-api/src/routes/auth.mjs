@@ -85,6 +85,18 @@ function getAppSessionMaxAge(env) {
   return Number.isFinite(configured) && configured > 0 ? Math.round(configured) : 7 * 24 * 60 * 60;
 }
 
+function getAppSessionCookieDomain(request, env) {
+  const configured = String(env.APP_SESSION_COOKIE_DOMAIN || '').trim();
+  if (configured) return configured;
+
+  const hostname = new URL(request.url).hostname.toLowerCase();
+  if (hostname === 'recuperaempresas.com.br' || hostname.endsWith('.recuperaempresas.com.br')) {
+    return '.recuperaempresas.com.br';
+  }
+
+  return '';
+}
+
 function buildAppSessionCookie(request, env, token, maxAgeSeconds) {
   const parts = [
     `${getAppSessionCookieName(env)}=${encodeURIComponent(token)}`,
@@ -92,8 +104,9 @@ function buildAppSessionCookie(request, env, token, maxAgeSeconds) {
     'HttpOnly',
     'SameSite=Lax',
     `Max-Age=${maxAgeSeconds}`,
-    'Domain=.recuperaempresas.com.br',
   ];
+  const domain = getAppSessionCookieDomain(request, env);
+  if (domain) parts.push(`Domain=${domain}`);
   if (new URL(request.url).protocol === 'https:') parts.push('Secure');
   return parts.join('; ');
 }
@@ -106,8 +119,9 @@ function buildClearedAppSessionCookie(request, env) {
     'SameSite=Lax',
     'Max-Age=0',
     'Expires=Thu, 01 Jan 1970 00:00:00 GMT',
-    'Domain=.recuperaempresas.com.br',
   ];
+  const domain = getAppSessionCookieDomain(request, env);
+  if (domain) parts.push(`Domain=${domain}`);
   if (new URL(request.url).protocol === 'https:') parts.push('Secure');
   return parts.join('; ');
 }

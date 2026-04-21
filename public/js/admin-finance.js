@@ -59,7 +59,7 @@
   }
 
   function openClientFinanceiro(clientId) {
-    window.location.href = 'cliente?id=' + encodeURIComponent(clientId) + '&tab=financeiro_client';
+    window.location.href = '/cliente?id=' + encodeURIComponent(clientId) + '&tab=financeiro_client';
   }
 
   window.loadAdminFinanceiro = loadAdminFinanceiro;

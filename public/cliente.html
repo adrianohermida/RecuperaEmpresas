@@ -6,39 +6,39 @@
   <meta name="robots" content="noindex, nofollow"/>
   <title>Cliente — Recupera Empresas</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
-  <link rel="stylesheet" href="./css/portal.css?v=20260421g"/>
+  <link rel="stylesheet" href="./css/portal.css?v=20260421h"/>
   <script src="./js/config.js?v=20260420a"></script>
   <script src="./js/runtime-diagnostics.js?v=20260420a"></script>
   <script src="./js/api-base.js?v=20260420a"></script>
   <script src="./js/shared-utils.js?v=20260421g"></script>
   <style>
-    .client-page-shell { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
-    .client-page-summary { display: grid; gap: 16px; grid-template-columns: 1fr; }
-    .client-page-hero { background: linear-gradient(135deg, #f8fbff 0%, #eef4ff 100%); border: 1px solid #dbe7ff; border-radius: 18px; padding: 20px; }
-    .client-page-title-row { display: flex; flex-direction: column; gap: 12px; }
-    .client-page-title-wrap { min-width: 0; }
-    .client-page-title { margin: 0; font-size: 28px; line-height: 1.1; color: #10233f; }
-    .client-page-subtitle { margin: 6px 0 0; color: #5b6b80; }
-    .client-page-actions { display: flex; flex-wrap: wrap; gap: 10px; }
-    .client-page-quicklinks { display: flex; flex-wrap: wrap; gap: 10px; }
-    .client-page-quicklink { display: inline-flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 999px; background: #fff; border: 1px solid #d9e4f5; color: #1b365d; text-decoration: none; font-size: 13px; font-weight: 600; }
-    .client-page-tabs-wrap { border: 1px solid #e5e7eb; border-radius: 18px; background: #fff; overflow: hidden; }
-    .client-page-tabs { display: flex; gap: 8px; overflow-x: auto; padding: 12px; border-bottom: 1px solid #eef2f7; scrollbar-width: thin; }
-    .client-page-tab { flex: 0 0 auto; border: 1px solid #dbe2ea; background: #f8fafc; color: #334155; border-radius: 999px; padding: 10px 14px; font-size: 13px; font-weight: 600; cursor: pointer; }
-    .client-page-tab.active { background: #1d4ed8; border-color: #1d4ed8; color: #fff; }
-    .client-page-body { padding: 18px; min-width: 0; overflow-x: auto; }
-    .client-page-info-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); margin-top: 16px; }
-    .client-page-info-card { background: rgba(255,255,255,.9); border: 1px solid #dde7f5; border-radius: 14px; padding: 14px; }
-    .client-page-info-label { font-size: 12px; color: #64748b; margin-bottom: 6px; }
-    .client-page-info-value { font-size: 18px; font-weight: 700; color: #10233f; }
+    .client-detail-page { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+    .client-detail-hero { border: 1px solid #dbe7ff; border-radius: 22px; padding: 20px; background: linear-gradient(135deg, #f8fbff 0%, #eef4ff 100%); }
+    .client-detail-hero-row { display: flex; flex-direction: column; gap: 14px; }
+    .client-detail-title-wrap { min-width: 0; }
+    .client-detail-title { margin: 0; font-size: clamp(28px, 5vw, 38px); line-height: 1.06; color: #10233f; letter-spacing: -0.03em; }
+    .client-detail-subtitle { margin: 8px 0 0; color: #5b6b80; }
+    .client-detail-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+    .client-detail-summary-grid { display: grid; gap: 12px; grid-template-columns: 1fr; margin-top: 18px; }
+    .client-detail-summary-card { background: rgba(255,255,255,.92); border: 1px solid #dde7f5; border-radius: 16px; padding: 14px; min-width: 0; }
+    .client-detail-summary-label { font-size: 12px; color: #64748b; margin-bottom: 6px; }
+    .client-detail-summary-value { font-size: 18px; font-weight: 700; color: #10233f; word-break: break-word; }
+    .client-detail-shortcuts { margin-top: 16px; display: flex; flex-wrap: wrap; gap: 10px; }
+    .client-detail-shortcut { display: inline-flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 999px; border: 1px solid #d9e4f5; background: #fff; color: #1b365d; text-decoration: none; font-size: 13px; font-weight: 600; }
+    .client-detail-tabs-shell { border: 1px solid #e5e7eb; border-radius: 20px; background: #fff; overflow: hidden; min-width: 0; }
+    .client-detail-tabs { display: flex; gap: 8px; overflow-x: auto; padding: 12px; border-bottom: 1px solid #eef2f7; scrollbar-width: thin; }
+    .client-detail-tab { flex: 0 0 auto; padding: 10px 14px; border-radius: 999px; border: 1px solid #dbe2ea; background: #f8fafc; color: #334155; font-size: 13px; font-weight: 700; cursor: pointer; }
+    .client-detail-tab.active { background: #1d4ed8; border-color: #1d4ed8; color: #fff; }
+    .client-detail-body { padding: 18px; min-width: 0; overflow-x: auto; }
+    .client-detail-back-link { width: fit-content; }
     @media (min-width: 768px) {
-      .client-page-title-row { flex-direction: row; justify-content: space-between; align-items: flex-start; }
-      .client-page-body { padding: 22px; }
+      .client-detail-hero-row { flex-direction: row; justify-content: space-between; align-items: flex-start; }
+      .client-detail-summary-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .client-detail-body { padding: 22px; }
     }
   </style>
 </head>
 <body>
-
 <div id="authGuard" class="auth-guard">
   <div class="auth-guard-content">
     <svg width="44" height="36" viewBox="0 0 44 36" fill="none" class="auth-guard-logo">
@@ -62,7 +62,7 @@
       </svg>
       <div>
         <div class="logo-text">Recupera Empresas</div>
-        <div class="logo-sub">Cliente em tela dedicada</div>
+        <div class="logo-sub">Client Details</div>
       </div>
     </div>
     <div class="header-right">
@@ -123,25 +123,19 @@
   </nav>
 
   <main class="portal-main">
-    <div class="page-shell client-page-shell">
-      <div class="section-header">
-        <div>
-          <div class="section-title">Cliente</div>
-          <div class="section-sub">Página dedicada para análise, documentos, agenda e operação</div>
-        </div>
-        <a href="/admin" class="btn btn-secondary" id="clientPageBackLink">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
-          Voltar ao painel
-        </a>
-      </div>
+    <div class="page-shell client-detail-page">
+      <a href="/admin" class="btn btn-secondary client-detail-back-link" id="clientPageBackLink">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+        Voltar ao painel
+      </a>
 
-      <section class="client-page-hero">
-        <div class="client-page-title-row">
-          <div class="client-page-title-wrap">
-            <h1 class="client-page-title" id="clientPageTitle">Carregando...</h1>
-            <p class="client-page-subtitle" id="clientPageSubtitle">Preparando dados do cliente</p>
+      <section class="client-detail-hero">
+        <div class="client-detail-hero-row">
+          <div class="client-detail-title-wrap">
+            <h1 class="client-detail-title" id="clientPageTitle">Carregando...</h1>
+            <p class="client-detail-subtitle" id="clientPageSubtitle">Preparando dados do cliente</p>
           </div>
-          <div class="client-page-actions">
+          <div class="client-detail-actions">
             <button class="btn-ghost drawer-action-btn" onclick="exportClientXLS(REClientDetailState.currentClientId)">Exportar XLS</button>
             <button class="btn-ghost drawer-action-btn" onclick="exportClientPDF(REClientDetailState.currentClientId)">Exportar PDF</button>
             <button class="btn-ghost drawer-action-btn" onclick="impersonateClient(REClientDetailState.currentClientId)">Ver como cliente</button>
@@ -150,45 +144,45 @@
           </div>
         </div>
 
-        <div class="client-page-info-grid">
-          <div class="client-page-info-card">
-            <div class="client-page-info-label">Cliente</div>
-            <div class="client-page-info-value" id="clientSummaryName">—</div>
+        <div class="client-detail-summary-grid">
+          <div class="client-detail-summary-card">
+            <div class="client-detail-summary-label">Cliente</div>
+            <div class="client-detail-summary-value" id="clientSummaryName">—</div>
           </div>
-          <div class="client-page-info-card">
-            <div class="client-page-info-label">Contato principal</div>
-            <div class="client-page-info-value" id="clientSummaryMeta">—</div>
+          <div class="client-detail-summary-card">
+            <div class="client-detail-summary-label">Contato principal</div>
+            <div class="client-detail-summary-value" id="clientSummaryMeta">—</div>
           </div>
-          <div class="client-page-info-card">
-            <div class="client-page-info-label">Status</div>
+          <div class="client-detail-summary-card">
+            <div class="client-detail-summary-label">Status</div>
             <div><span class="badge badge-gray" id="clientSummaryStatus">Carregando</span></div>
           </div>
         </div>
 
-        <div class="client-page-quicklinks">
-          <a class="client-page-quicklink" href="#agenda" id="clientAgendaShortcut">Agenda</a>
-          <a class="client-page-quicklink" href="#docs" id="clientDocsShortcut">Documentos</a>
-          <a class="client-page-quicklink" href="/admin">Lista de clientes</a>
+        <div class="client-detail-shortcuts">
+          <a class="client-detail-shortcut" href="#agenda" id="clientAgendaShortcut">Agenda</a>
+          <a class="client-detail-shortcut" href="#docs" id="clientDocsShortcut">Documentos</a>
+          <a class="client-detail-shortcut" href="/admin">Lista de clientes</a>
         </div>
       </section>
 
-      <section class="client-page-tabs-wrap">
-        <div class="client-page-tabs" id="clientPageTabs">
-          <button class="client-page-tab active" data-client-tab="overview" onclick="switchClientDetailTab('overview',this)">Visão Geral</button>
-          <button class="client-page-tab" data-client-tab="plan" onclick="switchClientDetailTab('plan',this)">Business Plan</button>
-          <button class="client-page-tab" data-client-tab="tasks" onclick="switchClientDetailTab('tasks',this)">Tarefas</button>
-          <button class="client-page-tab" data-client-tab="messages" id="drawerTabMessages" onclick="switchClientDetailTab('messages',this)">Mensagens</button>
-          <button class="client-page-tab" data-client-tab="agenda" onclick="switchClientDetailTab('agenda',this)">Agenda</button>
-          <button class="client-page-tab" data-client-tab="docs" onclick="switchClientDetailTab('docs',this)">Documentos</button>
-          <button class="client-page-tab" data-client-tab="equipe" onclick="switchClientDetailTab('equipe',this)">Equipe</button>
-          <button class="client-page-tab" data-client-tab="organograma" onclick="switchClientDetailTab('organograma',this)">Organograma</button>
-          <button class="client-page-tab" data-client-tab="credores" onclick="switchClientDetailTab('credores',this)">Credores</button>
-          <button class="client-page-tab" data-client-tab="fornecedores" onclick="switchClientDetailTab('fornecedores',this)">Fornecedores</button>
-          <button class="client-page-tab" data-client-tab="funcionarios" onclick="switchClientDetailTab('funcionarios',this)">Funcionários</button>
-          <button class="client-page-tab" data-client-tab="financeiro_client" onclick="switchClientDetailTab('financeiro_client',this)">Financeiro</button>
-          <button class="client-page-tab" data-client-tab="data" onclick="switchClientDetailTab('data',this)">Dados</button>
+      <section class="client-detail-tabs-shell">
+        <div class="client-detail-tabs" id="clientPageTabs">
+          <button class="client-detail-tab active" data-client-tab="overview" onclick="switchClientDetailTab('overview',this)">Visão Geral</button>
+          <button class="client-detail-tab" data-client-tab="plan" onclick="switchClientDetailTab('plan',this)">Business Plan</button>
+          <button class="client-detail-tab" data-client-tab="tasks" onclick="switchClientDetailTab('tasks',this)">Tarefas</button>
+          <button class="client-detail-tab" data-client-tab="messages" id="drawerTabMessages" onclick="switchClientDetailTab('messages',this)">Mensagens</button>
+          <button class="client-detail-tab" data-client-tab="agenda" onclick="switchClientDetailTab('agenda',this)">Agenda</button>
+          <button class="client-detail-tab" data-client-tab="docs" onclick="switchClientDetailTab('docs',this)">Documentos</button>
+          <button class="client-detail-tab" data-client-tab="equipe" onclick="switchClientDetailTab('equipe',this)">Equipe</button>
+          <button class="client-detail-tab" data-client-tab="organograma" onclick="switchClientDetailTab('organograma',this)">Organograma</button>
+          <button class="client-detail-tab" data-client-tab="credores" onclick="switchClientDetailTab('credores',this)">Credores</button>
+          <button class="client-detail-tab" data-client-tab="fornecedores" onclick="switchClientDetailTab('fornecedores',this)">Fornecedores</button>
+          <button class="client-detail-tab" data-client-tab="funcionarios" onclick="switchClientDetailTab('funcionarios',this)">Funcionários</button>
+          <button class="client-detail-tab" data-client-tab="financeiro_client" onclick="switchClientDetailTab('financeiro_client',this)">Financeiro</button>
+          <button class="client-detail-tab" data-client-tab="data" onclick="switchClientDetailTab('data',this)">Dados</button>
         </div>
-        <div class="client-page-body" id="clientPageBody">
+        <div class="client-detail-body" id="clientPageBody">
           <div class="empty-state"><p>Carregando cliente...</p></div>
         </div>
       </section>
@@ -208,7 +202,6 @@
 <script src="./js/client-detail-tabs-tertiary.js?v=20260421f"></script>
 <script src="./js/client-detail-data.js?v=20260421f"></script>
 <script src="./js/client-detail-exports.js?v=20260421f"></script>
-<script src="./js/client-detail-controller.js?v=20260421g"></script>
-
+<script src="./js/client-detail-controller.js?v=20260421h"></script>
 </body>
 </html>
