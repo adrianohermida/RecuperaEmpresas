@@ -25,7 +25,7 @@ try {
 
   // Deploy Worker (ajuste o path se necessário)
   const workerDir = path.join(__dirname, '../workers/portal-api');
-  run('npx wrangler deploy', workerDir);
+  run('npx --yes wrangler@4.84.1 deploy', workerDir);
 
   // Deploy Pages a partir de dist em ambos os projetos que servem o portal.
   run('node scripts/deploy-portal-pages.js', rootDir, productionBuildEnv);
