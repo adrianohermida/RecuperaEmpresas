@@ -19,8 +19,8 @@ async function loadAgendaSlots() {
   el.innerHTML = '<div class="dashboard-section-loading">Carregando...</div>';
 
   const [slotsRes, histRes] = await Promise.all([
-    fetch('/api/agenda/slots',      { headers: authH() }),
-    fetch('/api/credits/history',   { headers: authH() }),
+    fetch('/api/agenda/slots',    { headers: authH() }),
+    fetch('/api/credits/history', { headers: authH() }),
   ]);
 
   if (slotsRes.ok) {
@@ -29,60 +29,16 @@ async function loadAgendaSlots() {
 
     if (!slots.length) {
       el.innerHTML = `<div class="empty-state">
-        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+          <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+        </svg>
         <p>Nenhum horário disponível no momento.<br><small>A equipe publicará novos horários em breve.</small></p>
       </div>`;
     } else {
       const bal = credits_balance ?? 0;
       el.innerHTML = `<div class="agenda-slot-list">
-        ${slots.map(s => {
-          const past    = new Date(s.starts_at) < new Date();
-          const noSlots = !s.available && !s.my_booking;
-          return `
-          <div class="agenda-slot-card${past ? ' agenda-slot-card-past' : ''}${s.my_booking ? ' dashboard-slot-card-booked' : ''}">
-            <div class="agenda-slot-header">
-              <div class="agenda-slot-date-card${s.my_booking ? ' dashboard-slot-date-card-booked' : ''}">
-                <div class="agenda-slot-day">${new Date(s.starts_at).getDate()}</div>
-                <div class="agenda-slot-month">${MONTH_PT[new Date(s.starts_at).getMonth()]}</div>
-              </div>
-              <div class="agenda-slot-main">
-                <div class="agenda-slot-title">${s.title}</div>
-                <div class="agenda-slot-meta">
-                  ${fmtSlotTime(s.starts_at)} – ${fmtSlotTime(s.ends_at)} &nbsp;·&nbsp; ${s.duration_min}min
-                  &nbsp;·&nbsp; ${s.credits_cost} crédito${s.credits_cost > 1 ? 's' : ''}
-                  ${s.location === 'presencial' ? '&nbsp;·&nbsp; 📍 Presencial' : '&nbsp;·&nbsp; 🔗 Online'}
-                </div>
-                ${s.meeting_link && s.my_booking_detail?.status === 'confirmed'
-                  ? `<div class="agenda-slot-link-wrap"><a href="${s.meeting_link}" target="_blank" class="agenda-slot-link">🔗 Entrar na reunião</a></div>`
-                  : ''}
-              </div>
-              ${(() => {
-                const bd = s.my_booking_detail;
-                if (!bd) {
-                  if (noSlots) return '<span class="agenda-slot-status agenda-slot-status-full">Lotado</span>';
-                  if (past)    return '<span class="agenda-slot-status agenda-slot-status-past">Encerrado</span>';
-                  if (bal < s.credits_cost) return '<button onclick="buyCredits()" class="agenda-slot-action dashboard-slot-action-buy">Comprar créditos</button>';
-                  return '<button onclick="bookSlot(\''+s.id+'\','+s.credits_cost+')" class="agenda-slot-action dashboard-slot-action-primary">Reservar</button>';
-                }
-                if (bd.status === 'pending')     return '<span class="dashboard-slot-status-pill dashboard-slot-status-pending">Aguardando confirmação</span>'
-                  + '<button onclick="cancelBooking(\''+s.id+'\')" class="agenda-slot-action agenda-slot-action-delete">Cancelar</button>';
-                if (bd.status === 'confirmed')   return '<span class="dashboard-slot-status-pill dashboard-slot-status-confirmed">✅ Confirmado</span>'
-                  + (!past ? '<button onclick="cancelBooking(\''+s.id+'\')" class="agenda-slot-action agenda-slot-action-delete">Cancelar</button>' : '');
-                if (bd.status === 'cancelled')   return '<span class="dashboard-slot-status-pill dashboard-slot-status-cancelled">Cancelado</span>';
-                if (bd.status === 'rescheduled') return '<span class="dashboard-slot-status-pill dashboard-slot-status-rescheduled">Remarcado</span>';
-                return '';
-              })()}
-            </div>
-            ${s.my_booking_detail?.status === 'cancelled' && s.my_booking_detail?.cancel_reason ? `
-              <div class="dashboard-slot-note dashboard-slot-note-cancelled">
-                <strong>Cancelado pela consultoria:</strong> ${s.my_booking_detail.cancel_reason}
-              </div>` : ''}
-            ${s.my_booking_detail?.status === 'rescheduled' && s.my_booking_detail?.reschedule_reason ? `
-              <div class="dashboard-slot-note dashboard-slot-note-rescheduled">
-                <strong>Remarcado:</strong> ${s.my_booking_detail.reschedule_reason}
-              </div>` : ''}
-          </div>`;
-        }).join('')}
+        ${slots.map(s => _renderClientSlotCard(s, bal)).join('')}
       </div>`;
     }
   }
@@ -96,7 +52,11 @@ async function loadAgendaSlots() {
         ${transactions.slice(0, 10).map(t => `
         <div class="dashboard-credit-history-row">
           <span class="dashboard-credit-history-delta ${t.delta > 0 ? 'dashboard-credit-history-delta-positive' : 'dashboard-credit-history-delta-negative'}">${t.delta > 0 ? '+' : ''}${t.delta}</span>
-          <span class="dashboard-credit-history-reason">${t.reason === 'purchase' ? 'Compra de créditos' : t.reason === 'booking' ? 'Sessão reservada' : t.reason === 'refund' ? 'Reembolso de cancelamento' : t.reason}</span>
+          <span class="dashboard-credit-history-reason">${
+            t.reason === 'purchase'  ? 'Compra de créditos' :
+            t.reason === 'booking'   ? 'Sessão reservada'   :
+            t.reason === 'refund'    ? 'Reembolso de cancelamento' : t.reason
+          }</span>
           <span class="dashboard-credit-history-date">${new Date(t.created_at).toLocaleDateString('pt-BR')}</span>
           <span class="dashboard-credit-history-balance">${t.balance_after} crédito${t.balance_after !== 1 ? 's' : ''}</span>
         </div>`).join('')}
@@ -104,6 +64,84 @@ async function loadAgendaSlots() {
     }
   }
 }
+
+function _renderClientSlotCard(s, bal) {
+  const past    = new Date(s.starts_at) < new Date();
+  const noSlots = !s.available && !s.my_booking;
+  const bd      = s.my_booking_detail;
+  // Support both old (meeting_link) and new (meet_link) column names
+  const meetUrl = s.meet_link || s.meeting_link || null;
+
+  // ─── action area ────────────────────────────────────────────────────────────
+  let actionArea = '';
+  if (!bd) {
+    if (noSlots) {
+      actionArea = '<span class="agenda-slot-status agenda-slot-status-full">Lotado</span>';
+    } else if (past) {
+      actionArea = '<span class="agenda-slot-status agenda-slot-status-past">Encerrado</span>';
+    } else if (bal < s.credits_cost) {
+      actionArea = `<button onclick="buyCredits()" class="agenda-slot-action dashboard-slot-action-buy">Comprar créditos</button>`;
+    } else {
+      actionArea = `<button onclick="bookSlot('${s.id}',${s.credits_cost})" class="agenda-slot-action dashboard-slot-action-primary">Reservar</button>`;
+    }
+  } else if (bd.status === 'pending') {
+    actionArea = `
+      <span class="dashboard-slot-status-pill dashboard-slot-status-pending">Aguardando confirmação</span>
+      <button onclick="cancelBooking('${s.id}')" class="agenda-slot-action agenda-slot-action-delete">Cancelar</button>`;
+  } else if (bd.status === 'confirmed') {
+    actionArea = `<span class="dashboard-slot-status-pill dashboard-slot-status-confirmed">✅ Confirmado</span>`;
+    if (!past) {
+      actionArea += `
+        <button onclick="requestReschedule('${s.id}','${bd.id}')" class="agenda-slot-action dashboard-slot-action-reschedule">↕️ Remarcar</button>
+        <button onclick="cancelBooking('${s.id}')" class="agenda-slot-action agenda-slot-action-delete">Cancelar</button>`;
+    }
+  } else if (bd.status === 'pending_reschedule') {
+    actionArea = `
+      <span class="dashboard-slot-status-pill dashboard-slot-status-reschedule">⏳ Remarcação solicitada</span>
+      <button onclick="cancelBooking('${s.id}')" class="agenda-slot-action agenda-slot-action-delete">Cancelar</button>`;
+  } else if (bd.status === 'cancelled') {
+    actionArea = '<span class="dashboard-slot-status-pill dashboard-slot-status-cancelled">Cancelado</span>';
+  } else if (bd.status === 'rescheduled') {
+    actionArea = '<span class="dashboard-slot-status-pill dashboard-slot-status-rescheduled">Remarcado</span>';
+  } else if (bd.status === 'no_show') {
+    actionArea = '<span class="dashboard-slot-status-pill dashboard-slot-status-cancelled">Não compareceu</span>';
+  }
+
+  // ─── notes ──────────────────────────────────────────────────────────────────
+  let noteBanner = '';
+  if (bd?.status === 'cancelled' && bd.cancel_reason) {
+    noteBanner = `<div class="dashboard-slot-note dashboard-slot-note-cancelled"><strong>Cancelado pela consultoria:</strong> ${bd.cancel_reason}</div>`;
+  } else if (bd?.status === 'rescheduled' && bd.reschedule_reason) {
+    noteBanner = `<div class="dashboard-slot-note dashboard-slot-note-rescheduled"><strong>Remarcado:</strong> ${bd.reschedule_reason}</div>`;
+  } else if (bd?.status === 'pending_reschedule') {
+    noteBanner = `<div class="dashboard-slot-note dashboard-slot-note-reschedule">Sua solicitação de remarcação está em análise. A consultoria responderá em breve.</div>`;
+  }
+
+  return `
+  <div class="agenda-slot-card${past ? ' agenda-slot-card-past' : ''}${s.my_booking ? ' dashboard-slot-card-booked' : ''}">
+    <div class="agenda-slot-header">
+      <div class="agenda-slot-date-card${s.my_booking ? ' dashboard-slot-date-card-booked' : ''}">
+        <div class="agenda-slot-day">${new Date(s.starts_at).getDate()}</div>
+        <div class="agenda-slot-month">${MONTH_PT[new Date(s.starts_at).getMonth()]}</div>
+      </div>
+      <div class="agenda-slot-main">
+        <div class="agenda-slot-title">${s.title}</div>
+        <div class="agenda-slot-meta">
+          ${fmtSlotTime(s.starts_at)} – ${fmtSlotTime(s.ends_at)} &nbsp;·&nbsp; ${s.duration_min}min
+          &nbsp;·&nbsp; ${s.credits_cost} crédito${s.credits_cost > 1 ? 's' : ''}
+          ${s.location === 'presencial' ? '&nbsp;·&nbsp; 📍 Presencial' : '&nbsp;·&nbsp; 🖥 Online'}
+        </div>
+        ${meetUrl && bd?.status === 'confirmed'
+          ? `<div class="agenda-slot-link-wrap"><a href="${meetUrl}" target="_blank" class="agenda-slot-link">🔗 Entrar na reunião</a></div>`
+          : ''}
+      </div>
+      ${actionArea}
+    </div>
+    ${noteBanner}
+  </div>`;
+}
+
+// ─── Book slot ───────────────────────────────────────────────────────────────
 
 async function bookSlot(slotId, cost) {
   if (!confirm(`Reservar esta sessão usando ${cost} crédito${cost > 1 ? 's' : ''}?`)) return;
@@ -121,19 +159,86 @@ async function bookSlot(slotId, cost) {
   }
 }
 
+// ─── Cancel booking ──────────────────────────────────────────────────────────
+
 async function cancelBooking(slotId) {
   const reason = prompt('Motivo do cancelamento (opcional — ajuda a consultoria a melhorar os horários):');
   if (reason === null) return;
-  const cancelRes = await fetch(`/api/agenda/cancel-slot/${slotId}`, {
+  const res = await fetch(`/api/agenda/cancel-slot/${slotId}`, {
     method: 'DELETE', headers: authH(),
     body: JSON.stringify({ reason: reason.trim() || null }),
   });
-  const j = await cancelRes.json();
-  if (cancelRes.ok) { showToast('Reserva cancelada. Créditos devolvidos.', 'success'); loadAgendaSlots(); }
+  const j = await res.json();
+  if (res.ok) { showToast('Reserva cancelada. Créditos devolvidos.', 'success'); loadAgendaSlots(); }
   else showToast(j.error || 'Erro ao cancelar.', 'error');
 }
 
-function buyCredits()        { toggleCreditsPanel(); }
+// ─── Request reschedule (client → admin) ─────────────────────────────────────
+
+async function requestReschedule(slotId, bookingId) {
+  // Fetch available (free) slots from the freebusy-aware endpoint
+  const res = await fetch('/api/agenda/available-slots', { headers: authH() });
+  const j   = res.ok ? await res.json() : {};
+  const futureSlots = (j.slots || []).filter(s => s.id !== slotId && new Date(s.starts_at) > new Date() && s.available);
+
+  if (!futureSlots.length) {
+    showToast('Nenhum outro horário disponível no momento. Tente novamente em breve.', 'error');
+    return;
+  }
+
+  // Build modal
+  const modal = document.createElement('div');
+  modal.id = 'rescheduleRequestModal';
+  modal.className = 'admin-modal-overlay admin-modal-overlay-high';
+  modal.innerHTML = `
+    <div class="admin-modal agenda-modal-card agenda-modal-card-md">
+      <div class="agenda-modal-title">↕️ Solicitar remarcação</div>
+      <div class="agenda-modal-subtitle" style="color:#64748B;font-size:13px;margin-bottom:16px">
+        Escolha o novo horário desejado e informe o motivo. A consultoria analisará e confirmará a troca.
+      </div>
+      <label class="agenda-modal-label">Novo horário desejado *</label>
+      <select id="rrSlotSelect" class="portal-select agenda-modal-field" style="margin-bottom:12px">
+        ${futureSlots.map(s => {
+          const sd = new Date(s.starts_at), ed = new Date(s.ends_at);
+          const pad = n => String(n).padStart(2,'0');
+          return `<option value="${s.id}">${sd.toLocaleDateString('pt-BR')} ${pad(sd.getHours())}:${pad(sd.getMinutes())}–${pad(ed.getHours())}:${pad(ed.getMinutes())} · ${s.title}</option>`;
+        }).join('')}
+      </select>
+      <label class="agenda-modal-label">Motivo *</label>
+      <textarea id="rrReason" rows="3" placeholder="Ex.: Conflito de agenda, compromisso inadiável…"
+        class="portal-input agenda-modal-field agenda-modal-textarea" style="margin-bottom:16px"></textarea>
+      <div class="admin-modal-actions agenda-modal-actions-tight">
+        <button onclick="document.getElementById('rescheduleRequestModal').remove()" class="btn-ghost admin-modal-btn">Cancelar</button>
+        <button onclick="_submitRescheduleRequest('${bookingId}')" class="btn-primary admin-modal-btn">Solicitar remarcação</button>
+      </div>
+    </div>`;
+
+  document.body.appendChild(modal);
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+}
+
+async function _submitRescheduleRequest(bookingId) {
+  const newSlotId = document.getElementById('rrSlotSelect').value;
+  const reason    = document.getElementById('rrReason').value.trim();
+  if (!reason) { showToast('O motivo é obrigatório.', 'error'); return; }
+
+  const res = await fetch(`/api/agenda/book/${bookingId}/request-reschedule`, {
+    method: 'POST', headers: authH(),
+    body: JSON.stringify({ new_slot_id: newSlotId, reason }),
+  });
+  const j = await res.json();
+  if (res.ok) {
+    document.getElementById('rescheduleRequestModal')?.remove();
+    showToast('Solicitação enviada! Aguardando aprovação da consultoria.', 'success');
+    loadAgendaSlots();
+  } else {
+    showToast(j.error || 'Erro ao solicitar remarcação.', 'error');
+  }
+}
+
+// ─── Credits ─────────────────────────────────────────────────────────────────
+
+function buyCredits()         { toggleCreditsPanel(); }
 function toggleCreditsPanel() {
   document.getElementById('creditsBuyPanel').classList.toggle('ui-hidden');
 }
@@ -147,4 +252,5 @@ async function checkoutCredits(pack) {
   if (j.url) window.location.href = j.url;
   else showToast(j.error || 'Erro ao iniciar pagamento.', 'error');
 }
+
 console.info('[RE:dashboard-agenda] loaded');
