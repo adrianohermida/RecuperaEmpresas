@@ -6,11 +6,11 @@
   <meta name="robots" content="noindex, nofollow"/>
   <title>Portal do Cliente — Recupera Empresas</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
-  <link rel="stylesheet" href="/css/portal.css?v=20260421i"/>
+  <link rel="stylesheet" href="/css/portal.css?v=20260421k"/>
   <script src="/js/config.js?v=20260420a"></script>
   <script src="/js/runtime-diagnostics.js?v=20260420a"></script>
   <script src="/js/api-base.js?v=20260420a"></script>
-  <script src="/js/shared-utils.js?v=20260421g"></script>
+  <script src="/js/shared-utils.js?v=20260421k"></script>
   <!-- Sempre use assets absolutos /css/ e /js/ para evitar conflitos de cache e duplicidade. -->
 </head>
 <body>
@@ -44,6 +44,13 @@
       </div>
     </div>
     <div class="header-right">
+      <button class="menu-toggle" id="menuToggle" onclick="toggleSidebar()" aria-label="Abrir menu">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <line x1="3" y1="6" x2="21" y2="6"/>
+          <line x1="3" y1="12" x2="21" y2="12"/>
+          <line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+      </button>
       <!-- Notification Bell -->
       <div class="admin-notif-wrap" id="notifBellWrap">
         <button id="notifBell" class="admin-notif-bell" onclick="toggleNotifDropdown()" title="Notificações">
@@ -76,10 +83,13 @@
   </div>
 </header>
 
+<div class="sidebar-backdrop" id="sidebarBackdrop" onclick="closeSidebar()"></div>
+
 <div class="portal-layout">
 
   <!-- Sidebar -->
-  <nav class="sidebar" id="sidebar">
+  <nav class="sidebar" id="appSidebar">
+    <div class="sidebar-nav">
     <div class="sidebar-section">
       <div class="sidebar-label">Menu</div>
       <button class="sidebar-link active" onclick="showSection('dashboard',this)">
@@ -134,6 +144,7 @@
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         Equipe
       </button>
+    </div>
     </div>
   </nav>
 
@@ -733,15 +744,15 @@
 <div class="toast" id="toast"></div>
 
 <!-- Dashboard modules -->
-<script src="/js/dashboard-core.js?v=20260420a"></script>
-<script src="/js/dashboard-support.js?v=20260420a"></script>
-<script src="/js/dashboard-appointments.js?v=20260420a"></script>
-<script src="/js/dashboard-finance.js?v=20260420a"></script>
-<script src="/js/dashboard-docs.js?v=20260420a"></script>
-<script src="/js/dashboard-members.js?v=20260420a"></script>
-<script src="/js/dashboard-agenda.js?v=20260420a"></script>
-<script src="/js/dashboard-notifications.js?v=20260420a"></script>
-<script src="/js/dashboard-marketplace.js?v=20260420a"></script>
+<script src="/js/dashboard-core.js?v=20260421k"></script>
+<script src="/js/dashboard-support.js?v=20260421k"></script>
+<script src="/js/dashboard-appointments.js?v=20260421k"></script>
+<script src="/js/dashboard-finance.js?v=20260421k"></script>
+<script src="/js/dashboard-docs.js?v=20260421k"></script>
+<script src="/js/dashboard-members.js?v=20260421k"></script>
+<script src="/js/dashboard-agenda.js?v=20260421k"></script>
+<script src="/js/dashboard-notifications.js?v=20260421k"></script>
+<script src="/js/dashboard-marketplace.js?v=20260421k"></script>
 
 <script>
 'use strict';
@@ -782,6 +793,19 @@ function showToast(msg, type='', ms=3000) {
   const t = document.getElementById('toast');
   t.textContent = msg; t.className = 'toast show ' + type;
   setTimeout(() => { t.className = 'toast'; }, ms);
+}
+
+function toggleSidebar() {
+  const sidebar = document.getElementById('appSidebar');
+  const backdrop = document.getElementById('sidebarBackdrop');
+  const isOpen = sidebar?.classList.contains('mobile-open');
+  sidebar?.classList.toggle('mobile-open', !isOpen);
+  backdrop?.classList.toggle('open', !isOpen);
+}
+
+function closeSidebar() {
+  document.getElementById('appSidebar')?.classList.remove('mobile-open');
+  document.getElementById('sidebarBackdrop')?.classList.remove('open');
 }
 
 async function dashboardReadResponse(res) {
@@ -931,8 +955,8 @@ async function initFreshchat(user) {
 </script>
 
 <!-- Form Player -->
-<script src="/js/player-inputs.js?v=20260420a"></script>
-<script src="/js/form-player.js?v=20260420a"></script>
+<script src="/js/player-inputs.js?v=20260421k"></script>
+<script src="/js/form-player.js?v=20260421k"></script>
 
 <script>
   if (window.RE_ENABLE_FRESHCHAT && window.RE_FRESHCHAT_TOKEN && window.RE_FRESHCHAT_SITE_ID) {

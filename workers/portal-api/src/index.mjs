@@ -5,6 +5,7 @@ import { handleAdminSystem } from './routes/admin-system.mjs';
 import { handleAdminReadModels } from './routes/admin-read-models.mjs';
 import { handleAppointments } from './routes/appointments.mjs';
 import { handleCreditors } from './routes/creditors.mjs';
+import { handleClientPortal } from './routes/client-portal.mjs';
 import { handleDataChangeRequests } from './routes/data-change-requests.mjs';
 import { handleDepartments } from './routes/departments.mjs';
 import { handleDocumentRequests } from './routes/document-requests.mjs';
@@ -26,6 +27,9 @@ function match(pathname, pattern) {
 async function routeAuthenticated(request, env, pathname, executionCtx) {
   const auth = await requireAuth(request, env);
   if (!auth.ok) return auth.response;
+
+  const clientPortalResponse = await handleClientPortal(request, { ...auth, env, executionCtx });
+  if (clientPortalResponse) return clientPortalResponse;
 
   let params = match(pathname, /^\/api\/appointments(?:\/(?<id>[^/]+))?$/);
   if (params) return handleAppointments(request, { ...auth, env, executionCtx, params, scope: 'user' });

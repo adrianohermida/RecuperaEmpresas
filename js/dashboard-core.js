@@ -47,6 +47,7 @@ function showSection(name, clickedEl) {
   if (name === 'formularios') loadClientForms();
   if (name === 'jornadas')    loadClientJourneys();
   if (name === 'messages') { loadMessages(); startMsgPolling(); } else { stopMsgPolling(); }
+  if (typeof closeSidebar === 'function') closeSidebar();
 }
 
 // ── Navigate to a section programmatically (e.g. from notifications) ─────────
