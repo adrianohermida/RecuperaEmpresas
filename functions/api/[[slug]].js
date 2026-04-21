@@ -1,7 +1,14 @@
-const DEFAULT_LEGACY_API_BASE = 'https://api.recuperaempresas.com.br';
+const DEFAULT_LEGACY_API_BASE = '';
 const DEFAULT_WORKER_API_BASE = 'https://api-edge.recuperaempresas.com.br';
 const DEFAULT_WORKER_ROUTES = [
+  '/api/health',
   '/api/auth',
+  '/api/plan',
+  '/api/tasks',
+  '/api/progress',
+  '/api/messages',
+  '/api/my-forms',
+  '/api/my-journeys',
   '/api/company/members',
   '/api/company/members/*',
   '/api/admin/clients',
