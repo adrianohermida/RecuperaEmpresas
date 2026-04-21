@@ -166,7 +166,7 @@ app.get('/vendor/supabase/supabase.js', (req, res) => {
   res.sendFile(path.join(__dirname, 'node_modules', '@supabase', 'supabase-js', 'dist', 'umd', 'supabase.js'));
 });
 
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'public'), { extensions: ['html'] }));
 
 app.use(authRoutes);
 app.use(onboardingRoutes);
