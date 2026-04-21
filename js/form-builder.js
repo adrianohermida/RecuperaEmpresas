@@ -109,6 +109,31 @@ function loadFormBuilder() {
 }
 
 /* ──────────────────────────────────────────────────────────────────────────────
+   Palette — renders question type buttons in #fb-palette
+──────────────────────────────────────────────────────────────────────────────*/
+function fbRenderPalette() {
+  const palette = document.getElementById('fb-palette');
+  if (!palette) return;
+
+  if (FB.readOnly) {
+    palette.innerHTML = '<div class="fb-palette-readonly">Somente leitura</div>';
+    return;
+  }
+
+  palette.innerHTML = QB_TYPES.map(t => `
+    <button
+      class="fb-palette-btn"
+      onclick="fbAddQuestion('${t.type}')"
+      title="${fbEsc(t.label)}"
+      type="button"
+    >
+      <span class="fb-palette-btn-icon">${t.icon}</span>
+      <span class="fb-palette-btn-label">${fbEsc(t.label)}</span>
+    </button>
+  `).join('');
+}
+
+/* ──────────────────────────────────────────────────────────────────────────────
    View switcher
 ──────────────────────────────────────────────────────────────────────────────*/
 function fbShowView(view) {

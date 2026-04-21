@@ -274,15 +274,56 @@ async function handleClientBookings(request, context) {
 }
 
 async function handleClientDocuments(request, context) {
-  if (request.method !== 'GET') return methodNotAllowed();
-  const documents = await listSafe(
-    context.sb
+  if (request.method === 'GET') {
+    const documents = await listSafe(
+      context.sb
+        .from('re_documents')
+        .select('*')
+        .eq('user_id', context.params.clientId)
+        .order('created_at', { ascending: false })
+    );
+    return json({ documents });
+  }
+
+  if (request.method === 'PUT' && context.params.docId) {
+    const body = await readJson(request);
+    const allowedStatus = new Set(['pendente', 'em_analise', 'aprovado', 'reprovado', 'ajuste_solicitado']);
+    const status = String(body.status || '').trim();
+    const comment = String(body.comment || '').trim();
+
+    if (!allowedStatus.has(status)) {
+      return json({ error: 'Status inválido.' }, { status: 400 });
+    }
+
+    const document = await maybeSingle(
+      context.sb
+        .from('re_documents')
+        .select('*')
+        .eq('id', context.params.docId)
+        .eq('user_id', context.params.clientId)
+    );
+    if (!document) return json({ error: 'Documento não encontrado.' }, { status: 404 });
+
+    const comments = Array.isArray(document.comments) ? [...document.comments] : [];
+    if (comment) {
+      comments.push({
+        from: 'admin',
+        name: context.user.name || context.user.email,
+        text: comment,
+        ts: new Date().toISOString(),
+      });
+    }
+
+    const { error } = await context.sb
       .from('re_documents')
-      .select('*')
-      .eq('user_id', context.params.clientId)
-      .order('created_at', { ascending: false })
-  );
-  return json({ documents });
+      .update({ status, comments, updated_at: new Date().toISOString() })
+      .eq('id', context.params.docId);
+    if (error) return json({ error: error.message }, { status: 500 });
+
+    return json({ success: true });
+  }
+
+  return methodNotAllowed();
 }
 
 async function handleClientMembers(request, context) {
@@ -1491,7 +1532,7 @@ export async function handleAdminReadModels(request, context) {
   if (pathname === '/api/admin/clients/bulk-action') return handleBulkClientAction(request, context);
   if (/^\/api\/admin\/client\/[^/]+$/.test(pathname)) return handleClientDetail(request, context);
   if (/^\/api\/admin\/client\/[^/]+\/bookings$/.test(pathname)) return handleClientBookings(request, context);
-  if (/^\/api\/admin\/client\/[^/]+\/documents$/.test(pathname)) return handleClientDocuments(request, context);
+  if (/^\/api\/admin\/client\/[^/]+\/documents(?:\/[^/]+)?$/.test(pathname)) return handleClientDocuments(request, context);
   if (/^\/api\/admin\/client\/[^/]+\/members$/.test(pathname)) return handleClientMembers(request, context);
   if (/^\/api\/admin\/client\/[^/]+\/suppliers$/.test(pathname)) return handleClientSuppliers(request, context);
   if (/^\/api\/admin\/client\/[^/]+\/financial$/.test(pathname)) return handleClientFinancial(request, context);

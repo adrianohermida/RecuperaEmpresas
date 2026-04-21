@@ -23,6 +23,7 @@ async function fbOpenBuilder(formId, readOnly = false) {
   if (titleEl) titleEl.textContent = FB.currentForm.title;
 
   fbRenderPageTabs();
+  fbRenderPalette();
 
   const pages = FB.currentForm.pages || [];
   FB.currentPage = pages[0] || null;
