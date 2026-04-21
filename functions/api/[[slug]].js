@@ -1,6 +1,23 @@
 const DEFAULT_LEGACY_API_BASE = 'https://api.recuperaempresas.com.br';
 const DEFAULT_WORKER_API_BASE = 'https://api-edge.recuperaempresas.com.br';
-const DEFAULT_WORKER_ROUTES = ['/api/auth', '/api/admin/invoices', '/api/admin/journeys', '/api/admin/services', '/api/admin/service-orders', '/api/notifications'];
+const DEFAULT_WORKER_ROUTES = [
+  '/api/auth',
+  '/api/admin/clients',
+  '/api/admin/client/*',
+  '/api/admin/messages/unread',
+  '/api/admin/messages/seen/*',
+  '/api/admin/logs',
+  '/api/admin/stats',
+  '/api/admin/agenda/slots',
+  '/api/admin/financial',
+  '/api/admin/forms',
+  '/api/admin/audit-log',
+  '/api/admin/invoices',
+  '/api/admin/journeys',
+  '/api/admin/services',
+  '/api/admin/service-orders',
+  '/api/notifications'
+];
 
 function trimBase(value) {
   return String(value || '').replace(/\/+$/, '');
