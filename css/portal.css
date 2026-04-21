@@ -4873,6 +4873,30 @@ body {
   color: var(--text-muted);
 }
 
+.client-detail-body .cdp-plan-item,
+.client-detail-body .cds-doc-card,
+.client-detail-body .task-item,
+.client-detail-body .cdt-invoice-card,
+.client-detail-body .cdt-member-card {
+  width: 100%;
+  min-width: 0;
+}
+
+.client-detail-body .task-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+}
+
+.client-detail-body .cdt-summary-grid,
+.client-detail-body .cdp-overview-grid {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.client-detail-body .cds-message-thread {
+  max-height: min(52vh, 420px);
+}
+
 @media (max-width: 960px) {
   .cdt-summary-grid {
     grid-template-columns: 1fr;
@@ -4912,6 +4936,11 @@ body {
   .cdp-plan-controls,
   .cdp-plan-comments {
     padding-left: 0;
+  }
+
+  .client-detail-body .task-item {
+    grid-template-columns: 1fr;
+    align-items: flex-start;
   }
 
   .fp-list-card {

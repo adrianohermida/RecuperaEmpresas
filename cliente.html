@@ -6,51 +6,53 @@
   <meta name="robots" content="noindex, nofollow"/>
   <title>Cliente - Recupera Empresas</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
-  <link rel="stylesheet" href="./css/portal.css?v=20260421n"/>
+  <link rel="stylesheet" href="./css/portal.css?v=20260421o"/>
   <script src="./js/config.js?v=20260420a"></script>
   <script src="./js/runtime-diagnostics.js?v=20260420a"></script>
   <script src="./js/api-base.js?v=20260420a"></script>
   <script src="./js/shared-utils.js?v=20260421n"></script>
   <style>
-    .client-detail-page { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+    .client-detail-page { display: flex; flex-direction: column; gap: 20px; min-width: 0; width: 100%; max-width: none; }
+    .page-shell-wide.client-detail-page { max-width: min(1680px, 100%); }
     .client-header-inner { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 520px) auto; gap: 18px; align-items: center; }
     .client-header-search { min-width: 0; }
     .client-header-search .search-input { width: 100%; max-width: none; }
     .client-header-right { justify-content: flex-end; }
-    .client-detail-hero { border: 1px solid #dbe7ff; border-radius: 22px; padding: 20px; background: linear-gradient(135deg, #f8fbff 0%, #eef4ff 100%); }
+    .client-detail-hero { border: 1px solid #dbe7ff; border-radius: 22px; padding: clamp(20px, 2vw, 28px); background: linear-gradient(135deg, #f8fbff 0%, #eef4ff 100%); }
     .client-detail-hero-row { display: flex; flex-direction: column; gap: 14px; }
     .client-detail-title-wrap { min-width: 0; }
     .client-detail-title { margin: 0; font-size: clamp(28px, 5vw, 38px); line-height: 1.06; color: #10233f; letter-spacing: -0.03em; }
     .client-detail-subtitle { margin: 8px 0 0; color: #5b6b80; }
     .client-detail-actions { display: flex; flex-wrap: wrap; gap: 10px; }
-    .client-detail-summary-grid { display: grid; gap: 12px; grid-template-columns: 1fr; margin-top: 18px; }
+    .client-detail-summary-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); margin-top: 18px; }
     .client-detail-summary-card { background: rgba(255,255,255,.92); border: 1px solid #dde7f5; border-radius: 16px; padding: 14px; min-width: 0; }
     .client-detail-summary-label { font-size: 12px; color: #64748b; margin-bottom: 6px; }
     .client-detail-summary-value { font-size: 18px; font-weight: 700; color: #10233f; word-break: break-word; }
     .client-detail-shortcuts { margin-top: 16px; display: flex; flex-wrap: wrap; gap: 10px; }
     .client-detail-shortcut { display: inline-flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 999px; border: 1px solid #d9e4f5; background: #fff; color: #1b365d; text-decoration: none; font-size: 13px; font-weight: 600; }
     .client-detail-tabs-shell { border: 1px solid #e5e7eb; border-radius: 20px; background: #fff; overflow: hidden; min-width: 0; }
-    .client-detail-tabs { display: flex; gap: 8px; overflow-x: auto; padding: 12px; border-bottom: 1px solid #eef2f7; scrollbar-width: thin; }
+    .client-detail-tabs { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 12px; border-bottom: 1px solid #eef2f7; scrollbar-width: thin; }
     .client-detail-tab { flex: 0 0 auto; padding: 10px 14px; border-radius: 999px; border: 1px solid #dbe2ea; background: #f8fafc; color: #334155; font-size: 13px; font-weight: 700; cursor: pointer; }
     .client-detail-tab.active { background: #1d4ed8; border-color: #1d4ed8; color: #fff; }
-    .client-detail-body { padding: 18px; min-width: 0; overflow-x: auto; }
+    .client-detail-body { padding: clamp(18px, 2vw, 30px); min-width: 0; overflow-x: hidden; }
+    .client-detail-body > * { min-width: 0; }
     .client-detail-back-link { width: fit-content; }
     @media (min-width: 768px) {
       .client-detail-hero-row { flex-direction: row; justify-content: space-between; align-items: flex-start; }
-      .client-detail-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      .client-detail-body { padding: 22px; }
-    }
-    @media (min-width: 1180px) {
-      .client-detail-summary-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     }
     @media (max-width: 1024px) {
       .client-header-inner { grid-template-columns: minmax(0, 1fr) auto; }
       .client-header-search { grid-column: 1 / -1; order: 3; }
+      .page-shell-wide.client-detail-page { max-width: 100%; }
+    }
+    @media (max-width: 960px) {
+      .client-detail-tabs { flex-wrap: nowrap; overflow-x: auto; }
     }
     @media (max-width: 640px) {
       .client-header-inner { gap: 12px; }
       .client-header-right { gap: 8px; }
       .client-detail-actions { display: grid; grid-template-columns: 1fr; }
+      .client-detail-shortcuts { display: grid; grid-template-columns: 1fr; }
     }
   </style>
 </head>
