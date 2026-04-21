@@ -149,6 +149,9 @@ async function routeAdmin(request, env, pathname, executionCtx) {
   params = match(pathname, /^\/api\/admin\/client\/(?<clientId>[^/]+)\/messages\/(?<action>poll)$/);
   if (params) return handleMessages(request, { ...auth, env, executionCtx, params, scope: 'admin' });
 
+  params = match(pathname, /^\/api\/admin\/client\/(?<clientId>[^/]+)\/(?<action>message)$/);
+  if (params) return handleMessages(request, { ...auth, env, executionCtx, params, scope: 'admin' });
+
   params = match(pathname, /^\/api\/admin\/client\/(?<clientId>[^/]+)\/change-request$/);
   if (params) return handleDataChangeRequests(request, { ...auth, env, executionCtx, params, scope: 'admin' });
 

@@ -40,6 +40,34 @@ export async function handleMessages(request, context) {
       return json({ messages: data || [] });
     }
 
+    if (context.params.clientId && context.params.action === 'message' && request.method === 'POST') {
+      const body = await readJson(request);
+      if (!body.text?.trim()) return json({ error: 'Mensagem vazia.' }, { status: 400 });
+
+      const msgPayload = {
+        user_id: context.params.clientId,
+        from_role: 'admin',
+        from_name: context.user.name || context.user.email,
+        text: body.text.trim(),
+      };
+      if (body.to_member_id) msgPayload.to_member_id = body.to_member_id;
+
+      const { data, error } = await context.sb.from('re_messages').insert(msgPayload).select().single();
+      if (error) return json({ error: error.message }, { status: 500 });
+
+      queueSideEffect(context, () => pushNotification(
+        context.sb,
+        context.params.clientId,
+        'message',
+        'Nova mensagem do consultor',
+        body.text.trim().slice(0, 100),
+        'message',
+        context.params.clientId,
+      ), 'admin-message-notification');
+
+      return json({ success: true, message: data });
+    }
+
     return json({ error: 'Método não permitido.' }, { status: 405 });
   }
 
