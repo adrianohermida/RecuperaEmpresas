@@ -1,0 +1,13 @@
+{
+  "routes": [
+    {
+      "routePath": "/api/:slug*",
+      "mountPath": "/api",
+      "method": "",
+      "module": [
+        "api/[[slug]].js:onRequest"
+      ]
+    }
+  ],
+  "baseURL": "/"
+}
