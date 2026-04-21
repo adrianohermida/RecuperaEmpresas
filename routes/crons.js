@@ -2,15 +2,12 @@
 
 const express = require('express');
 
-const { EMAIL_TO, JWT_SECRET, sb } = require('../lib/config');
+const { JWT_SECRET, sb } = require('../lib/config');
 const { findUserById } = require('../lib/db');
 const {
-  sendMail,
-  emailFactRow,
-  emailFactTable,
-  emailStyle,
-  emailWrapper,
-} = require('../lib/email');
+  sendReminder24h,
+  sendReminder1h,
+} = require('../lib/agenda-emails');
 
 const router = express.Router();
 
@@ -19,93 +16,134 @@ function isAuthorizedCronRequest(req) {
   return secret === (process.env.CRON_SECRET || JWT_SECRET);
 }
 
+// ─── helper: resolve client identity from booking ─────────────────────────────
+async function resolveBookingIdentity(booking) {
+  if (booking.user_id) {
+    const user = await findUserById(booking.user_id);
+    if (!user?.email) return null;
+    return { email: user.email, name: user.name || user.email };
+  }
+  if (booking.external_contact?.email) {
+    return {
+      email: booking.external_contact.email,
+      name:  booking.external_contact.name || booking.external_contact.email,
+    };
+  }
+  // booker_email / booker_name stored directly on booking (new schema)
+  if (booking.booker_email) {
+    return { email: booking.booker_email, name: booking.booker_name || booking.booker_email };
+  }
+  return null;
+}
+
+// ─── helper: fetch confirmed bookings in a time window ────────────────────────
+async function fetchConfirmedBookingsInWindow(fromMs, toMs, reminderField) {
+  const from = new Date(fromMs).toISOString();
+  const to   = new Date(toMs).toISOString();
+
+  const { data: slots } = await sb.from('re_agenda_slots')
+    .select('id,title,starts_at,meet_link,meeting_link,ends_at')
+    .gte('starts_at', from)
+    .lte('starts_at', to);
+
+  if (!slots?.length) return { slots: [], bookings: [] };
+
+  const slotIds  = slots.map(s => s.id);
+  const notSent  = reminderField === 'reminder_sent'
+    ? sb.from('re_bookings').select('id,user_id,slot_id,booker_name,booker_email,external_contact,reminder_sent').in('slot_id', slotIds).eq('status', 'confirmed').neq('reminder_sent', true)
+    : sb.from('re_bookings').select('id,user_id,slot_id,booker_name,booker_email,external_contact,reminder_1h_sent').in('slot_id', slotIds).eq('status', 'confirmed').neq('reminder_1h_sent', true);
+
+  const { data: bookings } = await notSent;
+  return { slots, bookings: bookings || [] };
+}
+
+// ─── POST /api/cron/booking-reminders  (24 h) ─────────────────────────────────
 router.post('/api/cron/booking-reminders', async (req, res) => {
   if (!isAuthorizedCronRequest(req)) {
     return res.status(403).json({ error: 'Forbidden' });
   }
 
-  const from = new Date(Date.now() + 23 * 60 * 60 * 1000).toISOString();
-  const to = new Date(Date.now() + 25 * 60 * 60 * 1000).toISOString();
+  const { slots, bookings } = await fetchConfirmedBookingsInWindow(
+    Date.now() + 23 * 3600_000,
+    Date.now() + 25 * 3600_000,
+    'reminder_sent',
+  );
 
-  const { data: slots } = await sb.from('re_agenda_slots')
-    .select('id,title,starts_at,meeting_link')
-    .gte('starts_at', from)
-    .lte('starts_at', to);
+  if (!bookings.length) return res.json({ sent: 0 });
 
-  if (!slots?.length) return res.json({ sent: 0 });
-
-  const slotIds = slots.map((slot) => slot.id);
-  const { data: bookings } = await sb.from('re_bookings')
-    .select('id,user_id,slot_id,reminder_sent')
-    .in('slot_id', slotIds)
-    .eq('status', 'confirmed')
-    .neq('reminder_sent', true);
-
-  if (!bookings?.length) return res.json({ sent: 0 });
-
-  const { data: externalBookings } = await sb.from('re_bookings')
-    .select('id,slot_id,external_contact,reminder_sent')
-    .in('slot_id', slotIds)
-    .eq('status', 'confirmed')
-    .neq('reminder_sent', true)
-    .is('user_id', null);
-
-  const allBookings = [...(bookings || []), ...(externalBookings || [])];
-  if (!allBookings.length) return res.json({ sent: 0 });
-
-  const slotMap = Object.fromEntries(slots.map((slot) => [slot.id, slot]));
+  const slotMap = Object.fromEntries(slots.map(s => [s.id, s]));
   let sent = 0;
 
-  for (const booking of allBookings) {
-    const slot = slotMap[booking.slot_id];
+  for (const booking of bookings) {
+    const slot     = slotMap[booking.slot_id];
     if (!slot) continue;
+    const identity = await resolveBookingIdentity(booking);
+    if (!identity) continue;
 
-    let email;
-    let name;
-    let company;
-    if (booking.user_id) {
-      const user = await findUserById(booking.user_id);
-      if (!user?.email) continue;
-      email = user.email;
-      name = user.name || user.email;
-      company = user.company || '';
-    } else if (booking.external_contact?.email) {
-      email = booking.external_contact.email;
-      name = booking.external_contact.name || email;
-      company = booking.external_contact.company || '';
-    } else {
-      continue;
-    }
+    const slotPayload = {
+      title:    slot.title || 'Consultoria',
+      startsAt: slot.starts_at,
+      endsAt:   slot.ends_at,
+      meetLink: slot.meet_link || slot.meeting_link || null,
+    };
 
-    const startsAtFormatted = new Date(slot.starts_at).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
-    const meetingLine = slot.meeting_link ? `<p><b>Link:</b> <a href="${slot.meeting_link}">${slot.meeting_link}</a></p>` : '';
-
-    await sendMail(email, '⏰ Lembrete: sessão amanhã — Recupera Empresas', emailWrapper(
-      'Lembrete de sessão — amanhã',
-      `<p>Olá, <b>${name}</b>!</p>
-       <p>Você tem uma sessão agendada para <b>amanhã</b>:</p>
-       ${emailFactTable([
-         emailFactRow('Sessão', slot.title || 'Consultoria'),
-         emailFactRow('Data e hora', startsAtFormatted),
-       ].join(''))}
-       ${meetingLine}
-       <p ${emailStyle('metaText', 'margin-top:0')}>Em caso de imprevistos, acesse o portal para cancelar com antecedência.</p>`
-    )).catch((error) => console.warn('[async]', error?.message));
-
-    sendMail(EMAIL_TO, `⏰ Lembrete: sessão amanhã — ${name}`, emailWrapper(
-      'Lembrete de sessão',
-      `<p>Lembrete: sessão confirmada para amanhã.</p>
-       <p><b>Cliente:</b> ${name}${company ? ` — ${company}` : ''}<br>
-          <b>Sessão:</b> ${slot.title || 'Consultoria'}<br>
-          <b>Data:</b> ${startsAtFormatted}</p>
-       ${meetingLine}`
-    )).catch((error) => console.warn('[async]', error?.message));
+    await sendReminder24h({
+      clientEmail: identity.email,
+      clientName:  identity.name,
+      slot:        slotPayload,
+      meetLink:    slotPayload.meetLink,
+    }).catch(e => console.warn('[CRON 24h]', e?.message));
 
     await sb.from('re_bookings').update({ reminder_sent: true }).eq('id', booking.id);
     sent += 1;
   }
 
-  console.log(`[CRON] booking-reminders: ${sent} enviados`);
+  console.log(`[CRON] booking-reminders (24h): ${sent} enviados`);
+  res.json({ sent });
+});
+
+// ─── POST /api/cron/booking-reminders-1h  (1 h) ───────────────────────────────
+router.post('/api/cron/booking-reminders-1h', async (req, res) => {
+  if (!isAuthorizedCronRequest(req)) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+
+  const { slots, bookings } = await fetchConfirmedBookingsInWindow(
+    Date.now() + 55 * 60_000,
+    Date.now() + 65 * 60_000,
+    'reminder_1h_sent',
+  );
+
+  if (!bookings.length) return res.json({ sent: 0 });
+
+  const slotMap = Object.fromEntries(slots.map(s => [s.id, s]));
+  let sent = 0;
+
+  for (const booking of bookings) {
+    const slot     = slotMap[booking.slot_id];
+    if (!slot) continue;
+    const identity = await resolveBookingIdentity(booking);
+    if (!identity) continue;
+
+    const slotPayload = {
+      title:    slot.title || 'Consultoria',
+      startsAt: slot.starts_at,
+      endsAt:   slot.ends_at,
+      meetLink: slot.meet_link || slot.meeting_link || null,
+    };
+
+    await sendReminder1h({
+      clientEmail: identity.email,
+      clientName:  identity.name,
+      slot:        slotPayload,
+      meetLink:    slotPayload.meetLink,
+    }).catch(e => console.warn('[CRON 1h]', e?.message));
+
+    await sb.from('re_bookings').update({ reminder_1h_sent: true }).eq('id', booking.id);
+    sent += 1;
+  }
+
+  console.log(`[CRON] booking-reminders (1h): ${sent} enviados`);
   res.json({ sent });
 });
 
