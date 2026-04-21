@@ -35,7 +35,11 @@
 
   function storeAuthUser(user) {
     localStorage.setItem('re_user', JSON.stringify(user || {}));
-    localStorage.removeItem('re_token');
+  }
+
+  function storeAuthToken(token) {
+    if (!token || token === 'null' || token === 'undefined') return;
+    localStorage.setItem('re_token', String(token));
   }
 
   function getSupabaseProjectRef() {
@@ -345,6 +349,7 @@
     getRoute: getRoute,
     getStoredToken: getStoredToken,
     getStoredUser: getStoredUser,
+    storeAuthToken: storeAuthToken,
     logoutSession: logoutSession,
     readResponse: readResponse,
     redirectToRoute: redirectToRoute,

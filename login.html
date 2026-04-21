@@ -248,6 +248,7 @@
           access_token: decodeURIComponent(hashParams.oauth_access_token || ''),
           refresh_token: decodeURIComponent(hashParams.oauth_refresh_token || '')
         });
+        if (window.REShared?.storeAuthToken) window.REShared.storeAuthToken(hashParams.oauth_token || hashParams.oauth_access_token || '');
         if (window.REShared?.storeAuthUser) window.REShared.storeAuthUser(user);
         history.replaceState(null, '', window.location.pathname + window.location.search);
         redirectAfterAuth(user, { returnTo: params.get('returnTo') });
@@ -270,6 +271,7 @@
         var payload = result.data || {};
         if (result.ok && payload.user) {
           await persistSupabaseSession(payload.supabase_session);
+          if (window.REShared?.storeAuthToken) window.REShared.storeAuthToken(payload.token || hashParams.access_token || '');
           if (window.REShared?.storeAuthUser) window.REShared.storeAuthUser(payload.user);
           history.replaceState(null, '', window.location.pathname + window.location.search);
           redirectAfterAuth(payload.user);
@@ -347,6 +349,7 @@
 
       if (result.ok && (payload.success || payload.token) && payload.user) {
         await persistSupabaseSession(payload.supabase_session);
+        if (window.REShared?.storeAuthToken) window.REShared.storeAuthToken(payload.token || '');
         if (window.REShared?.storeAuthUser) window.REShared.storeAuthUser(payload.user);
         redirectAfterAuth(payload.user);
         return;
