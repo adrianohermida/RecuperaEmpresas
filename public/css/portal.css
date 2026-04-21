@@ -7931,3 +7931,30 @@ a[href] {
     font-size: 1.25rem;
   }
 }
+
+/* ── re-icon: base para todos os SVG gerados pelo icons.js ──────── */
+.re-icon {
+  display: inline-block;
+  vertical-align: middle;
+  flex-shrink: 0;
+  line-height: 1;
+  pointer-events: none;
+}
+
+/* Alinha ícones dentro de botões com gap consistente */
+button .re-icon,
+.btn .re-icon,
+.btn-primary .re-icon,
+.btn-ghost .re-icon,
+.btn-outline .re-icon,
+.sidebar-link .re-icon,
+.fb-question-card-action-btn .re-icon {
+  margin-right: 0;
+}
+
+/* Ícone ao lado de texto — gap via CSS */
+.re-icon + span,
+.re-icon + .label,
+button > .re-icon:not(:last-child) {
+  margin-left: 4px;
+}
