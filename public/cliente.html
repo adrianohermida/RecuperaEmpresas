@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="robots" content="noindex, nofollow"/>
+  <title>Cliente — Recupera Empresas</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
+  <link rel="stylesheet" href="./css/portal.css?v=20260420a"/>
+  <script src="./js/config.js?v=20260420a"></script>
+  <script src="./js/runtime-diagnostics.js?v=20260420a"></script>
+  <script src="./js/api-base.js?v=20260420a"></script>
+  <script src="./js/shared-utils.js?v=20260420c"></script>
+  <style>
+    .client-page-shell { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+    .client-page-summary { display: grid; gap: 16px; grid-template-columns: 1fr; }
+    .client-page-hero { background: linear-gradient(135deg, #f8fbff 0%, #eef4ff 100%); border: 1px solid #dbe7ff; border-radius: 18px; padding: 20px; }
+    .client-page-title-row { display: flex; flex-direction: column; gap: 12px; }
+    .client-page-title-wrap { min-width: 0; }
+    .client-page-title { margin: 0; font-size: 28px; line-height: 1.1; color: #10233f; }
+    .client-page-subtitle { margin: 6px 0 0; color: #5b6b80; }
+    .client-page-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+    .client-page-quicklinks { display: flex; flex-wrap: wrap; gap: 10px; }
+    .client-page-quicklink { display: inline-flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 999px; background: #fff; border: 1px solid #d9e4f5; color: #1b365d; text-decoration: none; font-size: 13px; font-weight: 600; }
+    .client-page-tabs-wrap { border: 1px solid #e5e7eb; border-radius: 18px; background: #fff; overflow: hidden; }
+    .client-page-tabs { display: flex; gap: 8px; overflow-x: auto; padding: 12px; border-bottom: 1px solid #eef2f7; scrollbar-width: thin; }
+    .client-page-tab { flex: 0 0 auto; border: 1px solid #dbe2ea; background: #f8fafc; color: #334155; border-radius: 999px; padding: 10px 14px; font-size: 13px; font-weight: 600; cursor: pointer; }
+    .client-page-tab.active { background: #1d4ed8; border-color: #1d4ed8; color: #fff; }
+    .client-page-body { padding: 18px; min-width: 0; overflow-x: auto; }
+    .client-page-info-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); margin-top: 16px; }
+    .client-page-info-card { background: rgba(255,255,255,.9); border: 1px solid #dde7f5; border-radius: 14px; padding: 14px; }
+    .client-page-info-label { font-size: 12px; color: #64748b; margin-bottom: 6px; }
+    .client-page-info-value { font-size: 18px; font-weight: 700; color: #10233f; }
+    @media (min-width: 768px) {
+      .client-page-title-row { flex-direction: row; justify-content: space-between; align-items: flex-start; }
+      .client-page-body { padding: 22px; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="authGuard" class="auth-guard">
+  <div class="auth-guard-content">
+    <svg width="44" height="36" viewBox="0 0 44 36" fill="none" class="auth-guard-logo">
+      <rect x="0"  y="26" width="8" height="10" rx="4" fill="#4B9EFF"/>
+      <rect x="12" y="18" width="8" height="18" rx="4" fill="#2B7FFF"/>
+      <rect x="24" y="10" width="8" height="26" rx="4" fill="#1A56DB"/>
+      <rect x="36" y="2"  width="8" height="34" rx="4" fill="#1244AB"/>
+    </svg>
+    <div class="auth-guard-message">Verificando acesso...</div>
+  </div>
+</div>
+
+<header class="header">
+  <div class="header-inner">
+    <div class="logo">
+      <svg width="36" height="30" viewBox="0 0 44 36" fill="none">
+        <rect x="0"  y="26" width="8" height="10" rx="4" fill="#4B9EFF"/>
+        <rect x="12" y="18" width="8" height="18" rx="4" fill="#2B7FFF"/>
+        <rect x="24" y="10" width="8" height="26" rx="4" fill="#1A56DB"/>
+        <rect x="36" y="2"  width="8" height="34" rx="4" fill="#1244AB"/>
+      </svg>
+      <div>
+        <div class="logo-text">Recupera Empresas</div>
+        <div class="logo-sub">Cliente em tela dedicada</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <span class="admin-badge">Admin</span>
+      <button class="menu-toggle" id="menuToggle" onclick="toggleSidebar()" aria-label="Abrir menu">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<div class="sidebar-backdrop" id="sidebarBackdrop" onclick="closeSidebar()"></div>
+
+<div class="portal-layout" id="clientPageLayout">
+  <nav class="sidebar" id="appSidebar">
+    <div class="sidebar-nav">
+      <div class="sidebar-section">
+        <div class="sidebar-label">Navegação</div>
+        <a href="admin.html" class="sidebar-link active">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          Clientes
+        </a>
+        <a href="admin.html#agenda" class="sidebar-link">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          Agenda
+        </a>
+        <a href="perfil.html" class="sidebar-link">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          Meu Perfil
+        </a>
+      </div>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="user-dropup" id="userDropup" role="menu">
+        <div class="user-dropup-header">
+          <div class="user-dropup-name" id="dropupUserName">—</div>
+          <div class="user-dropup-email" id="dropupUserEmail">—</div>
+        </div>
+        <a href="perfil.html" class="user-dropup-item" role="menuitem">Meu Perfil</a>
+        <a href="configuracoes.html" class="user-dropup-item" role="menuitem">Configurações</a>
+        <hr class="user-dropup-divider"/>
+        <button class="user-dropup-item danger" onclick="logout()" role="menuitem">Sair</button>
+      </div>
+      <button class="user-menu-btn" id="userMenuBtn" onclick="toggleUserDropup()" aria-expanded="false" aria-haspopup="true">
+        <div class="user-menu-avatar" id="userAvatar">?</div>
+        <div class="user-menu-info">
+          <div class="user-menu-name" id="userName">Carregando...</div>
+          <div class="user-menu-role">Consultor Admin</div>
+        </div>
+        <svg class="user-menu-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <polyline points="18 15 12 9 6 15"/>
+        </svg>
+      </button>
+    </div>
+  </nav>
+
+  <main class="portal-main">
+    <div class="page-shell client-page-shell">
+      <div class="section-header">
+        <div>
+          <div class="section-title">Cliente</div>
+          <div class="section-sub">Página dedicada para análise, documentos, agenda e operação</div>
+        </div>
+        <a href="admin.html" class="btn btn-secondary" id="clientPageBackLink">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+          Voltar ao painel
+        </a>
+      </div>
+
+      <section class="client-page-hero">
+        <div class="client-page-title-row">
+          <div class="client-page-title-wrap">
+            <h1 class="client-page-title" id="drawerTitle">Carregando...</h1>
+            <p class="client-page-subtitle" id="drawerSub">Preparando dados do cliente</p>
+          </div>
+          <div class="client-page-actions">
+            <button class="btn-ghost drawer-action-btn" onclick="exportClientXLS(_currentClientId)">Exportar XLS</button>
+            <button class="btn-ghost drawer-action-btn" onclick="exportClientPDF(_currentClientId)">Exportar PDF</button>
+            <button class="btn-ghost drawer-action-btn" onclick="impersonateClient(_currentClientId)">Ver como cliente</button>
+            <button class="btn-ghost drawer-action-btn" onclick="adminEditClient(_currentClientId)">Editar</button>
+            <button class="btn-ghost drawer-action-btn" onclick="adminDeleteClient(_currentClientId)" style="color:#dc2626">Excluir</button>
+          </div>
+        </div>
+
+        <div class="client-page-info-grid">
+          <div class="client-page-info-card">
+            <div class="client-page-info-label">Cliente</div>
+            <div class="client-page-info-value" id="clientSummaryName">—</div>
+          </div>
+          <div class="client-page-info-card">
+            <div class="client-page-info-label">Contato principal</div>
+            <div class="client-page-info-value" id="clientSummaryMeta">—</div>
+          </div>
+          <div class="client-page-info-card">
+            <div class="client-page-info-label">Status</div>
+            <div><span class="badge badge-gray" id="clientSummaryStatus">Carregando</span></div>
+          </div>
+        </div>
+
+        <div class="client-page-quicklinks">
+          <a class="client-page-quicklink" href="#agenda" id="clientAgendaShortcut">Agenda</a>
+          <a class="client-page-quicklink" href="#docs" id="clientDocsShortcut">Documentos</a>
+          <a class="client-page-quicklink" href="admin.html">Lista de clientes</a>
+        </div>
+      </section>
+
+      <section class="client-page-tabs-wrap">
+        <div class="client-page-tabs" id="clientPageTabs">
+          <button class="client-page-tab active" data-client-tab="overview" onclick="switchDrawerTab('overview',this)">Visão Geral</button>
+          <button class="client-page-tab" data-client-tab="plan" onclick="switchDrawerTab('plan',this)">Business Plan</button>
+          <button class="client-page-tab" data-client-tab="tasks" onclick="switchDrawerTab('tasks',this)">Tarefas</button>
+          <button class="client-page-tab" data-client-tab="messages" id="drawerTabMessages" onclick="switchDrawerTab('messages',this)">Mensagens</button>
+          <button class="client-page-tab" data-client-tab="agenda" onclick="switchDrawerTab('agenda',this)">Agenda</button>
+          <button class="client-page-tab" data-client-tab="docs" onclick="switchDrawerTab('docs',this)">Documentos</button>
+          <button class="client-page-tab" data-client-tab="equipe" onclick="switchDrawerTab('equipe',this)">Equipe</button>
+          <button class="client-page-tab" data-client-tab="organograma" onclick="switchDrawerTab('organograma',this)">Organograma</button>
+          <button class="client-page-tab" data-client-tab="credores" onclick="switchDrawerTab('credores',this)">Credores</button>
+          <button class="client-page-tab" data-client-tab="fornecedores" onclick="switchDrawerTab('fornecedores',this)">Fornecedores</button>
+          <button class="client-page-tab" data-client-tab="funcionarios" onclick="switchDrawerTab('funcionarios',this)">Funcionários</button>
+          <button class="client-page-tab" data-client-tab="financeiro_client" onclick="switchDrawerTab('financeiro_client',this)">Financeiro</button>
+          <button class="client-page-tab" data-client-tab="data" onclick="switchDrawerTab('data',this)">Dados</button>
+        </div>
+        <div class="client-page-body" id="drawerBody">
+          <div class="empty-state"><p>Carregando cliente...</p></div>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="./js/admin-modal-manager.js?v=20260421b"></script>
+<script src="./js/admin-shell-core.js?v=20260421b"></script>
+<script src="./js/admin-client-actions.js?v=20260421c"></script>
+<script src="./js/admin-client-actions-extended.js?v=20260421c"></script>
+<script src="./js/admin-agenda.js?v=20260421c"></script>
+<script src="./js/admin-client-drawer-tabs-primary.js?v=20260421c"></script>
+<script src="./js/admin-client-drawer-tabs-secondary.js?v=20260421c"></script>
+<script src="./js/admin-client-drawer-tabs-tertiary.js?v=20260421c"></script>
+<script src="./js/admin-client-drawer-data.js?v=20260421c"></script>
+<script src="./js/admin-client-page.js?v=20260421c"></script>
+<script src="./js/admin-client-drawer.js?v=20260421c"></script>
+
+</body>
+</html>
