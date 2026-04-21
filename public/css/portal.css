@@ -3060,7 +3060,7 @@ body {
   display: flex;
 }
 .admin-modal {
-  background: #fff; border-radius: 12px; padding: 28px; width: 440px;
+  background: #fff; border-radius: 20px; padding: 28px; width: 440px;
   max-width: 96vw; max-height: calc(100vh - 40px); overflow-y: auto;
   margin: auto;
 }
@@ -3089,18 +3089,22 @@ body {
 
 .agenda-modal-card {
   width: min(94vw, 480px);
+  border-radius: 20px;
 }
 
 .agenda-modal-card-sm {
   width: min(94vw, 420px);
+  border-radius: 20px;
 }
 
 .agenda-modal-card-md {
   width: min(94vw, 440px);
+  border-radius: 20px;
 }
 
 .agenda-modal-card-lg {
   width: min(94vw, 480px);
+  border-radius: 20px;
 }
 
 .agenda-modal-title {
@@ -3250,8 +3254,8 @@ body {
 }
 
 .agenda-slot-form-input {
-  padding: 8px 10px;
-  border-radius: 6px;
+  padding: 10px 12px;
+  border-radius: 14px;
   font-size: 13px;
 }
 
@@ -5968,12 +5972,12 @@ body {
 
 /* ── Forms (portal) ──────────────────────────────────────────────────────────── */
 .portal-input {
-  width: 100%; padding: 9px 12px; border: 1px solid var(--border); border-radius: 8px;
+  width: 100%; padding: 10px 14px; border: 1px solid var(--border); border-radius: 14px;
   font-size: 14px; font-family: inherit; outline: none; transition: border-color .15s;
 }
 .portal-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(26,86,219,.1); }
 .portal-select {
-  width: 100%; padding: 9px 12px; border: 1px solid var(--border); border-radius: 8px;
+  width: 100%; padding: 10px 14px; border: 1px solid var(--border); border-radius: 14px;
   font-size: 14px; font-family: inherit; outline: none; background: #fff; cursor: pointer;
 }
 .portal-select:focus { border-color: var(--primary); }
@@ -5990,7 +5994,7 @@ body {
 }
 .btn-ghost {
   background: none; border: 1px solid var(--border); color: var(--text-muted);
-  border-radius: 8px; padding: 9px 16px; font-size: 14px; cursor: pointer; transition: all .15s;
+  border-radius: 12px; padding: 9px 16px; font-size: 14px; cursor: pointer; transition: all .15s;
 }
 .btn-ghost:hover { background: var(--bg); color: var(--text); }
 .btn {
@@ -6014,7 +6018,8 @@ body {
 .search-wrap { position: relative; }
 .search-wrap svg { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--text-muted); pointer-events: none; }
 .search-input {
-  padding: 9px 12px 9px 36px; border: 1px solid var(--border); border-radius: 8px;
+  min-height: 40px;
+  padding: 9px 14px 9px 36px; border: 1px solid var(--border); border-radius: 14px;
   font-size: 14px; outline: none; width: 240px; font-family: inherit;
 }
 .search-input:focus { border-color: var(--primary); }
@@ -6726,6 +6731,16 @@ body {
     padding: 14px;
     border-radius: 16px;
   }
+  .drawer-action-btn,
+  .admin-bulk-toolbar-actions .btn,
+  .dashboard-inline-link,
+  .admin-compact-btn {
+    min-height: 40px;
+    padding: 9px 12px;
+    border-radius: 12px;
+    line-height: 1.2;
+    justify-content: center;
+  }
   .admin-clients-module-title {
     font-size: 14px;
   }
@@ -6801,6 +6816,22 @@ body {
   .progress-step,
   .dashboard-inline-link {
     font-size: 12px;
+  }
+  .drawer-action-btn,
+  .admin-bulk-toolbar-actions .btn,
+  .dashboard-inline-link,
+  .admin-compact-btn {
+    min-height: 38px;
+    padding: 8px 10px;
+    font-size: 11px;
+    gap: 4px;
+  }
+  .drawer-action-btn svg,
+  .admin-bulk-toolbar-actions .btn svg,
+  .dashboard-inline-link svg,
+  .admin-compact-btn svg {
+    width: 12px;
+    height: 12px;
   }
   .admin-bulk-toolbar {
     gap: 10px;

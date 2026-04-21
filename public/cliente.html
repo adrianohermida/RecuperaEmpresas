@@ -15,14 +15,15 @@
   <style>
     .client-detail-page { display: flex; flex-direction: column; gap: 20px; min-width: 0; width: 100%; max-width: none; }
     .page-shell-wide.client-detail-page { max-width: min(1680px, 100%); }
-    .client-header-search { min-width: 0; width: min(100%, 520px); margin: 0 auto; }
+    .client-header-search { min-width: 0; width: min(100%, 520px); margin: 0 auto; display: flex; align-items: center; }
     .client-header-search .search-input { width: 100%; max-width: none; }
     .client-detail-hero { border: 1px solid #dbe7ff; border-radius: 22px; padding: clamp(20px, 2vw, 28px); background: linear-gradient(135deg, #f8fbff 0%, #eef4ff 100%); }
     .client-detail-hero-row { display: flex; flex-direction: column; gap: 14px; }
     .client-detail-title-wrap { min-width: 0; }
     .client-detail-title { margin: 0; font-size: clamp(28px, 5vw, 38px); line-height: 1.06; color: #10233f; letter-spacing: -0.03em; }
     .client-detail-subtitle { margin: 8px 0 0; color: #5b6b80; }
-    .client-detail-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+    .client-detail-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: stretch; }
+    .client-detail-actions .btn-ghost { min-height: 38px; justify-content: center; }
     .client-detail-summary-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); margin-top: 18px; }
     .client-detail-summary-card { background: rgba(255,255,255,.92); border: 1px solid #dde7f5; border-radius: 16px; padding: 14px; min-width: 0; }
     .client-detail-summary-label { font-size: 12px; color: #64748b; margin-bottom: 6px; }
@@ -48,6 +49,10 @@
     @media (max-width: 640px) {
       .client-detail-actions { display: grid; grid-template-columns: 1fr; }
       .client-detail-shortcuts { display: grid; grid-template-columns: 1fr; }
+    }
+    @media (max-width: 360px) {
+      .client-detail-actions { gap: 8px; }
+      .client-detail-actions .btn-ghost { min-height: 36px; font-size: 11px; }
     }
   </style>
 </head>
