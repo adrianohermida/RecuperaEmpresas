@@ -5,6 +5,7 @@ const path = require('path');
 
 const rootDir = path.resolve(__dirname, '..');
 const publicDir = path.join(rootDir, 'public');
+const distDir = path.join(rootDir, 'dist');
 const rootVendorDir = path.join(rootDir, 'vendor');
 const supabaseVendorSource = path.join(
   rootDir,
@@ -137,6 +138,9 @@ function syncRootMirrors(options = {}) {
 
   cleanPath(rootVendorDir);
   copyIfExists(supabaseVendorSource, path.join(rootVendorDir, 'supabase', 'supabase.js'));
+
+  // Se existir um config.js gerado no build, ele deve prevalecer sobre o fallback de public/.
+  copyIfExists(path.join(distDir, 'js', 'config.js'), path.join(rootDir, 'js', 'config.js'));
 
   if (!silent) {
     console.log('Espelhos da raiz sincronizados a partir de public/.');
