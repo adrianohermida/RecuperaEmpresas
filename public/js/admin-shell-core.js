@@ -174,3 +174,20 @@ function renderClientTable(clients) {
 }
 
 console.info('[RE:admin-shell-core] loaded');
+
+(function initAdminSectionRouting() {
+  var validSections = ['clients', 'agenda', 'financeiro', 'formularios', 'jornadas', 'logs', 'adminInvoices', 'adminMarketplace', 'auditlog'];
+
+  function applyRequestedSection() {
+    var params = new URLSearchParams(window.location.search);
+    var requested = params.get('section') || window.location.hash.replace('#', '').trim();
+    if (!requested || !validSections.includes(requested)) return;
+    showSection(requested, null);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', applyRequestedSection, { once: true });
+  } else {
+    applyRequestedSection();
+  }
+})();

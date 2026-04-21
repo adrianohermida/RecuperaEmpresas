@@ -95,7 +95,7 @@
     const subtitle = getSubtitleElement();
     if (title) title.textContent = user.company || user.name || 'Cliente';
     if (subtitle) {
-      subtitle.textContent = user.email + (user.freshdeskTicketId ? ' Â· Ticket #' + user.freshdeskTicketId : '');
+      subtitle.textContent = user.email + (user.freshdeskTicketId ? ' · Ticket #' + user.freshdeskTicketId : '');
     }
     const summaryName = document.getElementById('clientSummaryName');
     const summaryMeta = document.getElementById('clientSummaryMeta');
@@ -168,7 +168,7 @@
     const route = '/api/admin/client/' + id;
     const response = await fetch(route, { headers: authH() });
     const payload = await readDrawerResponse(
-      'Base da PÃ¡gina do Cliente',
+      'Base da Página do Cliente',
       route,
       response,
       ['user', 'onboarding', 'tasks', 'plan', 'messages'],
@@ -359,7 +359,7 @@
   document.addEventListener('DOMContentLoaded', function () {
     initClientPage().catch(function (error) {
       console.error('[CLIENT PAGE INIT]', error.message);
-      showToast('Erro ao carregar a pÃ¡gina do cliente.', 'error');
+      showToast('Erro ao carregar a página do cliente.', 'error');
     });
   });
 
