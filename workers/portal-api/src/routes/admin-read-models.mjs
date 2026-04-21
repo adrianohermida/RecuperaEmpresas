@@ -290,14 +290,28 @@ async function handleClientTask(request, context) {
   );
   if (!target) return json({ error: 'Cliente nao encontrado.' }, { status: 404 });
 
-  const { data: task, error } = await context.sb.from('re_tasks').insert({
+  let taskInsertPayload = {
     user_id: context.params.clientId,
     title,
     description,
     due_date: dueDate,
     status: 'pendente',
     created_by: context.user.id,
-  }).select().single();
+  };
+
+  let { data: task, error } = await context.sb.from('re_tasks').insert(taskInsertPayload).select().single();
+
+  if (error && isSchemaCompatibilityError(error.message, ['re_tasks', 'created_by'])) {
+    taskInsertPayload = {
+      user_id: context.params.clientId,
+      title,
+      description,
+      due_date: dueDate,
+      status: 'pendente',
+    };
+    ({ data: task, error } = await context.sb.from('re_tasks').insert(taskInsertPayload).select().single());
+  }
+
   if (error) return json({ error: error.message }, { status: 500 });
 
   queueSideEffect(context, () => pushNotification(
