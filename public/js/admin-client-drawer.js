@@ -105,8 +105,8 @@
     }
   }
 
-  var _currentClientId = null;
-  var _currentClientData = null;
+  window._currentClientId = window._currentClientId || null;
+  window._currentClientData = window._currentClientData || null;
   var _drawerMsgPollTimer = null;
 
   function _stopDrawerMsgPoll() {
@@ -117,7 +117,7 @@
   }
 
   async function _drawerMsgPollTick() {
-    if (!_currentClientId) return;
+    if (!window._currentClientId) return;
     const thread = document.getElementById('adminMsgThread');
     if (!thread) {
       _stopDrawerMsgPoll();
@@ -125,16 +125,16 @@
     }
 
     try {
-      const response = await fetch('/api/admin/client/' + _currentClientId, { headers: authH() });
+      const response = await fetch('/api/admin/client/' + window._currentClientId, { headers: authH() });
       if (!response.ok) return;
       const data = await response.json();
       const messages = data.messages || [];
-      const previousMessages = _currentClientData?.messages || [];
+      const previousMessages = window._currentClientData?.messages || [];
       const hasChanged = messages.length !== previousMessages.length
         || (messages.length && messages[messages.length - 1].ts !== previousMessages.slice(-1)[0]?.ts);
       if (!hasChanged) return;
 
-      _currentClientData = data;
+      window._currentClientData = data;
       thread.innerHTML = !messages.length
         ? '<div class="empty-state"><p>Nenhuma mensagem.</p></div>'
         : messages.map(function (message) {
@@ -166,8 +166,8 @@
       return null;
     }
 
-    _currentClientData = payload;
-    _currentClientId = id;
+    window._currentClientData = payload;
+    window._currentClientId = id;
     updatePageHeader(payload.user || {});
     setActionLinks(id);
     return payload;
@@ -176,7 +176,7 @@
   async function openClient(id) {
     if (!id) return;
     if (!isClientPageMode()) {
-      window.location.href = 'cliente.html?id=' + encodeURIComponent(id);
+      window.location.href = 'cliente?id=' + encodeURIComponent(id);
       return;
     }
 
@@ -198,8 +198,8 @@
     }
     document.getElementById('drawerOverlay')?.classList.remove('open');
     document.getElementById('clientDrawer')?.classList.remove('open');
-    _currentClientId = null;
-    _currentClientData = null;
+    window._currentClientId = null;
+    window._currentClientData = null;
   }
 
   function switchDrawerTab(tab, element) {
@@ -223,13 +223,13 @@
   }
 
   async function renderDrawerTab(tab) {
-    if (!_currentClientData) return;
+    if (!window._currentClientData) return;
     const body = getBodyElement();
-    const user = _currentClientData.user || {};
-    const onboarding = _currentClientData.onboarding || {};
-    const tasks = _currentClientData.tasks || [];
-    const plan = _currentClientData.plan || {};
-    const messages = _currentClientData.messages || [];
+    const user = window._currentClientData.user || {};
+    const onboarding = window._currentClientData.onboarding || {};
+    const tasks = window._currentClientData.tasks || [];
+    const plan = window._currentClientData.plan || {};
+    const messages = window._currentClientData.messages || [];
 
     if (window.REAdminDrawerPrimaryTabs?.render?.(tab, {
       body: body,
@@ -238,7 +238,7 @@
       tasks: tasks,
       plan: plan,
       messages: messages,
-      currentClientId: _currentClientId,
+      currentClientId: window._currentClientId,
     })) {
       return;
     }
@@ -250,8 +250,8 @@
       tasks: tasks,
       plan: plan,
       messages: messages,
-      currentClientId: _currentClientId,
-      currentClientData: _currentClientData,
+      currentClientId: window._currentClientId,
+      currentClientData: window._currentClientData,
     })) {
       return;
     }
@@ -263,8 +263,8 @@
       tasks: tasks,
       plan: plan,
       messages: messages,
-      currentClientId: _currentClientId,
-      currentClientData: _currentClientData,
+      currentClientId: window._currentClientId,
+      currentClientData: window._currentClientData,
     })) {
       return;
     }

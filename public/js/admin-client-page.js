@@ -24,7 +24,7 @@
       showToast('Erro ao exportar XLS.', 'error');
       return;
     }
-    const label = sanitizeFileName(_currentClientData?.user?.company || _currentClientData?.user?.name || clientId);
+    const label = sanitizeFileName(window._currentClientData?.user?.company || window._currentClientData?.user?.name || clientId);
     downloadBlob(await response.blob(), label + '.xlsx');
   }
 
@@ -35,7 +35,7 @@
       showToast('Erro ao exportar PDF.', 'error');
       return;
     }
-    const label = sanitizeFileName(_currentClientData?.user?.company || _currentClientData?.user?.name || clientId);
+    const label = sanitizeFileName(window._currentClientData?.user?.company || window._currentClientData?.user?.name || clientId);
     downloadBlob(await response.blob(), label + '.pdf');
   }
 
