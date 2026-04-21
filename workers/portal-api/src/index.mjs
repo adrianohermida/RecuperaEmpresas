@@ -58,7 +58,7 @@ async function routeAuthenticated(request, env, pathname, executionCtx) {
   params = match(pathname, /^\/api\/tasks(?:\/(?<id>[^/]+))?$/);
   if (params) return handleTasks(request, { ...auth, env, executionCtx, params });
 
-  params = match(pathname, /^\/api\/notifications(?:\/(?<id>[^/]+))?$/);
+  params = match(pathname, /^\/api\/notifications(?:\/(?<id>[^/]+)(?:\/(?<action>read))?)?$/);
   if (params) return handleNotifications(request, { ...auth, env, executionCtx, params });
 
   return notFound();
