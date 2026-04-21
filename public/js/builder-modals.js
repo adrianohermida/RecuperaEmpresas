@@ -4,29 +4,9 @@
 let _logicSourceQId = null;
 
 const FB_TRANSIENT_MODAL_IDS = ['fb-modal-new', 'fb-logic-modal', 'fb-assign-modal', 'fb-resp-detail-modal'];
-const fbTransientModalState = {
-  activeModalId: null,
-  initialized: false,
-};
 
 function fbGetTransientModal(id) {
   return document.getElementById(id);
-}
-
-function fbGetVisibleTransientModals() {
-  return FB_TRANSIENT_MODAL_IDS
-    .map(fbGetTransientModal)
-    .filter(modal => modal && !modal.classList.contains('ui-hidden'));
-}
-
-function fbSyncTransientModalState() {
-  const visible = fbGetVisibleTransientModals();
-  fbTransientModalState.activeModalId = visible.length ? visible[visible.length - 1].id : null;
-}
-
-function fbEnforceSingleVisibleModal() {
-  window.REAdminModal?.enforceSingleVisible?.({ keepId: fbTransientModalState.activeModalId });
-  fbSyncTransientModalState();
 }
 
 function fbCloseAllTransientModals(exceptId) {
@@ -38,7 +18,6 @@ function fbCloseAllTransientModals(exceptId) {
       fbGetTransientModal(id)?.classList.add('ui-hidden');
     });
   }
-  fbTransientModalState.activeModalId = exceptId || null;
 }
 
 function fbCloseTransientModals(exceptId) {
@@ -53,7 +32,6 @@ function fbOpenTransientModal(id) {
     fbCloseAllTransientModals(id);
     fbGetTransientModal(id)?.classList.remove('ui-hidden');
   }
-  fbTransientModalState.activeModalId = id;
 }
 
 function fbCloseTransientModal(id) {
@@ -63,14 +41,11 @@ function fbCloseTransientModal(id) {
   } else {
     fbGetTransientModal(id)?.classList.add('ui-hidden');
   }
-  if (fbTransientModalState.activeModalId === id) {
-    fbTransientModalState.activeModalId = null;
-  }
 }
 
 function fbEnsureTransientModalController() {
-  if (fbTransientModalState.initialized) return;
-  fbTransientModalState.initialized = true;
+  if (window.__fbTransientModalControllerReady) return;
+  window.__fbTransientModalControllerReady = true;
   window.REAdminModal?.registerStatic?.(FB_TRANSIENT_MODAL_IDS, 'form-builder');
 }
 
@@ -86,8 +61,6 @@ function fbBindTransientModalBehavior() {
       fbCloseTransientModal(id);
     });
   });
-
-  fbSyncTransientModalState();
 }
 
 /* ──────────────────────────────────────────────────────────────────────────────

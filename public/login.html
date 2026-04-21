@@ -172,6 +172,65 @@ function clearErrors() {
   document.getElementById('alertError').classList.remove('show');
 }
 
+const REDIRECT_LOCK_KEY = 're_auth_redirect_lock';
+const REDIRECT_LOCK_TTL = 12000;
+
+function clearRedirectLock() {
+  sessionStorage.removeItem(REDIRECT_LOCK_KEY);
+}
+
+function sanitizeReturnTo(rawValue) {
+  if (!rawValue || typeof rawValue !== 'string') return '';
+  if (!rawValue.startsWith('/')) return '';
+  if (rawValue.startsWith('//')) return '';
+
+  try {
+    const url = new URL(rawValue, window.location.origin);
+    if (url.origin !== window.location.origin) return '';
+    const blockedPaths = new Set(['/login', '/register', '/forgot-password', '/reset-password']);
+    if (blockedPaths.has(url.pathname)) return '';
+    if (url.pathname === window.location.pathname && url.search === window.location.search) return '';
+    return url.pathname + url.search + url.hash;
+  } catch (error) {
+    return '';
+  }
+}
+
+function beginRedirect(target) {
+  if (!target) return false;
+
+  try {
+    const now = Date.now();
+    const last = JSON.parse(sessionStorage.getItem(REDIRECT_LOCK_KEY) || 'null');
+    if (last && last.target === target && now - Number(last.at || 0) < REDIRECT_LOCK_TTL) {
+      console.warn('[LOGIN] duplicate redirect suppressed', target);
+      return false;
+    }
+    sessionStorage.setItem(REDIRECT_LOCK_KEY, JSON.stringify({ target, at: now }));
+  } catch (error) {
+    // Best effort only.
+  }
+
+  return true;
+}
+
+function redirectAfterAuth(user, options) {
+  const opts = options || {};
+  const target = sanitizeReturnTo(opts.returnTo || new URLSearchParams(window.location.search).get('returnTo') || '');
+
+  if (target) {
+    if (beginRedirect(target)) {
+      window.location.replace(target);
+    }
+    return;
+  }
+
+  const fallback = user && user.isAdmin ? window.REShared.getRoute('admin') : window.REShared.getRoute('dashboard');
+  if (beginRedirect(fallback)) {
+    window.REShared.redirectToUserHome(user);
+  }
+}
+
 // â”€â”€ Supabase client (browser-side) â€” persists session automatically â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const _sbUrl  = (window.VITE_SUPABASE_URL || window.RE_SUPABASE_URL || 'https://riiajjmnzgagntiqqshs.supabase.co').replace(/\/$/, '');
 const _sbAnon = window.VITE_SUPABASE_ANON_KEY || window.RE_SUPABASE_ANON || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJpaWFqam1uemdhZ250aXFxc2hzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYxNzY0ODUsImV4cCI6MjA5MTc1MjQ4NX0.zyOFjVFIBJem5FZmXBD-ya78RheD_a-YHetibyVvXcI';
@@ -251,6 +310,7 @@ async function diagnoseOauthRuntime() {
 document.getElementById('loginForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   clearErrors();
+  clearRedirectLock();
 
   const email    = document.getElementById('email').value.trim();
   const password = document.getElementById('password').value;
@@ -329,12 +389,7 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
       else localStorage.setItem('re_user', JSON.stringify(json.user || {}));
 
       // If we were redirected here from the OAuth consent page, go back there.
-      const returnTo = new URLSearchParams(window.location.search).get('returnTo');
-      if (returnTo && returnTo.startsWith('/')) {
-        window.location.href = returnTo;
-        return;
-      }
-      window.REShared.redirectToUserHome(json.user);
+      redirectAfterAuth(json.user);
     } else {
       const msg = json.error || 'Credenciais invÃ¡lidas.';
       // Email not confirmed â€” offer to resend
@@ -404,10 +459,7 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
       if (window.REShared?.storeAuthUser) window.REShared.storeAuthUser(user);
       else localStorage.setItem('re_user', JSON.stringify(user || {}));
       history.replaceState(null, '', window.location.pathname + window.location.search);
-      const returnTo = params.get('returnTo');
-      window.location.href = returnTo && returnTo.startsWith('/')
-        ? returnTo
-        : window.REShared.getRoute(user?.isAdmin ? 'admin' : 'dashboard');
+      redirectAfterAuth(user, { returnTo: params.get('returnTo') });
       return;
     } catch (error) {
       reportLoginIssue('oauth-callback-hash-parse-failed', {
@@ -444,7 +496,7 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
       if (json.success && json.user) {
         if (window.REShared?.storeAuthUser) window.REShared.storeAuthUser(json.user);
         else localStorage.setItem('re_user', JSON.stringify(json.user || {}));
-        window.REShared.redirectToUserHome(json.user);
+        redirectAfterAuth(json.user);
         return;
       }
     } catch {}
@@ -505,9 +557,14 @@ function showSuccess(msg) {
       });
     }
     if (result.ok && result.user) {
-      window.REShared.redirectToUserHome(result.user);
+      redirectAfterAuth(result.user);
+    } else {
+      clearRedirectLock();
     }
-  } catch { /* server offline or slow â€” stay on login page */ }
+  } catch {
+    clearRedirectLock();
+    /* server offline or slow - stay on login page */
+  }
 })();
 </script>
 </body>

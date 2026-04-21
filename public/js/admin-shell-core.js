@@ -104,10 +104,6 @@ document.addEventListener('click', function (e) {
 function showSection(name, el) {
   window.REAdminModal?.init?.();
   window.REAdminModal?.closeAll?.({ reason: 'show-section:' + name });
-  // Close any open overlay modals before switching sections
-  document.querySelectorAll('.admin-modal-overlay').forEach(function (m) {
-    m.classList.add('ui-hidden');
-  });
   document.querySelectorAll('.tab-content').forEach(function (section) { section.classList.remove('active'); });
   document.querySelectorAll('.sidebar-link').forEach(function (link) { link.classList.remove('active'); });
   document.getElementById('sec-' + name)?.classList.add('active');

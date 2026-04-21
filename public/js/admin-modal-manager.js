@@ -4,6 +4,7 @@
   const BREAKPOINT = 900;
   const SELECTOR = '.admin-modal-overlay, .mkt-modal-overlay';
   const BODY_LOCK_CLASS = 're-admin-modal-open';
+  const ROOT_ID = 're-admin-modal-root';
   const STATIC_MODAL_IDS = [
     'jrn-modal-form',
     'jrn-modal-step',
@@ -19,8 +20,11 @@
     observer: null,
     resizeHandler: null,
     keydownHandler: null,
-    activeModalId: null,
+    subscribers: new Set(),
+    registry: Object.create(null),
+    root: null,
     lastWidth: 0,
+    modal: null,
   };
 
   function debounce(fn, wait) {
@@ -36,6 +40,51 @@
 
   function log(action, details) {
     console.info('[RE:admin-modal]', action, details || {});
+  }
+
+  function ensureRoot() {
+    if (state.root && document.body?.contains(state.root)) return state.root;
+    let root = document.getElementById(ROOT_ID);
+    if (!root) {
+      root = document.createElement('div');
+      root.id = ROOT_ID;
+    }
+    if (!root.parentNode && document.body) {
+      document.body.appendChild(root);
+    }
+    state.root = root;
+    return root;
+  }
+
+  function subscribe(listener) {
+    if (typeof listener !== 'function') return function noop() {};
+    state.subscribers.add(listener);
+    return function unsubscribe() {
+      state.subscribers.delete(listener);
+    };
+  }
+
+  function getModalState() {
+    return state.modal
+      ? {
+          name: state.modal.name,
+          id: state.modal.id,
+          props: state.modal.props || {},
+          source: state.modal.source || null,
+          static: !!state.modal.static,
+        }
+      : null;
+  }
+
+  function notify() {
+    const snapshot = getModalState();
+    state.subscribers.forEach(function (listener) {
+      try {
+        listener(snapshot);
+      } catch (error) {
+        console.warn('[RE:admin-modal] subscriber failed', error.message);
+      }
+    });
   }
 
   function isOverlay(element) {
@@ -69,7 +118,19 @@
 
   function syncActiveModal() {
     const topModal = getTopVisibleModal();
-    state.activeModalId = topModal ? (topModal.id || null) : null;
+    if (!topModal && state.modal && !state.modal.static) {
+      state.modal = null;
+      notify();
+    } else if (topModal && (!state.modal || state.modal.id !== topModal.id)) {
+      state.modal = {
+        name: topModal.dataset.reModalName || topModal.id || 'anonymous-modal',
+        id: topModal.id || null,
+        props: state.modal?.props || {},
+        source: topModal.dataset.reModalSource || null,
+        static: topModal.dataset.reModalStatic === '1',
+      };
+      notify();
+    }
     syncBodyLock();
   }
 
@@ -96,6 +157,7 @@
     const opts = options || {};
     modal.dataset.reModalManaged = '1';
     if (source) modal.dataset.reModalSource = source;
+    if (opts.name) modal.dataset.reModalName = opts.name;
     if (opts.static === true) modal.dataset.reModalStatic = '1';
     if (opts.static === false) modal.dataset.reModalStatic = '0';
     if (!modal.dataset.reModalStatic) {
@@ -106,12 +168,110 @@
     return modal;
   }
 
+  function setModalRecord(record) {
+    state.modal = record
+      ? {
+          name: record.name || record.id || 'anonymous-modal',
+          id: record.id || null,
+          props: record.props || {},
+          source: record.source || null,
+          static: !!record.static,
+          focusSelector: record.focusSelector || null,
+          element: record.element || null,
+        }
+      : null;
+    notify();
+  }
+
+  function focusModal(modal, focusSelector) {
+    if (!modal) return;
+    const target = focusSelector
+      ? modal.querySelector(focusSelector)
+      : modal.querySelector('input,select,textarea,button,[tabindex]:not([tabindex="-1"])');
+    if (target && typeof target.focus === 'function') {
+      target.focus();
+    }
+  }
+
+  function resolveModalNode(name, props, options) {
+    const opts = options || {};
+    const payload = props || {};
+
+    if (payload.element instanceof HTMLElement) {
+      return payload.element;
+    }
+
+    if (typeof payload.html === 'string') {
+      const wrapper = document.createElement('div');
+      wrapper.innerHTML = payload.html.trim();
+      return wrapper.firstElementChild;
+    }
+
+    const renderer = opts.renderer || state.registry[name];
+    if (typeof renderer === 'function') {
+      return renderer(payload, opts);
+    }
+
+    return null;
+  }
+
+  function renderDynamicModal(record) {
+    const root = ensureRoot();
+    if (!root) return null;
+
+    root.innerHTML = '';
+    if (!record) {
+      syncBodyLock();
+      return null;
+    }
+
+    const modal = resolveModalNode(record.name, record.props, record);
+    if (!modal) {
+      setModalRecord(null);
+      syncBodyLock();
+      return null;
+    }
+
+    if (!modal.id && record.id) modal.id = record.id;
+    modal.classList.remove('ui-hidden');
+    tagModal(modal, record.source, {
+      name: record.name,
+      static: false,
+    });
+    root.appendChild(modal);
+    focusModal(modal, record.focusSelector);
+    syncActiveModal();
+    return modal;
+  }
+
+  function closeCurrentDynamicModal(reason) {
+    if (!state.modal || state.modal.static) return;
+    const root = ensureRoot();
+    if (root) root.innerHTML = '';
+    const closed = state.modal;
+    setModalRecord(null);
+    syncActiveModal();
+    log('close', {
+      id: closed.id || null,
+      name: closed.name || null,
+      source: closed.source || null,
+      reason: reason || 'close-current-dynamic',
+    });
+  }
+
   function closeModalElement(modal, reason) {
     if (!modal) return;
-    if (modal.dataset.reModalStatic === '1') {
+    const isStatic = modal.dataset.reModalStatic === '1';
+    if (isStatic) {
       if (!modal.classList.contains('ui-hidden')) {
         modal.classList.add('ui-hidden');
       }
+      if (state.modal && state.modal.id === modal.id) {
+        setModalRecord(null);
+      }
+    } else if (state.modal && state.modal.id === modal.id) {
+      closeCurrentDynamicModal(reason || 'close-dynamic');
+      return;
     } else {
       modal.remove();
     }
@@ -124,6 +284,10 @@
   }
 
   function closeById(id, reason) {
+    if (state.modal && state.modal.id === id && !state.modal.static) {
+      closeCurrentDynamicModal(reason || 'close-by-id');
+      return;
+    }
     const modal = document.getElementById(id);
     if (!modal) return;
     closeModalElement(modal, reason || 'close-by-id');
@@ -132,15 +296,22 @@
   function closeAll(options) {
     const keepId = options?.keepId || null;
     const reason = options?.reason || 'close-all';
+
+    if (state.modal && !state.modal.static && (!keepId || state.modal.id !== keepId)) {
+      closeCurrentDynamicModal(reason);
+    }
+
     getVisibleModals().forEach(function (modal) {
       if (keepId && modal.id === keepId) return;
       closeModalElement(modal, reason);
     });
+
+    if (!keepId) setModalRecord(null);
     syncActiveModal();
   }
 
   function enforceSingleVisible(options) {
-    const keepId = options?.keepId || state.activeModalId || null;
+    const keepId = options?.keepId || state.modal?.id || null;
     const visible = getVisibleModals();
     if (visible.length <= 1) {
       syncActiveModal();
@@ -156,80 +327,167 @@
       closeModalElement(modal, 'enforce-single-visible');
     });
 
-    state.activeModalId = keepModal ? (keepModal.id || null) : null;
+    if (keepModal) {
+      setModalRecord({
+        name: keepModal.dataset.reModalName || keepModal.id || 'anonymous-modal',
+        id: keepModal.id || null,
+        props: state.modal?.props || {},
+        source: keepModal.dataset.reModalSource || null,
+        static: keepModal.dataset.reModalStatic === '1',
+      });
+    }
     syncBodyLock();
     log('enforce-single-visible', {
-      keepId: state.activeModalId,
+      keepId: keepModal?.id || null,
       visibleIds: visible.map(function (modal) { return modal.id || null; }),
     });
   }
 
-  function activateModal(modal, source, options) {
-    if (!modal) return null;
+  function openModal(name, props, options) {
     const opts = options || {};
-    tagModal(modal, source, opts);
-    if (opts.closeOthers !== false) {
-      closeAll({ keepId: modal.id || null, reason: opts.reason || 'activate-modal' });
-    }
-    modal.classList.remove('ui-hidden');
-    state.activeModalId = modal.id || null;
-    ensureBindings(modal);
-    syncBodyLock();
-    enforceSingleVisible({ keepId: modal.id || null });
+    const id = opts.id || props?.id || name;
+    const record = {
+      name: name,
+      id: id,
+      props: props || {},
+      source: opts.source || ('open-modal:' + name),
+      static: false,
+      focusSelector: opts.focusSelector || null,
+      renderer: opts.renderer || null,
+    };
+
+    closeAll({ keepId: id, reason: opts.reason || 'open-modal' });
+    setModalRecord(record);
+    const modal = renderDynamicModal(record);
+    if (!modal) return null;
+    enforceSingleVisible({ keepId: modal.id || id });
     log('open', {
-      id: modal.id || null,
-      source: modal.dataset.reModalSource || source || null,
-      reason: opts.reason || 'open',
+      id: modal.id || id || null,
+      name: name,
+      source: record.source,
+      reason: opts.reason || 'open-modal',
     });
     return modal;
+  }
+
+  function toggleModal(name, props, options) {
+    const nextId = options?.id || props?.id || name;
+    if (state.modal && state.modal.name === name && state.modal.id === nextId) {
+      closeModal();
+      return null;
+    }
+    return openModal(name, props, options);
+  }
+
+  function closeModal() {
+    if (state.modal?.id) {
+      closeById(state.modal.id, 'close-modal');
+      return;
+    }
+    closeAll({ reason: 'close-modal-fallback' });
+  }
+
+  function register(name, renderer) {
+    if (!name || typeof renderer !== 'function') return;
+    state.registry[name] = renderer;
+  }
+
+  function openDialog(config) {
+    const cfg = config || {};
+    const widths = {
+      sm: '360px',
+      md: '480px',
+      lg: '620px',
+      xl: '760px',
+    };
+    const width = cfg.width || widths[cfg.size || 'md'] || '480px';
+    const headerActions = cfg.headerActionsHtml || '';
+    const closeLabel = cfg.closeLabel || '&times;';
+    const html = `
+      <div id="${cfg.id}" class="admin-modal-overlay admin-modal-overlay-high">
+        <div class="admin-modal" style="max-width:${width};width:95%;border-radius:12px;padding:24px;background:#fff;position:relative">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;gap:12px">
+            <div style="font-weight:700;font-size:15px">${cfg.title || ''}</div>
+            <div style="display:flex;align-items:center;gap:8px">
+              ${headerActions}
+              <button type="button" onclick="window.REAdminModal.closeById('${cfg.id}', 'dialog-close-button')" style="background:none;border:none;cursor:pointer;font-size:20px;color:#6b7280;line-height:1">${closeLabel}</button>
+            </div>
+          </div>
+          <div class="modal-body">${cfg.bodyHtml || ''}</div>
+          ${cfg.footerHtml ? `<div style="display:flex;justify-content:flex-end;gap:8px;margin-top:20px">${cfg.footerHtml}</div>` : ''}
+        </div>
+      </div>`;
+
+    return openModal(cfg.name || cfg.id || 'dialog', { html: html }, {
+      id: cfg.id,
+      source: cfg.source || 'open-dialog',
+      reason: cfg.reason || 'open-dialog',
+      focusSelector: cfg.focusSelector || null,
+    });
   }
 
   function openStatic(id, source) {
     const modal = document.getElementById(id);
     if (!modal) return null;
-    return activateModal(modal, source, { static: true, reason: 'open-static' });
+    closeAll({ keepId: id, reason: 'open-static' });
+    tagModal(modal, source, {
+      name: id,
+      static: true,
+    });
+    modal.classList.remove('ui-hidden');
+    setModalRecord({
+      name: id,
+      id: id,
+      props: {},
+      source: source || 'open-static',
+      static: true,
+    });
+    ensureBindings(modal);
+    syncBodyLock();
+    enforceSingleVisible({ keepId: id });
+    log('open', {
+      id: id,
+      name: id,
+      source: source || 'open-static',
+      reason: 'open-static',
+    });
+    return modal;
   }
 
   function append(modal, source) {
     if (!modal) return null;
-    tagModal(modal, source, { static: false });
-    document.body.appendChild(modal);
-    return activateModal(modal, source, { static: false, reason: 'append-modal' });
+    return openModal(modal.id || source || 'dynamic-modal', { element: modal }, {
+      id: modal.id || null,
+      source: source || 'append-modal',
+      reason: 'append-modal',
+    });
   }
 
   function insertHtml(id, html, source) {
-    const existing = document.getElementById(id);
-    if (existing) closeModalElement(existing, 'replace-modal');
-    const wrapper = document.createElement('div');
-    wrapper.innerHTML = html.trim();
-    const modal = wrapper.firstElementChild;
-    if (!modal) return null;
-    if (!modal.id && id) modal.id = id;
-    tagModal(modal, source, { static: false });
-    document.body.appendChild(modal);
-    return activateModal(modal, source, { static: false, reason: 'insert-html' });
+    return openModal(id || source || 'dynamic-modal', { html: html }, {
+      id: id || null,
+      source: source || 'insert-html',
+      reason: 'insert-html',
+    });
   }
 
   function dumpState() {
     const snapshot = getManagedModals().map(function (modal) {
       return {
         id: modal.id || null,
+        name: modal.dataset.reModalName || null,
         visible: isElementVisible(modal),
         className: modal.className,
         source: modal.dataset.reModalSource || null,
         static: modal.dataset.reModalStatic || '0',
       };
     });
-    log('dump-state', { activeModalId: state.activeModalId, count: snapshot.length, modals: snapshot });
+    log('dump-state', {
+      active: getModalState(),
+      count: snapshot.length,
+      modals: snapshot,
+    });
     return snapshot;
-  }
-
-  function isVisible(element) {
-    if (!element) return false;
-    if (element.classList?.contains('ui-hidden')) return false;
-    if (element.hidden) return false;
-    const style = window.getComputedStyle(element);
-    return style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0';
   }
 
   function sanitizeShellOverlays(reason) {
@@ -242,12 +500,12 @@
 
     if (sidebarBackdrop && !sidebar?.classList.contains('mobile-open')) {
       sidebarBackdrop.classList.remove('open');
-      if (isVisible(sidebarBackdrop)) blockers.push('sidebarBackdrop');
+      if (isElementVisible(sidebarBackdrop)) blockers.push('sidebarBackdrop');
     }
 
     if (drawerOverlay && !drawer?.classList.contains('open')) {
       drawerOverlay.classList.remove('open');
-      if (isVisible(drawerOverlay)) blockers.push('drawerOverlay');
+      if (isElementVisible(drawerOverlay)) blockers.push('drawerOverlay');
     }
 
     STATIC_MODAL_IDS.forEach(function (id) {
@@ -255,7 +513,7 @@
     });
 
     if (getVisibleModals().length > 1) {
-      enforceSingleVisible({ keepId: state.activeModalId });
+      enforceSingleVisible({ keepId: state.modal?.id || null });
       blockers.push('multipleModals');
     }
 
@@ -266,7 +524,7 @@
 
     const snapshot = {
       reason: reason || 'sanitize',
-      activeModalId: state.activeModalId,
+      activeModal: getModalState(),
       visibleModals: getVisibleModals().map(function (modal) { return modal.id || null; }),
       drawerOpen: !!drawer?.classList.contains('open'),
       drawerOverlayOpen: !!drawerOverlay?.classList.contains('open'),
@@ -289,7 +547,7 @@
 
     const suspects = Array.from(document.querySelectorAll('body *')).filter(function (element) {
       if (!(element instanceof HTMLElement)) return false;
-      if (!isVisible(element)) return false;
+      if (!isElementVisible(element)) return false;
       const style = window.getComputedStyle(element);
       if (style.position !== 'fixed') return false;
       const zIndex = Number(style.zIndex || 0);
@@ -324,7 +582,7 @@
     const report = {
       reason: reason || 'viewport-audit',
       centerPoint: { x: centerX, y: centerY },
-      activeModalId: state.activeModalId,
+      activeModal: getModalState(),
       stack: stackSummary,
       fixedHighZ: suspects,
     };
@@ -335,11 +593,18 @@
   function handleModalMutation(modal, reason) {
     if (!modal) return;
     tagModal(modal, modal.dataset.reModalSource || reason, {
+      name: modal.dataset.reModalName || modal.id || 'anonymous-modal',
       static: STATIC_MODAL_IDS.includes(modal.id),
     });
     ensureBindings(modal);
     if (isElementVisible(modal)) {
-      state.activeModalId = modal.id || state.activeModalId;
+      setModalRecord({
+        name: modal.dataset.reModalName || modal.id || 'anonymous-modal',
+        id: modal.id || null,
+        props: state.modal?.props || {},
+        source: modal.dataset.reModalSource || reason,
+        static: modal.dataset.reModalStatic === '1',
+      });
       enforceSingleVisible({ keepId: modal.id || null });
     } else {
       syncActiveModal();
@@ -388,7 +653,7 @@
       state.lastWidth = currentWidth;
       if (currentWidth > BREAKPOINT || previousWidth > BREAKPOINT) {
         sanitizeShellOverlays('resize');
-        enforceSingleVisible({ keepId: state.activeModalId });
+        enforceSingleVisible({ keepId: state.modal?.id || null });
       }
     }, 120);
     window.addEventListener('resize', state.resizeHandler);
@@ -409,7 +674,10 @@
     (ids || []).forEach(function (id) {
       const modal = document.getElementById(id);
       if (!modal) return;
-      tagModal(modal, (sourcePrefix || 'register-static') + ':' + id, { static: true });
+      tagModal(modal, (sourcePrefix || 'register-static') + ':' + id, {
+        name: id,
+        static: true,
+      });
       ensureStaticBaseline(modal);
     });
     syncActiveModal();
@@ -418,9 +686,11 @@
   function init() {
     if (state.initialized) return;
     state.initialized = true;
+    ensureRoot();
     registerStatic(STATIC_MODAL_IDS, 'init');
     getManagedModals().forEach(function (modal) {
       tagModal(modal, modal.dataset.reModalSource || 'initial-dom', {
+        name: modal.dataset.reModalName || modal.id || 'anonymous-modal',
         static: STATIC_MODAL_IDS.includes(modal.id),
       });
     });
@@ -433,27 +703,42 @@
       sanitizeShellOverlays('pageshow');
       collectViewportBlockers('pageshow');
     });
-    log('init', { breakpoint: BREAKPOINT, modals: getManagedModals().length, staticModals: STATIC_MODAL_IDS });
+    log('init', {
+      breakpoint: BREAKPOINT,
+      modals: getManagedModals().length,
+      staticModals: STATIC_MODAL_IDS,
+    });
   }
 
   window.REAdminModal = {
-    init: init,
     append: append,
     closeAll: closeAll,
     closeById: closeById,
+    closeModal: closeModal,
+    collectViewportBlockers: collectViewportBlockers,
     dumpState: dumpState,
     enforceSingleVisible: enforceSingleVisible,
+    getModalState: getModalState,
     getVisibleModals: getVisibleModals,
+    init: init,
     insertHtml: insertHtml,
+    openDialog: openDialog,
+    openModal: openModal,
     openStatic: openStatic,
+    register: register,
     registerStatic: registerStatic,
     sanitizeShellOverlays: sanitizeShellOverlays,
-    collectViewportBlockers: collectViewportBlockers,
-    tagModal: tagModal,
+    subscribe: subscribe,
     syncActiveModal: syncActiveModal,
+    tagModal: tagModal,
+    toggleModal: toggleModal,
   };
 
-  window.closeModal = function closeModal(id) {
-    closeById(id, 'window-closeModal');
+  window.closeModal = function closeModalCompat(id) {
+    if (id) {
+      closeById(id, 'window-closeModal');
+      return;
+    }
+    closeModal();
   };
 })();
