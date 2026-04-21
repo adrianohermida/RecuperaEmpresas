@@ -80,7 +80,7 @@ async function onRequest(context) {
 }
 __name(onRequest, "onRequest");
 
-// ../.wrangler/tmp/pages-iZEAEq/functionsRoutes-0.5964484859723739.mjs
+// ../.wrangler/tmp/pages-oFik83/functionsRoutes-0.782789431512502.mjs
 var routes = [
   {
     routePath: "/api/:slug*",
