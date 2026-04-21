@@ -120,12 +120,12 @@ function fpRenderInput(q) {
         <button type="button" data-yn="${q.id}" data-val="sim"
           onclick="fpSelectYesNo(${q.id}, 'sim')"
           class="fp-yesno-btn">
-          ✅ Sim
+          ${ICONS.check(16)} Sim
         </button>
         <button type="button" data-yn="${q.id}" data-val="nao"
           onclick="fpSelectYesNo(${q.id}, 'nao')"
           class="fp-yesno-btn">
-          ❌ Não
+          ${ICONS.x(16)} Não
         </button>
         <input type="hidden" id="${id}">
       </div>`;
