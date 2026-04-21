@@ -179,7 +179,7 @@ router.put('/api/admin/journeys/:id/assignments/:asnId', requireAdmin, async (re
     if (current_step_index !== undefined) updates.current_step_index = current_step_index;
     if (status === 'completed') updates.completed_at = new Date().toISOString();
     const { data } = await sb.from('re_journey_assignments')
-      .update(updates).eq('id', req.params.asnId).select().single();
+      .update(updates).eq('id', req.params.asnId).eq('journey_id', req.params.id).select().single();
     res.json(data);
   } catch (e) {
     res.status(500).json({ error: e.message });
