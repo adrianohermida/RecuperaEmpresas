@@ -61,8 +61,34 @@ body {
   max-width: 1280px; margin: 0 auto;
   padding: 12px 20px;
   display: flex; align-items: center; justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
 }
 .logo { display: flex; align-items: center; gap: 10px; }
+.header-right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+.user-chip {
+  min-width: 0;
+  max-width: min(100%, 260px);
+}
+.user-chip span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.btn-logout {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  white-space: nowrap;
+}
 .logo-text { color: var(--dark); font-weight: 800; font-size: 16px; letter-spacing: -.3px; line-height: 1.2; }
 .logo-sub  { color: var(--text-muted); font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: .5px; }
 .header-right { display: flex; align-items: center; gap: 12px; }
@@ -2565,10 +2591,21 @@ body {
   max-width: 100%;
   overflow-x: hidden;
 }
+@media (max-width: 1180px) {
+  .header-inner {
+    padding: 12px 16px;
+  }
+  .header-right {
+    gap: 10px;
+  }
+  .user-chip {
+    max-width: 180px;
+  }
+}
 @media (max-width: 1024px) {
   .sidebar {
-    position: fixed; left: -284px; top: 0;
-    height: 100vh; width: 280px; z-index: 500;
+      position: fixed; left: -284px; top: 0;
+      height: 100vh; width: 280px; z-index: 500;
     transition: left .28s cubic-bezier(.4,0,.2,1);
     box-shadow: none; border-right: none;
   }
@@ -2577,9 +2614,16 @@ body {
     box-shadow: 4px 0 28px rgba(0,0,0,.18);
   }
   .portal-layout {
-    display: block;
-  }
+      display: block;
+    }
   .portal-main { padding: 20px 18px; }
+  .header-inner {
+    align-items: flex-start;
+  }
+  .header-right {
+    width: 100%;
+    justify-content: space-between;
+  }
 }
 
 /* ── Section header ──────────────────────────────────────────────────────────── */
@@ -5436,6 +5480,34 @@ body {
   /* header user-chip hidden on mobile (user is in sidebar footer) */
   .header-user-area { display: none; }
 }
+@media (max-width: 768px) {
+  .header-inner {
+    padding: 10px 14px;
+  }
+  .header-right {
+    align-items: center;
+  }
+  .user-chip {
+    max-width: calc(100vw - 180px);
+  }
+  .btn-logout {
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    font-size: 0;
+    gap: 0;
+  }
+  .btn-logout svg {
+    margin: 0;
+  }
+  .portal-main {
+    padding: 18px 14px;
+  }
+  .section-header {
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+}
 
 /* ── Modal responsive — bottom sheet on mobile ──────────────────────────────── */
 @media (max-width: 640px) {
@@ -5536,8 +5608,8 @@ body {
 @media (max-width: 1024px) {
   .page-shell,
   .page-shell-wide {
-    max-width: 100%;
-  }
+      max-width: 100%;
+    }
 }
 @media (max-width: 480px) {
   .stats-grid-4,

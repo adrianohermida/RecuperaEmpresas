@@ -17,7 +17,12 @@ function fpToken() {
   }
   return localStorage.getItem('re_token') || sessionStorage.getItem('re_impersonate_token');
 }
-function fpAuthH() { return { 'Content-Type':'application/json', 'Authorization':'Bearer '+fpToken() }; }
+function fpAuthH() {
+  if (window.REShared && typeof window.REShared.buildAuthHeaders === 'function') {
+    return window.REShared.buildAuthHeaders({ allowImpersonation: true });
+  }
+  return { 'Content-Type':'application/json', 'Authorization':'Bearer '+fpToken() };
+}
 
 function fpEsc(s) {
   if (s == null) return '';

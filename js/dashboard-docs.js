@@ -71,9 +71,12 @@ async function submitDocument() {
   if (name) formData.append('name', name);
 
   try {
+    const uploadHeaders = window.REShared && typeof window.REShared.buildAuthHeaders === 'function'
+      ? window.REShared.buildAuthHeaders({ includeContentType: false })
+      : {};
     const res  = await fetch('/api/documents/upload', {
       method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + getToken() },
+      headers: uploadHeaders,
       body: formData,
     });
     const json = await res.json();
@@ -189,7 +192,7 @@ async function loadDocuments() {
         <div class="dashboard-doc-side">
           <span class="badge ${st.cls}">${st.label}</span>
           <div class="dashboard-doc-actions">
-            <a href="${(window.RE_API_BASE || '').replace(/\/+$/, '')}/api/documents/${doc.id}/file?token=${getToken()}" target="_blank"
+            <a href="${downloadHref(doc.id)}" target="_blank"
                class="dashboard-doc-link">
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
               Baixar
@@ -283,3 +286,10 @@ async function _submitFulfillReq(reqId, docType) {
   }
 }
 console.info('[RE:dashboard-docs] loaded');
+  const downloadHref = (docId) => {
+    const base = (window.RE_API_BASE || '').replace(/\/+$/, '');
+    const token = typeof getToken === 'function' ? getToken() : '';
+    return token
+      ? `${base}/api/documents/${docId}/file?token=${encodeURIComponent(token)}`
+      : `${base}/api/documents/${docId}/file`;
+  };
