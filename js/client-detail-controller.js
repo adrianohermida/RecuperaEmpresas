@@ -121,7 +121,15 @@
     }
   }
 
+  function normalizeClientId(value) {
+    const normalized = String(value ?? '').trim();
+    if (!normalized || normalized === 'null' || normalized === 'undefined' || normalized === 'NaN') return null;
+    return normalized;
+  }
+
   const detailState = window.REClientDetailState || { currentClientId: null, currentClientData: null };
+  detailState.currentClientId = normalizeClientId(detailState.currentClientId)
+    || normalizeClientId(new URLSearchParams(window.location.search).get('id'));
   window.REClientDetailState = detailState;
   Object.defineProperty(window, '_currentClientId', {
     configurable: true,
@@ -193,13 +201,14 @@
     }
 
     detailState.currentClientData = payload;
-    detailState.currentClientId = id;
+    detailState.currentClientId = normalizeClientId(id);
     updatePageHeader(payload.user || {});
     setActionLinks(id);
     return payload;
   }
 
   async function openClient(id) {
+    id = normalizeClientId(id);
     if (!id) return;
     if (!isClientPageMode()) {
       const nextTab = arguments.length > 1 && arguments[1] ? String(arguments[1]) : 'overview';
@@ -331,7 +340,7 @@
     window.startAdminNotifPolling?.();
 
     const params = new URLSearchParams(window.location.search);
-    const clientId = params.get('id');
+    const clientId = normalizeClientId(params.get('id'));
     if (!clientId) {
       const body = getBodyElement();
       if (body) {

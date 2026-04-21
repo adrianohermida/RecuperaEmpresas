@@ -4,11 +4,30 @@
 (function () {
   function esc(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
+  function normalizeClientId(value) {
+    const normalized = String(value ?? '').trim();
+    if (!normalized || normalized === 'null' || normalized === 'undefined' || normalized === 'NaN') return null;
+    return normalized;
+  }
+
   function resolveClientId(candidate) {
-    if (candidate && candidate !== 'null' && candidate !== 'undefined') return candidate;
-    const stateId = window.REClientDetailState?.currentClientId || window._currentClientId;
-    if (stateId && stateId !== 'null' && stateId !== 'undefined') return stateId;
-    return new URLSearchParams(window.location.search).get('id');
+    const directId = normalizeClientId(candidate);
+    if (directId) return directId;
+    const pendingId = normalizeClientId(window.REPendingDeleteClientId);
+    if (pendingId) return pendingId;
+    const stateId = normalizeClientId(window.REClientDetailState?.currentClientId || window._currentClientId);
+    if (stateId) return stateId;
+    return normalizeClientId(new URLSearchParams(window.location.search).get('id'));
+  }
+
+  async function readJsonSafely(res) {
+    const text = await res.text();
+    if (!text) return {};
+    try {
+      return JSON.parse(text);
+    } catch (_) {
+      return { error: text.replace(/<[^>]+>/g, ' ').trim() || 'Resposta invalida do servidor.' };
+    }
   }
 
   function closeModal(id) {
@@ -715,6 +734,7 @@
       showToast('Cliente não identificado para exclusão.', 'error');
       return;
     }
+    window.REPendingDeleteClientId = effectiveClientId;
     openModal('deleteClientModal', 'Excluir conta do cliente',
       `<div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:12px;margin-bottom:14px;font-size:13px">
         <strong>Ação irreversível.</strong> Esta operação excluirá a conta e todos os dados do cliente.
@@ -723,7 +743,7 @@
       <p style="font-size:13px;margin-bottom:10px">Digite <code>CONFIRMAR_EXCLUSAO</code> para confirmar:</p>
       <input id="deleteConfirmText" class="form-control" placeholder="CONFIRMAR_EXCLUSAO">`,
       `<button class="btn-ghost admin-modal-btn" onclick="closeModal('deleteClientModal')">Cancelar</button>
-       <button class="btn btn-danger admin-modal-btn" onclick="_submitDeleteClient('${effectiveClientId}')">Excluir conta</button>`,
+       <button class="btn btn-danger admin-modal-btn" onclick="_submitDeleteClient()">Excluir conta</button>`,
       'sm'
     );
   }
@@ -742,9 +762,10 @@
       method: 'DELETE', headers: authH(),
       body: JSON.stringify({ confirm: 'CONFIRMAR_EXCLUSAO' }),
     });
-    const data = await res.json();
+    const data = await readJsonSafely(res);
     if (!res.ok) { showToast(data.error || 'Erro ao excluir.', 'error'); return; }
     showToast('Conta excluída com sucesso.', 'success');
+    window.REPendingDeleteClientId = null;
     closeModal('deleteClientModal');
     if (typeof closeDrawer === 'function') closeDrawer();
     // Reload client list

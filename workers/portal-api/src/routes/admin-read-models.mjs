@@ -727,14 +727,380 @@ async function loadFullForm(sb, formId) {
 }
 
 async function handleForms(request, context) {
-  if (request.method !== 'GET') return methodNotAllowed();
-  if (context.params.id) {
-    const form = await loadFullForm(context.sb, context.params.id);
+  const url = new URL(request.url);
+  const pathname = url.pathname;
+  const formDetailMatch = pathname.match(/^\/api\/admin\/forms\/(?<id>[^/]+)$/);
+  const duplicateMatch = pathname.match(/^\/api\/admin\/forms\/(?<id>[^/]+)\/duplicate$/);
+  const statsMatch = pathname.match(/^\/api\/admin\/forms\/(?<id>[^/]+)\/stats$/);
+  const pagesMatch = pathname.match(/^\/api\/admin\/forms\/(?<id>[^/]+)\/pages(?:\/(?<pageId>[^/]+))?$/);
+  const questionsMatch = pathname.match(/^\/api\/admin\/forms\/(?<id>[^/]+)\/questions(?:\/(?<questionId>[^/]+))?$/);
+  const logicMatch = pathname.match(/^\/api\/admin\/forms\/(?<id>[^/]+)\/logic(?:\/(?<ruleId>[^/]+))?$/);
+  const responsesMatch = pathname.match(/^\/api\/admin\/forms\/(?<id>[^/]+)\/responses(?:\/(?<responseId>[^/]+)(?:\/(?<responseAction>abandon))?)?$/);
+  const assignmentsMatch = pathname.match(/^\/api\/admin\/forms\/(?<id>[^/]+)\/assignments$/);
+  const assignEmailMatch = pathname.match(/^\/api\/admin\/forms\/(?<id>[^/]+)\/assign-email$/);
+  const assignDeleteMatch = pathname.match(/^\/api\/admin\/forms\/(?<id>[^/]+)\/assign\/(?<userId>[^/]+)$/);
+
+  if (pathname === '/api/admin/forms' && request.method === 'POST') {
+    const body = await readJson(request);
+    if (!body.title) return json({ error: 'Titulo e obrigatorio.' }, { status: 400 });
+
+    const { data: form, error } = await context.sb.from('re_forms').insert({
+      title: String(body.title).trim(),
+      description: body.description || null,
+      type: body.type || 'custom',
+      settings: body.settings || { scoring_enabled: false, show_progress: true, allow_resume: true },
+      linked_plan_chapter: body.linked_plan_chapter || null,
+      created_by: context.user.id,
+      status: body.status || 'draft',
+    }).select('*').single();
+    if (error) return json({ error: error.message }, { status: 500 });
+
+    const firstPageResult = await context.sb.from('re_form_pages').insert({
+      form_id: form.id,
+      title: 'Pagina 1',
+      order_index: 0,
+    }).select('id').single();
+    if (firstPageResult.error) {
+      console.warn('[worker:forms:create:first-page]', firstPageResult.error.message);
+    }
+
+    queueSideEffect(context, () => auditLog(context.sb, {
+      actorId: context.user.id,
+      actorEmail: context.user.email,
+      actorRole: 'admin',
+      entityType: 'form',
+      entityId: form.id,
+      action: 'create',
+      after: { title: form.title, type: form.type },
+    }), 'form-create-audit');
+
+    return json({ success: true, form });
+  }
+
+  if (formDetailMatch && request.method === 'PUT') {
+    const body = await readJson(request);
+    const updates = { updated_at: new Date().toISOString() };
+    if (body.title !== undefined) updates.title = body.title;
+    if (body.description !== undefined) updates.description = body.description;
+    if (body.type !== undefined) updates.type = body.type;
+    if (body.status !== undefined) updates.status = body.status;
+    if (body.settings !== undefined) updates.settings = body.settings;
+    if (body.linked_plan_chapter !== undefined) updates.linked_plan_chapter = body.linked_plan_chapter;
+
+    const { data: form, error } = await context.sb.from('re_forms')
+      .update(updates)
+      .eq('id', formDetailMatch.groups.id)
+      .select('*')
+      .single();
+    if (error) return json({ error: error.message }, { status: 500 });
+    return json({ success: true, form });
+  }
+
+  if (formDetailMatch && request.method === 'DELETE') {
+    const form = await maybeSingle(context.sb.from('re_forms').select('is_system').eq('id', formDetailMatch.groups.id));
+    if (form?.is_system) return json({ error: 'Formularios do sistema nao podem ser excluidos.' }, { status: 403 });
+    const { error } = await context.sb.from('re_forms').delete().eq('id', formDetailMatch.groups.id);
+    if (error) return json({ error: error.message }, { status: 500 });
+    return json({ success: true });
+  }
+
+  if (duplicateMatch && request.method === 'POST') {
+    const src = await loadFullForm(context.sb, duplicateMatch.groups.id);
+    if (!src) return json({ error: 'Formulario nao encontrado.' }, { status: 404 });
+
+    const { data: newForm, error: formInsertError } = await context.sb.from('re_forms').insert({
+      title: `${src.title} (copia)`,
+      description: src.description,
+      type: src.type,
+      settings: src.settings,
+      status: 'draft',
+      linked_plan_chapter: src.linked_plan_chapter,
+      created_by: context.user.id,
+      template_id: src.id,
+      version: 1,
+    }).select('*').single();
+    if (formInsertError) return json({ error: formInsertError.message }, { status: 500 });
+
+    const pageIdMap = {};
+    for (const page of src.pages || []) {
+      const { data: newPage, error } = await context.sb.from('re_form_pages').insert({
+        form_id: newForm.id,
+        title: page.title,
+        description: page.description,
+        order_index: page.order_index,
+      }).select('*').single();
+      if (error) return json({ error: error.message }, { status: 500 });
+      pageIdMap[page.id] = newPage.id;
+    }
+
+    const questionIdMap = {};
+    for (const question of src.questions || []) {
+      const { data: newQuestion, error } = await context.sb.from('re_form_questions').insert({
+        form_id: newForm.id,
+        page_id: pageIdMap[question.page_id] || null,
+        order_index: question.order_index,
+        type: question.type,
+        label: question.label,
+        description: question.description,
+        placeholder: question.placeholder,
+        required: question.required,
+        options: question.options,
+        settings: question.settings,
+        weight: question.weight,
+        score_map: question.score_map,
+        formula: question.formula,
+      }).select('*').single();
+      if (error) return json({ error: error.message }, { status: 500 });
+      questionIdMap[question.id] = newQuestion.id;
+    }
+
+    for (const rule of src.logic || []) {
+      const { error } = await context.sb.from('re_form_logic').insert({
+        form_id: newForm.id,
+        source_question_id: questionIdMap[rule.source_question_id] || null,
+        operator: rule.operator,
+        condition_value: rule.condition_value,
+        action: rule.action,
+        target_question_id: rule.target_question_id ? questionIdMap[rule.target_question_id] : null,
+        target_page_id: rule.target_page_id ? pageIdMap[rule.target_page_id] : null,
+      });
+      if (error) return json({ error: error.message }, { status: 500 });
+    }
+
+    return json({ success: true, form: newForm });
+  }
+
+  if (pagesMatch && !pagesMatch.groups.pageId && request.method === 'POST') {
+    const body = await readJson(request);
+    const { data: lastPage } = await context.sb.from('re_form_pages')
+      .select('order_index')
+      .eq('form_id', pagesMatch.groups.id)
+      .order('order_index', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const { data: page, error } = await context.sb.from('re_form_pages').insert({
+      form_id: pagesMatch.groups.id,
+      title: body.title || 'Nova Pagina',
+      description: body.description || null,
+      order_index: body.order_index ?? ((lastPage?.order_index ?? -1) + 1),
+    }).select('*').single();
+    if (error) return json({ error: error.message }, { status: 500 });
+    return json({ success: true, page, id: page.id });
+  }
+
+  if (questionsMatch && !questionsMatch.groups.questionId && request.method === 'POST') {
+    const body = await readJson(request);
+    if (!body.page_id || !body.type) return json({ error: 'page_id e type sao obrigatorios.' }, { status: 400 });
+
+    const { data: lastQuestion } = await context.sb.from('re_form_questions')
+      .select('order_index')
+      .eq('page_id', body.page_id)
+      .order('order_index', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const { data: question, error } = await context.sb.from('re_form_questions').insert({
+      form_id: questionsMatch.groups.id,
+      page_id: body.page_id,
+      type: body.type,
+      label: body.label || 'Nova Pergunta',
+      description: body.description || null,
+      placeholder: body.placeholder || null,
+      required: !!body.required,
+      options: body.options || null,
+      settings: body.settings || null,
+      weight: body.weight ?? 1,
+      score_map: body.score_map || null,
+      formula: body.formula || null,
+      order_index: body.order_index ?? ((lastQuestion?.order_index ?? -1) + 1),
+    }).select('*').single();
+    if (error) return json({ error: error.message }, { status: 500 });
+    return json({ success: true, question, id: question.id });
+  }
+
+  if (questionsMatch && questionsMatch.groups.questionId && request.method === 'PUT') {
+    const body = await readJson(request);
+    const updates = {};
+    for (const key of ['label', 'description', 'placeholder', 'required', 'options', 'settings', 'weight', 'score_map', 'formula', 'type', 'order_index', 'page_id']) {
+      if (body[key] !== undefined) updates[key] = body[key];
+    }
+    const { data: question, error } = await context.sb.from('re_form_questions')
+      .update(updates)
+      .eq('id', questionsMatch.groups.questionId)
+      .select('*')
+      .single();
+    if (error) return json({ error: error.message }, { status: 500 });
+    return json({ success: true, question });
+  }
+
+  if (questionsMatch && questionsMatch.groups.questionId && request.method === 'DELETE') {
+    await context.sb.from('re_form_logic').delete().or(`source_question_id.eq.${questionsMatch.groups.questionId},target_question_id.eq.${questionsMatch.groups.questionId}`);
+    const { error } = await context.sb.from('re_form_questions').delete().eq('id', questionsMatch.groups.questionId);
+    if (error) return json({ error: error.message }, { status: 500 });
+    return json({ success: true });
+  }
+
+  if (logicMatch && !logicMatch.groups.ruleId && request.method === 'GET') {
+    let query = context.sb.from('re_form_logic').select('*').eq('form_id', logicMatch.groups.id);
+    const questionId = url.searchParams.get('question_id');
+    if (questionId) query = query.eq('source_question_id', questionId);
+    const rules = await listSafe(query.order('id'));
+    return json({ rules });
+  }
+
+  if (logicMatch && !logicMatch.groups.ruleId && request.method === 'POST') {
+    const body = await readJson(request);
+    if (!body.source_question_id || !body.action) {
+      return json({ error: 'source_question_id e action sao obrigatorios.' }, { status: 400 });
+    }
+    const { data: rule, error } = await context.sb.from('re_form_logic').insert({
+      form_id: logicMatch.groups.id,
+      source_question_id: body.source_question_id,
+      operator: body.operator || 'equals',
+      condition_value: body.condition_value ?? null,
+      action: body.action,
+      target_question_id: body.target_question_id || null,
+      target_page_id: body.target_page_id || null,
+    }).select('*').single();
+    if (error) return json({ error: error.message }, { status: 500 });
+    return json({ success: true, rule });
+  }
+
+  if (logicMatch && logicMatch.groups.ruleId && request.method === 'DELETE') {
+    const { error } = await context.sb.from('re_form_logic')
+      .delete()
+      .eq('id', logicMatch.groups.ruleId)
+      .eq('form_id', logicMatch.groups.id);
+    if (error) return json({ error: error.message }, { status: 500 });
+    return json({ success: true });
+  }
+
+  if (assignmentsMatch && request.method === 'GET') {
+    const assignments = await listSafe(
+      context.sb.from('re_form_assignments')
+        .select('*,re_users!re_form_assignments_user_id_fkey(name,email,company)')
+        .eq('form_id', assignmentsMatch.groups.id)
+    );
+    return json({ assignments });
+  }
+
+  if (assignEmailMatch && request.method === 'POST') {
+    const body = await readJson(request);
+    if (!body.email) return json({ error: 'Email obrigatorio.' }, { status: 400 });
+
+    const user = await maybeSingle(context.sb.from('re_users').select('id,name,email').eq('email', body.email));
+    if (!user) return json({ error: 'Cliente nao encontrado com este email.' }, { status: 404 });
+
+    const { error } = await context.sb.from('re_form_assignments').upsert({
+      form_id: assignEmailMatch.groups.id,
+      user_id: user.id,
+      assigned_by: context.user.id,
+    }, { onConflict: 'form_id,user_id' });
+    if (error) return json({ error: error.message }, { status: 500 });
+
+    const form = await maybeSingle(context.sb.from('re_forms').select('title').eq('id', assignEmailMatch.groups.id));
+    queueSideEffect(context, () => pushNotification(
+      context.sb,
+      user.id,
+      'task',
+      'Novo formulario disponivel',
+      form?.title || 'Formulario',
+      'form',
+      assignEmailMatch.groups.id
+    ), 'form-assignment-email');
+
+    return json({ success: true, user });
+  }
+
+  if (assignDeleteMatch && request.method === 'DELETE') {
+    const { error } = await context.sb.from('re_form_assignments')
+      .delete()
+      .eq('form_id', assignDeleteMatch.groups.id)
+      .eq('user_id', assignDeleteMatch.groups.userId);
+    if (error) return json({ error: error.message }, { status: 500 });
+    return json({ success: true });
+  }
+
+  if (responsesMatch && !responsesMatch.groups.responseId && request.method === 'GET') {
+    const responses = await listSafe(
+      context.sb.from('re_form_responses')
+        .select('*,re_users!re_form_responses_user_id_fkey(name,email,company)')
+        .eq('form_id', responsesMatch.groups.id)
+        .order('started_at', { ascending: false })
+    );
+    return json({ responses });
+  }
+
+  if (responsesMatch && responsesMatch.groups.responseId && !responsesMatch.groups.responseAction && request.method === 'GET') {
+    const response = await maybeSingle(
+      context.sb.from('re_form_responses')
+        .select('*,re_users!re_form_responses_user_id_fkey(name,email,company)')
+        .eq('id', responsesMatch.groups.responseId)
+    );
+    if (!response) return json({ error: 'Resposta nao encontrada.' }, { status: 404 });
+    const answers = await listSafe(
+      context.sb.from('re_form_answers')
+        .select('*,re_form_questions(label,type)')
+        .eq('response_id', responsesMatch.groups.responseId)
+    );
+    return json({ response, answers });
+  }
+
+  if (responsesMatch && responsesMatch.groups.responseId && responsesMatch.groups.responseAction === 'abandon' && request.method === 'POST') {
+    const { error } = await context.sb.from('re_form_responses').update({
+      status: 'abandoned',
+      abandoned_at: new Date().toISOString(),
+    }).eq('id', responsesMatch.groups.responseId).eq('form_id', responsesMatch.groups.id);
+    if (error) return json({ error: error.message }, { status: 500 });
+    return json({ success: true });
+  }
+
+  if (statsMatch && request.method === 'GET') {
+    const rows = await listSafe(
+      context.sb.from('re_form_responses')
+        .select('id,status,started_at,completed_at,abandoned_at,time_to_complete_seconds,last_active_at,metadata')
+        .eq('form_id', statsMatch.groups.id)
+    );
+
+    const total = rows.length;
+    const completed = rows.filter((row) => row.status === 'completed').length;
+    const abandoned = rows.filter((row) => row.abandoned_at != null || row.status === 'abandoned').length;
+    const inProgress = total - completed - abandoned;
+    const completedRows = rows.filter((row) => row.time_to_complete_seconds != null);
+    const avgTime = completedRows.length
+      ? Math.round(completedRows.reduce((sum, row) => sum + row.time_to_complete_seconds, 0) / completedRows.length)
+      : null;
+    const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0;
+    const abandonmentRate = total > 0 ? Math.round((abandoned / total) * 100) : 0;
+
+    const cutoff = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString();
+    const dailyMap = {};
+    for (const row of rows.filter((entry) => entry.started_at >= cutoff)) {
+      const day = row.started_at.slice(0, 10);
+      dailyMap[day] = (dailyMap[day] || 0) + 1;
+    }
+    const dailyStarts = Object.entries(dailyMap)
+      .map(([date, count]) => ({ date, count }))
+      .sort((left, right) => left.date.localeCompare(right.date));
+
+    return json({
+      total,
+      completed,
+      abandoned,
+      in_progress: inProgress,
+      completion_rate: completionRate,
+      abandonment_rate: abandonmentRate,
+      avg_time_seconds: avgTime,
+      daily_starts: dailyStarts,
+    });
+  }
+
+  if (formDetailMatch && request.method === 'GET') {
+    const form = await loadFullForm(context.sb, formDetailMatch.groups.id);
     if (!form) return json({ error: 'Formulario nao encontrado.' }, { status: 404 });
     return json({ form });
   }
 
-  const url = new URL(request.url);
+  if (request.method !== 'GET') return methodNotAllowed();
   const type = url.searchParams.get('type');
   const status = url.searchParams.get('status');
   let query = context.sb
@@ -790,6 +1156,55 @@ async function handleJourneys(request, context) {
   if (id && !section && request.method === 'DELETE') {
     const journey = await maybeSingle(context.sb.from('re_journeys').select('is_system').eq('id', id));
     if (journey?.is_system) return json({ error: 'Jornadas do sistema nao podem ser excluidas.' }, { status: 403 });
+
+    const [steps, assignments] = await Promise.all([
+      listSafe(context.sb.from('re_journey_steps').select('id').eq('journey_id', id)),
+      listSafe(context.sb.from('re_journey_assignments').select('id').eq('journey_id', id)),
+    ]);
+
+    const stepIds = steps.map((step) => step.id).filter(Boolean);
+    const assignmentIds = assignments.map((assignment) => assignment.id).filter(Boolean);
+
+    const { error: unlinkServicesError } = await context.sb
+      .from('re_services')
+      .update({ journey_id: null })
+      .eq('journey_id', id);
+    if (unlinkServicesError) return json({ error: unlinkServicesError.message }, { status: 500 });
+
+    if (assignmentIds.length) {
+      const { error: completionsByAssignmentError } = await context.sb
+        .from('re_journey_step_completions')
+        .delete()
+        .in('assignment_id', assignmentIds);
+      if (completionsByAssignmentError) {
+        return json({ error: completionsByAssignmentError.message }, { status: 500 });
+      }
+    }
+
+    if (stepIds.length) {
+      const { error: completionsByStepError } = await context.sb
+        .from('re_journey_step_completions')
+        .delete()
+        .in('step_id', stepIds);
+      if (completionsByStepError) return json({ error: completionsByStepError.message }, { status: 500 });
+    }
+
+    if (assignmentIds.length) {
+      const { error: assignmentsError } = await context.sb
+        .from('re_journey_assignments')
+        .delete()
+        .eq('journey_id', id);
+      if (assignmentsError) return json({ error: assignmentsError.message }, { status: 500 });
+    }
+
+    if (stepIds.length) {
+      const { error: stepsError } = await context.sb
+        .from('re_journey_steps')
+        .delete()
+        .eq('journey_id', id);
+      if (stepsError) return json({ error: stepsError.message }, { status: 500 });
+    }
+
     const { error } = await context.sb.from('re_journeys').delete().eq('id', id);
     if (error) return json({ error: error.message }, { status: 500 });
     return json({ success: true });
@@ -1009,7 +1424,7 @@ export async function handleAdminReadModels(request, context) {
   if (/^\/api\/admin\/invoices(?:\/.*)?$/.test(pathname)) return handleInvoices(request, context);
   if (/^\/api\/admin\/services(?:\/[^/]+)?$/.test(pathname)) return handleServices(request, context);
   if (/^\/api\/admin\/service-orders(?:\/[^/]+)?$/.test(pathname)) return handleServiceOrders(request, context);
-  if (/^\/api\/admin\/forms(?:\/[^/]+)?$/.test(pathname)) return handleForms(request, context);
+  if (/^\/api\/admin\/forms(?:\/.*)?$/.test(pathname)) return handleForms(request, context);
   if (/^\/api\/admin\/journeys(?:\/.*)?$/.test(pathname)) return handleJourneys(request, context);
   if (pathname === '/api/admin/agenda/slots') return handleAgendaSlots(request, context);
 
