@@ -12,10 +12,11 @@ function run(cmd, cwd = process.cwd(), env = process.env) {
 
 try {
   const rootDir = path.join(__dirname, '..');
-  const publicApiBase = process.env.RE_API_BASE || 'https://api.recuperaempresas.com.br';
+  const publicApiBase = process.env.RE_STATIC_API_BASE || '';
   const productionBuildEnv = {
     ...process.env,
-    RE_API_BASE: publicApiBase,
+    RE_STATIC_API_BASE: publicApiBase,
+    RE_API_BASE: '',
     RE_API_WORKER_BASE: '',
     RE_API_WORKER_ROUTES: '',
   };

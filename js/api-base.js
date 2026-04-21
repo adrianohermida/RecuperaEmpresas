@@ -8,7 +8,7 @@
  * `window.RE_API_WORKER_ROUTES`.
  */
 (function () {
-  var PUBLIC_API_FALLBACK_BASE = 'https://api.recuperaempresas.com.br';
+  var PUBLIC_API_FALLBACK_BASE = '';
 
   function trimBase(value) {
     return String(value || '').replace(/\/+$/, '');

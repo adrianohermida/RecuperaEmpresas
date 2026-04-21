@@ -10,7 +10,7 @@
  * For GitHub Pages: CI (deploy-pages.yml) rewrites this file with real values
  * before deploying to gh-pages.
  */
-window.RE_API_BASE      = 'https://api.recuperaempresas.com.br';
+window.RE_API_BASE      = '';
 window.RE_API_WORKER_BASE = '';
 window.RE_API_WORKER_ROUTES = [];
 window.VITE_SUPABASE_URL = 'https://riiajjmnzgagntiqqshs.supabase.co';

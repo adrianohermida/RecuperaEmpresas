@@ -59,13 +59,12 @@ copyIfExists(
   path.join(distDir, 'vendor', 'supabase', 'supabase.js')
 );
 
-// Static portal deployments must point to the public API host by default.
-// When Express serves /js/config.js dynamically it can still override this to
-// same-origin for the single-origin runtime.
+// Static portal deployments default to same-origin `/api/*`.
+// Only set RE_STATIC_API_BASE explicitly for a deliberate non-production split-origin environment.
 const defaultWorkerApiBase = '';
 const defaultWorkerApiRoutes = [];
-const defaultApiBase = 'https://api.recuperaempresas.com.br';
-const apiBase = process.env.RE_API_BASE || defaultApiBase;
+const defaultApiBase = '';
+const apiBase = process.env.RE_STATIC_API_BASE || defaultApiBase;
 const workerApiBase = process.env.RE_API_WORKER_BASE || defaultWorkerApiBase;
 const workerApiRoutes = (process.env.RE_API_WORKER_ROUTES || defaultWorkerApiRoutes.join(','))
   .split(',')
