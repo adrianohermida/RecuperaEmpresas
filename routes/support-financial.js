@@ -19,6 +19,17 @@ router.get('/api/freshchat-token', requireAuth, (req, res) => {
   res.json({ token });
 });
 
+router.get('/api/admin/freshchat/identity', requireAdmin, (req, res) => {
+  res.json({
+    ok: true,
+    email: req.user.email,
+    freshchatExternalId: req.user.id,
+    mappedAdminId: req.user.id,
+    hasJwtSecret: !!FRESHCHAT_JWT_SECRET,
+    secretSource: FRESHCHAT_JWT_SECRET ? 'Configurado (Environment)' : 'Não configurado'
+  });
+});
+
 router.get('/api/support/tickets', requireAuth, async (req, res) => {
   const result = await freshdeskRequest(
     'GET',

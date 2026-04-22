@@ -155,7 +155,8 @@
     }
 
     const button = document.getElementById('saveProfileBtn');
-    if (button) button.disabled = true;
+    const originalLabel = button ? button.textContent : 'Salvar perfil';
+    if (button) { button.disabled = true; button.textContent = 'Salvando...'; }
 
     try {
       const payload = {
@@ -188,7 +189,7 @@
     } catch (error) {
       showToast(error.message || 'Erro ao salvar perfil.', 'error');
     } finally {
-      if (button) button.disabled = false;
+      if (button) { button.disabled = false; button.textContent = originalLabel; }
     }
   };
 
@@ -212,7 +213,8 @@
     }
 
     const button = document.getElementById('savePasswordBtn');
-    if (button) button.disabled = true;
+    const originalLabel = button ? button.textContent : 'Atualizar senha';
+    if (button) { button.disabled = true; button.textContent = 'Atualizando...'; }
 
     try {
       const response = await fetch('/api/auth/change-password', {
@@ -230,7 +232,7 @@
     } catch (error) {
       showToast(error.message || 'Erro ao atualizar senha.', 'error');
     } finally {
-      if (button) button.disabled = false;
+      if (button) { button.disabled = false; button.textContent = originalLabel; }
     }
   };
 

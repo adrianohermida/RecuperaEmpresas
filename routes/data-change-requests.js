@@ -15,7 +15,7 @@ router.post('/api/admin/client/:id/change-request', requireAdmin, async (req, re
     return res.status(400).json({ error: 'entity_type, entity_id e field_changes são obrigatórios.' });
   }
   const { data: req_row, error } = await sb.from('re_data_change_requests').insert({
-    company_id: req.params.id,
+    user_id: req.params.id,
     requested_by: req.user.id,
     requester_role: 'admin',
     entity_type, entity_id,
@@ -53,7 +53,7 @@ router.post('/api/admin/client/:id/change-request', requireAdmin, async (req, re
 router.get('/api/change-requests', requireAuth, async (req, res) => {
   const cid = companyId(req.user);
   const { data } = await sb.from('re_data_change_requests')
-    .select('*').eq('company_id', cid).eq('status', 'pending')
+    .select('*').eq('user_id', cid).eq('status', 'pending')
     .gt('expires_at', new Date().toISOString()).order('created_at', { ascending: false });
   res.json({ requests: data || [] });
 });
@@ -65,7 +65,7 @@ router.put('/api/change-requests/:token', requireAuth, async (req, res) => {
 
   const cid = companyId(req.user);
   const { data: cr } = await sb.from('re_data_change_requests')
-    .select('*').eq('token', req.params.token).eq('company_id', cid).single();
+    .select('*').eq('token', req.params.token).eq('user_id', cid).single();
   if (!cr) return res.status(404).json({ error: 'Solicitação não encontrada.' });
   if (cr.status !== 'pending') return res.status(409).json({ error: 'Solicitação já processada.' });
   if (new Date(cr.expires_at) < new Date()) return res.status(410).json({ error: 'Solicitação expirada.' });
@@ -99,7 +99,7 @@ router.put('/api/change-requests/:token', requireAuth, async (req, res) => {
 // Admin: list change requests for a client
 router.get('/api/admin/client/:id/change-requests', requireAdmin, async (req, res) => {
   const { data } = await sb.from('re_data_change_requests')
-    .select('*').eq('company_id', req.params.id)
+    .select('*').eq('user_id', req.params.id)
     .order('created_at', { ascending: false }).limit(50);
   res.json({ requests: data || [] });
 });

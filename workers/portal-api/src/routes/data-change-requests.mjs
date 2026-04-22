@@ -15,7 +15,7 @@ export async function handleDataChangeRequests(request, context) {
       }
 
       const { data, error } = await context.sb.from('re_data_change_requests').insert({
-        company_id: context.params.clientId,
+        user_id: context.params.clientId,
         requested_by: context.user.id,
         requester_role: 'admin',
         entity_type,
@@ -70,7 +70,7 @@ export async function handleDataChangeRequests(request, context) {
     if (request.method === 'GET') {
       const { data } = await context.sb.from('re_data_change_requests')
         .select('*')
-        .eq('company_id', context.params.clientId)
+        .eq('user_id', context.params.clientId)
         .order('created_at', { ascending: false })
         .limit(50);
       return json({ requests: data || [] });
@@ -92,7 +92,7 @@ export async function handleDataChangeRequests(request, context) {
     const cid = companyId(context.user);
     const { data } = await context.sb.from('re_data_change_requests')
       .select('*')
-      .eq('company_id', cid)
+      .eq('user_id', cid)
       .eq('status', 'pending')
       .gt('expires_at', new Date().toISOString())
       .order('created_at', { ascending: false });
@@ -110,7 +110,7 @@ export async function handleDataChangeRequests(request, context) {
     const { data: changeRequest } = await context.sb.from('re_data_change_requests')
       .select('*')
       .eq('token', context.params.token)
-      .eq('company_id', cid)
+      .eq('user_id', cid)
       .single();
 
     if (!changeRequest) return json({ error: 'Solicitação não encontrada.' }, { status: 404 });

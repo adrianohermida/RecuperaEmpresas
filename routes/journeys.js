@@ -250,6 +250,11 @@ router.post('/api/admin/journeys/:id/assignments/:asnId/complete-step', requireA
     const { step_id, form_response_id, notes } = req.body;
     if (!step_id) return res.status(400).json({ error: 'step_id é obrigatório.' });
 
+    // Verify assignment belongs to this journey before inserting completion
+    const { data: assignmentCheck } = await sb.from('re_journey_assignments')
+      .select('id').eq('id', req.params.asnId).eq('journey_id', req.params.id).single();
+    if (!assignmentCheck) return res.status(403).json({ error: 'Atribuição não pertence a esta jornada.' });
+
     await sb.from('re_journey_step_completions').upsert({
       assignment_id: req.params.asnId,
       step_id,
@@ -279,7 +284,10 @@ router.post('/api/admin/journeys/:id/assignments/:asnId/complete-step', requireA
 router.get('/api/admin/journeys/:id/assignments/:asnId/progress', requireAdmin, async (req, res) => {
   try {
     const { data: assignment } = await sb.from('re_journey_assignments')
-      .select('*,re_users(name,email)').eq('id', req.params.asnId).single();
+      .select('*,re_users(name,email)')
+      .eq('id', req.params.asnId)
+      .eq('journey_id', req.params.id)
+      .single();
     if (!assignment) return res.status(404).json({ error: 'Atribuição não encontrada.' });
 
     const { data: steps } = await sb.from('re_journey_steps')
