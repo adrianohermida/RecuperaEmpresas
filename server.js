@@ -37,6 +37,7 @@ const employeeRoutes = require('./routes/employees');
 const entityDocumentRoutes = require('./routes/entity-documents');
 const dataChangeRequestRoutes = require('./routes/data-change-requests');
 const documentRequestRoutes = require('./routes/document-requests');
+const recuperaChatRoutes    = require('./routes/recuperachat');
 
 const {
   PORT,
@@ -211,6 +212,7 @@ app.use(employeeRoutes);
 app.use(entityDocumentRoutes);
 app.use(dataChangeRequestRoutes);
 app.use(documentRequestRoutes);
+app.use(recuperaChatRoutes);   // RecuperaChat — Chat e Suporte Multitenant
 
 // ─── Health check (used by Render.com and uptime monitors) ───────────────────
 app.get(['/api/health', '/healthz'], (req, res) => {

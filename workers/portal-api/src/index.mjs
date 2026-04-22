@@ -14,6 +14,7 @@ import { handleMessages } from './routes/messages.mjs';
 import { handlePlan } from './routes/plan.mjs';
 import { handleTasks } from './routes/tasks.mjs';
 import { handleNotifications } from './routes/notifications.mjs';
+import { handleRecuperaChat } from './routes/recuperachat.mjs';
 
 function withCors(request, response, env) {
   return applyCors(request, response, env);
@@ -64,6 +65,10 @@ async function routeAuthenticated(request, env, pathname, executionCtx) {
 
   params = match(pathname, /^\/api\/notifications(?:\/(?<id>[^/]+)(?:\/(?<action>read))?)?$/);
   if (params) return handleNotifications(request, { ...auth, env, executionCtx, params });
+
+  // RecuperaChat — conversações e tickets do cliente
+  params = match(pathname, /^\/api\/chat\/(?<resource>conversation|conversations|tickets)(?:\/(?<id>[^/]+)(?:\/(?<action>[^/]+))?)?$/);
+  if (params) return handleRecuperaChat(request, { ...auth, env, executionCtx, params, scope: 'user' });
 
   return notFound();
 }
@@ -176,6 +181,10 @@ async function routeAdmin(request, env, pathname, executionCtx) {
 
   params = match(pathname, /^\/api\/admin\/(?<resource>freshchat)\/(?<action>identity)$/);
   if (params) return handleAdminSystem(request, { ...auth, env, executionCtx, params, scope: 'admin' });
+
+  // RecuperaChat Admin — conversas, tickets e integração com IA
+  params = match(pathname, /^\/api\/admin\/chat\/(?<resource>conversations|tickets)(?:\/(?<id>[^/]+)(?:\/(?<action>[^/]+))?)?$/);
+  if (params) return handleRecuperaChat(request, { ...auth, env, executionCtx, params, scope: 'admin' });
 
   return notFound();
 }
