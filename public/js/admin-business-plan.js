@@ -10,6 +10,9 @@
   let currentChapterId = null;
   let quillEditor = null;
   let planData = null;
+  let typingTimeout = null;
+  let presenceInterval = null;
+  let typingCheckInterval = null;
 
   // ─── Inicialização ───────────────────────────────────────────────────────────
 
@@ -119,6 +122,11 @@
   }
 
   function resetWorkspace() {
+    // BP-FE-03: Limpar presença e timers
+    registerPresence(false).catch(() => {});
+    clearInterval(typingCheckInterval);
+    clearTimeout(typingTimeout);
+    
     currentClientId = null;
     currentChapterId = null;
     planData = null;
@@ -128,6 +136,8 @@
     if (quillEditor) quillEditor.setContents([]);
     document.getElementById('businessPlanCommentsList').innerHTML = '';
     document.getElementById('businessPlanAttachmentsList').innerHTML = '';
+    document.getElementById('businessPlanTypingIndicators').innerHTML = '';
+    document.getElementById('businessPlanPresenceIndicators').innerHTML = '';
   }
 
   async function loadClientPlan(userId) {
@@ -190,6 +200,16 @@
     try {
       currentChapterId = chapterId;
       
+      // BP-FE-03: Registrar presença
+      await registerPresence(true);
+      
+      // BP-FE-03: Iniciar polling de indicadores de digitação e presença
+      clearInterval(typingCheckInterval);
+      typingCheckInterval = setInterval(() => {
+        updateTypingIndicators();
+        updatePresenceIndicators();
+      }, 2000); // Atualizar a cada 2 segundos
+      
       const chapter = planData.chapters.find(c => c.id === chapterId);
       if (!chapter) return;
       
@@ -208,6 +228,10 @@
       // Renderizar comentários e anexos
       renderComments(chapter.comments || []);
       renderAttachments(chapter.attachments || []);
+      
+      // BP-FE-03: Atualizar indicadores iniciais
+      updateTypingIndicators();
+      updatePresenceIndicators();
       
       // Atualizar UI
       document.getElementById('businessPlanChapterTitle').textContent = chapter.title;
@@ -252,7 +276,23 @@
       const div = document.createElement('div');
       div.className = 'business-plan-attachment';
       div.innerHTML = `<span>📎 ${a.name}</span><small>${formatFileSize(a.size)}</small>`;
-      div.onclick = () => window.open(a.url, '_blank');
+      // BP-FE-02: Usar URL assinada em vez de URL previsível
+      div.onclick = async () => {
+        try {
+          const response = await fetch(`/api/admin/plan/${currentClientId}/chapter/${currentChapterId}/attachment/${a.id}/download`, {
+            headers: authH(),
+          });
+          if (response.ok) {
+            const data = await readAdminResponse(response);
+            window.open(data.attachment.downloadUrl, '_blank');
+          } else {
+            showToast('Erro ao obter link de download.', 'error');
+          }
+        } catch (err) {
+          console.error('[BusinessPlan] Erro ao fazer download:', err);
+          showToast('Erro ao fazer download.', 'error');
+        }
+      };
       container.appendChild(div);
     });
   }
@@ -361,7 +401,110 @@
 
   // ─── Helpers ──────────────────────────────────────────────────────────────────
 
+  // BP-FE-03: Registrar digitação
+  function registerTyping() {
+    if (!currentClientId || !currentChapterId) return;
+    
+    clearTimeout(typingTimeout);
+    
+    // Enviar indicador de digitação
+    fetch(`/api/admin/plan/${currentClientId}/chapter/${currentChapterId}/typing`, {
+      method: 'POST',
+      headers: authH(),
+      body: JSON.stringify({ isTyping: true }),
+    }).catch(err => console.warn('[BusinessPlan] Erro ao registrar digitação:', err));
+    
+    // Limpar indicador após 5 segundos de inatividade
+    typingTimeout = setTimeout(() => {
+      fetch(`/api/admin/plan/${currentClientId}/chapter/${currentChapterId}/typing`, {
+        method: 'POST',
+        headers: authH(),
+        body: JSON.stringify({ isTyping: false }),
+      }).catch(err => console.warn('[BusinessPlan] Erro ao limpar digitação:', err));
+    }, 5000);
+  }
+
+  // BP-FE-03: Registrar presença
+  async function registerPresence(isPresent) {
+    if (!currentClientId || !currentChapterId) return;
+    
+    try {
+      await fetch(`/api/admin/plan/${currentClientId}/chapter/${currentChapterId}/presence`, {
+        method: 'POST',
+        headers: authH(),
+        body: JSON.stringify({ isPresent }),
+      });
+    } catch (err) {
+      console.warn('[BusinessPlan] Erro ao registrar presença:', err);
+    }
+  }
+
+  // BP-FE-03: Obter e exibir usuários digitando
+  async function updateTypingIndicators() {
+    if (!currentClientId || !currentChapterId) return;
+    
+    try {
+      const response = await fetch(`/api/admin/plan/${currentClientId}/chapter/${currentChapterId}/typing`, {
+        headers: authH(),
+      });
+      if (response.ok) {
+        const data = await readAdminResponse(response);
+        const typingUsers = data.typingUsers || [];
+        
+        const typingContainer = document.getElementById('businessPlanTypingIndicators');
+        if (typingContainer) {
+          if (typingUsers.length === 0) {
+            typingContainer.innerHTML = '';
+          } else {
+            const names = typingUsers.map(u => u.typing_user_name).join(', ');
+            typingContainer.innerHTML = `<small style="color: #999;">✏️ ${names} está(ão) digitando...</small>`;
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('[BusinessPlan] Erro ao obter indicadores de digitação:', err);
+    }
+  }
+
+  // BP-FE-03: Obter e exibir usuários presentes
+  async function updatePresenceIndicators() {
+    if (!currentClientId || !currentChapterId) return;
+    
+    try {
+      const response = await fetch(`/api/admin/plan/${currentClientId}/chapter/${currentChapterId}/presence`, {
+        headers: authH(),
+      });
+      if (response.ok) {
+        const data = await readAdminResponse(response);
+        const presentUsers = data.presentUsers || [];
+        
+        const presenceContainer = document.getElementById('businessPlanPresenceIndicators');
+        if (presenceContainer) {
+          if (presentUsers.length === 0) {
+            presenceContainer.innerHTML = '';
+          } else {
+            const names = presentUsers.map(u => `${u.presence_user_name} (${u.presence_user_role})`).join(', ');
+            presenceContainer.innerHTML = `<small style="color: #0066cc;">👥 Presentes: ${names}</small>`;
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('[BusinessPlan] Erro ao obter indicadores de presença:', err);
+    }
+  }
+
+  // BP-FE-03: Adicionar listener de digitação ao editor
+  function setupEditorListeners() {
+    if (!quillEditor) return;
+    quillEditor.on('text-change', () => {
+      registerTyping();
+    });
+  }
+
   function setupEventListeners() {
+    // BP-FE-03: Listeners do editor para typing indicators
+    setupEditorListeners();
+    
     document.getElementById('businessPlanSaveBtn')?.addEventListener('click', saveChapterContent);
     document.getElementById('businessPlanPublishBtn')?.addEventListener('click', publishChapter);
     document.getElementById('businessPlanAddCommentBtn')?.addEventListener('click', addComment);

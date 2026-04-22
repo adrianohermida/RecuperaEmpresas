@@ -135,10 +135,37 @@
 .business-plan-editor-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   gap: 1rem;
   padding-bottom: 1rem;
   border-bottom: 1px solid var(--color-border, #e5e7eb);
+}
+
+.business-plan-header-main {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.business-plan-header-status-group {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.realtime-presence-container, .realtime-typing-container {
+  min-height: 18px;
+}
+
+.realtime-presence-container small {
+  color: #0066cc;
+  font-weight: 500;
+}
+
+.realtime-typing-container small {
+  color: #999;
+  font-style: italic;
 }
 
 .business-plan-editor-header h2 {

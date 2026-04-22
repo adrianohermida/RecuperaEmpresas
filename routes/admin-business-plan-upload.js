@@ -6,6 +6,13 @@ const { upload, UPLOADS_DIR } = require('../lib/config');
 const { sb } = require('../lib/config');
 const { ADMIN_EMAILS } = require('../lib/config');
 const fs = require('fs').promises;
+const {
+  uploadFile,
+  generateSignedDownloadUrl,
+  validateFileAccess,
+  deleteFile,
+  listChapterFiles,
+} = require('../lib/storage-helpers');
 
 // Middleware: Verifica se o usuário é consultor (admin)
 function requireConsultor(req, res, next) {
@@ -16,7 +23,7 @@ function requireConsultor(req, res, next) {
 }
 
 // ─── POST /api/admin/plan/:userId/chapter/:chapterId/upload ──────────────────
-// Upload de documentos para um capítulo do Business Plan.
+// Upload de documentos para um capítulo do Business Plan (BP-BE-02).
 router.post('/api/admin/plan/:userId/chapter/:chapterId/upload', 
   requireAuth, 
   requireConsultor, 
@@ -29,22 +36,24 @@ router.post('/api/admin/plan/:userId/chapter/:chapterId/upload',
         return res.status(400).json({ error: 'Nenhum arquivo foi enviado.' });
       }
       
-      const fileId = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      const fileName = req.file.originalname;
-      const fileSize = req.file.size;
-      const filePath = req.file.path;
-      
-      // TODO: Fazer upload para S3 ou Supabase Storage
-      // Por enquanto, apenas salvar metadados
+      // BP-BE-02: Upload para Supabase Storage
+      const fileBuffer = await fs.readFile(req.file.path);
+      const storageMetadata = await uploadFile(
+        fileBuffer,
+        userId,
+        parseInt(chapterId),
+        req.file.originalname,
+        req.file.mimetype
+      );
       
       const attachment = {
-        id: fileId,
-        name: fileName,
-        size: fileSize,
-        type: req.file.mimetype,
-        uploadedAt: new Date().toISOString(),
+        id: storageMetadata.id,
+        name: storageMetadata.name,
+        size: storageMetadata.size,
+        type: storageMetadata.type,
+        storagePath: storageMetadata.storagePath,
+        uploadedAt: storageMetadata.uploadedAt,
         uploadedBy: req.user.id,
-        url: `/api/admin/plan/${userId}/chapter/${chapterId}/attachment/${fileId}/download`,
       };
       
       // Recuperar attachments existentes
@@ -58,8 +67,8 @@ router.post('/api/admin/plan/:userId/chapter/:chapterId/upload',
       await sb.from('re_plan_chapters').update({ attachments })
         .eq('user_id', userId).eq('chapter_id', chapterId);
       
-      // Salvar arquivo no disco (ou S3)
-      // TODO: Implementar persistência em S3
+      // Limpar arquivo temporário
+      await fs.unlink(req.file.path).catch(() => {});
       
       res.json({
         success: true,
@@ -68,13 +77,13 @@ router.post('/api/admin/plan/:userId/chapter/:chapterId/upload',
       });
     } catch (err) {
       console.error('[admin-business-plan-upload] POST upload', err);
-      res.status(500).json({ error: 'Erro ao fazer upload do arquivo.' });
+      res.status(500).json({ error: err.message || 'Erro ao fazer upload do arquivo.' });
     }
   }
 );
 
 // ─── GET /api/admin/plan/:userId/chapter/:chapterId/attachment/:attachmentId/download ──
-// Download de um arquivo anexado.
+// Download de um arquivo anexado com URL assinada (BP-BE-02, BP-FE-02).
 router.get('/api/admin/plan/:userId/chapter/:chapterId/attachment/:attachmentId/download', 
   requireAuth, 
   async (req, res) => {
@@ -99,23 +108,31 @@ router.get('/api/admin/plan/:userId/chapter/:chapterId/attachment/:attachmentId/
         return res.status(404).json({ error: 'Arquivo não encontrado.' });
       }
       
-      // TODO: Implementar download de S3 ou disco local
-      // Por enquanto, retornar metadados
+      // BP-BE-02 & BP-FE-02: Validar e gerar URL assinada
+      const isValid = await validateFileAccess(userId, parseInt(chapterId), attachment.storagePath);
+      if (!isValid) {
+        return res.status(403).json({ error: 'Acesso ao arquivo negado.' });
+      }
+      
+      // Gerar URL assinada com expiração de 1 hora
+      const signedUrl = await generateSignedDownloadUrl(attachment.storagePath, 3600);
       
       res.json({
         success: true,
-        attachment,
-        message: 'Metadados do arquivo recuperados.',
+        attachment: {
+          ...attachment,
+          downloadUrl: signedUrl,
+        },
       });
     } catch (err) {
       console.error('[admin-business-plan-upload] GET download', err);
-      res.status(500).json({ error: 'Erro ao recuperar arquivo.' });
+      res.status(500).json({ error: err.message || 'Erro ao recuperar arquivo.' });
     }
   }
 );
 
 // ─── DELETE /api/admin/plan/:userId/chapter/:chapterId/attachment/:attachmentId ──
-// Remover um arquivo anexado.
+// Remover um arquivo anexado (BP-BE-02).
 router.delete('/api/admin/plan/:userId/chapter/:chapterId/attachment/:attachmentId', 
   requireAuth, 
   requireConsultor, 
@@ -131,18 +148,25 @@ router.delete('/api/admin/plan/:userId/chapter/:chapterId/attachment/:attachment
         return res.status(404).json({ error: 'Arquivo não encontrado.' });
       }
       
+      const attachment = chapter.attachments.find(a => a.id === attachmentId);
+      if (!attachment) {
+        return res.status(404).json({ error: 'Arquivo não encontrado.' });
+      }
+      
+      // BP-BE-02: Remover arquivo do Supabase Storage
+      await deleteFile(attachment.storagePath);
+      
+      // Remover do array de attachments
       const attachments = chapter.attachments.filter(a => a.id !== attachmentId);
       
       // Atualizar capítulo removendo o attachment
       await sb.from('re_plan_chapters').update({ attachments })
         .eq('user_id', userId).eq('chapter_id', chapterId);
       
-      // TODO: Remover arquivo de S3 ou disco local
-      
       res.json({ success: true, message: 'Arquivo removido.' });
     } catch (err) {
       console.error('[admin-business-plan-upload] DELETE attachment', err);
-      res.status(500).json({ error: 'Erro ao remover arquivo.' });
+      res.status(500).json({ error: err.message || 'Erro ao remover arquivo.' });
     }
   }
 );

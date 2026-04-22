@@ -509,5 +509,4 @@ function showSuccessScreen() {
 
   renderStep(state.step);
   if (state.step > 1) showToast(`Bem-vindo de volta, ${user.name?.split(' ')[0] || ''}! Continuando na etapa ${state.step}.`, 'success', 4000);
-  if (window.RecuperaChat) window.RecuperaChat.boot(user);
 })();

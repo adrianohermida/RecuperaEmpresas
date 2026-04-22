@@ -17,6 +17,14 @@ const {
   requestRevisionWithAudit,
   getChapterAuditTrail,
 } = require('../lib/audit-helpers');
+const {
+  recordTypingIndicator,
+  clearTypingIndicator,
+  getActiveTypingIndicators,
+  recordPresence,
+  clearPresence,
+  getActivePresence,
+} = require('../lib/realtime-helpers');
 
 // BP-BE-03: Sanitize HTML content to prevent XSS attacks
 function sanitizeContent(content) {
@@ -165,6 +173,96 @@ router.get('/api/admin/plan/:userId/chapter/:chapterId/attachment/:attachmentId'
   } catch (err) {
     console.error('[admin-business-plan] GET attachment', err);
     res.status(500).json({ error: 'Erro ao recuperar arquivo.' });
+  }
+});
+
+// ─── POST /api/admin/plan/:userId/chapter/:chapterId/typing ──────────────────
+// Registra que um usuário está digitando (BP-FE-03)
+router.post('/api/admin/plan/:userId/chapter/:chapterId/typing', requireAuth, async (req, res) => {
+  try {
+    const { userId, chapterId } = req.params;
+    const { isTyping } = req.body;
+
+    if (isTyping) {
+      await recordTypingIndicator(
+        userId,
+        parseInt(chapterId),
+        req.user.id,
+        req.user.name || req.user.email,
+        ADMIN_EMAILS.includes(req.user.email?.toLowerCase()) ? 'consultor' : 'cliente'
+      );
+    } else {
+      await clearTypingIndicator(userId, parseInt(chapterId), req.user.id);
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[admin-business-plan] POST typing', err);
+    res.status(500).json({ error: 'Erro ao registrar digitação.' });
+  }
+});
+
+// ─── GET /api/admin/plan/:userId/chapter/:chapterId/typing ──────────────────
+// Obtém quem está digitando neste capítulo (BP-FE-03)
+router.get('/api/admin/plan/:userId/chapter/:chapterId/typing', requireAuth, async (req, res) => {
+  try {
+    const { userId, chapterId } = req.params;
+
+    // Validar acesso
+    if (req.user.id !== userId && !ADMIN_EMAILS.includes(req.user.email?.toLowerCase())) {
+      return res.status(403).json({ error: 'Acesso negado.' });
+    }
+
+    const typingUsers = await getActiveTypingIndicators(userId, parseInt(chapterId));
+    res.json({ typingUsers });
+  } catch (err) {
+    console.error('[admin-business-plan] GET typing', err);
+    res.status(500).json({ error: 'Erro ao obter indicadores de digitação.' });
+  }
+});
+
+// ─── POST /api/admin/plan/:userId/chapter/:chapterId/presence ────────────────
+// Registra presença do usuário em um capítulo (BP-FE-03)
+router.post('/api/admin/plan/:userId/chapter/:chapterId/presence', requireAuth, async (req, res) => {
+  try {
+    const { userId, chapterId } = req.params;
+    const { isPresent } = req.body;
+
+    if (isPresent) {
+      await recordPresence(
+        userId,
+        parseInt(chapterId),
+        req.user.id,
+        req.user.name || req.user.email,
+        ADMIN_EMAILS.includes(req.user.email?.toLowerCase()) ? 'consultor' : 'cliente'
+      );
+    } else {
+      await clearPresence(userId, parseInt(chapterId), req.user.id);
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[admin-business-plan] POST presence', err);
+    res.status(500).json({ error: 'Erro ao registrar presença.' });
+  }
+});
+
+// ─── GET /api/admin/plan/:userId/chapter/:chapterId/presence ────────────────
+// Obtém quem está presente neste capítulo (BP-FE-03)
+router.get('/api/admin/plan/:userId/chapter/:chapterId/presence', requireAuth, async (req, res) => {
+  try {
+    const { userId, chapterId } = req.params;
+
+    // Validar acesso
+    if (req.user.id !== userId && !ADMIN_EMAILS.includes(req.user.email?.toLowerCase())) {
+      return res.status(403).json({ error: 'Acesso negado.' });
+    }
+
+    const presentUsers = await getActivePresence(userId, parseInt(chapterId));
+    res.json({ presentUsers });
+  } catch (err) {
+    console.error('[admin-business-plan] GET presence', err);
+    res.status(500).json({ error: 'Erro ao obter presença.' });
   }
 });
 

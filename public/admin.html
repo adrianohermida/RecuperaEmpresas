@@ -991,10 +991,16 @@
 
         <!-- Editor Principal -->
         <div class="business-plan-editor-container">
-          <div class="business-plan-editor-header">
-            <h2 id="businessPlanChapterTitle">Selecione um capítulo</h2>
-            <span class="chapter-status" id="businessPlanChapterStatus">—</span>
-          </div>
+	          <div class="business-plan-editor-header">
+	            <div class="business-plan-header-main">
+	              <h2 id="businessPlanChapterTitle">Selecione um capítulo</h2>
+	              <div id="businessPlanPresenceIndicators" class="realtime-presence-container"></div>
+	            </div>
+	            <div class="business-plan-header-status-group">
+	              <div id="businessPlanTypingIndicators" class="realtime-typing-container"></div>
+	              <span class="chapter-status" id="businessPlanChapterStatus">—</span>
+	            </div>
+	          </div>
           <div class="business-plan-editor-toolbar">
             <button id="businessPlanSaveBtn" class="primary">Salvar Rascunho</button>
             <button id="businessPlanPublishBtn" class="primary">Publicar para Aprovação</button>
