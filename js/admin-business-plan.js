@@ -193,15 +193,33 @@
       const chapter = planData.chapters.find(c => c.id === chapterId);
       if (!chapter) return;
       
-      // Carregar conteúdo no editor
+      // BP-FE-04: Carregar conteúdo com tratamento de erros
       if (quillEditor) {
         try {
-          // Tentar parsear como Delta (Quill) ou HTML
-          const content = chapter.content ? JSON.parse(chapter.content) : { ops: [] };
-          quillEditor.setContents(content);
+          if (!chapter.content || chapter.content.trim() === '') {
+            quillEditor.setContents([]);
+          } else {
+            try {
+              const content = JSON.parse(chapter.content);
+              quillEditor.setContents(content);
+            } catch (parseErr) {
+              console.warn('[BusinessPlan] Conteúdo não é JSON válido, usando como HTML:', parseErr);
+              quillEditor.root.innerHTML = chapter.content;
+            }
+          }
         } catch (e) {
-          // Fallback para texto puro/HTML se não for JSON
-          quillEditor.setText(chapter.content || '');
+          console.error('[BusinessPlan] Erro ao carregar conteúdo:', e);
+          quillEditor.setContents([]);
+          showToast('Aviso: Conteúdo corrompido. Editor vazio para evitar perda de dados.', 'warning');
+        }
+      }
+      
+      // BP-FE-01: Desabilitar editor se capítulo está aprovado ou em revisão
+      const isEditable = chapter.status !== 'aprovado' && chapter.status !== 'em_revisao';
+      if (quillEditor) {
+        quillEditor.enable(isEditable);
+        if (!isEditable) {
+          showToast(`Capítulo em status "${chapter.status}" - edição desabilitada.`, 'info');
         }
       }
       
