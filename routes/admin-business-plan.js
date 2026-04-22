@@ -1,6 +1,7 @@
 'use strict';
 const router = require('express').Router();
 const { requireAuth } = require('../lib/auth');
+const DOMPurify = require('isomorphic-dompurify');
 const {
   readPlanForConsultor,
   saveChapterContent,
@@ -10,6 +11,16 @@ const {
   publishChapterForApproval,
 } = require('../lib/db');
 const { ADMIN_EMAILS } = require('../lib/config');
+
+// BP-BE-03: Sanitize HTML content to prevent XSS attacks
+function sanitizeContent(content) {
+  if (typeof content !== 'string') return '';
+  return DOMPurify.sanitize(content, {
+    ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'p', 'br', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'a', 'img'],
+    ALLOWED_ATTR: ['href', 'src', 'alt', 'title', 'target'],
+    KEEP_CONTENT: true,
+  });
+}
 
 // Middleware: Verifica se o usuário é consultor (admin)
 function requireConsultor(req, res, next) {
@@ -42,6 +53,9 @@ router.put('/api/admin/plan/:userId/chapter/:chapterId', requireAuth, requireCon
     if (!content || typeof content !== 'string') {
       return res.status(400).json({ error: 'Conteúdo inválido.' });
     }
+
+    // BP-BE-03: Sanitize HTML content before saving
+    content = sanitizeContent(content);
 
     await saveChapterContent(userId, parseInt(chapterId), content, req.user.id, attachments || []);
     res.json({ success: true, message: 'Capítulo salvo com sucesso.' });
