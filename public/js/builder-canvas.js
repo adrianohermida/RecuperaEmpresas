@@ -259,12 +259,12 @@ async function fbAddQuestion(type) {
     method:'POST', headers: fbAuthH(), body: JSON.stringify(body)
   });
   if (!res.ok) { fbToast('Erro ao adicionar questão.','error'); return; }
-  const newQ = await res.json();
+  const { question: newQ } = await res.json();
   await fbRefreshForm();
   FB.currentPage = (FB.currentForm.pages||[]).find(p => p.id === FB.currentPage.id) || FB.currentPage;
-  FB.selectedQ = newQ.id;
+  FB.selectedQ = newQ?.id;
   fbRenderCanvas();
-  fbRenderPropertiesPanel(newQ.id);
+  fbRenderPropertiesPanel(newQ?.id);
   const canvas = document.getElementById('fb-canvas');
   if (canvas) canvas.scrollTop = canvas.scrollHeight;
 }

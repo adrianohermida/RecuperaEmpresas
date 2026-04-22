@@ -133,12 +133,19 @@ async function loadClientJourneys() {
       host.innerHTML = '<div class="admin-empty-state-soft">Nenhuma jornada ativa.</div>';
       return;
     }
-    host.innerHTML = journeys.map((journey) => `
+    host.innerHTML = journeys.map((journey) => {
+      const name = journey.journey_name || journey.title || 'Jornada';
+      const desc = journey.journey_description || journey.description || '';
+      const total = (journey.steps || []).length;
+      const done  = (journey.steps || []).filter(s => s.completed).length;
+      const pct   = total ? Math.round(done / total * 100) : null;
+      return `
       <div class="fp-journey-card">
-        <div class="fp-journey-title">${fpEsc(journey.title || 'Jornada')}</div>
-        ${journey.description ? `<div class="fp-journey-desc">${fpEsc(journey.description)}</div>` : ''}
-      </div>
-    `).join('');
+        <div class="fp-journey-title">${fpEsc(name)}</div>
+        ${desc ? `<div class="fp-journey-desc">${fpEsc(desc)}</div>` : ''}
+        ${total ? `<div class="fp-journey-progress">${done}/${total} etapas${pct !== null ? ` · ${pct}%` : ''}</div>` : ''}
+      </div>`;
+    }).join('');
   } catch {
     host.innerHTML = '<div class="admin-empty-state-soft">Não foi possível carregar as jornadas.</div>';
   }

@@ -214,6 +214,13 @@
       syncShell();
       document.getElementById('opsClientSearch').addEventListener('input', filterClients);
       await loadClients();
+      
+      // Initialize Freshchat widget for consultants (agents)
+      if (window.REAccountData && typeof window.REAccountData.bootFreshchat === 'function') {
+        window.REAccountData.bootFreshchat(state.user).catch(function (error) {
+          console.warn('[AdminOps] Failed to initialize Freshchat:', error.message);
+        });
+      }
     } finally {
       document.getElementById('authGuard')?.remove();
     }

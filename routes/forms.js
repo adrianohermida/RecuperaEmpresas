@@ -730,10 +730,11 @@ router.post('/api/public/forms/:slug/response', async (req, res) => {
     if (!publicConfig.allowAnonymous && !req.user?.id) {
       return res.status(403).json({ error: 'Este formulário não aceita respostas anônimas.' });
     }
-    if (publicConfig.requireCaptcha && !req.body?.captcha_token) {
-      return res.status(400).json({ error: 'Captcha obrigatório.' });
-    }
     if (publicConfig.requireCaptcha && req.body?.status === 'concluido') {
+      // Only enforce captcha on final submission, not on intermediate em_andamento saves
+      if (!req.body?.captcha_token) {
+        return res.status(400).json({ error: 'Captcha obrigatório.' });
+      }
       const captchaCheck = await verifyGoogleRecaptcha(req.body.captcha_token, req.ip);
       if (!captchaCheck.ok) {
         return res.status(400).json({ error: captchaCheck.reason || 'Captcha inválido.' });

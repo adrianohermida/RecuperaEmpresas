@@ -248,7 +248,7 @@ router.get('/api/admin/agenda/bookings', requireAdmin, async (req, res) => {
                reschedule_requested_slot_id,reschedule_requested_at,notes,
                no_show,created_at,
                re_users(id,name,email,company),
-               re_agenda_slots(id,starts_at,ends_at,title,location,meet_link,duration_min)`)
+               slot:re_agenda_slots!slot_id(id,starts_at,ends_at,title,location,meet_link,duration_min)`)
       .gte('created_at', from)
       .order('created_at', { ascending: false })
       .limit(300);
@@ -267,7 +267,7 @@ router.get('/api/admin/agenda/bookings', requireAdmin, async (req, res) => {
 router.put('/api/admin/agenda/bookings/:bookingId/confirm', requireAdmin, async (req, res) => {
   try {
     const { data: booking } = await sb.from('re_bookings')
-      .select(`*,re_agenda_slots(id,starts_at,ends_at,title,location,meet_link,calendar_event_id,duration_min),re_users(name,email,company)`)
+      .select(`*,slot:re_agenda_slots!slot_id(id,starts_at,ends_at,title,location,meet_link,calendar_event_id,duration_min),re_users(name,email,company)`)
       .eq('id', req.params.bookingId).single();
     if (!booking) return res.status(404).json({ error: 'Reserva não encontrada.' });
     if (booking.status === 'confirmed') return res.status(400).json({ error: 'Já confirmada.' });
@@ -279,10 +279,10 @@ router.put('/api/admin/agenda/bookings/:bookingId/confirm', requireAdmin, async 
       updated_at:   new Date().toISOString(),
     }).eq('id', booking.id);
 
-    const slot    = booking.re_agenda_slots || {};
+    const slot    = booking.slot || {};
     const user    = booking.re_users        || {};
-    const email   = user.email  || booking.external_contact?.email;
-    const name    = user.name   || booking.external_contact?.name  || email;
+    const email   = user.email  || booking.booker_email || null;
+    const name    = user.name   || booking.booker_name || email;
     const company = user.company || booking.booker_name || name;
     const meetLink = slot.meet_link || null;
 
@@ -312,7 +312,7 @@ router.put('/api/admin/agenda/bookings/:bookingId/cancel', requireAdmin, async (
   try {
     const { reason } = req.body;
     const { data: booking } = await sb.from('re_bookings')
-      .select(`*,re_agenda_slots(id,starts_at,ends_at,title,location,meet_link,calendar_event_id),re_users(name,email)`)
+      .select(`*,slot:re_agenda_slots!slot_id(id,starts_at,ends_at,title,location,meet_link,calendar_event_id),re_users(name,email)`)
       .eq('id', req.params.bookingId).single();
     if (!booking) return res.status(404).json({ error: 'Reserva não encontrada.' });
     if (booking.status === 'cancelled') return res.status(400).json({ error: 'Já cancelada.' });
@@ -330,10 +330,10 @@ router.put('/api/admin/agenda/bookings/:bookingId/cancel', requireAdmin, async (
         .catch(e => console.warn('[credits refund]', e.message));
     }
 
-    const slot  = booking.re_agenda_slots || {};
+    const slot  = booking.slot || {};
     const user  = booking.re_users        || {};
-    const email = user.email || booking.external_contact?.email;
-    const name  = user.name  || booking.external_contact?.name || email;
+    const email = user.email || booking.booker_email || null;
+    const name  = user.name  || booking.booker_name || email;
 
     // Restore Google Calendar event
     const evId = slot.calendar_event_id;
@@ -364,7 +364,7 @@ router.put('/api/admin/agenda/bookings/:bookingId/reschedule', requireAdmin, asy
     if (!new_slot_id) return res.status(400).json({ error: 'new_slot_id é obrigatório.' });
 
     const { data: booking } = await sb.from('re_bookings')
-      .select(`*,re_agenda_slots(id,starts_at,ends_at,title,location,meet_link,calendar_event_id),re_users(name,email,company)`)
+      .select(`*,slot:re_agenda_slots!slot_id(id,starts_at,ends_at,title,location,meet_link,calendar_event_id),re_users(name,email,company)`)
       .eq('id', req.params.bookingId).single();
     if (!booking) return res.status(404).json({ error: 'Reserva não encontrada.' });
     if (['cancelled', 'rescheduled'].includes(booking.status))
@@ -384,7 +384,6 @@ router.put('/api/admin/agenda/bookings/:bookingId/reschedule', requireAdmin, asy
       member_id:        booking.member_id        || null,
       booker_name:      booking.booker_name      || null,
       booker_email:     booking.booker_email     || null,
-      external_contact: booking.external_contact || null,
       status:           'confirmed',
       confirmed_at:     new Date().toISOString(),
       credits_spent:    booking.credits_spent,
@@ -399,10 +398,10 @@ router.put('/api/admin/agenda/bookings/:bookingId/reschedule', requireAdmin, asy
       updated_at:               new Date().toISOString(),
     }).eq('id', booking.id);
 
-    const oldSlot = booking.re_agenda_slots || {};
+    const oldSlot = booking.slot || {};
     const user    = booking.re_users        || {};
-    const email   = user.email || booking.external_contact?.email;
-    const name    = user.name  || booking.external_contact?.name || email;
+    const email   = user.email || booking.booker_email || null;
+    const name    = user.name  || booking.booker_name || email;
 
     // Update new slot's Google Calendar event
     const newEvId = await getCalEventId(new_slot_id);
@@ -438,7 +437,7 @@ router.put('/api/admin/agenda/bookings/:bookingId/reschedule', requireAdmin, asy
 router.put('/api/admin/agenda/bookings/:bookingId/approve-reschedule', requireAdmin, async (req, res) => {
   try {
     const { data: booking } = await sb.from('re_bookings')
-      .select(`*,re_agenda_slots(id,starts_at,ends_at,title,location,meet_link,calendar_event_id),re_users(name,email,company)`)
+      .select(`*,slot:re_agenda_slots!slot_id(id,starts_at,ends_at,title,location,meet_link,calendar_event_id),re_users(name,email,company)`)
       .eq('id', req.params.bookingId).single();
     if (!booking) return res.status(404).json({ error: 'Reserva não encontrada.' });
     if (booking.status !== 'pending_reschedule')
@@ -475,10 +474,10 @@ router.put('/api/admin/agenda/bookings/:bookingId/approve-reschedule', requireAd
       updated_at:              new Date().toISOString(),
     }).eq('id', booking.id);
 
-    const oldSlot  = booking.re_agenda_slots || {};
+    const oldSlot  = booking.slot || {};
     const user     = booking.re_users        || {};
-    const email    = user.email || booking.external_contact?.email;
-    const name     = user.name  || booking.external_contact?.name || email;
+    const email    = user.email || booking.booker_email || null;
+    const name     = user.name  || booking.booker_name || email;
 
     sendBookingRescheduled({
       clientEmail: email, clientName: name,
@@ -497,7 +496,7 @@ router.put('/api/admin/agenda/bookings/:bookingId/reject-reschedule', requireAdm
   try {
     const { reason } = req.body;
     const { data: booking } = await sb.from('re_bookings')
-      .select(`*,re_agenda_slots(id,starts_at,title),re_users(name,email)`)
+      .select(`*,slot:re_agenda_slots!slot_id(id,starts_at,title),re_users(name,email)`)
       .eq('id', req.params.bookingId).single();
     if (!booking) return res.status(404).json({ error: 'Reserva não encontrada.' });
 
@@ -512,9 +511,9 @@ router.put('/api/admin/agenda/bookings/:bookingId/reject-reschedule', requireAdm
 
     const user  = booking.re_users || {};
     sendRescheduleRejected({
-      clientEmail:  user.email || booking.external_contact?.email,
-      clientName:   user.name  || booking.external_contact?.name,
-      currentSlot:  booking.re_agenda_slots || { starts_at: booking.created_at },
+      clientEmail:  user.email || booking.booker_email || null,
+      clientName:   user.name  || booking.booker_name || null,
+      currentSlot:  booking.slot || { starts_at: booking.created_at },
       reason,
       bookerName:   booking.booker_name,
     }).catch(e => console.warn('[AgendaEmail]', e.message));
@@ -527,7 +526,7 @@ router.put('/api/admin/agenda/bookings/:bookingId/reject-reschedule', requireAdm
 router.put('/api/admin/agenda/bookings/:bookingId/no-show', requireAdmin, async (req, res) => {
   try {
     const { data: booking } = await sb.from('re_bookings')
-      .select(`*,re_agenda_slots(id,starts_at,title),re_users(name,email)`)
+      .select(`*,slot:re_agenda_slots!slot_id(id,starts_at,title),re_users(name,email)`)
       .eq('id', req.params.bookingId).single();
     if (!booking) return res.status(404).json({ error: 'Reserva não encontrada.' });
 
@@ -539,9 +538,9 @@ router.put('/api/admin/agenda/bookings/:bookingId/no-show', requireAdmin, async 
 
     const user = booking.re_users || {};
     sendNoShowAlert({
-      clientName:  user.name  || booking.booker_name || booking.external_contact?.name,
-      clientEmail: user.email || booking.external_contact?.email,
-      slot:        booking.re_agenda_slots || { starts_at: booking.created_at, title: 'Consultoria' },
+      clientName:  user.name  || booking.booker_name || null,
+      clientEmail: user.email || booking.booker_email || null,
+      slot:        booking.slot || { starts_at: booking.created_at, title: 'Consultoria' },
     }).catch(e => console.warn('[AgendaEmail]', e.message));
 
     res.json({ success: true });
@@ -571,14 +570,13 @@ router.post('/api/admin/agenda/book-for-client', requireAdmin, async (req, res) 
 
     const { data: booking, error } = await sb.from('re_bookings').insert({
       slot_id,
-      user_id:          user_id || null,
-      external_contact: !user_id ? external_contact : null,
-      status:           'confirmed',
-      confirmed_at:     new Date().toISOString(),
-      credits_spent:    0,
-      notes:            notes || null,
-      booker_name:      userInfo?.name  || external_contact?.name  || null,
-      booker_email:     userInfo?.email || external_contact?.email || null,
+      user_id:      user_id || null,
+      status:       'confirmed',
+      confirmed_at: new Date().toISOString(),
+      credits_spent: 0,
+      notes:        notes || null,
+      booker_name:  userInfo?.name  || external_contact?.name  || null,
+      booker_email: userInfo?.email || external_contact?.email || null,
     }).select().single();
     if (error) return res.status(500).json({ error: error.message });
 
@@ -663,7 +661,7 @@ router.get('/api/admin/agenda/client/:clientId/bookings', requireAdmin, async (r
     const { data, error } = await sb.from('re_bookings')
       .select(`id,slot_id,member_id,booker_name,booker_email,status,credits_spent,
                confirmed_at,cancel_reason,no_show,created_at,
-               re_agenda_slots(id,starts_at,ends_at,title,location,meet_link,duration_min)`)
+               slot:re_agenda_slots!slot_id(id,starts_at,ends_at,title,location,meet_link,duration_min)`)
       .eq('user_id', req.params.clientId)
       .order('created_at', { ascending: false })
       .limit(100);

@@ -454,7 +454,7 @@ async function fbAssignClient() {
 }
 
 async function fbRemoveAssignment(userId) {
-  const res = await fetch(`/api/admin/forms/${FB.currentFormId}/assign/${userId}`, {
+  const res = await fetch(`/api/admin/forms/${FB.currentFormId}/assignments/${userId}`, {
     method:'DELETE', headers: fbAuthH()
   });
   if (res.ok) { fbToast('Removido.','success'); fbLoadAssignments(); }
