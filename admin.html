@@ -99,10 +99,6 @@
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
           Auditoria
         </button>
-        <button class="sidebar-link" onclick="showSection('recuperachat',this)">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-          Chat Suporte
-        </button>
       </div>
     </div><!-- /sidebar-nav -->
 
@@ -969,37 +965,6 @@
       </div>
     </div>
 
-    <!-- RECUPERACHAT (ADMIN) -->
-    <div id="sec-recuperachat" class="tab-content">
-      <div class="section-header">
-        <div>
-          <div class="section-title">Chat de Suporte</div>
-          <div class="section-sub">Gerencie conversas em tempo real com os clientes</div>
-        </div>
-      </div>
-      <link rel="stylesheet" href="/css/recuperachat.css?v=20260422a"/>
-      <div class="rc-admin-workspace">
-        <div class="rc-admin-conv-sidebar">
-          <div class="rc-admin-conv-sidebar-head">
-            Conversas
-          </div>
-          <div class="rc-status-filters">
-            <button class="rc-filter-btn rc-active" onclick="window.RCAdmin.loadConversations()">Todas</button>
-            <button class="rc-filter-btn" onclick="window.RCAdmin.loadConversations('open')">Abertas</button>
-          </div>
-          <div class="rc-admin-conv-list" id="rc-admin-conv-list">
-            <!-- Preenchido via JS -->
-          </div>
-        </div>
-        <div class="rc-admin-chat-panel" id="rc-admin-chat-panel">
-          <div class="rc-admin-placeholder">
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" style="opacity:0.2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-            Selecione uma conversa para começar
-          </div>
-        </div>
-      </div>
-    </div>
-
     <!-- BUSINESS PLAN -->
     <div id="sec-businessPlan" class="tab-content">
       <div class="section-header">
@@ -1096,7 +1061,6 @@
 
 <!-- Business Plan JS -->
 <script src="/js/admin-business-plan.js?v=20260422a"></script>
-<script src="/js/admin-recuperachat.js?v=20260422a"></script>
 
 </body>
 </html>

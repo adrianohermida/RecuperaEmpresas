@@ -144,9 +144,6 @@ function showSection(name, el) {
   if (name === 'adminInvoices') loadAdminInvoices();
   if (name === 'adminMarketplace') loadAdminMarketplace();
   if (name === 'auditlog') loadAuditLog();
-  if (name === 'recuperachat') {
-    if (window.RCAdmin?.init) window.RCAdmin.init(window._adminUser);
-  }
   if (name === 'businessPlan') {
     if (typeof initBusinessPlanModule === 'function') {
       initBusinessPlanModule();

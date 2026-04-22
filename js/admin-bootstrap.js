@@ -198,7 +198,6 @@
     try {
       const body = await response.json();
       user = body.user;
-      window._adminUser = user;
       if (!user) throw new Error('user field missing from /api/auth/verify response');
       if (window.REShared?.storeAuthUser) window.REShared.storeAuthUser(user);
     } catch (err) {
