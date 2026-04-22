@@ -95,6 +95,41 @@ function isClientEmpresa(user, env) {
   return true;
 }
 
+function hasFreshdeskContact(payload) {
+  if (Array.isArray(payload)) return payload.length > 0;
+  if (payload && typeof payload === 'object') {
+    if (Array.isArray(payload.results)) return payload.results.length > 0;
+    if (payload.id) return true;
+  }
+  return false;
+}
+
+async function createFreshdeskContact(context, baseUrl, authHeader, email) {
+  const names = splitName(context.user?.name || context.user?.full_name || '');
+  const fullName = `${names.firstName} ${names.lastName}`.trim() || email;
+  const response = await fetch(`${baseUrl}/contacts`, {
+    method: 'POST',
+    headers: {
+      Authorization: authHeader,
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      name: fullName,
+      email,
+    }),
+  });
+
+  if (response.ok || response.status === 409) return { ok: true };
+  const details = await response.text().catch(() => '');
+  return {
+    ok: false,
+    status: 502,
+    error: `Falha ao criar conta no Freshdesk (${response.status}).`,
+    details,
+  };
+}
+
 async function ensureFreshdeskContactExists(context) {
   const baseUrl = getFreshdeskApiBaseUrl(context.env);
   const authHeader = buildFreshdeskAuthHeader(context.env);
@@ -117,21 +152,22 @@ async function ensureFreshdeskContactExists(context) {
     });
 
     if (!response.ok) {
+      if (response.status === 404) {
+        return createFreshdeskContact(context, baseUrl, authHeader, email);
+      }
       const details = await response.text().catch(() => '');
       return {
         ok: false,
-        status: response.status === 404 ? 403 : 502,
-        error: response.status === 404
-          ? 'Conta Freshdesk obrigatória para acessar o chat.'
-          : `Falha ao validar conta no Freshdesk (${response.status}).`,
+        status: 502,
+        error: `Falha ao validar conta no Freshdesk (${response.status}).`,
         details,
       };
     }
 
     const payload = await response.json().catch(() => []);
-    const hasContact = Array.isArray(payload) ? payload.length > 0 : Boolean(payload?.id);
+    const hasContact = hasFreshdeskContact(payload);
     if (!hasContact) {
-      return { ok: false, status: 403, error: 'Conta Freshdesk obrigatória para acessar o chat.' };
+      return createFreshdeskContact(context, baseUrl, authHeader, email);
     }
 
     return { ok: true };

@@ -960,12 +960,6 @@ async function initFreshdesk() {
     
     if (!tokenRes.ok) {
       console.warn('[RE:Freshdesk] Failed to obtain JWT token:', tokenRes.status);
-      // Fallback: inicializar sem JWT (apenas com token público)
-      window.fdWidget.init({
-        token: "01KNPXYJ04R918TJ5N8JQ4SQGS",
-        host: "https://recuperaempresas-support.freshdesk.com",
-        widgetId: "01KNPXYMGGC0AE5Z819T8PVDWG"
-      });
       return;
     }
     
@@ -985,12 +979,7 @@ async function initFreshdesk() {
     
   } catch (error) {
     console.warn('[RE:Freshdesk] Error initializing Freshdesk:', error);
-    // Fallback
-    window.fdWidget.init({
-      token: "01KNPXYJ04R918TJ5N8JQ4SQGS",
-      host: "https://recuperaempresas-support.freshdesk.com",
-      widgetId: "01KNPXYMGGC0AE5Z819T8PVDWG"
-    });
+    return;
   }
 }
 
