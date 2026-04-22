@@ -11,6 +11,12 @@ const {
   publishChapterForApproval,
 } = require('../lib/db');
 const { ADMIN_EMAILS } = require('../lib/config');
+const {
+  publishChapterWithAudit,
+  approveChapterWithAudit,
+  requestRevisionWithAudit,
+  getChapterAuditTrail,
+} = require('../lib/audit-helpers');
 
 // BP-BE-03: Sanitize HTML content to prevent XSS attacks
 function sanitizeContent(content) {
@@ -71,7 +77,8 @@ router.post('/api/admin/plan/:userId/chapter/:chapterId/publish', requireAuth, r
   try {
     const { userId, chapterId } = req.params;
 
-    await publishChapterForApproval(userId, parseInt(chapterId), req.user.id);
+    // BP-BE-04: Use centralized audit helper
+    await publishChapterWithAudit(userId, parseInt(chapterId), req.user.id);
     res.json({ success: true, message: 'Capítulo publicado para aprovação do cliente.' });
   } catch (err) {
     console.error('[admin-business-plan] POST /publish', err);
@@ -110,13 +117,28 @@ router.put('/api/admin/plan/:userId/chapter/:chapterId/status', requireAuth, asy
       return res.status(403).json({ error: 'Acesso negado.' });
     }
 
-    const validActions = ['pendente', 'aprovado', 'revisao_solicitada'];
+    const validActions = ['aprovado', 'revisao_solicitada'];
     if (!validActions.includes(clientAction)) {
-      return res.status(400).json({ error: 'Status inválido.' });
+      return res.status(400).json({ error: 'Status inválido. Apenas "aprovado" ou "revisao_solicitada".' });
     }
 
-    await updateChapterClientAction(userId, parseInt(chapterId), clientAction);
-    res.json({ success: true, message: 'Status atualizado.' });
+    // BP-BE-04: Use centralized audit helpers for state transitions
+    try {
+      if (clientAction === 'aprovado') {
+        await approveChapterWithAudit(userId, parseInt(chapterId), req.user.id);
+      } else if (clientAction === 'revisao_solicitada') {
+        const { reason } = req.body;
+        if (!reason || typeof reason !== 'string') {
+          return res.status(400).json({ error: 'Motivo da revisão é obrigatório.' });
+        }
+        await requestRevisionWithAudit(userId, parseInt(chapterId), req.user.id, reason);
+      }
+      res.json({ success: true, message: 'Status atualizado com sucesso.' });
+    } catch (auditErr) {
+      console.error('[admin-business-plan] Audit error:', auditErr);
+      res.status(500).json({ error: auditErr.message || 'Erro ao atualizar status.' });
+      return;
+    }
   } catch (err) {
     console.error('[admin-business-plan] PUT status', err);
     res.status(500).json({ error: 'Erro ao atualizar status.' });
