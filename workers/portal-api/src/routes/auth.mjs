@@ -71,7 +71,73 @@ function splitName(name) {
 }
 
 function getFreshchatJwtSecret(env) {
-  return String(env.FRESHCHAT_JWT_WIDGET || env.FRESHCHAT_JWT_SECRET || '').trim();
+  return String(env.FRESHCHAT_JWT_WIDGET || env.FRESHDESK_JWT_WIDGET || env.FRESHCHAT_JWT_SECRET || '').trim();
+}
+
+function getFreshdeskApiBaseUrl(env) {
+  const configured = String(env.FRESHDESK_BASE_URL || '').trim().replace(/\/+$/, '');
+  if (!configured) return '';
+  if (configured.endsWith('/api/v2')) return configured;
+  return `${configured}/api/v2`;
+}
+
+function buildFreshdeskAuthHeader(env) {
+  const apiKey = String(env.FRESHDESK_API_KEY || '').trim();
+  if (!apiKey) return '';
+  return `Basic ${btoa(`${apiKey}:X`)}`;
+}
+
+function isClientEmpresa(user, env) {
+  const adminEmails = getAdminEmails(env);
+  const email = String(user?.email || '').toLowerCase().trim();
+  if (adminEmails.includes(email)) return false;
+  if (Boolean(user?.is_admin) || Boolean(user?.isAdmin)) return false;
+  return true;
+}
+
+async function ensureFreshdeskContactExists(context) {
+  const baseUrl = getFreshdeskApiBaseUrl(context.env);
+  const authHeader = buildFreshdeskAuthHeader(context.env);
+  if (!baseUrl || !authHeader) {
+    return { ok: false, status: 503, error: 'Integração Freshdesk não configurada.' };
+  }
+
+  const email = String(context.user?.email || '').trim();
+  if (!email) {
+    return { ok: false, status: 400, error: 'E-mail do usuário não disponível para validação Freshdesk.' };
+  }
+
+  try {
+    const response = await fetch(`${baseUrl}/contacts?email=${encodeURIComponent(email)}`, {
+      method: 'GET',
+      headers: {
+        Authorization: authHeader,
+        Accept: 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const details = await response.text().catch(() => '');
+      return {
+        ok: false,
+        status: response.status === 404 ? 403 : 502,
+        error: response.status === 404
+          ? 'Conta Freshdesk obrigatória para acessar o chat.'
+          : `Falha ao validar conta no Freshdesk (${response.status}).`,
+        details,
+      };
+    }
+
+    const payload = await response.json().catch(() => []);
+    const hasContact = Array.isArray(payload) ? payload.length > 0 : Boolean(payload?.id);
+    if (!hasContact) {
+      return { ok: false, status: 403, error: 'Conta Freshdesk obrigatória para acessar o chat.' };
+    }
+
+    return { ok: true };
+  } catch {
+    return { ok: false, status: 502, error: 'Erro de comunicação ao validar conta no Freshdesk.' };
+  }
 }
 
 function resolveFreshchatExternalId(user) {
@@ -82,9 +148,16 @@ function resolveFreshchatExternalId(user) {
 export async function handleFreshchatToken(request, context) {
   if (request.method !== 'GET') return methodNotAllowed();
 
+  if (isClientEmpresa(context.user, context.env)) {
+    const freshdeskValidation = await ensureFreshdeskContactExists(context);
+    if (!freshdeskValidation.ok) {
+      return json({ error: freshdeskValidation.error }, { status: freshdeskValidation.status });
+    }
+  }
+
   const secret = getFreshchatJwtSecret(context.env);
   if (!secret) {
-    return json({ error: 'Freshchat JWT não configurado.' }, { status: 503 });
+    return json({ error: 'JWT do widget não configurado.' }, { status: 503 });
   }
 
   const externalId = resolveFreshchatExternalId(context.user);

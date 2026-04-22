@@ -13,14 +13,18 @@ function resolveFreshchatExternalId(user) {
 export async function handleAdminSystem(request, context) {
   if (context.params.resource === 'freshchat' && context.params.action === 'identity' && request.method === 'GET') {
     const email = String(context.user?.email || '').toLowerCase().trim();
-    const configuredSecret = Boolean(String(context.env.FRESHCHAT_JWT_WIDGET || context.env.FRESHCHAT_JWT_SECRET || '').trim());
+    const configuredSecret = Boolean(String(context.env.FRESHCHAT_JWT_WIDGET || context.env.FRESHDESK_JWT_WIDGET || context.env.FRESHCHAT_JWT_SECRET || '').trim());
     return json({
       ok: true,
       email,
       freshchatExternalId: resolveFreshchatExternalId(context.user),
       mappedAdminId: FRESHCHAT_ADMIN_BY_EMAIL[email] || null,
       hasJwtSecret: configuredSecret,
-      secretSource: context.env.FRESHCHAT_JWT_WIDGET ? 'FRESHCHAT_JWT_WIDGET' : (context.env.FRESHCHAT_JWT_SECRET ? 'FRESHCHAT_JWT_SECRET' : null),
+      secretSource: context.env.FRESHCHAT_JWT_WIDGET
+        ? 'FRESHCHAT_JWT_WIDGET'
+        : (context.env.FRESHDESK_JWT_WIDGET
+            ? 'FRESHDESK_JWT_WIDGET'
+            : (context.env.FRESHCHAT_JWT_SECRET ? 'FRESHCHAT_JWT_SECRET' : null)),
     });
   }
 

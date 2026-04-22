@@ -26,15 +26,8 @@
   }
 
   function bookingClientName(booking) {
-    // new schema: booker_name stored directly
     if (booking.booker_name) return booking.booker_name;
     if (booking.re_users?.name || booking.re_users?.email) return booking.re_users.name || booking.re_users.email;
-    if (booking.external_contact) {
-      const ext = typeof booking.external_contact === 'string'
-        ? JSON.parse(booking.external_contact)
-        : booking.external_contact;
-      return (ext.name || ext.email || 'Contato externo') + ' <span class="agenda-booking-external">(externo)</span>';
-    }
     return 'Cliente';
   }
 
@@ -90,7 +83,7 @@
 
     el.innerHTML = `<div class="agenda-all-bookings-list">
       ${bookings.map(b => {
-        const slot       = b.re_agenda_slots || {};
+        const slot       = b.slot || b.re_agenda_slots || {};
         const clientName = (b.booker_name || b.re_users?.name || b.re_users?.email || 'Cliente').replace(/'/g, '&#39;');
         const clientNamePlain = clientName.replace(/<[^>]+>/g,'').trim();
         const isNoShow   = b.no_show;
