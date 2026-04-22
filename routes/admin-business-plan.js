@@ -7,6 +7,7 @@ const {
   addChapterComment,
   updateChapterClientAction,
   getChapterAttachment,
+  publishChapterForApproval,
 } = require('../lib/db');
 const { ADMIN_EMAILS } = require('../lib/config');
 
@@ -47,6 +48,20 @@ router.put('/api/admin/plan/:userId/chapter/:chapterId', requireAuth, requireCon
   } catch (err) {
     console.error('[admin-business-plan] PUT /api/admin/plan/:userId/chapter/:chapterId', err);
     res.status(500).json({ error: 'Erro ao salvar capítulo.' });
+  }
+});
+
+// ─── POST /api/admin/plan/:userId/chapter/:chapterId/publish ──────────────────
+// Publica um capítulo para aprovação do cliente (consultor).
+router.post('/api/admin/plan/:userId/chapter/:chapterId/publish', requireAuth, requireConsultor, async (req, res) => {
+  try {
+    const { userId, chapterId } = req.params;
+
+    await publishChapterForApproval(userId, parseInt(chapterId), req.user.id);
+    res.json({ success: true, message: 'Capítulo publicado para aprovação do cliente.' });
+  } catch (err) {
+    console.error('[admin-business-plan] POST /publish', err);
+    res.status(500).json({ error: 'Erro ao publicar capítulo.' });
   }
 });
 
