@@ -1,452 +1,393 @@
 /**
- * Admin Business Plan Module
+ * Admin Business Plan Module (Fixed)
  * Workspace do Consultor para redação, revisão e aprovação de capítulos do Business Plan.
- * 
- * Features:
- * - Seleção de cliente
- * - Editor de texto rico (Quill.js)
- * - Visualização de comentários
- * - Upload de documentos
- * - Histórico de edições
  */
 
 'use strict';
 
-let currentClientId = null;
-let currentChapterId = null;
-let quillEditor = null;
-let planData = null;
+(function() {
+  let currentClientId = null;
+  let currentChapterId = null;
+  let quillEditor = null;
+  let planData = null;
 
-// ─── Inicialização ───────────────────────────────────────────────────────────
+  // ─── Inicialização ───────────────────────────────────────────────────────────
 
-async function initBusinessPlanModule() {
-  console.log('[BusinessPlan] Inicializando módulo...');
-  
-  // Carregar Quill.js dinamicamente se não estiver carregado
-  if (typeof Quill === 'undefined') {
-    await loadQuillLibrary();
-  }
-  
-  // Inicializar o editor Quill
-  initializeQuillEditor();
-  
-  // Carregar lista de clientes
-  await loadClientsList();
-  
-  // Configurar event listeners
-  setupEventListeners();
-  
-  console.log('[BusinessPlan] Módulo inicializado com sucesso.');
-}
-
-// ─── Quill Editor Setup ───────────────────────────────────────────────────────
-
-function loadQuillLibrary() {
-  return new Promise((resolve, reject) => {
-    // Quill CSS
-    const cssLink = document.createElement('link');
-    cssLink.rel = 'stylesheet';
-    cssLink.href = 'https://cdn.quilljs.com/1.3.6/quill.snow.css';
-    document.head.appendChild(cssLink);
+  async function initBusinessPlanModule() {
+    console.log('[BusinessPlan] Inicializando módulo...');
     
-    // Quill JS
-    const script = document.createElement('script');
-    script.src = 'https://cdn.quilljs.com/1.3.6/quill.js';
-    script.onload = resolve;
-    script.onerror = reject;
-    document.head.appendChild(script);
-  });
-}
-
-function initializeQuillEditor() {
-  const editorContainer = document.getElementById('businessPlanEditor');
-  if (!editorContainer) return;
-  
-  quillEditor = new Quill('#businessPlanEditor', {
-    theme: 'snow',
-    placeholder: 'Digite o conteúdo do capítulo aqui...',
-    modules: {
-      toolbar: [
-        [{ 'header': [1, 2, 3, false] }],
-        ['bold', 'italic', 'underline', 'strike'],
-        ['blockquote', 'code-block'],
-        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-        [{ 'indent': '-1'}, { 'indent': '+1' }],
-        ['link', 'image'],
-        ['clean'],
-      ]
+    // Carregar Quill.js dinamicamente se não estiver carregado
+    if (typeof Quill === 'undefined') {
+      await loadQuillLibrary();
     }
-  });
-  
-  console.log('[BusinessPlan] Editor Quill inicializado.');
-}
-
-// ─── Carregamento de Dados ────────────────────────────────────────────────────
-
-async function loadClientsList() {
-  try {
-    // TODO: Implementar endpoint para listar clientes do consultor
-    // Por enquanto, usar dados mockados
-    const clientsList = document.getElementById('businessPlanClientsList');
-    if (!clientsList) return;
     
-    clientsList.innerHTML = '<option value="">Selecione um cliente...</option>';
-    clientsList.addEventListener('change', (e) => {
-      currentClientId = e.target.value;
-      if (currentClientId) {
-        loadClientPlan(currentClientId);
+    // Inicializar o editor Quill
+    initializeQuillEditor();
+    
+    // Carregar lista de clientes
+    await loadClientsList();
+    
+    // Configurar event listeners
+    setupEventListeners();
+    
+    console.log('[BusinessPlan] Módulo inicializado com sucesso.');
+  }
+
+  // ─── Quill Editor Setup ───────────────────────────────────────────────────────
+
+  function loadQuillLibrary() {
+    return new Promise((resolve, reject) => {
+      if (document.getElementById('quill-css')) return resolve();
+      
+      // Quill CSS
+      const cssLink = document.createElement('link');
+      cssLink.id = 'quill-css';
+      cssLink.rel = 'stylesheet';
+      cssLink.href = 'https://cdn.quilljs.com/1.3.6/quill.snow.css';
+      document.head.appendChild(cssLink);
+      
+      // Quill JS
+      const script = document.createElement('script');
+      script.src = 'https://cdn.quilljs.com/1.3.6/quill.js';
+      script.onload = resolve;
+      script.onerror = reject;
+      document.head.appendChild(script);
+    });
+  }
+
+  function initializeQuillEditor() {
+    const editorContainer = document.getElementById('businessPlanEditor');
+    if (!editorContainer || quillEditor) return;
+    
+    quillEditor = new Quill('#businessPlanEditor', {
+      theme: 'snow',
+      placeholder: 'Digite o conteúdo do capítulo aqui...',
+      modules: {
+        toolbar: [
+          [{ 'header': [1, 2, 3, false] }],
+          ['bold', 'italic', 'underline', 'strike'],
+          ['blockquote', 'code-block'],
+          [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+          [{ 'indent': '-1'}, { 'indent': '+1' }],
+          ['link', 'image'],
+          ['clean'],
+        ]
       }
     });
     
-    console.log('[BusinessPlan] Lista de clientes carregada.');
-  } catch (err) {
-    console.error('[BusinessPlan] Erro ao carregar clientes:', err);
-    showNotification('Erro ao carregar clientes.', 'error');
+    console.log('[BusinessPlan] Editor Quill inicializado.');
   }
-}
 
-async function loadClientPlan(userId) {
-  try {
-    showNotification('Carregando plano...', 'info');
-    
-    const response = await fetch(`/api/admin/plan/${userId}`, {
-      method: 'GET',
-      headers: { 'Content-Type': 'application/json' },
-    });
-    
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
+  // ─── Carregamento de Dados ────────────────────────────────────────────────────
+
+  async function loadClientsList() {
+    try {
+      const clientsList = document.getElementById('businessPlanClientsList');
+      if (!clientsList) return;
+      
+      // Usar o endpoint de clientes existente
+      const response = await fetch('/api/admin/clients', { headers: authH() });
+      const data = await readAdminResponse(response);
+      
+      if (!response.ok) throw new Error(data.error || 'Erro ao carregar clientes');
+      
+      const clients = data.clients || [];
+      
+      clientsList.innerHTML = '<option value="">Selecione um cliente...</option>';
+      clients.forEach(client => {
+        const option = document.createElement('option');
+        option.value = client.id;
+        option.textContent = `${client.company || client.name} (${client.email})`;
+        clientsList.appendChild(option);
+      });
+
+      // Remover listener antigo se existir e adicionar novo
+      clientsList.onchange = (e) => {
+        currentClientId = e.target.value;
+        if (currentClientId) {
+          loadClientPlan(currentClientId);
+        } else {
+          resetWorkspace();
+        }
+      };
+      
+      console.log('[BusinessPlan] Lista de clientes carregada:', clients.length);
+    } catch (err) {
+      console.error('[BusinessPlan] Erro ao carregar clientes:', err);
+      showToast('Erro ao carregar clientes.', 'error');
     }
-    
-    planData = await response.json();
-    
-    // Renderizar lista de capítulos
-    renderChaptersList(planData.chapters);
-    
-    showNotification('Plano carregado com sucesso.', 'success');
-  } catch (err) {
-    console.error('[BusinessPlan] Erro ao carregar plano:', err);
-    showNotification('Erro ao carregar plano do cliente.', 'error');
   }
-}
 
-function renderChaptersList(chapters) {
-  const chaptersList = document.getElementById('businessPlanChaptersList');
-  if (!chaptersList) return;
-  
-  chaptersList.innerHTML = '';
-  
-  chapters.forEach(chapter => {
-    const statusClass = `status-${chapter.status}`;
-    const statusLabel = getStatusLabel(chapter.status);
-    
-    const item = document.createElement('div');
-    item.className = `business-plan-chapter-item ${statusClass}`;
-    item.innerHTML = `
-      <div class="chapter-header">
-        <h4>${chapter.title}</h4>
-        <span class="chapter-status">${statusLabel}</span>
-      </div>
-      <div class="chapter-meta">
-        <small>Última atualização: ${formatDate(chapter.updatedAt)}</small>
-      </div>
-    `;
-    
-    item.addEventListener('click', () => {
-      loadChapterContent(currentClientId, chapter.id);
-    });
-    
-    chaptersList.appendChild(item);
-  });
-}
+  function resetWorkspace() {
+    currentClientId = null;
+    currentChapterId = null;
+    planData = null;
+    document.getElementById('businessPlanChaptersList').innerHTML = '';
+    document.getElementById('businessPlanChapterTitle').textContent = 'Selecione um capítulo';
+    document.getElementById('businessPlanChapterStatus').textContent = '—';
+    if (quillEditor) quillEditor.setContents([]);
+    document.getElementById('businessPlanCommentsList').innerHTML = '';
+    document.getElementById('businessPlanAttachmentsList').innerHTML = '';
+  }
 
-async function loadChapterContent(userId, chapterId) {
-  try {
-    currentChapterId = chapterId;
-    
-    // Encontrar o capítulo nos dados já carregados
-    const chapter = planData.chapters.find(c => c.id === chapterId);
-    if (!chapter) {
-      showNotification('Capítulo não encontrado.', 'error');
-      return;
+  async function loadClientPlan(userId) {
+    try {
+      showToast('Carregando plano...', 'info');
+      
+      const response = await fetch(`/api/admin/plan/${userId}`, {
+        method: 'GET',
+        headers: authH(),
+      });
+      
+      const data = await readAdminResponse(response);
+      if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
+      
+      planData = data;
+      
+      // Renderizar lista de capítulos
+      renderChaptersList(planData.chapters || []);
+      
+      showToast('Plano carregado com sucesso.', 'success');
+    } catch (err) {
+      console.error('[BusinessPlan] Erro ao carregar plano:', err);
+      showToast('Erro ao carregar plano do cliente.', 'error');
     }
+  }
+
+  function renderChaptersList(chapters) {
+    const chaptersList = document.getElementById('businessPlanChaptersList');
+    if (!chaptersList) return;
     
-    // Carregar conteúdo no editor
-    if (quillEditor) {
-      quillEditor.setContents(JSON.parse(chapter.content || '{"ops":[]}'));
+    chaptersList.innerHTML = '';
+    
+    chapters.forEach(chapter => {
+      const statusInfo = CHAPTER_STATUS[chapter.status] || { label: chapter.status, cls: 'badge-gray' };
+      
+      const item = document.createElement('div');
+      item.className = `business-plan-chapter-item ${chapter.id === currentChapterId ? 'active' : ''}`;
+      item.innerHTML = `
+        <div class="chapter-header">
+          <h4>${chapter.title}</h4>
+          <span class="badge ${statusInfo.cls}">${statusInfo.label}</span>
+        </div>
+        <div class="chapter-meta">
+          <small>Atualizado: ${formatDate(chapter.updatedAt)}</small>
+        </div>
+      `;
+      
+      item.onclick = () => {
+        // Remover active de outros
+        document.querySelectorAll('.business-plan-chapter-item').forEach(el => el.classList.remove('active'));
+        item.classList.add('active');
+        loadChapterContent(currentClientId, chapter.id);
+      };
+      
+      chaptersList.appendChild(item);
+    });
+  }
+
+  async function loadChapterContent(userId, chapterId) {
+    try {
+      currentChapterId = chapterId;
+      
+      const chapter = planData.chapters.find(c => c.id === chapterId);
+      if (!chapter) return;
+      
+      // Carregar conteúdo no editor
+      if (quillEditor) {
+        try {
+          // Tentar parsear como Delta (Quill) ou HTML
+          const content = chapter.content ? JSON.parse(chapter.content) : { ops: [] };
+          quillEditor.setContents(content);
+        } catch (e) {
+          // Fallback para texto puro/HTML se não for JSON
+          quillEditor.setText(chapter.content || '');
+        }
+      }
+      
+      // Renderizar comentários e anexos
+      renderComments(chapter.comments || []);
+      renderAttachments(chapter.attachments || []);
+      
+      // Atualizar UI
+      document.getElementById('businessPlanChapterTitle').textContent = chapter.title;
+      const statusInfo = CHAPTER_STATUS[chapter.status] || { label: chapter.status, cls: 'badge-gray' };
+      const statusEl = document.getElementById('businessPlanChapterStatus');
+      statusEl.textContent = statusInfo.label;
+      statusEl.className = `chapter-status badge ${statusInfo.cls}`;
+      
+    } catch (err) {
+      console.error('[BusinessPlan] Erro ao carregar capítulo:', err);
+      showToast('Erro ao carregar capítulo.', 'error');
     }
-    
-    // Renderizar comentários
-    renderComments(chapter.comments || []);
-    
-    // Renderizar anexos
-    renderAttachments(chapter.attachments || []);
-    
-    // Atualizar UI
-    updateChapterUI(chapter);
-    
-    showNotification('Capítulo carregado.', 'success');
-  } catch (err) {
-    console.error('[BusinessPlan] Erro ao carregar capítulo:', err);
-    showNotification('Erro ao carregar capítulo.', 'error');
   }
-}
 
-// ─── Renderização de UI ───────────────────────────────────────────────────────
+  // ─── Renderização de UI ───────────────────────────────────────────────────────
 
-function updateChapterUI(chapter) {
-  const chapterTitle = document.getElementById('businessPlanChapterTitle');
-  const chapterStatus = document.getElementById('businessPlanChapterStatus');
-  
-  if (chapterTitle) chapterTitle.textContent = chapter.title;
-  if (chapterStatus) chapterStatus.textContent = getStatusLabel(chapter.status);
-}
-
-function renderComments(comments) {
-  const commentsList = document.getElementById('businessPlanCommentsList');
-  if (!commentsList) return;
-  
-  commentsList.innerHTML = '';
-  
-  if (comments.length === 0) {
-    commentsList.innerHTML = '<p class="no-comments">Nenhum comentário ainda.</p>';
-    return;
-  }
-  
-  comments.forEach(comment => {
-    const item = document.createElement('div');
-    item.className = 'business-plan-comment';
-    item.innerHTML = `
-      <div class="comment-header">
-        <strong>${comment.fromName}</strong>
-        <small>${formatDate(comment.ts)}</small>
-      </div>
-      <div class="comment-body">${escapeHtml(comment.text)}</div>
-    `;
-    commentsList.appendChild(item);
-  });
-}
-
-function renderAttachments(attachments) {
-  const attachmentsList = document.getElementById('businessPlanAttachmentsList');
-  if (!attachmentsList) return;
-  
-  attachmentsList.innerHTML = '';
-  
-  if (attachments.length === 0) {
-    attachmentsList.innerHTML = '<p class="no-attachments">Nenhum arquivo anexado.</p>';
-    return;
-  }
-  
-  attachments.forEach(attachment => {
-    const item = document.createElement('div');
-    item.className = 'business-plan-attachment';
-    item.innerHTML = `
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-        <polyline points="14 2 14 8 20 8"/>
-      </svg>
-      <span>${attachment.name}</span>
-      <small>${formatFileSize(attachment.size)}</small>
-    `;
+  function renderComments(comments) {
+    const container = document.getElementById('businessPlanCommentsList');
+    if (!container) return;
+    container.innerHTML = comments.length ? '' : '<p class="no-comments">Nenhum comentário.</p>';
     
-    item.addEventListener('click', () => {
-      window.open(attachment.url, '_blank');
-    });
-    
-    attachmentsList.appendChild(item);
-  });
-}
-
-// ─── Event Listeners ──────────────────────────────────────────────────────────
-
-function setupEventListeners() {
-  const saveBtn = document.getElementById('businessPlanSaveBtn');
-  const publishBtn = document.getElementById('businessPlanPublishBtn');
-  const addCommentBtn = document.getElementById('businessPlanAddCommentBtn');
-  const uploadFileBtn = document.getElementById('businessPlanUploadFileBtn');
-  
-  if (saveBtn) {
-    saveBtn.addEventListener('click', saveChapterContent);
-  }
-  
-  if (publishBtn) {
-    publishBtn.addEventListener('click', publishChapter);
-  }
-  
-  if (addCommentBtn) {
-    addCommentBtn.addEventListener('click', addComment);
-  }
-  
-  if (uploadFileBtn) {
-    uploadFileBtn.addEventListener('click', () => {
-      document.getElementById('businessPlanFileInput')?.click();
+    comments.forEach(c => {
+      const div = document.createElement('div');
+      div.className = 'business-plan-comment';
+      div.innerHTML = `
+        <div class="comment-header">
+          <strong>${c.fromName || 'Usuário'}</strong>
+          <small>${formatDate(c.ts)}</small>
+        </div>
+        <div class="comment-body">${escapeHtml(c.text)}</div>
+      `;
+      container.appendChild(div);
     });
   }
-  
-  const fileInput = document.getElementById('businessPlanFileInput');
-  if (fileInput) {
-    fileInput.addEventListener('change', handleFileUpload);
-  }
-}
 
-// ─── Ações ────────────────────────────────────────────────────────────────────
-
-async function saveChapterContent() {
-  if (!currentClientId || !currentChapterId) {
-    showNotification('Selecione um capítulo primeiro.', 'warning');
-    return;
-  }
-  
-  try {
-    showNotification('Salvando...', 'info');
+  function renderAttachments(attachments) {
+    const container = document.getElementById('businessPlanAttachmentsList');
+    if (!container) return;
+    container.innerHTML = attachments.length ? '' : '<p class="no-attachments">Nenhum anexo.</p>';
     
-    const content = JSON.stringify(quillEditor.getContents());
-    
-    const response = await fetch(`/api/admin/plan/${currentClientId}/chapter/${currentChapterId}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        content,
-        attachments: planData.chapters.find(c => c.id === currentChapterId)?.attachments || [],
-      }),
+    attachments.forEach(a => {
+      const div = document.createElement('div');
+      div.className = 'business-plan-attachment';
+      div.innerHTML = `<span>📎 ${a.name}</span><small>${formatFileSize(a.size)}</small>`;
+      div.onclick = () => window.open(a.url, '_blank');
+      container.appendChild(div);
     });
+  }
+
+  // ─── Ações ────────────────────────────────────────────────────────────────────
+
+  async function saveChapterContent() {
+    if (!currentClientId || !currentChapterId) return showToast('Selecione um capítulo.', 'warning');
     
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
+    try {
+      showToast('Salvando...', 'info');
+      const content = JSON.stringify(quillEditor.getContents());
+      
+      const response = await fetch(`/api/admin/plan/${currentClientId}/chapter/${currentChapterId}`, {
+        method: 'PUT',
+        headers: authH(),
+        body: JSON.stringify({ content }),
+      });
+      
+      if (response.ok) {
+        showToast('Salvo com sucesso!', 'success');
+        // Atualizar data local
+        const chapter = planData.chapters.find(c => c.id === currentChapterId);
+        if (chapter) {
+          chapter.content = content;
+          chapter.updatedAt = new Date().toISOString();
+          renderChaptersList(planData.chapters);
+        }
+      } else {
+        const err = await readAdminResponse(response);
+        throw new Error(err.error || 'Erro ao salvar');
+      }
+    } catch (err) {
+      showToast(err.message, 'error');
     }
-    
-    showNotification('Capítulo salvo com sucesso.', 'success');
-  } catch (err) {
-    console.error('[BusinessPlan] Erro ao salvar:', err);
-    showNotification('Erro ao salvar capítulo.', 'error');
   }
-}
 
-async function publishChapter() {
-  if (!currentClientId || !currentChapterId) {
-    showNotification('Selecione um capítulo primeiro.', 'warning');
-    return;
-  }
-  
-  try {
-    showNotification('Publicando para aprovação...', 'info');
-    
-    // Primeiro salvar o conteúdo
-    await saveChapterContent();
-    
-    // Depois atualizar o status
-    const response = await fetch(`/api/admin/plan/${currentClientId}/chapter/${currentChapterId}/status`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ clientAction: 'pendente' }),
-    });
-    
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
+  async function publishChapter() {
+    if (!currentClientId || !currentChapterId) return showToast('Selecione um capítulo.', 'warning');
+    if (!confirm('Deseja publicar este capítulo para aprovação do cliente?')) return;
+
+    try {
+      showToast('Publicando...', 'info');
+      const response = await fetch(`/api/admin/plan/${currentClientId}/chapter/${currentChapterId}/publish`, {
+        method: 'POST',
+        headers: authH()
+      });
+      
+      if (response.ok) {
+        showToast('Publicado com sucesso!', 'success');
+        loadClientPlan(currentClientId); // Recarregar tudo para atualizar status
+      } else {
+        const err = await readAdminResponse(response);
+        throw new Error(err.error || 'Erro ao publicar');
+      }
+    } catch (err) {
+      showToast(err.message, 'error');
     }
-    
-    showNotification('Capítulo publicado para aprovação do cliente.', 'success');
-    
-    // Recarregar dados
-    await loadClientPlan(currentClientId);
-  } catch (err) {
-    console.error('[BusinessPlan] Erro ao publicar:', err);
-    showNotification('Erro ao publicar capítulo.', 'error');
   }
-}
 
-async function addComment() {
-  if (!currentClientId || !currentChapterId) {
-    showNotification('Selecione um capítulo primeiro.', 'warning');
-    return;
+  async function addComment() {
+    const input = document.getElementById('businessPlanCommentInput');
+    const text = input?.value.trim();
+    if (!text || !currentClientId || !currentChapterId) return;
+
+    try {
+      const response = await fetch(`/api/admin/plan/${currentClientId}/chapter/${currentChapterId}/comment`, {
+        method: 'POST',
+        headers: authH(),
+        body: JSON.stringify({ text })
+      });
+
+      if (response.ok) {
+        input.value = '';
+        loadChapterContent(currentClientId, currentChapterId);
+      }
+    } catch (err) {
+      console.error(err);
+    }
   }
-  
-  const commentInput = document.getElementById('businessPlanCommentInput');
-  const comment = commentInput?.value?.trim();
-  
-  if (!comment) {
-    showNotification('Digite um comentário.', 'warning');
-    return;
-  }
-  
-  try {
-    showNotification('Adicionando comentário...', 'info');
-    
-    const response = await fetch(`/api/admin/plan/${currentClientId}/chapter/${currentChapterId}/comment`, {
+
+  function handleFileUpload(e) {
+    const file = e.target.files[0];
+    if (!file || !currentClientId || !currentChapterId) return;
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    showToast('Enviando arquivo...', 'info');
+    fetch(`/api/admin/plan/${currentClientId}/chapter/${currentChapterId}/upload`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ comment }),
-    });
-    
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
-    }
-    
-    if (commentInput) commentInput.value = '';
-    
-    showNotification('Comentário adicionado.', 'success');
-    
-    // Recarregar capítulo
-    await loadClientPlan(currentClientId);
-  } catch (err) {
-    console.error('[BusinessPlan] Erro ao adicionar comentário:', err);
-    showNotification('Erro ao adicionar comentário.', 'error');
+      headers: { 'Authorization': 'Bearer ' + getToken() }, // FormData não usa Content-Type manual
+      body: formData
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        showToast('Arquivo enviado!', 'success');
+        loadChapterContent(currentClientId, currentChapterId);
+      } else {
+        showToast(data.error || 'Erro no upload', 'error');
+      }
+    })
+    .catch(err => showToast('Erro na conexão', 'error'));
   }
-}
 
-async function handleFileUpload(e) {
-  const files = e.target.files;
-  if (!files || files.length === 0) return;
-  
-  // TODO: Implementar upload de arquivos
-  showNotification('Upload de arquivos em desenvolvimento.', 'info');
-}
+  // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-// ─── Utilitários ──────────────────────────────────────────────────────────────
+  function setupEventListeners() {
+    document.getElementById('businessPlanSaveBtn')?.addEventListener('click', saveChapterContent);
+    document.getElementById('businessPlanPublishBtn')?.addEventListener('click', publishChapter);
+    document.getElementById('businessPlanAddCommentBtn')?.addEventListener('click', addComment);
+    document.getElementById('businessPlanUploadFileBtn')?.addEventListener('click', () => document.getElementById('businessPlanFileInput').click());
+    document.getElementById('businessPlanFileInput')?.addEventListener('change', handleFileUpload);
+  }
 
-function getStatusLabel(status) {
-  const labels = {
-    'pendente': 'Pendente',
-    'em_revisao': 'Em Revisão',
-    'aprovado': 'Aprovado',
-    'revisao_solicitada': 'Revisão Solicitada',
-  };
-  return labels[status] || status;
-}
+  function formatDate(ts) {
+    if (!ts) return '—';
+    return new Date(ts).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' });
+  }
 
-function formatDate(dateString) {
-  if (!dateString) return 'N/A';
-  const date = new Date(dateString);
-  return date.toLocaleDateString('pt-BR', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-}
+  function formatFileSize(bytes) {
+    if (!bytes) return '0 B';
+    const k = 1024, dm = 2, sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+  }
 
-function formatFileSize(bytes) {
-  if (!bytes) return '0 B';
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
-}
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
 
-function escapeHtml(text) {
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
-}
+  // Exportar para o escopo global
+  window.initBusinessPlanModule = initBusinessPlanModule;
 
-function showNotification(message, type = 'info') {
-  console.log(`[BusinessPlan] [${type.toUpperCase()}] ${message}`);
-  // TODO: Integrar com sistema de notificações do portal
-}
-
-// ─── Exportar para uso global ──────────────────────────────────────────────────
-
-window.BusinessPlanModule = {
-  init: initBusinessPlanModule,
-  loadClientPlan,
-  loadChapterContent,
-  saveChapterContent,
-  publishChapter,
-  addComment,
-};
+})();

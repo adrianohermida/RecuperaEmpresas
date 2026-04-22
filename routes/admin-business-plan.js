@@ -70,13 +70,13 @@ router.post('/api/admin/plan/:userId/chapter/:chapterId/publish', requireAuth, r
 router.post('/api/admin/plan/:userId/chapter/:chapterId/comment', requireAuth, requireConsultor, async (req, res) => {
   try {
     const { userId, chapterId } = req.params;
-    const { comment } = req.body;
+    const commentText = req.body.text || req.body.comment;
 
-    if (!comment || typeof comment !== 'string') {
+    if (!commentText || typeof commentText !== 'string') {
       return res.status(400).json({ error: 'Comentário inválido.' });
     }
 
-    await addChapterComment(userId, parseInt(chapterId), comment, req.user.id, req.user.name || req.user.email);
+    await addChapterComment(userId, parseInt(chapterId), commentText, req.user.id, req.user.name || req.user.email);
     res.json({ success: true, message: 'Comentário adicionado.' });
   } catch (err) {
     console.error('[admin-business-plan] POST comment', err);
