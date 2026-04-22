@@ -699,10 +699,201 @@
       (window.renderClientDetailTab || renderDrawerTab)('agenda');
       return;
     }
-    showToast(payload.error || 'Erro ao agendar.', 'error');
+     showToast(payload.error || 'Erro ao agendar.', 'error');
   }
 
-  // ─── Exports ────────────────────────────────────────────────────────────────
+  // ─── Templates ─────────────────────────────────────────────────────────────────────────────────
+
+  async function loadTemplates() {
+    const el = document.getElementById('agendaTemplatesList');
+    if (!el) return;
+    el.innerHTML = '<div class="agenda-loading-state">Carregando templates...</div>';
+    const res = await fetch('/api/admin/agenda/templates', { headers: authH() });
+    const j   = res.ok ? await res.json() : {};
+    const templates = j.templates || [];
+    if (!templates.length) {
+      el.innerHTML = '<div class="empty-state" style="padding:24px">Nenhum template criado ainda.</div>';
+      return;
+    }
+    el.innerHTML = `<table class="admin-table" style="width:100%">
+      <thead><tr>
+        <th>Nome</th><th>Duração</th><th>Créditos</th><th>Vagas</th><th>Local</th><th>Ativo</th><th>Ações</th>
+      </tr></thead>
+      <tbody>${templates.map(t => `
+        <tr>
+          <td><strong>${t.name}</strong>${t.description ? `<br><small style="color:#64748B">${t.description}</small>` : ''}</td>
+          <td>${t.duration_min}min</td>
+          <td>${t.credits_cost}</td>
+          <td>${t.max_bookings}</td>
+          <td>${t.location || 'online'}</td>
+          <td>${t.is_active ? '✅' : '❌'}</td>
+          <td style="white-space:nowrap">
+            <button onclick="editTemplate('${t.id}')" class="btn-ghost" style="font-size:12px">Editar</button>
+            <button onclick="deleteTemplate('${t.id}')" class="btn-ghost" style="font-size:12px;color:#ef4444">Remover</button>
+            <button onclick="prefillSlotFromTemplate('${t.id}')" class="btn-ghost" style="font-size:12px;color:#3b82f6">Usar</button>
+          </td>
+        </tr>`).join('')}
+      </tbody></table>`;
+  }
+
+  async function createTemplate() {
+    const name        = document.getElementById('tmplName')?.value?.trim();
+    const description = document.getElementById('tmplDescription')?.value?.trim() || null;
+    const duration    = parseInt(document.getElementById('tmplDuration')?.value || '60');
+    const credits     = parseInt(document.getElementById('tmplCredits')?.value || '1');
+    const maxBookings = parseInt(document.getElementById('tmplMaxBookings')?.value || '1');
+    const location    = document.getElementById('tmplLocation')?.value || 'online';
+    if (!name) { showToast('Nome do template é obrigatório.', 'error'); return; }
+    const res = await fetch('/api/admin/agenda/templates', {
+      method: 'POST', headers: authH(),
+      body: JSON.stringify({ name, description, duration_min: duration, credits_cost: credits, max_bookings: maxBookings, location }),
+    });
+    const j = await res.json();
+    if (res.ok) { showToast('Template criado!', 'success'); loadTemplates(); }
+    else showToast(j.error || 'Erro ao criar template.', 'error');
+  }
+
+  async function deleteTemplate(id) {
+    if (!confirm('Remover este template?')) return;
+    const res = await fetch(`/api/admin/agenda/templates/${id}`, { method: 'DELETE', headers: authH() });
+    if (res.ok) { showToast('Template removido.', 'success'); loadTemplates(); }
+    else { const j = await res.json(); showToast(j.error || 'Erro.', 'error'); }
+  }
+
+  async function editTemplate(id) {
+    const name = prompt('Novo nome do template:');
+    if (!name) return;
+    const res = await fetch(`/api/admin/agenda/templates/${id}`, {
+      method: 'PUT', headers: authH(),
+      body: JSON.stringify({ name: name.trim() }),
+    });
+    const j = await res.json();
+    if (res.ok) { showToast('Template atualizado!', 'success'); loadTemplates(); }
+    else showToast(j.error || 'Erro ao atualizar.', 'error');
+  }
+
+  function prefillSlotFromTemplate(templateId) {
+    // Fetch template details and prefill the slot creation form
+    fetch(`/api/admin/agenda/templates`, { headers: authH() })
+      .then(r => r.json())
+      .then(j => {
+        const t = (j.templates || []).find(x => x.id === templateId);
+        if (!t) return;
+        const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
+        setVal('slotTitle',       t.name);
+        setVal('slotDuration',    t.duration_min);
+        setVal('slotCredits',     t.credits_cost);
+        setVal('slotMaxBookings', t.max_bookings);
+        setVal('slotLocation',    t.location || 'online');
+        if (t.description) setVal('slotDescription', t.description);
+        // Show the form if hidden
+        const form = document.getElementById('slotForm') || document.getElementById('newSlotForm');
+        if (form) form.hidden = false;
+        showToast('Template aplicado ao formulário.', 'success');
+      });
+  }
+
+  // ─── Conflicts ─────────────────────────────────────────────────────────────────────────────────
+
+  async function loadConflicts(includeResolved = false) {
+    const el = document.getElementById('agendaConflictsList');
+    if (!el) return;
+    el.innerHTML = '<div class="agenda-loading-state">Carregando conflitos...</div>';
+    const url = `/api/admin/agenda/conflicts${includeResolved ? '?include_resolved=1' : ''}`;
+    const res = await fetch(url, { headers: authH() });
+    const j   = res.ok ? await res.json() : {};
+    const conflicts = j.conflicts || [];
+    if (!conflicts.length) {
+      el.innerHTML = '<div class="empty-state" style="padding:24px;color:#22c55e">Nenhum conflito pendente. ✅</div>';
+      return;
+    }
+    el.innerHTML = `<table class="admin-table" style="width:100%">
+      <thead><tr>
+        <th>Tipo</th><th>Reserva</th><th>Descrição</th><th>Detectado em</th><th>Status</th><th>Ações</th>
+      </tr></thead>
+      <tbody>${conflicts.map(c => {
+        const client = c.booking?.re_users?.name || c.booking?.booker_name || '—';
+        const slot   = c.booking?.slot;
+        const slotDate = slot?.starts_at ? new Date(slot.starts_at).toLocaleString('pt-BR') : '—';
+        return `<tr>
+          <td><span class="admin-badge admin-badge-warning">${c.conflict_type}</span></td>
+          <td>${client}<br><small style="color:#64748B">${slotDate}</small></td>
+          <td style="max-width:280px;font-size:13px">${c.description || '—'}</td>
+          <td>${new Date(c.detected_at).toLocaleString('pt-BR')}</td>
+          <td>${c.resolved_at ? '<span style="color:#22c55e">Resolvido</span>' : '<span style="color:#ef4444">Pendente</span>'}</td>
+          <td>${!c.resolved_at ? `<button onclick="resolveConflict('${c.id}')" class="btn-ghost" style="font-size:12px">Resolver</button>` : ''}</td>
+        </tr>`;
+      }).join('')}
+      </tbody></table>`;
+  }
+
+  async function resolveConflict(id) {
+    const notes = prompt('Notas de resolução (opcional):');
+    if (notes === null) return;
+    const res = await fetch(`/api/admin/agenda/conflicts/${id}/resolve`, {
+      method: 'PUT', headers: authH(),
+      body: JSON.stringify({ resolution_notes: notes.trim() || null }),
+    });
+    if (res.ok) { showToast('Conflito resolvido.', 'success'); loadConflicts(); }
+    else { const j = await res.json(); showToast(j.error || 'Erro.', 'error'); }
+  }
+
+  // ─── Metrics ───────────────────────────────────────────────────────────────────────────────────
+
+  async function loadAgendaMetrics() {
+    const el = document.getElementById('agendaMetricsPanel');
+    if (!el) return;
+    el.innerHTML = '<div class="agenda-loading-state">Carregando métricas...</div>';
+    const res = await fetch('/api/admin/agenda/metrics', { headers: authH() });
+    const j   = res.ok ? await res.json() : {};
+    const t   = j.totals || {};
+    el.innerHTML = `
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:16px;margin-bottom:24px">
+        <div class="admin-kpi-card"><div class="admin-kpi-value">${t.total_bookings ?? 0}</div><div class="admin-kpi-label">Total de reservas</div></div>
+        <div class="admin-kpi-card"><div class="admin-kpi-value">${t.confirmed_bookings ?? 0}</div><div class="admin-kpi-label">Confirmadas</div></div>
+        <div class="admin-kpi-card"><div class="admin-kpi-value">${t.cancelled_bookings ?? 0}</div><div class="admin-kpi-label">Canceladas</div></div>
+        <div class="admin-kpi-card"><div class="admin-kpi-value">${t.no_show_count ?? 0}</div><div class="admin-kpi-label">No-shows</div></div>
+        <div class="admin-kpi-card"><div class="admin-kpi-value">${t.total_credits_earned ?? 0}</div><div class="admin-kpi-label">Créditos ganhos</div></div>
+        <div class="admin-kpi-card"><div class="admin-kpi-value">${t.average_rating ? t.average_rating.toFixed(1) + ' ⭐' : '—'}</div><div class="admin-kpi-label">Avaliação média</div></div>
+      </div>`;
+  }
+
+  // ─── Feedback summary ─────────────────────────────────────────────────────────────────────────────────
+
+  async function loadFeedbackSummary() {
+    const el = document.getElementById('agendaFeedbackPanel');
+    if (!el) return;
+    el.innerHTML = '<div class="agenda-loading-state">Carregando avaliações...</div>';
+    const res = await fetch('/api/admin/agenda/feedback-summary', { headers: authH() });
+    const j   = res.ok ? await res.json() : {};
+    const feedbacks = j.feedbacks || [];
+    const avg = j.average_rating;
+    if (!feedbacks.length) {
+      el.innerHTML = '<div class="empty-state" style="padding:24px">Nenhuma avaliação recebida ainda.</div>';
+      return;
+    }
+    const stars = n => '★'.repeat(n || 0) + '☆'.repeat(5 - (n || 0));
+    el.innerHTML = `
+      <div style="margin-bottom:16px;font-size:18px;font-weight:600">
+        Média: ${avg ? avg.toFixed(1) + ' ⭐' : '—'} &nbsp;·&nbsp; ${feedbacks.length} avaliações
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:24px">
+        ${[5,4,3,2,1].map(r => `<span style="font-size:13px">${r}★: ${j.distribution?.[r] ?? 0}</span>`).join(' &nbsp; ')}
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        ${feedbacks.map(f => `
+          <div style="background:#f8fafc;border-radius:8px;padding:12px 16px">
+            <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+              <span style="color:#f59e0b;font-size:18px">${stars(f.rating)}</span>
+              <span style="color:#64748B;font-size:12px">${new Date(f.submitted_at).toLocaleString('pt-BR')}</span>
+            </div>
+            ${f.comment ? `<div style="font-size:14px;color:#1e293b;margin-bottom:4px">“${f.comment}”</div>` : ''}
+            <div style="font-size:12px;color:#94a3b8">${f.client?.name || f.client?.email || '—'} &nbsp;·&nbsp; ${f.slot?.title || '—'}</div>
+          </div>`).join('')}
+      </div>`;
+  }
+
+  // ─── Exports ─────────────────────────────────────────────────────────────────────────────────
 
   window.loadAdminAgenda           = loadAdminAgenda;
   window.loadAvailabilityPanel     = loadAvailabilityPanel;
@@ -724,6 +915,15 @@
   window.openBookForClientFromDrawer = openBookForClientFromDrawer;
   window._submitBookFromDrawer     = submitBookFromDrawer;
   window._prefillSlotFromWindow    = prefillSlotFromWindow;
+  window.loadTemplates             = loadTemplates;
+  window.createTemplate            = createTemplate;
+  window.deleteTemplate            = deleteTemplate;
+  window.editTemplate              = editTemplate;
+  window.prefillSlotFromTemplate   = prefillSlotFromTemplate;
+  window.loadConflicts             = loadConflicts;
+  window.resolveConflict           = resolveConflict;
+  window.loadAgendaMetrics         = loadAgendaMetrics;
+  window.loadFeedbackSummary       = loadFeedbackSummary;
 
   // ─── Recover from deep-link race condition ───────────────────────────────────
   // admin-shell-core.js may have fired showSection('agenda') before this script

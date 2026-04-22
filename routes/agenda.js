@@ -7,6 +7,13 @@ const {
   sendBookingCreated,
   sendBookingCancelledByClient,
 } = require('../lib/agenda-emails');
+const {
+  buildStatusEntry,
+  appendStatusHistory,
+  appendAttendee,
+  recordConflict,
+  updateMetrics,
+} = require('../lib/agenda-helpers');
 
 // ── Credit helpers (exported for use by admin-agenda.js) ─────────────────────
 async function getCredits(userId) {
@@ -141,6 +148,21 @@ router.post('/api/agenda/book/:slotId', requireAuth, async (req, res) => {
     .select('id').eq('slot_id', slotId).eq('user_id', userId)
     .neq('status', 'cancelled').maybeSingle();
   if (dup) return res.status(409).json({ error: 'Você já tem reserva neste horário.' });
+
+  // ── Check for time-overlap with another confirmed booking of the same user ──
+  const { data: userSlots } = await sb.from('re_bookings')
+    .select('slot:re_agenda_slots!slot_id(starts_at,ends_at,duration_min)')
+    .eq('user_id', userId)
+    .in('status', ['pending', 'confirmed']);
+  const slotStart = new Date(slot.starts_at).getTime();
+  const slotEnd   = new Date(slot.ends_at || new Date(slot.starts_at).getTime() + (slot.duration_min || 60) * 60000).getTime();
+  const hasOverlap = (userSlots || []).some(b => {
+    if (!b.slot) return false;
+    const bs = new Date(b.slot.starts_at).getTime();
+    const be = new Date(b.slot.ends_at || bs + (b.slot.duration_min || 60) * 60000).getTime();
+    return slotStart < be && slotEnd > bs;
+  });
+  if (hasOverlap) return res.status(409).json({ error: 'Você já possui uma reserva em horário conflitante.' });
 
   const credits = await getCredits(userId);
   if (credits < slot.credits_cost) return res.status(402).json({
@@ -308,6 +330,90 @@ router.post('/api/agenda/book/:bookingId/request-reschedule', requireAuth, async
   }).catch(e => console.warn('[AgendaEmail]', e.message));
 
   res.json({ success: true, status: 'pending_reschedule' });
+});
+
+
+// ─── POST /api/agenda/book/:bookingId/feedback — client submits feedback ──────
+router.post('/api/agenda/book/:bookingId/feedback', requireAuth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { rating, comment } = req.body;
+
+    if (!rating || typeof rating !== 'number' || rating < 1 || rating > 5) {
+      return res.status(400).json({ error: 'rating deve ser um número entre 1 e 5.' });
+    }
+
+    // Only the booking owner can submit feedback
+    const { data: booking } = await sb.from('re_bookings')
+      .select('id, status, user_id, feedback_submitted_at, slot_id')
+      .eq('id', req.params.bookingId)
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (!booking) return res.status(404).json({ error: 'Reserva não encontrada.' });
+    if (!['confirmed', 'rescheduled', 'no_show'].includes(booking.status) && booking.status !== 'confirmed') {
+      return res.status(400).json({ error: 'Feedback só pode ser enviado para reservas confirmadas ou encerradas.' });
+    }
+    if (booking.feedback_submitted_at) {
+      return res.status(409).json({ error: 'Feedback já enviado para esta reserva.' });
+    }
+
+    // Verify the slot has already passed (only allow feedback after the session)
+    const { data: slot } = await sb.from('re_agenda_slots')
+      .select('starts_at, ends_at, title').eq('id', booking.slot_id).maybeSingle();
+    if (slot && new Date(slot.ends_at || slot.starts_at) > new Date()) {
+      return res.status(400).json({ error: 'Feedback só pode ser enviado após o término da sessão.' });
+    }
+
+    const now = new Date().toISOString();
+    const { error } = await sb.from('re_bookings').update({
+      feedback_rating:       rating,
+      feedback_comment:      comment ? String(comment).trim().slice(0, 2000) : null,
+      feedback_submitted_at: now,
+      updated_at:            now,
+    }).eq('id', booking.id);
+
+    if (error) return res.status(500).json({ error: error.message });
+
+    // Update metrics with the new rating
+    updateMetrics(sb, null, { rating })
+      .catch(e => console.warn('[agenda-helpers]', e.message));
+
+    res.json({ success: true });
+  } catch (e) {
+    console.error('[FEEDBACK]', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ─── GET /api/agenda/book/:bookingId/feedback — get feedback status ───────────
+router.get('/api/agenda/book/:bookingId/feedback', requireAuth, async (req, res) => {
+  try {
+    const { data: booking } = await sb.from('re_bookings')
+      .select('id, status, feedback_rating, feedback_comment, feedback_submitted_at, slot_id')
+      .eq('id', req.params.bookingId)
+      .eq('user_id', req.user.id)
+      .maybeSingle();
+
+    if (!booking) return res.status(404).json({ error: 'Reserva não encontrada.' });
+
+    const { data: slot } = await sb.from('re_agenda_slots')
+      .select('starts_at, ends_at, title').eq('id', booking.slot_id).maybeSingle();
+
+    const sessionEnded = slot ? new Date(slot.ends_at || slot.starts_at) < new Date() : true;
+
+    res.json({
+      booking_id:            booking.id,
+      status:                booking.status,
+      feedback_submitted:    !!booking.feedback_submitted_at,
+      feedback_rating:       booking.feedback_rating || null,
+      feedback_comment:      booking.feedback_comment || null,
+      feedback_submitted_at: booking.feedback_submitted_at || null,
+      can_submit_feedback:   sessionEnded && !booking.feedback_submitted_at,
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 // ─── GET /api/credits/history ─────────────────────────────────────────────────

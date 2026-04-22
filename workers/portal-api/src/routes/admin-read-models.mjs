@@ -1539,14 +1539,30 @@ async function handleJourneys(request, context) {
   return json({ ...journey, steps });
 }
 
+/**
+ * GET /api/admin/agenda/camila-availability
+ *
+ * Returns Camila's free time windows for the next N weekdays by querying
+ * Google Calendar's FreeBusy API via OAuth2 (Cloudflare Workers compatible).
+ *
+ * Required env secrets: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_OAUTH_REFRESH_TOKEN
+ * Optional env vars:    GOOGLE_CALENDAR_ID (defaults to 'primary')
+ *                       CAMILA_WORK_START  (default '08:00'), CAMILA_WORK_END (default '18:00')
+ *                       CAMILA_SLOT_MIN    (default 60)
+ *                       CAMILA_DAYS_AHEAD  (default 7)
+ */
 async function handleCamilaAvailability(request, context) {
   if (request.method !== 'GET') return methodNotAllowed();
 
-  // Check if Google Calendar is configured in environment
   const {
     GOOGLE_CLIENT_ID,
     GOOGLE_CLIENT_SECRET,
     GOOGLE_OAUTH_REFRESH_TOKEN,
+    GOOGLE_CALENDAR_ID,
+    CAMILA_WORK_START,
+    CAMILA_WORK_END,
+    CAMILA_SLOT_MIN,
+    CAMILA_DAYS_AHEAD,
   } = context.env;
 
   if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET || !GOOGLE_OAUTH_REFRESH_TOKEN) {
@@ -1554,45 +1570,118 @@ async function handleCamilaAvailability(request, context) {
   }
 
   try {
-    // For now, return mock data - full integration would fetch from Google Calendar API
-    // This prevents the 404 error while integration is being completed
-    const now = new Date();
-    const freeWindows = {};
+    // 1. Obtain OAuth2 access token via refresh token grant
+    const tokenResp = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        client_id:     GOOGLE_CLIENT_ID,
+        client_secret: GOOGLE_CLIENT_SECRET,
+        refresh_token: GOOGLE_OAUTH_REFRESH_TOKEN,
+        grant_type:    'refresh_token',
+      }).toString(),
+    });
+    const tokenData = await tokenResp.json();
+    if (!tokenData.access_token) {
+      console.error('[CamilaAvailability] Token error:', JSON.stringify(tokenData));
+      return json({ error: 'Falha ao autenticar com Google Calendar.' }, { status: 502 });
+    }
+    const accessToken = tokenData.access_token;
 
-    // Generate mock free windows for next 5 weekdays
-    let daysProcessed = 0;
-    let currentDate = new Date(now);
+    // 2. Build query window
+    const daysAhead  = parseInt(CAMILA_DAYS_AHEAD || '7');
+    const slotMin    = parseInt(CAMILA_SLOT_MIN   || '60');
+    const workStart  = CAMILA_WORK_START || '08:00';
+    const workEnd    = CAMILA_WORK_END   || '18:00';
+    const calendarId = GOOGLE_CALENDAR_ID || 'primary';
 
-    while (daysProcessed < 5) {
-      const dateStr = currentDate.toISOString().split('T')[0];
-      const dayOfWeek = currentDate.getDay();
+    const now     = new Date();
+    const timeMin = now.toISOString();
+    const timeMax = new Date(now.getTime() + daysAhead * 24 * 60 * 60 * 1000).toISOString();
 
-      // Skip weekends
-      if (dayOfWeek !== 0 && dayOfWeek !== 6) {
-        // Mock: show 09:00-11:00 and 14:00-16:00 as free
-        freeWindows[dateStr] = [
-          {
-            start: currentDate.toISOString().split('T')[0] + 'T09:00:00Z',
-            end: currentDate.toISOString().split('T')[0] + 'T11:00:00Z',
-          },
-          {
-            start: currentDate.toISOString().split('T')[0] + 'T14:00:00Z',
-            end: currentDate.toISOString().split('T')[0] + 'T16:00:00Z',
-          },
-        ];
-        daysProcessed++;
+    // 3. Call FreeBusy API
+    const fbResp = await fetch('https://www.googleapis.com/calendar/v3/freeBusy', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type':  'application/json',
+      },
+      body: JSON.stringify({
+        timeMin,
+        timeMax,
+        timeZone: 'America/Sao_Paulo',
+        items: [{ id: calendarId }],
+      }),
+    });
+    const fbData = await fbResp.json();
+    const busyIntervals = fbData?.calendars?.[calendarId]?.busy || [];
+
+    // 4. Compute free windows per day
+    function computeFreeWindowsForDay(busy, dateStr) {
+      // America/Sao_Paulo = UTC-3 (no DST since April 2019)
+      const TZ_OFFSET_MS = 3 * 60 * 60 * 1000;
+
+      const [startH, startM] = workStart.split(':').map(Number);
+      const [endH,   endM]   = workEnd.split(':').map(Number);
+
+      const dayBase     = new Date(`${dateStr}T00:00:00Z`).getTime() + TZ_OFFSET_MS;
+      const dayStartUTC = dayBase + (startH * 60 + startM) * 60 * 1000;
+      const dayEndUTC   = dayBase + (endH   * 60 + endM)   * 60 * 1000;
+
+      const dayBusy = busy
+        .map(b => ({ s: new Date(b.start).getTime(), e: new Date(b.end).getTime() }))
+        .filter(b => b.e > dayStartUTC && b.s < dayEndUTC)
+        .sort((a, b) => a.s - b.s);
+
+      const freeSlots = [];
+      let cursor = dayStartUTC;
+
+      for (const b of dayBusy) {
+        let slotStart = cursor;
+        while (slotStart + slotMin * 60 * 1000 <= b.s) {
+          freeSlots.push({
+            start: new Date(slotStart).toISOString(),
+            end:   new Date(slotStart + slotMin * 60 * 1000).toISOString(),
+          });
+          slotStart += slotMin * 60 * 1000;
+        }
+        cursor = Math.max(cursor, b.e);
       }
 
-      currentDate.setDate(currentDate.getDate() + 1);
+      let slotStart = cursor;
+      while (slotStart + slotMin * 60 * 1000 <= dayEndUTC) {
+        freeSlots.push({
+          start: new Date(slotStart).toISOString(),
+          end:   new Date(slotStart + slotMin * 60 * 1000).toISOString(),
+        });
+        slotStart += slotMin * 60 * 1000;
+      }
+
+      return freeSlots;
+    }
+
+    // 5. Build free_windows map keyed by date
+    const freeWindows = {};
+    const d = new Date(now);
+    for (let i = 0; i < daysAhead; i++) {
+      const dow = d.getDay();
+      if (dow !== 0 && dow !== 6) {
+        const dateStr = d.toISOString().split('T')[0];
+        const slots = computeFreeWindowsForDay(busyIntervals, dateStr);
+        if (slots.length) freeWindows[dateStr] = slots;
+      }
+      d.setDate(d.getDate() + 1);
     }
 
     return json({
-      free_windows: freeWindows,
+      free_windows:       freeWindows,
       calendar_connected: true,
+      query_window:       { from: timeMin, to: timeMax },
     });
+
   } catch (err) {
     console.error('[CamilaAvailability] Error:', err.message);
-    return json({ error: 'Erro ao carregar disponibilidade do calendário' }, { status: 500 });
+    return json({ error: 'Erro ao carregar disponibilidade do calendario.' }, { status: 500 });
   }
 }
 
