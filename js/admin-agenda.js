@@ -527,18 +527,29 @@
     const newSlotId = document.getElementById('rescheduleSlotSelect').value;
     const reason    = document.getElementById('rescheduleReason').value.trim();
     if (!reason) { showToast('O motivo é obrigatório.', 'error'); return; }
-    const response = await fetch(`/api/admin/agenda/bookings/${bookingId}/reschedule`, {
-      method: 'PUT', headers: authH(),
-      body: JSON.stringify({ new_slot_id: newSlotId, reason }),
-    });
-    const payload = await readAdminResponse(response);
-    if (response.ok) {
-      window.REAdminModal?.closeById?.('rescheduleModal', 'admin-agenda:reschedule-submit');
-      showToast('Agendamento remarcado e cliente notificado.', 'success');
-      _refreshActivePanel();
-      return;
+
+    const btn = document.querySelector('#rescheduleModal .btn-primary');
+    const originalLabel = btn ? btn.textContent : 'Remarcar';
+    if (btn) { btn.disabled = true; btn.textContent = 'Remarcando...'; }
+
+    try {
+      const response = await fetch(`/api/admin/agenda/bookings/${bookingId}/reschedule`, {
+        method: 'PUT', headers: authH(),
+        body: JSON.stringify({ new_slot_id: newSlotId, reason }),
+      });
+      const payload = await readAdminResponse(response);
+      if (response.ok) {
+        window.REAdminModal?.closeById?.('rescheduleModal', 'admin-agenda:reschedule-submit');
+        showToast('Agendamento remarcado e cliente notificado.', 'success');
+        _refreshActivePanel();
+        return;
+      }
+      showToast(payload.error || 'Erro ao remarcar.', 'error');
+    } catch (error) {
+      showToast('Erro de conexão ao remarcar.', 'error');
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = originalLabel; }
     }
-    showToast(payload.error || 'Erro ao remarcar.', 'error');
   }
 
   // ─── Book-for-client modal (from slot card) ─────────────────────────────────
@@ -617,17 +628,27 @@
       body.external_contact = { name, email, phone: phone || null, company: company || null };
     }
 
-    const response = await fetch('/api/admin/agenda/book-for-client', {
-      method: 'POST', headers: authH(), body: JSON.stringify(body),
-    });
-    const payload = await readAdminResponse(response);
-    if (response.ok) {
-      window.REAdminModal?.closeById?.('bookForClientModal', 'admin-agenda:book-for-client-submit');
-      showToast('Agendamento criado e confirmado!', 'success');
-      _refreshActivePanel();
-      return;
+    const btn = document.querySelector('#bookForClientModal .btn-primary');
+    const originalLabel = btn ? btn.textContent : 'Confirmar agendamento';
+    if (btn) { btn.disabled = true; btn.textContent = 'Agendando...'; }
+
+    try {
+      const response = await fetch('/api/admin/agenda/book-for-client', {
+        method: 'POST', headers: authH(), body: JSON.stringify(body),
+      });
+      const payload = await readAdminResponse(response);
+      if (response.ok) {
+        window.REAdminModal?.closeById?.('bookForClientModal', 'admin-agenda:book-for-client-submit');
+        showToast('Agendamento criado e confirmado!', 'success');
+        _refreshActivePanel();
+        return;
+      }
+      showToast(payload.error || 'Erro ao agendar.', 'error');
+    } catch (error) {
+      showToast('Erro de conexão ao agendar.', 'error');
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = originalLabel; }
     }
-    showToast(payload.error || 'Erro ao agendar.', 'error');
   }
 
   // ─── Book-from-drawer (client detail panel) ─────────────────────────────────

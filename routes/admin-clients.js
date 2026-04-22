@@ -224,7 +224,7 @@ router.put('/api/admin/client/:id', requireAdmin, async (req, res) => {
 
   // Insert a LGPD change request and notify the client to confirm
   const { data: cr } = await sb.from('re_data_change_requests').insert({
-    company_id: req.params.id,
+    user_id: req.params.id, // NR-03: Using user_id for clarity as it stores re_users.id
     requested_by: req.user.id,
     requester_role: 'admin',
     entity_type: 're_users',

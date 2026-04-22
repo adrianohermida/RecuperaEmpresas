@@ -54,3 +54,19 @@
 - Do not change `/api/*` to absolute URLs in production
 - Do not remove the browser Supabase session setup used by OAuth consent
 - Do not swap out Supabase templates with parallel custom auth emails
+
+## Recent Improvements (April 2026)
+
+### Security & Data Integrity
+- **Vulnerability Fixes**: Resolved NR-01 and NR-02 in `routes/journeys.js` (ownership validation for assignments).
+- **Data Standardization**: Fixed NR-03 by renaming `company_id` to `user_id` in `re_data_change_requests` across backend and workers for architectural clarity.
+- **Audit Log**: Updated `SECURITY-AUDIT.md` with the status of all resolved vulnerabilities.
+
+### UX & Feedback Visual
+- **Loading States**: Implemented visual feedback (spinners/disabled buttons) in Perfil, Configurações, and Agenda Admin.
+- **Toasts**: Standardized success/error notifications across critical flows.
+- **Persistence Feedback**: Added "Saving..." indicators for automatic preference updates.
+
+### Integrations
+- **Freshchat**: Consolidated JWT-based authentication across Client Portal and Admin. Added `/api/admin/freshchat/identity` for real-time diagnostic in the Integrations page.
+- **Google Calendar**: Refined synchronization logic in `lib/calendar.js` to ensure event status consistency during cancellations and reschedules.

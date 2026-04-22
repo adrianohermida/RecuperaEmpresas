@@ -147,31 +147,21 @@ const { data } = await sb.from('re_journey_assignments')
 
 ## 4. NEEDS REVIEW Items (not fixed — require further analysis)
 
-### NR-01 — `journeys.js` `complete-step` (admin) without journey ownership verification
+### NR-01 — `journeys.js` `complete-step` (admin) — FIXED
 
 **Route:** `POST /api/admin/journeys/:id/assignments/:asnId/complete-step`
 
-The `re_journey_step_completions` upsert uses `assignment_id: req.params.asnId` without verifying that `asnId` belongs to journey `req.params.id`. An admin could upsert a completion to an assignment of another journey.
+**Status:** FIXED (2026-04-22) — Added ownership check to verify that `asnId` belongs to journey `req.params.id` before upserting completion.
 
-Recommended fix:
-```js
-// Verify assignment belongs to this journey before inserting completion
-const { data: assignmentCheck } = await sb.from('re_journey_assignments')
-  .select('id').eq('id', req.params.asnId).eq('journey_id', req.params.id).single();
-if (!assignmentCheck) return res.status(403).json({ error: 'Atribuição não pertence a esta jornada.' });
-```
-
-### NR-02 — `journeys.js` `progress` (admin) without journey ownership verification
+### NR-02 — `journeys.js` `progress` (admin) — FIXED
 
 **Route:** `GET /api/admin/journeys/:id/assignments/:asnId/progress`
 
-The query `.eq('id', req.params.asnId)` does not verify that the assignment belongs to journey `:id`. A malicious call could read progress data for a user assigned to a different journey.
+**Status:** FIXED (2026-04-22) — Added `.eq('journey_id', req.params.id)` to the query to ensure data isolation.
 
-Recommended fix: add `.eq('journey_id', req.params.id)` to the `re_journey_assignments` query.
+### NR-03 — `admin-clients.js` `re_data_change_requests` — FIXED
 
-### NR-03 — `admin-clients.js` `re_data_change_requests` — misleading `company_id` field
-
-The insert sets `company_id: req.params.id` which stores a `re_users.id` (the client's ID). This is internally consistent but the column name implies a foreign key to a company entity. Verify with the database schema whether this is the intended use of the column, and consider renaming to `user_id` for clarity.
+**Status:** FIXED (2026-04-22) — Renamed the logic and references from `company_id` to `user_id` in the backend routes and workers to align with the actual data stored (user ID) and avoid architectural confusion.
 
 ---
 
@@ -204,6 +194,10 @@ Based on the audit, the following tables should have RLS enabled with appropriat
 |---|---|
 | `routes/forms.js` | Added `.eq('form_id', req.params.id)` to `GET /api/admin/forms/:id/responses/:responseId` (VULN-01) |
 | `routes/journeys.js` | Added `.eq('journey_id', req.params.id)` to `PUT /api/admin/journeys/:id/assignments/:asnId` (VULN-02) |
+| `routes/journeys.js` | Fixed NR-01 and NR-02 (Ownership validation for assignments) |
+| `routes/admin-clients.js` | Fixed NR-03 (Standardized `user_id` in change requests) |
+| `routes/data-change-requests.js` | Fixed NR-03 (Standardized `user_id` in change requests) |
+| `workers/portal-api/...` | Fixed NR-03 (Standardized `user_id` in change requests) |
 
 ---
 

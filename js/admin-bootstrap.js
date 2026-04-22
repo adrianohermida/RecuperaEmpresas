@@ -144,17 +144,23 @@
   }
 
   function initFreshchatOperator(user) {
-    pollFreshchatWidget(() => {
-      try {
-        window.fcWidget.setExternalId(user.id || user.email);
-        window.fcWidget.user.setFirstName(user.name ? user.name.split(' ')[0] : '');
-        window.fcWidget.user.setLastName(user.name ? user.name.split(' ').slice(1).join(' ') : '');
-        window.fcWidget.user.setEmail(user.email);
-        window.fcWidget.user.setProperties({ role: 'consultor', app: 'Recupera Empresas — Operador' });
-      } catch (error) {
-        console.warn('[Freshchat] operator init error:', error.message);
-      }
-    }, 30);
+    if (window.REAccountData?.bootFreshchat) {
+      window.REAccountData.bootFreshchat(user).catch(function (err) {
+        console.warn('[Freshchat:admin-bootstrap]', err.message);
+      });
+    } else {
+      pollFreshchatWidget(() => {
+        try {
+          window.fcWidget.setExternalId(user.id || user.email);
+          window.fcWidget.user.setFirstName(user.name ? user.name.split(' ')[0] : '');
+          window.fcWidget.user.setLastName(user.name ? user.name.split(' ').slice(1).join(' ') : '');
+          window.fcWidget.user.setEmail(user.email);
+          window.fcWidget.user.setProperties({ role: 'consultor', app: 'Recupera Empresas — Operador' });
+        } catch (error) {
+          console.warn('[Freshchat] operator init error:', error.message);
+        }
+      }, 30);
+    }
   }
 
   let _shellInited = false;
