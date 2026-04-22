@@ -1,0 +1,27 @@
+{
+	"folders": [
+		{
+			"path": "../.."
+		},
+		{
+			"path": "../../../../Downloads/chat-main/chat-main"
+		},
+		{
+			"path": "../../../../Downloads/chat-main"
+		},
+		{
+			"path": "../../../../Downloads/chat-ui-main/chat-ui-main"
+		}
+	],
+	"settings": {
+		"mcp": {
+			"servers": {
+				"supabase": {
+					"type": "http",
+					"url": "https://mcp.supabase.com/mcp?project_ref=riiajjmnzgagntiqqshs"
+				}
+			},
+			"inputs": []
+		}
+	}
+}

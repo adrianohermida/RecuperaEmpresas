@@ -79,6 +79,10 @@
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
           Jornadas
         </button>
+        <button class="sidebar-link" onclick="showSection('businessPlan',this)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="3" y1="13" x2="21" y2="13"/><line x1="3" y1="17" x2="21" y2="17"/></svg>
+          Business Plan
+        </button>
         <button class="sidebar-link" onclick="showSection('logs',this)">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
           Log de Acesso
@@ -961,6 +965,63 @@
       </div>
     </div>
 
+    <!-- BUSINESS PLAN -->
+    <div id="sec-businessPlan" class="tab-content">
+      <div class="section-header">
+        <div>
+          <div class="section-title">Gestão do Business Plan</div>
+          <div class="section-sub">Redação, revisão e aprovação dos capítulos do plano de recuperação</div>
+        </div>
+      </div>
+
+      <link rel="stylesheet" href="/css/admin-business-plan.css?v=20260422a"/>
+
+      <div class="business-plan-container">
+        <!-- Sidebar Esquerda: Clientes e Capítulos -->
+        <div class="business-plan-sidebar">
+          <div class="business-plan-sidebar-section">
+            <h3>Selecione um Cliente</h3>
+            <select id="businessPlanClientsList" class="portal-input"></select>
+          </div>
+          <div class="business-plan-sidebar-section">
+            <h3>Capítulos</h3>
+            <div id="businessPlanChaptersList"></div>
+          </div>
+        </div>
+
+        <!-- Editor Principal -->
+        <div class="business-plan-editor-container">
+          <div class="business-plan-editor-header">
+            <h2 id="businessPlanChapterTitle">Selecione um capítulo</h2>
+            <span class="chapter-status" id="businessPlanChapterStatus">—</span>
+          </div>
+          <div class="business-plan-editor-toolbar">
+            <button id="businessPlanSaveBtn" class="primary">Salvar Rascunho</button>
+            <button id="businessPlanPublishBtn" class="primary">Publicar para Aprovação</button>
+            <input type="file" id="businessPlanFileInput" accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.zip,.rar"/>
+            <button id="businessPlanUploadFileBtn">Anexar Arquivo</button>
+          </div>
+          <div id="businessPlanEditor"></div>
+        </div>
+
+        <!-- Sidebar Direita: Comentários e Anexos -->
+        <div class="business-plan-right-sidebar">
+          <div class="business-plan-right-sidebar-section">
+            <h3>Comentários</h3>
+            <div id="businessPlanCommentsList"></div>
+            <div class="business-plan-comment-input-group">
+              <textarea id="businessPlanCommentInput" placeholder="Adicione um comentário..."></textarea>
+              <button id="businessPlanAddCommentBtn" class="primary">Comentar</button>
+            </div>
+          </div>
+          <div class="business-plan-right-sidebar-section">
+            <h3>Anexos</h3>
+            <div id="businessPlanAttachmentsList"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </main>
 </div>
 
@@ -997,6 +1058,9 @@
 <!-- Jornadas JS -->
 <script src="/js/admin-journeys.js?v=20260421c"></script>
 <script src="/js/re-integration.js?v=20260421a"></script>
+
+<!-- Business Plan JS -->
+<script src="/js/admin-business-plan.js?v=20260422a"></script>
 
 </body>
 </html>

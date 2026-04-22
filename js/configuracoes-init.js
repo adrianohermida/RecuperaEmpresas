@@ -93,7 +93,6 @@
     const previous = Object.assign({}, currentPreferences);
     currentPreferences[key] = value;
     applyPrefsToUI(currentPreferences);
-    showToast('Salvando...', 'info', 1000);
     try {
       const data = await window.REAccountData.saveProfileState({ preferences: { [key]: value } });
       currentPreferences = Object.assign({}, currentPreferences, data.preferences || {});
@@ -173,32 +172,21 @@
       actions: [{
         label: 'Salvar convite',
         tone: 'primary',
-        onClick: async function (ctx) {
+        onClick: async function () {
           var password = form.querySelector('#memberPasswordInput').value.trim();
           if (password.length < 8) {
             showToast('A senha inicial deve ter no mínimo 8 caracteres.', 'error');
             return false;
           }
-          
-          const btn = ctx?.element?.querySelector('[data-portal-action="0"]');
-          const originalLabel = btn ? btn.textContent : 'Salvar convite';
-          if (btn) { btn.disabled = true; btn.textContent = 'Enviando...'; }
-
-          try {
-            await window.REAccountData.inviteCompanyMember({
-              name: form.querySelector('#memberNameInput').value.trim(),
-              email: form.querySelector('#memberEmailInput').value.trim(),
-              role: form.querySelector('#memberRoleInput').value,
-              password: password,
-            });
-            await reloadMembers();
-            showToast('Membro convidado.', 'success');
-            return true;
-          } catch (error) {
-            showToast(error.message || 'Erro ao convidar membro.', 'error');
-            if (btn) { btn.disabled = false; btn.textContent = originalLabel; }
-            return false;
-          }
+          await window.REAccountData.inviteCompanyMember({
+            name: form.querySelector('#memberNameInput').value.trim(),
+            email: form.querySelector('#memberEmailInput').value.trim(),
+            role: form.querySelector('#memberRoleInput').value,
+            password: password,
+          });
+          await reloadMembers();
+          showToast('Membro convidado.', 'success');
+          return true;
         }
       }]
     });
@@ -216,25 +204,15 @@
       actions: [{
         label: 'Salvar alterações',
         tone: 'primary',
-        onClick: async function (ctx) {
-          const btn = ctx?.element?.querySelector('[data-portal-action="0"]');
-          const originalLabel = btn ? btn.textContent : 'Salvar alterações';
-          if (btn) { btn.disabled = true; btn.textContent = 'Salvando...'; }
-
-          try {
-            await window.REAccountData.updateCompanyMember(memberId, {
-              name: form.querySelector('#memberNameInput').value.trim(),
-              role: form.querySelector('#memberRoleInput').value,
-              active: form.querySelector('#memberActiveInput').value === 'true',
-            });
-            await reloadMembers();
-            showToast('Membro atualizado.', 'success');
-            return true;
-          } catch (error) {
-            showToast(error.message || 'Erro ao atualizar membro.', 'error');
-            if (btn) { btn.disabled = false; btn.textContent = originalLabel; }
-            return false;
-          }
+        onClick: async function () {
+          await window.REAccountData.updateCompanyMember(memberId, {
+            name: form.querySelector('#memberNameInput').value.trim(),
+            role: form.querySelector('#memberRoleInput').value,
+            active: form.querySelector('#memberActiveInput').value === 'true',
+          });
+          await reloadMembers();
+          showToast('Membro atualizado.', 'success');
+          return true;
         }
       }]
     });

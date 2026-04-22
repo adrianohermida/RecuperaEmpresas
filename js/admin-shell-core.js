@@ -144,6 +144,11 @@ function showSection(name, el) {
   if (name === 'adminInvoices') loadAdminInvoices();
   if (name === 'adminMarketplace') loadAdminMarketplace();
   if (name === 'auditlog') loadAuditLog();
+  if (name === 'businessPlan') {
+    if (typeof initBusinessPlanModule === 'function') {
+      initBusinessPlanModule();
+    }
+  }
   closeSidebar();
   window.scrollTo({ top: 0, behavior: 'instant' });
 }
