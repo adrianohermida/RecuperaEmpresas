@@ -8,6 +8,8 @@ const rateLimit = require('express-rate-limit');
 const authRoutes = require('./routes/auth');
 const onboardingRoutes = require('./routes/onboarding');
 const planRoutes = require('./routes/plan');
+const adminBusinessPlanRoutes = require('./routes/admin-business-plan');
+const adminBusinessPlanUploadRoutes = require('./routes/admin-business-plan-upload');
 const taskRoutes = require('./routes/tasks');
 const messageRoutes = require('./routes/messages');
 const adminClientRoutes = require('./routes/admin-clients');
@@ -179,6 +181,8 @@ app.get('/oauth/consent', (req, res) => {
 // CLIENT PORTAL ROUTES
 // ═══════════════════════════════════════════════════════════════════════════════
 app.use(planRoutes);
+app.use(adminBusinessPlanRoutes);
+app.use(adminBusinessPlanUploadRoutes);
 app.use(taskRoutes);
 app.use(messageRoutes);
 app.use(adminClientRoutes);
