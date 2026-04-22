@@ -1,6 +1,6 @@
 /**
  * RecuperaChat Admin — Painel de Chat e Suporte para Consultores
- * Gerencia conversas, tickets e integração com IA no painel admin
+ * Versão 2.0: Interface Freshchat Style integrada com Tickets e Clientes
  */
 (function () {
   'use strict';
@@ -18,7 +18,9 @@
     pollingInterval: null,
     realtimeChannel: null,
     supabase: null,
+    orgData: { departments: [], members: [] },
     view: 'conversations', // 'conversations' | 'tickets'
+    filter: 'open'
   };
 
   // ─── Helpers ───────────────────────────────────────────────────────────────
@@ -83,28 +85,10 @@
     }
   }
 
-  function startPolling(convId) {
-    if (_state.pollingInterval) clearInterval(_state.pollingInterval);
-    _state.pollingInterval = setInterval(async () => {
-      if (!_state.selectedConvId) return;
-      try {
-        const since = _state.lastTs || new Date(0).toISOString();
-        const data = await apiFetch(`/api/admin/chat/conversations/${convId}/messages?since=${encodeURIComponent(since)}`);
-        const newMsgs = (data.messages || []).filter(m => !_state.messages.find(x => x.id === m.id));
-        if (newMsgs.length) {
-          _state.messages.push(...newMsgs);
-          _state.lastTs = newMsgs[newMsgs.length - 1].created_at;
-          renderChatPanel();
-        }
-      } catch (e) {
-        console.warn('[RecuperaChat Admin] Polling error:', e.message);
-      }
-    }, 3000);
-  }
-
   // ─── Carregamento de dados ─────────────────────────────────────────────────
 
-  async function loadConversations(status = null) {
+  async function loadConversations(status = _state.filter) {
+    _state.filter = status;
     const qs = status ? `?status=${status}` : '';
     const data = await apiFetch(`/api/admin/chat/conversations${qs}`);
     _state.conversations = data.conversations || [];
@@ -126,14 +110,61 @@
       _state.lastTs = _state.messages[_state.messages.length - 1].created_at;
     }
 
+    // Carrega dados da organização (departamentos/membros)
+    const conv = _state.conversations.find(c => c.id === convId);
+    if (conv?.client_id) {
+      loadOrgData(conv.client_id);
+    }
+
     renderChatPanel();
+    renderDetailsSidebar();
     subscribeToConversation(convId);
-    if (!_state.realtimeChannel) startPolling(convId);
+  }
+
+  async function loadOrgData(clientId) {
+    try {
+      const data = await apiFetch(`/api/admin/chat/client/${clientId}/org-data`);
+      _state.orgData = data;
+      renderDetailsSidebar();
+    } catch (e) {
+      console.error('[RecuperaChat Admin] OrgData error:', e.message);
+    }
   }
 
   // ─── Renderização ──────────────────────────────────────────────────────────
 
   function renderConversationList() {
+    const sidebar = document.getElementById('sec-recuperachat');
+    if (!sidebar) return;
+
+    // Garantir estrutura 3 colunas
+    if (!document.querySelector('.rc-admin-workspace')) {
+      sidebar.innerHTML = `
+        <div class="rc-admin-workspace">
+          <div class="rc-admin-conv-sidebar">
+            <div class="rc-admin-conv-sidebar-head">
+              <span>Conversas</span>
+              <button class="btn btn-sm btn-primary" onclick="window.RCAdmin.showNewConvModal()">+</button>
+            </div>
+            <div class="rc-status-filters">
+              <button class="rc-filter-btn ${_state.filter === 'open' ? 'rc-active' : ''}" onclick="window.RCAdmin.loadConversations('open')">Abertas</button>
+              <button class="rc-filter-btn ${_state.filter === 'resolved' ? 'rc-active' : ''}" onclick="window.RCAdmin.loadConversations('resolved')">Resolvidas</button>
+              <button class="rc-filter-btn ${_state.filter === 'all' ? 'rc-active' : ''}" onclick="window.RCAdmin.loadConversations('all')">Todas</button>
+            </div>
+            <div class="rc-admin-conv-list" id="rc-admin-conv-list"></div>
+          </div>
+          <div class="rc-admin-chat-panel" id="rc-admin-chat-panel">
+            <div class="rc-admin-placeholder">Selecione uma conversa para começar</div>
+          </div>
+          <div class="rc-admin-details-sidebar" id="rc-admin-details-sidebar">
+            <div class="rc-admin-placeholder">Detalhes do Cliente</div>
+          </div>
+        </div>
+        <div id="rc-convert-modal" class="rc-modal rc-hidden"></div>
+        <div id="rc-new-conv-modal" class="rc-modal rc-hidden"></div>
+      `;
+    }
+
     const container = document.getElementById('rc-admin-conv-list');
     if (!container) return;
 
@@ -143,20 +174,17 @@
     }
 
     container.innerHTML = _state.conversations.map(conv => {
-      const client = conv.re_users || {};
+      const client = conv.client || {};
       const isSelected = conv.id === _state.selectedConvId;
-      const statusBadge = {
-        open: '<span class="rc-badge rc-badge-green">Aberta</span>',
-        resolved: '<span class="rc-badge rc-badge-gray">Resolvida</span>',
-        snoozed: '<span class="rc-badge rc-badge-yellow">Pausada</span>',
-      }[conv.status] || '';
-
+      const ticket = conv.ticket?.[0];
+      
       return `<div class="rc-admin-conv-item ${isSelected ? 'rc-selected' : ''}" 
                    onclick="window.RCAdmin.selectConversation('${conv.id}')">
         <div class="rc-admin-conv-name">${escHtml(client.name || 'Cliente')}</div>
         <div class="rc-admin-conv-company">${escHtml(client.company || '')}</div>
         <div class="rc-admin-conv-meta">
-          ${statusBadge}
+          <span class="rc-badge ${conv.status === 'open' ? 'rc-badge-green' : 'rc-badge-gray'}">${conv.status}</span>
+          ${ticket ? `<span class="rc-badge rc-badge-yellow">#${ticket.ticket_number}</span>` : ''}
           <span class="rc-admin-conv-time">${relativeTime(conv.updated_at)}</span>
         </div>
       </div>`;
@@ -168,7 +196,7 @@
     if (!panel) return;
 
     const conv = _state.conversations.find(c => c.id === _state.selectedConvId);
-    const client = conv?.re_users || {};
+    const client = conv?.client || {};
 
     panel.innerHTML = `
       <div class="rc-admin-chat-header">
@@ -178,10 +206,7 @@
         </div>
         <div class="rc-admin-chat-actions">
           <button class="btn btn-secondary btn-sm" onclick="window.RCAdmin.showConvertToTicket()">
-            Converter em Chamado
-          </button>
-          <button class="btn btn-secondary btn-sm" onclick="window.RCAdmin.requestAISummary()">
-            Resumo IA
+            ${conv?.ticket?.[0] ? 'Ver Chamado' : 'Criar Chamado'}
           </button>
           <select onchange="window.RCAdmin.updateStatus(this.value)" class="rc-status-select">
             <option value="open" ${conv?.status === 'open' ? 'selected' : ''}>Aberta</option>
@@ -192,62 +217,79 @@
       </div>
 
       <div class="rc-admin-messages" id="rc-admin-messages">
-        ${_state.messages.length === 0
-          ? '<div class="rc-admin-empty">Nenhuma mensagem ainda.</div>'
-          : _state.messages.map(m => {
-              const isAdmin = m.sender_role === 'admin';
-              const isSystem = m.sender_role === 'system' || m.sender_role === 'ai';
-              const cls = isSystem ? 'rc-msg-system' : isAdmin ? 'rc-msg-self' : 'rc-msg-other';
-              const time = new Date(m.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-              return `<div class="rc-msg ${cls}">
-                <div class="rc-msg-bubble">${escHtml(m.content)}</div>
-                <div class="rc-msg-time">${time}</div>
-              </div>`;
-            }).join('')
-        }
+        ${_state.messages.map(m => {
+          const isAdmin = m.sender_role === 'admin';
+          const isSystem = m.sender_role === 'system' || m.sender_role === 'ai';
+          const cls = isSystem ? 'rc-msg-system' : isAdmin ? 'rc-msg-self' : 'rc-msg-other';
+          const time = new Date(m.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+          return `<div class="rc-msg ${cls}">
+            <div class="rc-msg-bubble">${escHtml(m.content)}</div>
+            <div class="rc-msg-time">${time}</div>
+          </div>`;
+        }).join('')}
       </div>
 
       <div class="rc-admin-input-area">
         <textarea id="rc-admin-input" placeholder="Responder ao cliente..." rows="2"></textarea>
         <button class="btn btn-primary" onclick="window.RCAdmin.sendMessage()">Enviar</button>
       </div>
+    `;
 
-      <div id="rc-convert-modal" class="rc-modal rc-hidden">
-        <div class="rc-modal-box">
-          <div class="rc-modal-title">Converter em Chamado</div>
-          <label>Assunto</label>
-          <input type="text" id="rc-ticket-subject" placeholder="Assunto do chamado" class="rc-input"/>
-          <label>Descrição</label>
-          <textarea id="rc-ticket-desc" rows="4" class="rc-input" placeholder="Descreva o problema..."></textarea>
-          <label>Prioridade</label>
-          <select id="rc-ticket-priority" class="rc-input">
-            <option value="low">Baixa</option>
-            <option value="normal" selected>Normal</option>
-            <option value="high">Alta</option>
-            <option value="urgent">Urgente</option>
-          </select>
-          <div class="rc-modal-actions">
-            <button class="btn btn-secondary" onclick="window.RCAdmin.hideConvertToTicket()">Cancelar</button>
-            <button class="btn btn-primary" onclick="window.RCAdmin.convertToTicket()">Criar Chamado</button>
-          </div>
+    const msgContainer = document.getElementById('rc-admin-messages');
+    if (msgContainer) msgContainer.scrollTop = msgContainer.scrollHeight;
+  }
+
+  function renderDetailsSidebar() {
+    const sidebar = document.getElementById('rc-admin-details-sidebar');
+    if (!sidebar) return;
+
+    const conv = _state.conversations.find(c => c.id === _state.selectedConvId);
+    if (!conv) return;
+
+    const client = conv.client || {};
+    const ticket = conv.ticket?.[0];
+
+    sidebar.innerHTML = `
+      <div>
+        <div class="rc-detail-section-title">Informações do Cliente</div>
+        <div class="rc-detail-card">
+          <div class="rc-detail-row"><span class="rc-detail-label">Nome:</span> <span class="rc-detail-value">${escHtml(client.name)}</span></div>
+          <div class="rc-detail-row"><span class="rc-detail-label">Empresa:</span> <span class="rc-detail-value">${escHtml(client.company)}</span></div>
+          <div class="rc-detail-row"><span class="rc-detail-label">E-mail:</span> <span class="rc-detail-value">${escHtml(client.email)}</span></div>
+        </div>
+      </div>
+
+      <div>
+        <div class="rc-detail-section-title">Chamado Vinculado</div>
+        <div class="rc-detail-card">
+          ${ticket ? `
+            <div class="rc-detail-row"><span class="rc-detail-label">Número:</span> <span class="rc-detail-value">#${ticket.ticket_number}</span></div>
+            <div class="rc-detail-row"><span class="rc-detail-label">Status:</span> <span class="rc-badge rc-badge-yellow">${ticket.status}</span></div>
+            <div class="rc-detail-row"><span class="rc-detail-label">Prioridade:</span> <span class="rc-detail-value">${ticket.priority}</span></div>
+          ` : '<p class="rc-admin-empty" style="padding:0">Nenhum chamado vinculado.</p>'}
+        </div>
+      </div>
+
+      <div>
+        <div class="rc-detail-section-title">Organização / Departamentos</div>
+        <div class="rc-detail-card">
+          ${_state.orgData.departments.length ? 
+            _state.orgData.departments.map(d => `<div class="rc-detail-row"><span class="rc-detail-value">${escHtml(d.name)}</span></div>`).join('')
+            : '<p class="rc-admin-empty" style="padding:0">Sem departamentos.</p>'
+          }
+        </div>
+      </div>
+
+      <div>
+        <div class="rc-detail-section-title">Membros Ativos</div>
+        <div class="rc-detail-card">
+          ${_state.orgData.members.length ? 
+            _state.orgData.members.map(m => `<div class="rc-detail-row"><span class="rc-detail-value">${escHtml(m.name)}</span> <span class="rc-detail-label">${m.role}</span></div>`).join('')
+            : '<p class="rc-admin-empty" style="padding:0">Sem membros.</p>'
+          }
         </div>
       </div>
     `;
-
-    // Scroll para o final
-    const msgContainer = document.getElementById('rc-admin-messages');
-    if (msgContainer) msgContainer.scrollTop = msgContainer.scrollHeight;
-
-    // Evento de Enter no textarea
-    const input = document.getElementById('rc-admin-input');
-    if (input) {
-      input.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && e.ctrlKey) {
-          e.preventDefault();
-          window.RCAdmin.sendMessage();
-        }
-      });
-    }
   }
 
   // ─── Ações ─────────────────────────────────────────────────────────────────
@@ -258,24 +300,19 @@
     if (!content || !_state.selectedConvId) return;
     input.value = '';
     try {
-      const data = await apiFetch(`/api/admin/chat/conversations/${_state.selectedConvId}/messages`, {
+      await apiFetch(`/api/admin/chat/conversations/${_state.selectedConvId}/messages`, {
         method: 'POST',
         body: JSON.stringify({ content }),
       });
-      if (!_state.realtimeChannel) {
-        _state.messages.push(data.message);
-        _state.lastTs = data.message.created_at;
-        renderChatPanel();
-      }
+      // O realtime cuidará da renderização se configurado, senão fazemos polling/manual
+      if (!_state.supabase) await selectConversation(_state.selectedConvId);
     } catch (e) {
-      console.error('[RecuperaChat Admin] sendMessage error:', e.message);
       input.value = content;
-      if (typeof showToast === 'function') showToast('Erro ao enviar mensagem.', 'error');
+      if (typeof showToast === 'function') showToast('Erro ao enviar.', 'error');
     }
   }
 
   async function updateStatus(status) {
-    if (!_state.selectedConvId) return;
     try {
       await apiFetch(`/api/admin/chat/conversations/${_state.selectedConvId}/status`, {
         method: 'PATCH',
@@ -284,87 +321,128 @@
       await loadConversations();
       if (typeof showToast === 'function') showToast('Status atualizado.', 'success');
     } catch (e) {
-      if (typeof showToast === 'function') showToast('Erro ao atualizar status.', 'error');
+      if (typeof showToast === 'function') showToast('Erro ao atualizar.', 'error');
+    }
+  }
+
+  function showNewConvModal() {
+    const modal = document.getElementById('rc-new-conv-modal');
+    modal.innerHTML = `
+      <div class="rc-modal-box">
+        <div class="rc-modal-title">Iniciar Nova Conversa</div>
+        <label>Cliente</label>
+        <select id="rc-new-client-id" class="rc-input">
+          <option value="">Carregando clientes...</option>
+        </select>
+        <label>Assunto</label>
+        <input type="text" id="rc-new-subject" placeholder="Ex: Dúvida sobre Onboarding" class="rc-input"/>
+        <label>Mensagem Inicial</label>
+        <textarea id="rc-new-msg" rows="3" class="rc-input" placeholder="Olá, como podemos ajudar?"></textarea>
+        <div class="rc-modal-actions">
+          <button class="btn btn-secondary" onclick="window.RCAdmin.hideModals()">Cancelar</button>
+          <button class="btn btn-primary" onclick="window.RCAdmin.createNewConversation()">Iniciar Chat</button>
+        </div>
+      </div>
+    `;
+    modal.classList.remove('rc-hidden');
+    loadClientsForModal();
+  }
+
+  async function loadClientsForModal() {
+    try {
+      const data = await apiFetch('/api/admin/clients');
+      const select = document.getElementById('rc-new-client-id');
+      if (select) {
+        select.innerHTML = (data.clients || []).map(c => `<option value="${c.id}">${escHtml(c.company || c.name)} (${c.email})</option>`).join('');
+      }
+    } catch (e) {
+      console.error('Erro ao carregar clientes:', e);
+    }
+  }
+
+  async function createNewConversation() {
+    const client_id = document.getElementById('rc-new-client-id').value;
+    const subject = document.getElementById('rc-new-subject').value;
+    const initial_message = document.getElementById('rc-new-msg').value;
+
+    if (!client_id) return;
+
+    try {
+      const data = await apiFetch('/api/admin/chat/conversations', {
+        method: 'POST',
+        body: JSON.stringify({ client_id, subject, initial_message })
+      });
+      hideModals();
+      await loadConversations('open');
+      selectConversation(data.conversation.id);
+    } catch (e) {
+      if (typeof showToast === 'function') showToast('Erro ao criar conversa.', 'error');
     }
   }
 
   function showConvertToTicket() {
     const modal = document.getElementById('rc-convert-modal');
-    if (modal) modal.classList.remove('rc-hidden');
-  }
-
-  function hideConvertToTicket() {
-    const modal = document.getElementById('rc-convert-modal');
-    if (modal) modal.classList.add('rc-hidden');
+    const conv = _state.conversations.find(c => c.id === _state.selectedConvId);
+    
+    modal.innerHTML = `
+      <div class="rc-modal-box">
+        <div class="rc-modal-title">Converter em Chamado</div>
+        <label>Assunto</label>
+        <input type="text" id="rc-ticket-subject" value="${escHtml(conv?.subject || '')}" class="rc-input"/>
+        <label>Descrição</label>
+        <textarea id="rc-ticket-desc" rows="4" class="rc-input" placeholder="Descreva o problema..."></textarea>
+        <label>Prioridade</label>
+        <select id="rc-ticket-priority" class="rc-input">
+          <option value="low">Baixa</option>
+          <option value="normal" selected>Normal</option>
+          <option value="high">Alta</option>
+          <option value="urgent">Urgente</option>
+        </select>
+        <div class="rc-modal-actions">
+          <button class="btn btn-secondary" onclick="window.RCAdmin.hideModals()">Cancelar</button>
+          <button class="btn btn-primary" onclick="window.RCAdmin.convertToTicket()">Criar Chamado</button>
+        </div>
+      </div>
+    `;
+    modal.classList.remove('rc-hidden');
   }
 
   async function convertToTicket() {
-    const subject = document.getElementById('rc-ticket-subject')?.value?.trim();
-    const description = document.getElementById('rc-ticket-desc')?.value?.trim();
-    const priority = document.getElementById('rc-ticket-priority')?.value || 'normal';
-
-    if (!subject) {
-      if (typeof showToast === 'function') showToast('Informe o assunto do chamado.', 'error');
-      return;
-    }
-    if (!description) {
-      if (typeof showToast === 'function') showToast('Informe a descrição do chamado.', 'error');
-      return;
-    }
+    const subject = document.getElementById('rc-ticket-subject').value;
+    const description = document.getElementById('rc-ticket-desc').value;
+    const priority = document.getElementById('rc-ticket-priority').value;
 
     try {
-      const data = await apiFetch(`/api/admin/chat/conversations/${_state.selectedConvId}/convert-to-ticket`, {
+      await apiFetch(`/api/admin/chat/conversations/${_state.selectedConvId}/convert-to-ticket`, {
         method: 'POST',
-        body: JSON.stringify({ subject, description, priority }),
+        body: JSON.stringify({ subject, description, priority })
       });
-      hideConvertToTicket();
-      if (typeof showToast === 'function') showToast(`Chamado #${data.ticket.ticket_number} criado com sucesso!`, 'success');
-      // Recarrega mensagens para mostrar a mensagem de sistema
+      hideModals();
+      await loadConversations();
       await selectConversation(_state.selectedConvId);
+      if (typeof showToast === 'function') showToast('Chamado criado!', 'success');
     } catch (e) {
-      if (typeof showToast === 'function') showToast(e.message || 'Erro ao criar chamado.', 'error');
+      if (typeof showToast === 'function') showToast('Erro ao criar chamado.', 'error');
     }
   }
 
-  async function requestAISummary() {
-    if (!_state.selectedConvId) return;
-    if (typeof showToast === 'function') showToast('Gerando resumo com IA...', 'info');
-    try {
-      const data = await apiFetch(`/api/admin/chat/conversations/${_state.selectedConvId}/ai-summary`, {
-        method: 'POST',
-        body: '{}',
-      });
-      if (data.summary) {
-        if (typeof showToast === 'function') showToast('Resumo gerado!', 'success');
-        alert(`Resumo IA:\n\n${data.summary}`);
-      } else if (data.warning) {
-        if (typeof showToast === 'function') showToast(data.warning, 'warning');
-      }
-    } catch (e) {
-      if (typeof showToast === 'function') showToast(e.message || 'Erro ao gerar resumo.', 'error');
-    }
-  }
-
-  // ─── Inicialização ─────────────────────────────────────────────────────────
-
-  async function init(user) {
-    _state.user = user;
-    await loadConversations();
+  function hideModals() {
+    document.querySelectorAll('.rc-modal').forEach(m => m.classList.add('rc-hidden'));
   }
 
   // ─── API pública ───────────────────────────────────────────────────────────
 
   window.RCAdmin = {
-    init,
+    init: (user) => { _state.user = user; loadConversations(); },
     loadConversations,
     selectConversation,
     sendMessage,
     updateStatus,
+    showNewConvModal,
+    createNewConversation,
     showConvertToTicket,
-    hideConvertToTicket,
     convertToTicket,
-    requestAISummary,
+    hideModals
   };
 
-  console.info('[RecuperaChat Admin] módulo carregado v1.0');
 })();

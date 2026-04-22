@@ -23,6 +23,8 @@ const {
   updateTicket,
   addTicketComment,
   listTicketComments,
+  listClientDepartments,
+  listOrganizationMembers,
 } = require('../lib/recuperachat/db');
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -273,6 +275,52 @@ router.post('/api/admin/chat/conversations/:id/read', requireAdmin, async (req, 
   try {
     await markMessagesAsRead(req.params.id, req.user.id);
     res.json({ success: true });
+  } catch (e) {
+    err(res, 500, e.message);
+  }
+});
+
+/**
+ * POST /api/admin/chat/conversations
+ * Consultor inicia uma nova conversa com um cliente.
+ */
+router.post('/api/admin/chat/conversations', requireAdmin, async (req, res) => {
+  try {
+    const { client_id, subject, initial_message } = req.body;
+    if (!client_id) return err(res, 400, 'ID do cliente é obrigatório.');
+
+    const conv = await createConversation({
+      client_id,
+      consultant_id: req.user.id,
+      subject: subject || 'Suporte Direto',
+    });
+
+    if (initial_message?.trim()) {
+      await insertChatMessage({
+        conversation_id: conv.id,
+        sender_id: req.user.id,
+        sender_role: 'admin',
+        content: initial_message.trim(),
+      });
+    }
+
+    res.json({ success: true, conversation: conv });
+  } catch (e) {
+    err(res, 500, e.message);
+  }
+});
+
+/**
+ * GET /api/admin/chat/client/:id/org-data
+ * Retorna departamentos e membros da organização do cliente para o widget.
+ */
+router.get('/api/admin/chat/client/:id/org-data', requireAdmin, async (req, res) => {
+  try {
+    const [departments, members] = await Promise.all([
+      listClientDepartments(req.params.id),
+      listOrganizationMembers(req.params.id)
+    ]);
+    res.json({ departments, members });
   } catch (e) {
     err(res, 500, e.message);
   }
