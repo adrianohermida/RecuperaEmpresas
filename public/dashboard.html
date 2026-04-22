@@ -931,8 +931,10 @@ async function initFreshchat(user) {
     document.getElementById('equipeNavBtn')?.classList.remove('ui-hidden');
   }
 
-  // Inicia identificação do usuário no widget Freshchat do portal cliente.
-  initFreshchat(user);
+  // Inicia o RecuperaChat (substituto do Freshchat)
+  if (window.RecuperaChat) {
+    window.RecuperaChat.boot(user);
+  }
 
   // Polling de mensagens — inicia automaticamente se a aba de mensagens estiver ativa
   if (document.getElementById('sec-messages')?.classList.contains('active')) {
@@ -958,11 +960,12 @@ async function initFreshchat(user) {
 <script src="/js/form-runtime.js?v=20260421s"></script>
 <script src="/js/form-player.js?v=20260421s"></script>
 
-<script src='//fw-cdn.com/16078787/7064112.js' chat='true'></script>
+<!-- RecuperaChat carregado via /js/recuperachat.js -->
 
 <div class="dashboard-sidebar-backdrop" id="dashSidebarBackdrop" onclick="window.closeDashSidebar()"></div>
 <script src="/js/dashboard-support.js?v=20260421b"></script>
-<script src="/js/dashboard-plan-approval.js?v=20260422a"></script>
+  <script src="/js/dashboard-plan-approval.js?v=20260422a"></script>
+  <script src="/js/recuperachat.js?v=20260422a"></script>
 
 </body>
 </html>

@@ -151,7 +151,8 @@ window.VITE_SUPABASE_ANON_KEY = ${JSON.stringify(SUPABASE_ANON_KEY)};
 window.RE_SUPABASE_URL    = ${JSON.stringify(SUPABASE_URL)};
 window.RE_SUPABASE_ANON   = ${JSON.stringify(SUPABASE_ANON_KEY)};
 window.RE_OAUTH_CLIENT_ID = ${JSON.stringify(process.env.OAUTH_CLIENT_ID || '')};
-window.RE_ENABLE_FRESHCHAT = ${JSON.stringify(process.env.RE_ENABLE_FRESHCHAT === 'true')};
+window.RE_ENABLE_FRESHCHAT = false; // Substituído pelo RecuperaChat
+window.RE_API_WORKER_ROUTES = ${JSON.stringify((process.env.RE_API_WORKER_ROUTES || 'api/chat,api/admin/chat').split(',').map(s => s.trim()).filter(Boolean))};
 window.RE_FRESHCHAT_TOKEN  = ${JSON.stringify(process.env.RE_FRESHCHAT_TOKEN || '')};
 window.RE_FRESHCHAT_SITE_ID = ${JSON.stringify(process.env.RE_FRESHCHAT_SITE_ID || '')};
 window.RE_GOOGLE_RECAPTCHA_SITE_KEY = ${JSON.stringify(GOOGLE_RECAPTCHA_SITE_KEY)};
