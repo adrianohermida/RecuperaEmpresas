@@ -805,31 +805,41 @@ async function dashboardReadResponse(res) {
 // ── Freshchat identity ────────────────────────────────────────────────────────
 // Polls for fcWidget availability (CDN loads async) then applies JWT identity.
 function _fcPoll(cb, attempts) {
-  if (!(window.RE_ENABLE_FRESHCHAT && window.RE_FRESHCHAT_TOKEN && window.RE_FRESHCHAT_SITE_ID)) return;
   if (typeof window.fcWidget !== 'undefined') { cb(); return; }
-  if (attempts <= 0) { console.warn('[Freshchat] widget not ready after 15s'); return; }
+  if (attempts <= 0) { console.warn('[Freshchat] widget not ready after 20s'); return; }
   setTimeout(function() { _fcPoll(cb, attempts - 1); }, 500);
 }
 
 async function initFreshchat(user) {
-  if (!(window.RE_ENABLE_FRESHCHAT && window.RE_FRESHCHAT_TOKEN && window.RE_FRESHCHAT_SITE_ID)) return;
+  if (!user || !user.email) return;
   _fcPoll(async function() {
+    const firstName = user.name ? user.name.split(' ')[0] : '';
+    const lastName = user.name ? user.name.split(' ').slice(1).join(' ') : '';
+
     try {
-      const res  = await fetch('/api/freshchat-token', { headers: authH() });
-      const json = await res.json();
-      if (!json.token) return;
-      // Apply user identity + JWT authentication
-      window.fcWidget.setExternalId(user.id || user.email);
-      window.fcWidget.user.setFirstName(user.name ? user.name.split(' ')[0] : '');
-      window.fcWidget.user.setLastName(user.name ? user.name.split(' ').slice(1).join(' ') : '');
+      // Identificação automática do usuário no portal cliente
+      window.fcWidget.setExternalId(String(user.id || user.email));
+      window.fcWidget.user.setFirstName(firstName || 'Cliente');
       window.fcWidget.user.setEmail(user.email);
-      window.fcWidget.user.setProperties({ plan: 'cliente', company: user.company || '' });
-      window.fcWidget.authenticate({
-        token:    json.token,
-        callback: function(err) { if (err) console.warn('[Freshchat] auth error:', err); }
+      if (window.fcWidget.user.setLastName) {
+        window.fcWidget.user.setLastName(lastName || '');
+      }
+      window.fcWidget.user.setProperties({
+        cf_plan: user.company_id ? 'Empresa' : 'Individual',
+        cf_status: 'Active',
+        cf_portal: 'cliente-empresa',
       });
+
+      const res  = await fetch('/api/freshchat-token', { headers: authH() });
+      const json = await res.json().catch(function () { return {}; });
+      if (res.ok && json.token) {
+        window.fcWidget.authenticate({
+          token: json.token,
+          callback: function(err) { if (err) console.warn('[Freshchat] auth error:', err); }
+        });
+      }
     } catch(e) { console.warn('[Freshchat] init error:', e.message); }
-  }, 30); // 30 attempts × 500ms = 15s max
+  }, 40); // 40 attempts × 500ms = 20s max
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
@@ -920,7 +930,8 @@ async function initFreshchat(user) {
     document.getElementById('equipeNavBtn')?.classList.remove('ui-hidden');
   }
 
-  // O widget Freshdesk do portal cliente inicia via script de load no fim da página.
+  // Inicia identificação do usuário no widget Freshchat do portal cliente.
+  initFreshchat(user);
 
   // Polling de mensagens — inicia automaticamente se a aba de mensagens estiver ativa
   if (document.getElementById('sec-messages')?.classList.contains('active')) {
@@ -946,45 +957,7 @@ async function initFreshchat(user) {
 <script src="/js/form-runtime.js?v=20260421s"></script>
 <script src="/js/form-player.js?v=20260421s"></script>
 
-<script>
-async function initFreshdesk() {
-  try {
-    // Obter token JWT para autenticação
-    const tokenRes = await fetch('/api/freshchat-token', {
-      method: 'GET',
-      headers: {
-        'Authorization': 'Bearer ' + (window.REShared?.getStoredToken?.() || localStorage.getItem('re_token')),
-        'Content-Type': 'application/json'
-      }
-    });
-    
-    if (!tokenRes.ok) {
-      console.warn('[RE:Freshdesk] Failed to obtain JWT token:', tokenRes.status);
-      return;
-    }
-    
-    const tokenData = await tokenRes.json();
-    if (!tokenData.token) {
-      console.warn('[RE:Freshdesk] No JWT token in response');
-      return;
-    }
-    
-    // Inicializar com JWT token
-    window.fdWidget.init({
-      token: "01KNPXYJ04R918TJ5N8JQ4SQGS",
-      host: "https://recuperaempresas-support.freshdesk.com",
-      widgetId: "01KNPXYMGGC0AE5Z819T8PVDWG",
-      jwtAuthToken: tokenData.token
-    });
-    
-  } catch (error) {
-    console.warn('[RE:Freshdesk] Error initializing Freshdesk:', error);
-    return;
-  }
-}
-
-function initialize(i,t){var e;i.getElementById(t)?initFreshdesk():((e=i.createElement("script")).id=t,e.async=!0,e.src="https://recuperaempresas-support.freshdesk.com/webchat/js/widget.js",e.onload=initFreshdesk,i.head.appendChild(e))}function initiateCall(){initialize(document,"Freshdesk-js-sdk")}window.addEventListener?window.addEventListener("load",initiateCall,!1):window.attachEvent("load",initiateCall,!1);
-</script>
+<script src='//fw-cdn.com/16078787/7064112.js' chat='true'></script>
 
 <div class="dashboard-sidebar-backdrop" id="dashSidebarBackdrop" onclick="window.closeDashSidebar()"></div>
 <script src="/js/re-integration.js?v=20260421s"></script>
