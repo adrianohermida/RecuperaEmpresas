@@ -212,9 +212,80 @@ Retorna timeline com todas as ações e responsáveis.
 
 ## 🚀 Próximas Fases Recomendadas
 
-- **Fase 3**: Sistema de comentários avançado com @mentions e notificações em tempo real
-- **Fase 4**: Exportação de relatórios com histórico de aprovações (PDF/Excel)
-- **Fase 5**: Integração com e-mail para notificações automáticas de aprovação/revisão
+- **Fase 3**- **Fase 3**: Sistema de comentários colaborativo com Supabase Realtime e Controle de Permissões (Concluído)
+- **Fase 4**: Exportação de relatórios com histórico de aprovações
+- **Fase 5**: Integração com e-mail para notificações de aprovação
+
+---
+
+## 💬 FASE 3: Colaboração Realtime e Permissões (Concluído)
+
+**Data de Implementação**: 22 de Abril de 2026  
+**Status**: ✅ Concluído
+
+### 3.1 Resumo da Fase 3
+
+A Fase 3 transforma a comunicação estática em uma **experiência colaborativa em tempo real**, utilizando o Supabase Realtime para sincronizar diálogos entre consultor e cliente instantaneamente.
+
+### 3.2 Alterações Implementadas
+
+#### Banco de Dados (`migrations/business_plan_v3_comments_collaboration.sql`)
+
+Novas tabelas estruturadas:
+
+1.  **`re_plan_comments`**: Armazena a thread de diálogos com suporte a respostas (`parent_comment_id`), menções e soft-delete.
+2.  **`re_plan_chapter_permissions`**: Controle granular de quem pode ver, comentar, editar ou aprovar cada capítulo.
+3.  **`re_plan_notifications`**: Sistema de alertas para menções e atividades importantes.
+
+#### Realtime Sync (`public/js/plan-comments-ui.js`)
+
+Implementada a integração com `window.supabase.channel`:
+- Escuta eventos de `INSERT`, `UPDATE` e `DELETE` na tabela de comentários.
+- Filtra atualizações por `user_id` e `chapter_id` para segurança.
+- Atualiza a interface automaticamente sem refresh.
+- Notificações em tela (Toasts) para novas mensagens de terceiros.
+
+#### Controle de Acesso (`public/js/plan-permissions.js`)
+
+Lógica de permissões granulares:
+- **View**: Acesso de leitura.
+- **Comment**: Permissão para participar da thread.
+- **Edit**: Permissão para alterar o conteúdo (Consultor/Membro Senior).
+- **Approve**: Permissão para dar o aceite final (Titular/Cliente).
+
+### 3.3 Arquivos Criados/Modificados (Fase 3)
+
+| Arquivo | Tipo | Descrição |
+|---------|------|-----------|
+| `migrations/business_plan_v3_comments_collaboration.sql` | SQL | Schema de colaboração e permissões |
+| `lib/db-phase3.js` | JS | Funções de comentários, permissões e notificações |
+| `routes/admin-business-plan-comments.js` | JS | Endpoints de colaboração e permissões |
+| `public/js/plan-comments-ui.js` | JS | Interface de chat com Realtime |
+| `public/css/plan-comments-ui.css` | CSS | Estilos de chat e threads |
+| `public/js/plan-permissions.js` | JS | Lógica de controle de acesso |
+| `public/css/plan-permissions.css` | CSS | Estilos de gerenciamento de permissões |
+| `server.js` | JS | Registro das novas rotas de colaboração |
+
+---
+
+## 🔍 Testes Realizados (Fase 3)
+
+1. ✅ Envio de comentários em thread (respostas).
+2. ✅ Sincronização Realtime entre duas abas (Consultor/Cliente).
+3. ✅ Edição e Deleção de comentários com persistência.
+4. ✅ Verificação de permissões granulares por tipo de ação.
+5. ✅ Notificações de menções (@usuario).
+
+---
+
+## 🚀 Conclusão do Módulo de Business Plan
+
+Com a conclusão das 3 fases, o **RecuperaEmpresas** agora possui um módulo robusto de Business Plan que permite:
+- Redação profissional com editor rico.
+- Gestão de documentos e anexos.
+- Fluxo de aprovação com auditoria completa.
+- Colaboração em tempo real entre todas as partes interessadas.
+- Controle de acesso seguro e granular.s automáticas de aprovação/revisão
 - **Fase 6**: Dashboard de métricas (tempo médio de aprovação, taxa de revisões, etc.)
 
 ---

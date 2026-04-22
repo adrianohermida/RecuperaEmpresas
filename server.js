@@ -10,6 +10,7 @@ const onboardingRoutes = require('./routes/onboarding');
 const planRoutes = require('./routes/plan');
 const adminBusinessPlanRoutes = require('./routes/admin-business-plan');
 const adminBusinessPlanUploadRoutes = require('./routes/admin-business-plan-upload');
+const adminBusinessPlanCommentsRoutes = require('./routes/admin-business-plan-comments');
 const taskRoutes = require('./routes/tasks');
 const messageRoutes = require('./routes/messages');
 const adminClientRoutes = require('./routes/admin-clients');
@@ -183,6 +184,7 @@ app.get('/oauth/consent', (req, res) => {
 app.use(planRoutes);
 app.use(adminBusinessPlanRoutes);
 app.use(adminBusinessPlanUploadRoutes);
+app.use(adminBusinessPlanCommentsRoutes);
 app.use(taskRoutes);
 app.use(messageRoutes);
 app.use(adminClientRoutes);
