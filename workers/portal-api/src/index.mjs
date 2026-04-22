@@ -129,6 +129,9 @@ async function routeAdmin(request, env, pathname, executionCtx) {
   params = match(pathname, /^\/api\/admin\/agenda\/slots$/);
   if (params) return handleAdminReadModels(request, { ...auth, env, executionCtx, params, scope: 'admin' });
 
+  params = match(pathname, /^\/api\/admin\/agenda\/camila-availability$/);
+  if (params) return handleAdminReadModels(request, { ...auth, env, executionCtx, params, scope: 'admin' });
+
   params = match(pathname, /^\/api\/admin\/impersonate\/(?<clientId>[^/]+)$/);
   if (params) return handleAdminImpersonate(request, { ...auth, env, executionCtx, params, scope: 'admin' });
 

@@ -18,6 +18,7 @@ const DEFAULT_WORKER_ROUTES = [
   '/api/admin/logs',
   '/api/admin/stats',
   '/api/admin/agenda/slots',
+  '/api/admin/agenda/camila-availability',
   '/api/admin/financial',
   '/api/admin/forms',
   '/api/admin/audit-log',
