@@ -106,6 +106,15 @@ function _renderClientSlotCard(s, bal) {
   } else if (bd.status === 'no_show') {
     actionArea = '<span class="dashboard-slot-status-pill dashboard-slot-status-cancelled">Não compareceu</span>';
   }
+  // ── Feedback button for past confirmed/no_show bookings ──────────────────────
+  if (past && bd?.id && ['confirmed', 'no_show', 'rescheduled'].includes(bd.status)) {
+    if (bd.feedback_submitted_at) {
+      const stars = '★'.repeat(bd.feedback_rating || 0) + '☆'.repeat(5 - (bd.feedback_rating || 0));
+      actionArea += `<span class="dashboard-slot-feedback-done" title="Avaliação enviada" style="color:#f59e0b;font-size:16px;margin-left:8px">${stars}</span>`;
+    } else {
+      actionArea += `<button onclick="openFeedbackModal('${bd.id}')" class="agenda-slot-action dashboard-slot-action-feedback" style="background:#f59e0b;color:#fff;border:none">⭐ Avaliar sessão</button>`;
+    }
+  }
 
   // ─── notes ──────────────────────────────────────────────────────────────────
   let noteBanner = '';
@@ -251,6 +260,63 @@ async function checkoutCredits(pack) {
   const j = await res.json();
   if (j.url) window.location.href = j.url;
   else showToast(j.error || 'Erro ao iniciar pagamento.', 'error');
+}
+
+// ─── Feedback modal ─────────────────────────────────────────────────────────────────────────────────
+
+let _feedbackSelectedRating = 0;
+
+function openFeedbackModal(bookingId) {
+  _feedbackSelectedRating = 0;
+  const modal = document.createElement('div');
+  modal.id = 'feedbackModal';
+  modal.className = 'admin-modal-overlay admin-modal-overlay-high';
+  modal.innerHTML = `
+    <div class="admin-modal agenda-modal-card agenda-modal-card-md">
+      <div class="agenda-modal-title">⭐ Avaliar sessão</div>
+      <div class="agenda-modal-subtitle" style="color:#64748B;font-size:13px;margin-bottom:16px">
+        Sua avaliação é anônima e ajuda a melhorar o serviço.
+      </div>
+      <div id="feedbackStars" style="font-size:32px;cursor:pointer;margin-bottom:16px;text-align:center">
+        ${'<span onclick="_setFeedbackRating(' + 1 + ')" data-star="1">☆</span>' +
+          '<span onclick="_setFeedbackRating(' + 2 + ')" data-star="2">☆</span>' +
+          '<span onclick="_setFeedbackRating(' + 3 + ')" data-star="3">☆</span>' +
+          '<span onclick="_setFeedbackRating(' + 4 + ')" data-star="4">☆</span>' +
+          '<span onclick="_setFeedbackRating(' + 5 + ')" data-star="5">☆</span>'}
+      </div>
+      <label class="agenda-modal-label">Comentário (opcional)</label>
+      <textarea id="feedbackComment" rows="3" placeholder="Conte como foi sua experiência..."
+        class="portal-input agenda-modal-field agenda-modal-textarea" style="margin-bottom:16px"></textarea>
+      <div class="admin-modal-actions agenda-modal-actions-tight">
+        <button onclick="document.getElementById('feedbackModal').remove()" class="btn-ghost admin-modal-btn">Cancelar</button>
+        <button onclick="_submitFeedback('${bookingId}')" class="btn-primary admin-modal-btn">Enviar avaliação</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+}
+
+function _setFeedbackRating(rating) {
+  _feedbackSelectedRating = rating;
+  const stars = document.querySelectorAll('#feedbackStars span');
+  stars.forEach((s, i) => { s.textContent = i < rating ? '★' : '☆'; });
+}
+
+async function _submitFeedback(bookingId) {
+  if (!_feedbackSelectedRating) { showToast('Selecione uma nota de 1 a 5 estrelas.', 'error'); return; }
+  const comment = document.getElementById('feedbackComment').value.trim();
+  const res = await fetch(`/api/agenda/book/${bookingId}/feedback`, {
+    method: 'POST', headers: authH(),
+    body: JSON.stringify({ rating: _feedbackSelectedRating, comment: comment || null }),
+  });
+  const j = await res.json();
+  if (res.ok) {
+    document.getElementById('feedbackModal')?.remove();
+    showToast('Obrigado pela sua avaliação!', 'success');
+    loadAgendaSlots();
+  } else {
+    showToast(j.error || 'Erro ao enviar avaliação.', 'error');
+  }
 }
 
 console.info('[RE:dashboard-agenda] loaded');

@@ -495,7 +495,93 @@ async function handleCredits(request, context) {
   }
 
   if (request.method === 'POST' && pathname === '/api/credits/checkout') {
-    return json({ error: 'Checkout de créditos ainda não foi portado para o Worker.' }, { status: 501 });
+    // ── Stripe Checkout via REST API (Cloudflare Workers compatible) ──────────
+    const STRIPE_SECRET_KEY = context.env.STRIPE_SECRET_KEY;
+    if (!STRIPE_SECRET_KEY) {
+      return json({ error: 'Pagamentos não configurados.' }, { status: 503 });
+    }
+
+    const PACKS = {
+      '1':  { credits: 1,  price_brl: 29700 },
+      '3':  { credits: 3,  price_brl: 79700 },
+      '5':  { credits: 5,  price_brl: 119700 },
+      '10': { credits: 10, price_brl: 197000 },
+    };
+
+    const body = await readJson(request);
+    const pack = String(body.pack || '1');
+    const chosen = PACKS[pack];
+    if (!chosen) return json({ error: 'Pacote inválido. Opções: 1, 3, 5, 10.' }, { status: 400 });
+
+    const BASE = context.env.BASE_URL || 'https://portal.recuperaempresas.com.br';
+    const successUrl = body.success_url || `${BASE}/dashboard?credits=success`;
+    const cancelUrl  = body.cancel_url  || `${BASE}/dashboard?credits=cancel`;
+
+    const ownerId = companyId(context);
+
+    // Fetch user to get/create Stripe customer
+    const { data: userRow } = await context.sb
+      .from('re_users')
+      .select('id, name, email, stripe_customer_id')
+      .eq('id', ownerId)
+      .maybeSingle();
+
+    let customerId = userRow?.stripe_customer_id || null;
+
+    // Helper: POST to Stripe REST API
+    const stripePost = async (path, params) => {
+      const formBody = new URLSearchParams(params).toString();
+      const resp = await fetch(`https://api.stripe.com/v1${path}`, {
+        method:  'POST',
+        headers: {
+          'Authorization': `Bearer ${STRIPE_SECRET_KEY}`,
+          'Content-Type':  'application/x-www-form-urlencoded',
+        },
+        body: formBody,
+      });
+      return resp.json();
+    };
+
+    // Create Stripe customer if not yet registered
+    if (!customerId && userRow?.email) {
+      const customer = await stripePost('/customers', {
+        email: userRow.email,
+        name:  userRow.name || userRow.email,
+      });
+      if (customer?.id) {
+        customerId = customer.id;
+        await context.sb
+          .from('re_users')
+          .update({ stripe_customer_id: customerId })
+          .eq('id', ownerId);
+      }
+    }
+
+    const sessionParams = {
+      'mode':                                   'payment',
+      'line_items[0][price_data][currency]':    'brl',
+      'line_items[0][price_data][unit_amount]': String(chosen.price_brl),
+      'line_items[0][price_data][product_data][name]':
+        `${chosen.credits} crédito${chosen.credits > 1 ? 's' : ''} de consultoria`,
+      'line_items[0][quantity]': '1',
+      'metadata[user_id]':       ownerId,
+      'metadata[credits]':       String(chosen.credits),
+      'success_url':             successUrl,
+      'cancel_url':              cancelUrl,
+    };
+    if (customerId) sessionParams['customer'] = customerId;
+
+    const session = await stripePost('/checkout/sessions', sessionParams);
+
+    if (!session?.url) {
+      console.error('[Worker:checkout] Stripe error:', JSON.stringify(session));
+      return json(
+        { error: session?.error?.message || 'Erro ao criar sessão de pagamento.' },
+        { status: 500 }
+      );
+    }
+
+    return json({ url: session.url, session_id: session.id });
   }
 
   return methodNotAllowed();

@@ -23,6 +23,18 @@ EMAIL_TO = "contato@recuperaempresas.com.br"
 # - VITE_SUPABASE_SERVICE_ROLE ou SUPABASE_SERVICE_ROLE_KEY
 # - JWT_SECRET
 # - RESEND_API_KEY
+# - STRIPE_SECRET_KEY                (Stripe secret key para checkout de créditos)
+# - GOOGLE_CLIENT_ID                 (OAuth2 client ID para integração Google Calendar)
+# - GOOGLE_CLIENT_SECRET             (OAuth2 client secret para Google Calendar)
+# - GOOGLE_OAUTH_REFRESH_TOKEN       (OAuth2 refresh token do calendário da Camila)
+# - GOOGLE_CALENDAR_WEBHOOK_SECRET   (Token para validar notificações push do Google Calendar)
+#
+# Variáveis opcionais (podem ser definidas em [vars] ou como secrets):
+# - GOOGLE_CALENDAR_ID   (ID do calendário; padrão: 'primary')
+# - CAMILA_WORK_START    (início do expediente; padrão: '08:00')
+# - CAMILA_WORK_END      (fim do expediente; padrão: '18:00')
+# - CAMILA_SLOT_MIN      (duração de cada janela livre em minutos; padrão: 60)
+# - CAMILA_DAYS_AHEAD    (dias à frente para calcular disponibilidade; padrão: 7)
 
 # Optional binding for persistent admin message read state:
 # [[kv_namespaces]]
