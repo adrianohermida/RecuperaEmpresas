@@ -11,6 +11,7 @@
   <script src="/js/runtime-diagnostics.js?v=20260421s"></script>
   <script src="/js/api-base.js?v=20260421s"></script>
   <script src="/js/shared-utils.js?v=20260421s"></script>
+  <script src="/js/admin-modal-manager.js?v=20260421n"></script>
   <script src="/js/re-core.js?v=20260421s"></script>
   <script src="/js/re-api.js?v=20260421s"></script>
   <script src="/js/portal-header.js?v=20260421s" defer></script>
@@ -833,10 +834,11 @@ async function initFreshchat(user) {
       const res  = await fetch('/api/freshchat-token', { headers: authH() });
       const json = await res.json().catch(function () { return {}; });
       if (res.ok && json.token) {
-        window.fcWidget.authenticate({
-          token: json.token,
-          callback: function(err) { if (err) console.warn('[Freshchat] auth error:', err); }
-        });
+        try {
+          window.fcWidget.authenticate({ token: json.token });
+        } catch (authError) {
+          console.warn('[Freshchat] auth error:', authError?.message || authError);
+        }
       }
     } catch(e) { console.warn('[Freshchat] init error:', e.message); }
   }, 40); // 40 attempts × 500ms = 20s max
