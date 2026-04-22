@@ -1,0 +1,349 @@
+/* ═══════════════════════════════════════════════════════════════════════════════
+   RecuperaChat — Estilos do Painel Admin
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+/* ─── Layout principal ──────────────────────────────────────────────────────── */
+.rc-admin-workspace {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 0;
+  height: calc(100vh - 120px);
+  min-height: 500px;
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--surface, #fff);
+}
+
+/* ─── Lista de conversas (coluna esquerda) ───────────────────────────────────── */
+.rc-admin-conv-sidebar {
+  border-right: 1px solid var(--border-color, #e5e7eb);
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-secondary, #f8fafc);
+}
+
+.rc-admin-conv-sidebar-head {
+  padding: 16px;
+  border-bottom: 1px solid var(--border-color, #e5e7eb);
+  font-weight: 600;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.rc-admin-conv-list {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.rc-admin-conv-item {
+  padding: 12px 16px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border-color, #e5e7eb);
+  transition: background .12s;
+}
+
+.rc-admin-conv-item:hover {
+  background: var(--hover-bg, #f1f5f9);
+}
+
+.rc-admin-conv-item.rc-selected {
+  background: #eff6ff;
+  border-left: 3px solid #1a56db;
+}
+
+.rc-admin-conv-name {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text-primary, #111827);
+  margin-bottom: 2px;
+}
+
+.rc-admin-conv-company {
+  font-size: 12px;
+  color: var(--text-muted, #6b7280);
+  margin-bottom: 4px;
+}
+
+.rc-admin-conv-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.rc-admin-conv-time {
+  font-size: 11px;
+  color: var(--text-muted, #9ca3af);
+}
+
+/* ─── Badges de status ────────────────────────────────────────────────────────── */
+.rc-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 99px;
+  text-transform: uppercase;
+  letter-spacing: .3px;
+}
+
+.rc-badge-green { background: #d1fae5; color: #065f46; }
+.rc-badge-gray  { background: #f3f4f6; color: #374151; }
+.rc-badge-yellow { background: #fef3c7; color: #92400e; }
+.rc-badge-red   { background: #fee2e2; color: #991b1b; }
+
+/* ─── Painel de chat (coluna direita) ────────────────────────────────────────── */
+.rc-admin-chat-panel,
+#rc-admin-chat-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.rc-admin-chat-header {
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border-color, #e5e7eb);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--surface, #fff);
+  flex-shrink: 0;
+}
+
+.rc-admin-chat-title {
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--text-primary, #111827);
+}
+
+.rc-admin-chat-sub {
+  font-size: 12px;
+  color: var(--text-muted, #6b7280);
+}
+
+.rc-admin-chat-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rc-status-select {
+  font-size: 13px;
+  padding: 5px 10px;
+  border: 1px solid var(--border-color, #d1d5db);
+  border-radius: 6px;
+  background: var(--surface, #fff);
+  cursor: pointer;
+}
+
+/* ─── Mensagens ───────────────────────────────────────────────────────────────── */
+.rc-admin-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--surface-secondary, #f8fafc);
+}
+
+.rc-msg {
+  display: flex;
+  flex-direction: column;
+  max-width: 75%;
+}
+
+.rc-msg-self { align-self: flex-end; align-items: flex-end; }
+.rc-msg-other { align-self: flex-start; }
+.rc-msg-system { align-self: center; max-width: 90%; }
+
+.rc-msg-bubble {
+  padding: 9px 14px;
+  border-radius: 12px;
+  font-size: 14px;
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.rc-msg-self .rc-msg-bubble {
+  background: #1a56db;
+  color: #fff;
+  border-radius: 12px 12px 2px 12px;
+}
+
+.rc-msg-other .rc-msg-bubble {
+  background: #fff;
+  color: #111827;
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 12px 12px 12px 2px;
+}
+
+.rc-msg-system .rc-msg-bubble {
+  background: #fef3c7;
+  color: #92400e;
+  font-size: 12px;
+  border-radius: 6px;
+  text-align: center;
+  border: 1px solid #fde68a;
+}
+
+.rc-msg-time {
+  font-size: 10px;
+  color: var(--text-muted, #9ca3af);
+  margin-top: 3px;
+}
+
+/* ─── Área de input ───────────────────────────────────────────────────────────── */
+.rc-admin-input-area {
+  display: flex;
+  gap: 10px;
+  padding: 12px 20px;
+  border-top: 1px solid var(--border-color, #e5e7eb);
+  background: var(--surface, #fff);
+  flex-shrink: 0;
+}
+
+.rc-admin-input-area textarea {
+  flex: 1;
+  border: 1px solid var(--border-color, #d1d5db);
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-size: 14px;
+  resize: none;
+  font-family: inherit;
+  outline: none;
+  transition: border-color .15s;
+}
+
+.rc-admin-input-area textarea:focus {
+  border-color: #1a56db;
+  box-shadow: 0 0 0 2px rgba(26, 86, 219, .1);
+}
+
+/* ─── Modal de conversão em ticket ───────────────────────────────────────────── */
+.rc-modal {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.rc-modal.rc-hidden { display: none; }
+
+.rc-modal-box {
+  background: #fff;
+  border-radius: 12px;
+  padding: 24px;
+  width: 420px;
+  max-width: 90vw;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.2);
+}
+
+.rc-modal-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text-primary, #111827);
+  margin-bottom: 4px;
+}
+
+.rc-modal-box label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary, #374151);
+}
+
+.rc-input {
+  width: 100%;
+  border: 1px solid var(--border-color, #d1d5db);
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color .15s;
+}
+
+.rc-input:focus {
+  border-color: #1a56db;
+  box-shadow: 0 0 0 2px rgba(26, 86, 219, .1);
+}
+
+.rc-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+/* ─── Estados vazios ──────────────────────────────────────────────────────────── */
+.rc-admin-empty {
+  text-align: center;
+  color: var(--text-muted, #9ca3af);
+  font-size: 13px;
+  padding: 32px 16px;
+}
+
+.rc-admin-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-muted, #9ca3af);
+  font-size: 14px;
+  gap: 8px;
+}
+
+/* ─── Filtros de status ───────────────────────────────────────────────────────── */
+.rc-status-filters {
+  display: flex;
+  gap: 6px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border-color, #e5e7eb);
+}
+
+.rc-filter-btn {
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 99px;
+  border: 1px solid var(--border-color, #d1d5db);
+  background: transparent;
+  cursor: pointer;
+  color: var(--text-secondary, #374151);
+  transition: all .12s;
+}
+
+.rc-filter-btn.rc-active,
+.rc-filter-btn:hover {
+  background: #1a56db;
+  color: #fff;
+  border-color: #1a56db;
+}
+
+/* ─── Responsivo ──────────────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .rc-admin-workspace {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+
+  .rc-admin-conv-sidebar {
+    border-right: none;
+    border-bottom: 1px solid var(--border-color, #e5e7eb);
+    max-height: 200px;
+  }
+
+  .rc-admin-messages {
+    min-height: 300px;
+  }
+}

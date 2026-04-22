@@ -37,6 +37,7 @@ const employeeRoutes = require('./routes/employees');
 const entityDocumentRoutes = require('./routes/entity-documents');
 const dataChangeRequestRoutes = require('./routes/data-change-requests');
 const documentRequestRoutes = require('./routes/document-requests');
+const recuperaChatRoutes    = require('./routes/recuperachat');
 
 const {
   PORT,
@@ -150,7 +151,8 @@ window.VITE_SUPABASE_ANON_KEY = ${JSON.stringify(SUPABASE_ANON_KEY)};
 window.RE_SUPABASE_URL    = ${JSON.stringify(SUPABASE_URL)};
 window.RE_SUPABASE_ANON   = ${JSON.stringify(SUPABASE_ANON_KEY)};
 window.RE_OAUTH_CLIENT_ID = ${JSON.stringify(process.env.OAUTH_CLIENT_ID || '')};
-window.RE_ENABLE_FRESHCHAT = ${JSON.stringify(process.env.RE_ENABLE_FRESHCHAT === 'true')};
+window.RE_ENABLE_FRESHCHAT = false; // Substituído pelo RecuperaChat
+window.RE_API_WORKER_ROUTES = ${JSON.stringify((process.env.RE_API_WORKER_ROUTES || 'api/chat,api/admin/chat').split(',').map(s => s.trim()).filter(Boolean))};
 window.RE_FRESHCHAT_TOKEN  = ${JSON.stringify(process.env.RE_FRESHCHAT_TOKEN || '')};
 window.RE_FRESHCHAT_SITE_ID = ${JSON.stringify(process.env.RE_FRESHCHAT_SITE_ID || '')};
 window.RE_GOOGLE_RECAPTCHA_SITE_KEY = ${JSON.stringify(GOOGLE_RECAPTCHA_SITE_KEY)};
@@ -211,6 +213,7 @@ app.use(employeeRoutes);
 app.use(entityDocumentRoutes);
 app.use(dataChangeRequestRoutes);
 app.use(documentRequestRoutes);
+app.use(recuperaChatRoutes);   // RecuperaChat — Chat e Suporte Multitenant
 
 // ─── Health check (used by Render.com and uptime monitors) ───────────────────
 app.get(['/api/health', '/healthz'], (req, res) => {

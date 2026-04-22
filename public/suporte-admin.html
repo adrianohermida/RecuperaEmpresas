@@ -7,6 +7,7 @@
   <title>Suporte Admin — Recupera Empresas</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
   <link rel="stylesheet" href="./css/portal.css?v=20260421v"/>
+  <link rel="stylesheet" href="./css/recuperachat.css?v=20260422a"/>
   <script src="./js/config.js?v=20260420a"></script>
   <script src="./js/runtime-diagnostics.js?v=20260421t"></script>
   <script src="./js/api-base.js?v=20260421t"></script>
@@ -39,13 +40,26 @@
   <main class="portal-main">
     <div class="page-shell-wide ops-page-shell">
       <div class="section-header"><div><div class="section-title" id="opsPageTitle">Suporte</div><div class="section-sub" id="opsPageSub">Console de mensagens e contexto de atendimento.</div></div><a href="/admin" class="btn btn-secondary">Voltar ao painel</a></div>
-      <div class="ops-workspace">
-        <aside class="ops-client-rail card-surface">
-          <div class="ops-client-rail-head"><div class="page-section-title">Clientes</div><div class="page-section-sub" id="opsRailSummary">Carregando...</div></div>
-          <div class="search-wrap ops-client-search"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input class="search-input" id="opsClientSearch" type="search" placeholder="Buscar cliente"/></div>
-          <div class="ops-client-list" id="opsClientList"></div>
+      <div class="rc-admin-workspace">
+        <aside class="rc-admin-conv-sidebar">
+          <div class="rc-admin-conv-sidebar-head">
+            Conversas
+            <button class="rc-filter-btn" onclick="window.RCAdmin.loadConversations()">🔄</button>
+          </div>
+          <div class="rc-status-filters">
+            <button class="rc-filter-btn rc-active" onclick="window.RCAdmin.loadConversations('open')">Abertas</button>
+            <button class="rc-filter-btn" onclick="window.RCAdmin.loadConversations('resolved')">Resolvidas</button>
+          </div>
+          <div class="rc-admin-conv-list" id="rc-admin-conv-list">
+            <div class="rc-admin-empty">Carregando conversas...</div>
+          </div>
         </aside>
-        <section class="ops-main-panel card-surface" id="opsMainPanel"></section>
+        <section class="rc-admin-chat-panel" id="rc-admin-chat-panel">
+          <div class="rc-admin-placeholder">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity: 0.2; margin-bottom: 16px;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            Selecione uma conversa para iniciar o atendimento.
+          </div>
+        </section>
       </div>
     </div>
   </main>
@@ -53,6 +67,21 @@
 <div class="toast" id="toast"></div>
 <script src="./js/admin-shell-core.js?v=20260421p"></script>
 <script src="./js/admin-notifications.js?v=20260421r"></script>
+<script src="/vendor/supabase/supabase.js"></script>
 <script src="./js/admin-ops-pages.js?v=20260421p"></script>
+<script src="./js/admin-recuperachat.js?v=20260422a"></script>
+<script>
+  // Inicializa o RecuperaChat Admin após o login verificado pelo admin-shell-core
+  window.addEventListener('load', () => {
+    const checkAuth = setInterval(() => {
+      const user = window.REShared && window.REShared.getStoredUser();
+      if (user && user.isAdmin) {
+        clearInterval(checkAuth);
+        window.RCAdmin.init(user);
+      }
+    }, 100);
+    setTimeout(() => clearInterval(checkAuth), 5000);
+  });
+</script>
 </body>
 </html>
