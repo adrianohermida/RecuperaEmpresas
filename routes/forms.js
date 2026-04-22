@@ -73,7 +73,7 @@ function getFormPublicConfig(form) {
 
 function isFormPubliclyAvailable(form) {
   const publicConfig = getFormPublicConfig(form);
-  return publicConfig.enabled && ['active', 'publicado'].includes(String(form?.status || ''));
+  return publicConfig.enabled && ['active', 'publicado', 'published'].includes(String(form?.status || ''));
 }
 
 async function findPublicFormBySlug(slug) {
@@ -81,7 +81,7 @@ async function findPublicFormBySlug(slug) {
   if (!normalizedSlug) return null;
   const { data: forms, error } = await sb.from('re_forms')
     .select('*')
-    .in('status', ['active', 'publicado'])
+    .in('status', ['active', 'publicado', 'published'])
     .order('updated_at', { ascending: false })
     .limit(200);
   if (error) throw error;
@@ -872,7 +872,7 @@ router.get('/api/forms', requireAuth, async (req, res) => {
     if (formIds.length) {
       const { data } = await sb.from('re_forms')
         .select('id,title,description,type,settings')
-        .in('id', formIds).eq('status', 'active');
+        .in('id', formIds).in('status', ['active', 'publicado', 'published']);
       forms = data || [];
     }
 
@@ -1016,7 +1016,7 @@ router.get('/api/my-forms', requireAuth, async (req, res) => {
 
     const { data: forms } = await sb.from('re_forms')
       .select('id,title,description,type,status')
-      .in('id', formIds).in('status', ['active', 'publicado']);
+      .in('id', formIds).in('status', ['active', 'publicado', 'published']);
 
     const withStatus = await Promise.all((forms || []).map(async (form) => {
       const { data: responses } = await sb.from('re_form_responses')
