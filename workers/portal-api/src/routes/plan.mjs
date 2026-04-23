@@ -1,19 +1,4 @@
-import { json, readJson } from '../lib/http.mjs';
-
-// BP-WK-03: Fetch chapter titles from database instead of hardcoding
-async function getChapterTitles(sb) {
-  const { data, error } = await sb.from('re_plan_chapters')
-    .select('chapter_id, title')
-    .limit(8);
-  
-  if (error || !data) return null;
-  
-  const titleMap = {};
-  data.forEach(row => {
-    titleMap[row.chapter_id] = row.title;
-  });
-  return titleMap;
-}
+import { json, readJson, notFound, methodNotAllowed } from '../lib/http.mjs';
 
 // BP-WK-02: Check chapter permissions before returning content
 async function checkChapterPermission(sb, userId, chapterId, permissionType = 'view') {
@@ -41,6 +26,34 @@ async function getChapterComments(sb, userId, chapterId) {
   
   if (error || !data) return [];
   return data;
+}
+
+// Lê todos os capítulos de um cliente sem filtro de permissão (uso interno/admin)
+async function readPlanRaw(sb, userId) {
+  const { data: rows, error } = await sb.from('re_plan_chapters')
+    .select('*')
+    .eq('user_id', userId)
+    .order('chapter_id');
+
+  if (error || !rows || rows.length === 0) {
+    return { chapters: [] };
+  }
+
+  const chapters = [];
+  for (const row of rows) {
+    const comments = await getChapterComments(sb, userId, row.chapter_id);
+    chapters.push({
+      id: row.chapter_id,
+      title: row.title,
+      status: row.status,
+      visibility: row.visibility || 'private',
+      content: row.content || '',
+      comments,
+      attachments: row.attachments || [],
+      updatedAt: row.updated_at || null,
+    });
+  }
+  return { chapters };
 }
 
 async function readPlan(sb, userId) {
@@ -131,4 +144,148 @@ export async function handlePlan(request, context) {
   }
 
   return json({ success: true });
+}
+
+// ─── Handler admin ────────────────────────────────────────────────────────────
+// Rotas cobertas:
+//   GET  /api/admin/plan/:clientId                                  → carregar plano completo
+//   PUT  /api/admin/plan/:clientId/chapter/:chapterId               → salvar conteúdo
+//   POST /api/admin/plan/:clientId/chapter/:chapterId/publish       → publicar capítulo
+//   POST /api/admin/plan/:clientId/chapter/:chapterId/comment       → comentário do consultor
+//   POST /api/admin/plan/:clientId/chapter/:chapterId/upload        → registrar anexo
+
+export async function handleAdminPlan(request, context) {
+  const { sb, user, params } = context;
+  const { clientId, chapterId, action } = params;
+
+  if (!clientId) return notFound();
+
+  // GET /api/admin/plan/:clientId
+  if (request.method === 'GET' && !chapterId) {
+    const plan = await readPlanRaw(sb, clientId);
+    return json(plan);
+  }
+
+  if (!chapterId) return notFound();
+
+  const chapterIdNum = Number(chapterId);
+
+  // PUT /api/admin/plan/:clientId/chapter/:chapterId — salvar conteúdo
+  if (request.method === 'PUT' && !action) {
+    const body = await readJson(request);
+    const { content } = body;
+
+    if (content === undefined) {
+      return json({ error: 'Campo "content" obrigatório.' }, { status: 400 });
+    }
+
+    const { error } = await sb.from('re_plan_chapters')
+      .update({ content, updated_at: new Date().toISOString() })
+      .eq('user_id', clientId)
+      .eq('chapter_id', chapterIdNum);
+
+    if (error) {
+      return json({ error: 'Erro ao salvar capítulo: ' + error.message }, { status: 500 });
+    }
+
+    return json({ success: true });
+  }
+
+  // POST /api/admin/plan/:clientId/chapter/:chapterId/publish
+  if (request.method === 'POST' && action === 'publish') {
+    const { error } = await sb.from('re_plan_chapters')
+      .update({ status: 'published', visibility: 'public', updated_at: new Date().toISOString() })
+      .eq('user_id', clientId)
+      .eq('chapter_id', chapterIdNum);
+
+    if (error) {
+      return json({ error: 'Erro ao publicar capítulo: ' + error.message }, { status: 500 });
+    }
+
+    return json({ success: true });
+  }
+
+  // POST /api/admin/plan/:clientId/chapter/:chapterId/comment
+  if (request.method === 'POST' && action === 'comment') {
+    const body = await readJson(request);
+    const text = String(body.text || '').trim();
+
+    if (!text) {
+      return json({ error: 'Texto do comentário não pode ser vazio.' }, { status: 400 });
+    }
+
+    const { error: commentError } = await sb.from('re_plan_comments').insert({
+      user_id: clientId,
+      chapter_id: chapterIdNum,
+      author_id: user.id,
+      author_name: user.name || user.email,
+      author_role: 'consultor',
+      content: text,
+      created_at: new Date().toISOString(),
+    });
+
+    if (commentError) {
+      return json({ error: 'Erro ao salvar comentário: ' + commentError.message }, { status: 500 });
+    }
+
+    return json({ success: true });
+  }
+
+  // POST /api/admin/plan/:clientId/chapter/:chapterId/upload
+  if (request.method === 'POST' && action === 'upload') {
+    let fileName = null;
+    let fileSize = 0;
+    let mimeType = null;
+
+    try {
+      const form = await request.formData();
+      const file = form.get('file');
+      if (file && typeof file !== 'string') {
+        fileName = file.name || 'arquivo';
+        fileSize = Number(file.size || 0);
+        mimeType = file.type || null;
+      }
+    } catch {
+      return json({ error: 'Erro ao processar o arquivo enviado.' }, { status: 400 });
+    }
+
+    if (!fileName) {
+      return json({ error: 'Nenhum arquivo enviado.' }, { status: 400 });
+    }
+
+    const { data: chapterRow, error: fetchError } = await sb.from('re_plan_chapters')
+      .select('attachments')
+      .eq('user_id', clientId)
+      .eq('chapter_id', chapterIdNum)
+      .single();
+
+    if (fetchError || !chapterRow) {
+      return json({ error: 'Capítulo não encontrado.' }, { status: 404 });
+    }
+
+    const attachments = Array.isArray(chapterRow.attachments) ? chapterRow.attachments : [];
+    const newAttachment = {
+      id: crypto.randomUUID(),
+      name: fileName,
+      size: fileSize,
+      mime_type: mimeType,
+      uploaded_at: new Date().toISOString(),
+      uploaded_by: user.id,
+      file_path: null,
+    };
+    attachments.push(newAttachment);
+
+    const { error: updateError } = await sb.from('re_plan_chapters')
+      .update({ attachments, updated_at: new Date().toISOString() })
+      .eq('user_id', clientId)
+      .eq('chapter_id', chapterIdNum);
+
+    if (updateError) {
+      return json({ error: 'Erro ao registrar anexo: ' + updateError.message }, { status: 500 });
+    }
+
+    return json({ success: true, attachment: newAttachment });
+  }
+
+  return notFound();
 }
