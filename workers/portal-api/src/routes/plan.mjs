@@ -28,6 +28,18 @@ async function getChapterComments(sb, userId, chapterId) {
   return data;
 }
 
+// BP-WK-03: Centralized chapter titles to avoid hardcoding inconsistencies
+const DEFAULT_PLAN_CHAPTERS = [
+  { id: 1, title: 'Sumário Executivo' },
+  { id: 2, title: 'Perfil da Empresa' },
+  { id: 3, title: 'Análise do Setor e Mercado' },
+  { id: 4, title: 'Diagnóstico Financeiro' },
+  { id: 5, title: 'Análise de Endividamento' },
+  { id: 6, title: 'Plano de Reestruturação Operacional' },
+  { id: 7, title: 'Plano Financeiro e Projeções' },
+  { id: 8, title: 'Cronograma e Gestão de Riscos' },
+];
+
 // Lê todos os capítulos de um cliente sem filtro de permissão (uso interno/admin)
 async function readPlanRaw(sb, userId) {
   const { data: rows, error } = await sb.from('re_plan_chapters')
@@ -36,7 +48,7 @@ async function readPlanRaw(sb, userId) {
     .order('chapter_id');
 
   if (error || !rows || rows.length === 0) {
-    return { chapters: [] };
+    return { chapters: DEFAULT_PLAN_CHAPTERS.map(c => ({ ...c, status: 'pendente', visibility: 'private', comments: [], attachments: [] })) };
   }
 
   const chapters = [];
@@ -63,7 +75,7 @@ async function readPlan(sb, userId) {
     .order('chapter_id');
 
   if (error || !rows || rows.length === 0) {
-    return { chapters: [], error: 'Nenhum plano encontrado' };
+    return { chapters: [] };
   }
 
   // BP-WK-02: Filter chapters by visibility and permissions
@@ -131,10 +143,31 @@ export async function handlePlan(request, context) {
     }
   }
 
-  // Update chapter status if clientAction is provided
+  // BP-BE-01: Validate state transition for client actions
   if (clientAction) {
+    const validActions = ['aprovado', 'revisao_solicitada'];
+    if (!validActions.includes(clientAction)) {
+      return json({ error: 'Ação do cliente inválida.' }, { status: 400 });
+    }
+
+    if (chapter.status !== 'published') {
+      return json({ error: 'Apenas capítulos publicados podem ser aprovados ou revisados.' }, { status: 400 });
+    }
+
+    const newStatus = clientAction === 'aprovado' ? 'approved' : 'revision_requested';
+    const updatePayload = { 
+      status: newStatus, 
+      updated_at: new Date().toISOString() 
+    };
+
+    if (clientAction === 'aprovado') {
+      updatePayload.approved_at = new Date().toISOString();
+    } else {
+      updatePayload.revision_requested_at = new Date().toISOString();
+    }
+
     const { error: updateError } = await context.sb.from('re_plan_chapters')
-      .update({ client_action: clientAction, updated_at: new Date().toISOString() })
+      .update(updatePayload)
       .eq('user_id', context.user.id)
       .eq('chapter_id', chapterId);
     

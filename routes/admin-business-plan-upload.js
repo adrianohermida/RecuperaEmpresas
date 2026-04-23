@@ -6,6 +6,7 @@ const { upload, UPLOADS_DIR } = require('../lib/config');
 const { sb } = require('../lib/config');
 const { ADMIN_EMAILS } = require('../lib/config');
 const fs = require('fs').promises;
+const { uploadToStorage, removeFromStorage, getPublicUrl } = require('../lib/storage');
 
 // Middleware: Verifica se o usuário é consultor (admin)
 function requireConsultor(req, res, next) {
@@ -34,8 +35,9 @@ router.post('/api/admin/plan/:userId/chapter/:chapterId/upload',
       const fileSize = req.file.size;
       const filePath = req.file.path;
       
-      // TODO: Fazer upload para S3 ou Supabase Storage
-      // Por enquanto, apenas salvar metadados
+      // BP-BE-02: Fazer upload para Supabase Storage
+      const remotePath = `${userId}/${chapterId}/${fileId}_${fileName}`;
+      const storagePath = await uploadToStorage(filePath, remotePath, req.file.mimetype);
       
       const attachment = {
         id: fileId,
@@ -44,7 +46,8 @@ router.post('/api/admin/plan/:userId/chapter/:chapterId/upload',
         type: req.file.mimetype,
         uploadedAt: new Date().toISOString(),
         uploadedBy: req.user.id,
-        url: `/api/admin/plan/${userId}/chapter/${chapterId}/attachment/${fileId}/download`,
+        storagePath: storagePath,
+        url: getPublicUrl(storagePath),
       };
       
       // Recuperar attachments existentes
@@ -58,13 +61,17 @@ router.post('/api/admin/plan/:userId/chapter/:chapterId/upload',
       await sb.from('re_plan_chapters').update({ attachments })
         .eq('user_id', userId).eq('chapter_id', chapterId);
       
-      // Salvar arquivo no disco (ou S3)
-      // TODO: Implementar persistência em S3
+      // Remover arquivo temporário do disco local
+      try {
+        await fs.unlink(filePath);
+      } catch (err) {
+        console.warn('[admin-business-plan-upload] Erro ao remover arquivo temporário:', err);
+      }
       
       res.json({
         success: true,
         attachment,
-        message: 'Arquivo enviado com sucesso.',
+        message: 'Arquivo enviado e persistido com sucesso.',
       });
     } catch (err) {
       console.error('[admin-business-plan-upload] POST upload', err);
@@ -99,13 +106,15 @@ router.get('/api/admin/plan/:userId/chapter/:chapterId/attachment/:attachmentId/
         return res.status(404).json({ error: 'Arquivo não encontrado.' });
       }
       
-      // TODO: Implementar download de S3 ou disco local
-      // Por enquanto, retornar metadados
+      // BP-BE-02: Se houver storagePath, redirecionar para URL pública do Supabase
+      if (attachment.storagePath) {
+        return res.redirect(getPublicUrl(attachment.storagePath));
+      }
       
       res.json({
         success: true,
         attachment,
-        message: 'Metadados do arquivo recuperados.',
+        message: 'Metadados do arquivo recuperados. (Arquivo legado no disco local)',
       });
     } catch (err) {
       console.error('[admin-business-plan-upload] GET download', err);
@@ -131,15 +140,19 @@ router.delete('/api/admin/plan/:userId/chapter/:chapterId/attachment/:attachment
         return res.status(404).json({ error: 'Arquivo não encontrado.' });
       }
       
+      const attachment = chapter.attachments.find(a => a.id === attachmentId);
       const attachments = chapter.attachments.filter(a => a.id !== attachmentId);
       
       // Atualizar capítulo removendo o attachment
       await sb.from('re_plan_chapters').update({ attachments })
         .eq('user_id', userId).eq('chapter_id', chapterId);
       
-      // TODO: Remover arquivo de S3 ou disco local
+      // BP-BE-02: Remover arquivo do Supabase Storage
+      if (attachment && attachment.storagePath) {
+        await removeFromStorage(attachment.storagePath);
+      }
       
-      res.json({ success: true, message: 'Arquivo removido.' });
+      res.json({ success: true, message: 'Arquivo removido com sucesso.' });
     } catch (err) {
       console.error('[admin-business-plan-upload] DELETE attachment', err);
       res.status(500).json({ error: 'Erro ao remover arquivo.' });
