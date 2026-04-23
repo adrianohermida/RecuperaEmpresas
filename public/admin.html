@@ -6,14 +6,14 @@
   <meta name="robots" content="noindex, nofollow"/>
   <title>Painel do Consultor — Recupera Empresas</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
-  <link rel="stylesheet" href="/css/portal.css?v=20260421v"/>
+  <link rel="stylesheet" href="/css/portal.css?v=20260423e"/>
   <script src="/js/config.js?v=20260421u"></script>
   <script src="/js/runtime-diagnostics.js?v=20260421u"></script>
   <script src="/js/api-base.js?v=20260421u"></script>
-  <script src="/js/shared-utils.js?v=20260421n"></script>
+  <script src="/js/shared-utils.js?v=20260423e"></script>
   <script src="/js/re-core.js?v=20260421a"></script>
   <script src="/js/re-api.js?v=20260421a"></script>
-  <script src="/js/portal-header.js?v=20260423a" defer></script>
+  <script src="/js/portal-header.js?v=20260423b" defer></script>
   <!-- Sempre use assets absolutos /css/ e /js/ para evitar conflitos de cache e duplicidade. -->
 </head>
 <body>
@@ -33,6 +33,7 @@
 
 <div
   data-shell-header
+  data-view="admin"
   data-home-href="/admin"
   data-logo-label="Abrir painel do consultor"
   data-logo-sub="Painel do Consultor"
@@ -45,6 +46,11 @@
   data-account-kicker="Conta do consultor"
   data-profile-href="/perfil"
   data-settings-href="/configuracoes"
+  data-enable-search="true"
+  data-search-action="/admin"
+  data-search-param="q"
+  data-search-placeholder="Buscar cliente, empresa ou e-mail"
+  data-search-sync-target="clientSearch"
 ></div>
 
 <!-- Sidebar backdrop (mobile) -->
@@ -88,7 +94,11 @@
         <div class="sidebar-label">Operação</div>
         <a class="sidebar-link" href="/suporte-admin">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-          Suporte
+          Chamados
+        </a>
+        <a class="sidebar-link" href="/suporte-admin?view=messages">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          Mensagens
         </a>
         <a class="sidebar-link" href="/tarefas-admin">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
@@ -180,7 +190,7 @@
           <div class="admin-bulk-toolbar-sub" id="clientBulkSummary">Nenhum cliente selecionado.</div>
         </div>
         <div class="admin-bulk-toolbar-actions">
-          <button class="btn btn-secondary btn-sm" type="button" onclick="openBulkClientPage('support')">Suporte</button>
+          <button class="btn btn-secondary btn-sm" type="button" onclick="openBulkClientPage('support')">Chamados</button>
           <button class="btn btn-secondary btn-sm" type="button" onclick="openBulkClientPage('tasks')">Tarefas</button>
           <button class="btn btn-secondary btn-sm" type="button" onclick="openBulkClientPage('documents')">Documentos</button>
           <button class="btn btn-secondary btn-sm" type="button" onclick="bulkAssignClients()">Atribuir tarefa</button>
@@ -196,16 +206,20 @@
 
       <div class="admin-clients-module-grid">
         <a class="admin-clients-module-card" href="/suporte-admin">
-          <div class="admin-clients-module-title">Suporte</div>
-          <div class="admin-clients-module-sub">Mensagens administrativas, ticket Freshdesk e contexto do atendimento.</div>
+          <div class="admin-clients-module-title">Chamados</div>
+          <div class="admin-clients-module-sub">Acompanhe atendimentos, contexto da operação e próximos passos por cliente.</div>
+        </a>
+        <a class="admin-clients-module-card" href="/suporte-admin?view=messages">
+          <div class="admin-clients-module-title">Mensagens</div>
+          <div class="admin-clients-module-sub">Central do consultor para responder com rapidez e manter a carteira bem acompanhada.</div>
         </a>
         <a class="admin-clients-module-card" href="/tarefas-admin">
           <div class="admin-clients-module-title">Tarefas</div>
-          <div class="admin-clients-module-sub">Fila operacional por cliente com criação rápida a partir do admin.</div>
+          <div class="admin-clients-module-sub">Fila operacional por cliente com criação rápida, prioridade e visão do backlog.</div>
         </a>
         <a class="admin-clients-module-card" href="/documentos-admin">
           <div class="admin-clients-module-title">Documentos</div>
-          <div class="admin-clients-module-sub">Revisão, status e pendências documentais em páginas dedicadas.</div>
+          <div class="admin-clients-module-sub">Revisão, status e pendências documentais em páginas dedicadas para a equipe.</div>
         </a>
       </div>
 
@@ -1060,7 +1074,7 @@
 <div class="toast" id="toast"></div>
 
 <script src="/js/admin-modal-manager.js?v=20260421n"></script>
-<script src="/js/admin-shell-core.js?v=20260421q"></script>
+<script src="/js/admin-shell-core.js?v=20260423e"></script>
 <script src="/js/admin-clients-enhancements.js?v=20260423c"></script>
 
 <script src="/js/admin-agenda.js?v=20260421h"></script>

@@ -214,7 +214,7 @@
 
       <div id="recuperachat-panel" class="rc-hidden">
         <div id="recuperachat-header">
-          <div>Suporte</div>
+          <div>Chamados</div>
           <span id="recuperachat-status">Conectando...</span>
         </div>
         <div id="recuperachat-messages">
@@ -226,7 +226,7 @@
         </div>
       </div>
 
-      <button id="recuperachat-btn" title="Suporte">
+      <button id="recuperachat-btn" title="Chamados">
         💬
         <span id="recuperachat-unread" class="rc-hidden">0</span>
       </button>

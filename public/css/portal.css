@@ -662,11 +662,18 @@ body {
   align-items: center;
   align-self: center;
   margin: 0;
+  width: 100%;
+  max-width: 560px;
 }
 
 .header-center-search .search-wrap {
   width: 100%;
   margin: 0;
+}
+
+.header-center-search .search-input {
+  width: 100%;
+  max-width: none;
 }
 
 .header-user-trigger {
@@ -794,6 +801,10 @@ body {
 
   .header-center-desktop {
     display: block;
+  }
+
+  .header-center-search {
+    justify-self: center;
   }
 }
 

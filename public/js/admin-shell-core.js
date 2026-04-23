@@ -81,6 +81,19 @@ function closeSidebar() {
   document.getElementById('sidebarBackdrop')?.classList.remove('open');
 }
 
+function applyInitialAdminSearchQuery() {
+  try {
+    var query = new URLSearchParams(window.location.search).get('q') || '';
+    if (!query) return;
+    var input = document.getElementById('clientSearch');
+    if (!input) return;
+    input.value = query;
+    if (typeof window.filterClients === 'function') {
+      window.filterClients();
+    }
+  } catch (_error) {}
+}
+
 function getUserMenuShell() {
   return document.querySelector('[data-user-menu-shell]') || document.querySelector('.sidebar-footer');
 }
@@ -117,6 +130,10 @@ document.addEventListener('keydown', function (event) {
     setUserDropupState(false);
     closeAllClientActionMenus();
   }
+});
+
+document.addEventListener('DOMContentLoaded', function () {
+  window.setTimeout(applyInitialAdminSearchQuery, 250);
 });
 
 function showSection(name, el) {

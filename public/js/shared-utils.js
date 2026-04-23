@@ -296,7 +296,7 @@
           { href: '/dashboard?section=agenda', label: 'Agenda', icon: SIDEBAR_ICONS.agenda },
           { href: '/dashboard?section=docs', label: 'Documentos', icon: SIDEBAR_ICONS.documentos },
           { href: '/dashboard?section=forms', label: 'Formulários', icon: SIDEBAR_ICONS.formularios },
-          { href: '/dashboard?section=support', label: 'Suporte', icon: SIDEBAR_ICONS.suporte },
+          { href: '/dashboard?section=support', label: 'Chamados', icon: SIDEBAR_ICONS.suporte },
           { href: '/dashboard?section=financeiro', label: 'Financeiro', icon: SIDEBAR_ICONS.financeiro }
         ]
       },

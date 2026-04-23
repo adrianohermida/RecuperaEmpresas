@@ -107,7 +107,7 @@
     const subtitle = getSubtitleElement();
     if (title) title.textContent = user.company || user.name || 'Cliente';
     if (subtitle) {
-      subtitle.textContent = user.email + (user.freshdeskTicketId ? ' · Ticket #' + user.freshdeskTicketId : '');
+      subtitle.textContent = user.email + (user.freshdeskTicketId ? ' · acompanhamento ativo' : '');
     }
     const summaryName = document.getElementById('clientSummaryName');
     const summaryMeta = document.getElementById('clientSummaryMeta');
@@ -388,4 +388,3 @@
 
   console.info('[RE:client-detail-controller] loaded');
 })();
-

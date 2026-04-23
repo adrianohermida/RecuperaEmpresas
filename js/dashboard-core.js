@@ -62,6 +62,45 @@ function navigateTo(section, highlightId) {
   }
 }
 
+function resolveDashboardSearchSection(query) {
+  const value = String(query || '').toLowerCase();
+  if (!value) return 'dashboard';
+
+  const matches = [
+    { terms: ['onboard', 'onboarding', 'cadastro', 'formulario inicial'], section: 'onboarding' },
+    { terms: ['plan', 'business', 'bp'], section: 'plan' },
+    { terms: ['tarefa', 'tarefas', 'atividade', 'pendencia'], section: 'tasks' },
+    { terms: ['mensagem', 'mensagens', 'chat', 'conversa'], section: 'messages' },
+    { terms: ['chamado', 'chamados', 'suporte', 'atendimento'], section: 'support' },
+    { terms: ['agenda', 'consultoria', 'horario'], section: 'agenda' },
+    { terms: ['financeiro', 'fatura', 'faturas', 'invoice', 'cobranca'], section: 'financeiro' },
+    { terms: ['documento', 'documentos', 'arquivo', 'pdf'], section: 'documentos' },
+    { terms: ['formulario', 'formularios', 'pesquisa', 'avaliacao'], section: 'formularios' },
+    { terms: ['jornada', 'jornadas', 'trilha'], section: 'jornadas' },
+    { terms: ['equipe', 'membro', 'membros'], section: 'equipe' },
+    { terms: ['marketplace', 'servico', 'servicos'], section: 'marketplace' }
+  ];
+
+  const found = matches.find((item) => item.terms.some((term) => value.includes(term)));
+  return found ? found.section : 'dashboard';
+}
+
+window.handleGlobalShellSearch = function handleGlobalShellSearch(payload) {
+  const query = String(payload?.query || '').trim();
+  const nextUrl = payload?.nextUrl || (window.REPortalHeader?.buildSearchUrl
+    ? window.REPortalHeader.buildSearchUrl('/dashboard', 'q', query)
+    : '/dashboard');
+  const nextSection = resolveDashboardSearchSection(query);
+  if (history.replaceState) history.replaceState(null, '', nextUrl);
+  showSection(nextSection, null);
+  return true;
+};
+
+document.addEventListener('DOMContentLoaded', function () {
+  const query = new URLSearchParams(window.location.search).get('q') || '';
+  if (query) window.handleGlobalShellSearch({ query: query });
+});
+
 // ── Progress ring ─────────────────────────────────────────────────────────────
 function setRing(pct) {
   const circumference = 238.76;

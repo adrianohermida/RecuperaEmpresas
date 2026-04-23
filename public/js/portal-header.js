@@ -34,7 +34,7 @@
         dropdownId: 'adminNotifDropdown',
         listId: 'adminNotifList',
         title: 'Notificações',
-        markAllLabel: 'Marcar todas lidas',
+        markAllLabel: 'Marcar todas como lidas',
         toggleAction: 'toggleAdminNotifDropdown()',
         markAllAction: 'adminMarkAllNotifRead()'
       };
@@ -47,12 +47,31 @@
         dropdownId: 'notifDropdown',
         listId: 'notifList',
         title: 'Notificações',
-        markAllLabel: 'Marcar todas lidas',
+        markAllLabel: 'Marcar todas como lidas',
         toggleAction: 'toggleNotifDropdown()',
         markAllAction: 'markAllNotifRead()'
       };
     }
     return null;
+  }
+
+  function buildSearchTemplate(props) {
+    if (!props.enableSearch) return '';
+    return [
+      '<form class="header-center-search" data-shell-search-form',
+      ' action="' + escapeHtml(props.searchAction) + '"',
+      ' data-search-param="' + escapeHtml(props.searchParam) + '"',
+      ' data-search-sync-target="' + escapeHtml(props.searchSyncTarget) + '"',
+      ' onsubmit="return window.REPortalHeader.submitSearch(event)">',
+      '  <label class="search-wrap" aria-label="' + escapeHtml(props.searchAriaLabel) + '">',
+      '    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">',
+      '      <circle cx="11" cy="11" r="8"></circle>',
+      '      <line x1="21" y1="21" x2="16.65" y2="16.65"></line>',
+      '    </svg>',
+      '    <input class="search-input" type="search" name="' + escapeHtml(props.searchParam) + '" value="' + escapeHtml(props.searchValue) + '" placeholder="' + escapeHtml(props.searchPlaceholder) + '" autocomplete="off"/>',
+      '  </label>',
+      '</form>'
+    ].join('');
   }
 
   function HeaderLeft(props) {
@@ -79,7 +98,9 @@
   }
 
   function HeaderCenter(props) {
-    if (props.centerTemplateHtml) {
+    var desktopContent = props.centerTemplateHtml || buildSearchTemplate(props);
+
+    if (desktopContent) {
       return [
         '<div class="header-center header-center-template">',
         props.pageTitle || props.mobileTitle
@@ -91,7 +112,7 @@
             + '  </div>'
           : '',
         '  <div class="header-center-desktop">',
-        props.centerTemplateHtml,
+        desktopContent,
         '  </div>',
         '</div>'
       ].join('');
@@ -149,13 +170,13 @@
       '    <a href="' + escapeHtml(props.profileHref) + '" class="user-dropup-item" role="menuitem">',
       '      <span class="user-dropup-item-copy">',
       '        <span class="user-dropup-item-label">Perfil</span>',
-      '        <span class="user-dropup-item-meta">Identidade, avatar e dados públicos</span>',
+      '        <span class="user-dropup-item-meta">Avatar, dados públicos e apresentação profissional</span>',
       '      </span>',
       '    </a>',
       '    <a href="' + escapeHtml(props.settingsHref) + '" class="user-dropup-item" role="menuitem">',
       '      <span class="user-dropup-item-copy">',
       '        <span class="user-dropup-item-label">Configurações</span>',
-      '        <span class="user-dropup-item-meta">Preferências e segurança da conta</span>',
+      '        <span class="user-dropup-item-meta">Preferências da conta, segurança e acesso</span>',
       '      </span>',
       '    </a>',
       '    <hr class="user-dropup-divider"/>',
@@ -202,8 +223,26 @@
     ].join('');
   }
 
+  function inferView(root) {
+    if (root.dataset.view) return root.dataset.view;
+    var homeHref = root.dataset.homeHref || '';
+    if (homeHref.indexOf('/admin') === 0 || homeHref.indexOf('/suporte-admin') === 0 || homeHref.indexOf('/tarefas-admin') === 0 || homeHref.indexOf('/documentos-admin') === 0) {
+      return 'admin';
+    }
+    return 'client';
+  }
+
   function getProps(root) {
+    var view = inferView(root);
+    var searchParam = root.dataset.searchParam || 'q';
+    var searchValue = '';
+
+    try {
+      searchValue = new URLSearchParams(window.location.search).get(searchParam) || '';
+    } catch (_error) {}
+
     return {
+      view: view,
       showMenu: root.dataset.showMenu !== 'false',
       homeHref: root.dataset.homeHref || '/',
       logoLabel: root.dataset.logoLabel || 'Página inicial',
@@ -217,7 +256,16 @@
       profileHref: root.dataset.profileHref || '/perfil',
       settingsHref: root.dataset.settingsHref || '/configuracoes',
       accountKicker: root.dataset.accountKicker || 'Minha conta',
-      centerTemplateHtml: readTemplateHtml(root.dataset.centerTemplate || '')
+      centerTemplateHtml: readTemplateHtml(root.dataset.centerTemplate || ''),
+      enableSearch: root.dataset.enableSearch === 'true',
+      searchAction: root.dataset.searchAction || window.location.pathname,
+      searchParam: searchParam,
+      searchSyncTarget: root.dataset.searchSyncTarget || '',
+      searchPlaceholder: root.dataset.searchPlaceholder || (view === 'admin'
+        ? 'Buscar cliente, empresa ou e-mail'
+        : 'Buscar módulo, tarefa ou documento'),
+      searchAriaLabel: root.dataset.searchAriaLabel || 'Busca global',
+      searchValue: searchValue
     };
   }
 
@@ -245,6 +293,59 @@
     setDefaultUserDropupState(!isOpen, { focusFirst: !isOpen });
   }
 
+  function applySearchToTarget(targetId, query) {
+    if (!targetId) return false;
+    var target = document.getElementById(targetId);
+    if (!target) return false;
+    target.value = query;
+    target.dispatchEvent(new Event('input', { bubbles: true }));
+    target.dispatchEvent(new Event('change', { bubbles: true }));
+    target.focus();
+    return true;
+  }
+
+  function buildSearchUrl(action, param, query) {
+    var url = new URL(action || window.location.pathname, window.location.origin);
+    if (query) url.searchParams.set(param || 'q', query);
+    else url.searchParams.delete(param || 'q');
+    return url.pathname + url.search + url.hash;
+  }
+
+  function submitSearch(event) {
+    event?.preventDefault?.();
+    var form = event?.target?.closest?.('[data-shell-search-form]') || event?.target;
+    if (!form) return false;
+
+    var input = form.querySelector('input[type="search"], input[name]');
+    var query = String(input?.value || '').trim();
+    var action = form.getAttribute('action') || window.location.pathname;
+    var param = form.dataset.searchParam || 'q';
+    var syncTarget = form.dataset.searchSyncTarget || '';
+    var nextUrl = buildSearchUrl(action, param, query);
+
+    if (typeof window.handleGlobalShellSearch === 'function') {
+      var handled = window.handleGlobalShellSearch({
+        query: query,
+        action: action,
+        param: param,
+        targetId: syncTarget,
+        nextUrl: nextUrl,
+        form: form
+      });
+      if (handled === true) {
+        return false;
+      }
+    }
+
+    if (syncTarget && applySearchToTarget(syncTarget, query)) {
+      if (history.replaceState) history.replaceState(null, '', nextUrl);
+      return false;
+    }
+
+    window.location.href = nextUrl;
+    return false;
+  }
+
   function bindDefaultUserMenu() {
     if (window.__rePortalHeaderUserMenuBound) return;
     window.__rePortalHeaderUserMenuBound = true;
@@ -256,8 +357,8 @@
       window.toggleUserDropup = toggleDefaultUserDropup;
     }
 
-    // Apenas registra event listeners se admin-shell-core.js não foi carregado.
     var hasAdminShellCore = typeof window.__reAdminShellCoreBound !== 'undefined'
+      || document.querySelector('[data-admin-shell-core]')
       || document.querySelector('[data-shell-header]');
 
     if (!hasAdminShellCore) {
@@ -295,7 +396,9 @@
 
   window.REPortalHeader = {
     init: init,
-    render: render
+    render: render,
+    submitSearch: submitSearch,
+    buildSearchUrl: buildSearchUrl
   };
 
   if (document.readyState === 'loading') {
