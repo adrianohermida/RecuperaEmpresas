@@ -1,0 +1,853 @@
+/**
+ * clients-module.css
+ * Redesign UX Mobile-First — Módulo de Clientes (Admin)
+ * Substitui e sobrescreve os estilos legados do portal.css para sec-clients
+ *
+ * Breakpoints:
+ *   Mobile:  < 480px
+ *   Tablet:  480px – 768px
+ *   Desktop: > 768px
+ */
+
+/* ─── 1. Seção Principal ────────────────────────────────────────────────────── */
+#sec-clients {
+  container-type: inline-size;
+  container-name: clients-section;
+}
+
+/* ─── 2. Header da Seção — Mobile First ────────────────────────────────────── */
+.clients-header {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.clients-header-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.clients-header-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--dark);
+  line-height: 1.2;
+}
+
+.clients-header-sub {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-top: 3px;
+}
+
+.clients-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* Barra de busca integrada no header */
+.clients-search-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.clients-search-input-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.clients-search-input-wrap svg {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  pointer-events: none;
+  flex-shrink: 0;
+}
+
+.clients-search-input {
+  width: 100%;
+  height: 42px;
+  padding: 0 12px 0 38px;
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  font-size: 14px;
+  color: var(--dark);
+  background: var(--card);
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+  outline: none;
+  -webkit-appearance: none;
+}
+
+.clients-search-input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(26, 86, 219, 0.12);
+}
+
+.clients-search-input::placeholder {
+  color: #94a3b8;
+}
+
+/* Botão Novo Cliente */
+.clients-btn-new {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 42px;
+  padding: 0 16px;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.18s ease, transform 0.12s ease, box-shadow 0.18s ease;
+  flex-shrink: 0;
+}
+
+.clients-btn-new:hover {
+  background: var(--primary-dark);
+  box-shadow: 0 4px 14px rgba(26, 86, 219, 0.28);
+  transform: translateY(-1px);
+}
+
+.clients-btn-new:active {
+  transform: translateY(0);
+}
+
+/* Esconde o texto "Novo Cliente" em telas muito pequenas */
+@media (max-width: 360px) {
+  .clients-btn-new .clients-btn-label {
+    display: none;
+  }
+  .clients-btn-new {
+    padding: 0 12px;
+  }
+}
+
+/* ─── 3. Cards de Estatísticas — Mobile First ───────────────────────────────── */
+.clients-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+@media (min-width: 640px) {
+  .clients-stats-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+  }
+}
+
+.clients-stat-card {
+  background: var(--card);
+  border: 1px solid rgba(203, 213, 225, 0.6);
+  border-radius: 14px;
+  padding: 14px 16px;
+  box-shadow: var(--shadow);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: box-shadow 0.18s ease, transform 0.18s ease;
+}
+
+.clients-stat-card:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+
+.clients-stat-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.clients-stat-icon.blue  { background: var(--primary-light); }
+.clients-stat-icon.green { background: var(--success-light); }
+.clients-stat-icon.amber { background: var(--warning-light); }
+.clients-stat-icon.red   { background: var(--error-light); }
+
+.clients-stat-icon.blue  svg { stroke: var(--primary); }
+.clients-stat-icon.green svg { stroke: var(--success); }
+.clients-stat-icon.amber svg { stroke: var(--warning); }
+.clients-stat-icon.red   svg { stroke: var(--error); }
+
+.clients-stat-body {
+  min-width: 0;
+}
+
+.clients-stat-value {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--dark);
+  line-height: 1;
+}
+
+.clients-stat-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (min-width: 640px) {
+  .clients-stat-value {
+    font-size: 26px;
+  }
+  .clients-stat-label {
+    font-size: 12px;
+  }
+}
+
+/* ─── 4. Toolbar de Ações em Lote — Mobile First ───────────────────────────── */
+.clients-bulk-toolbar {
+  display: none; /* Oculto por padrão, exibido via JS quando há seleção */
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding: 14px 16px;
+  border: 1.5px solid rgba(37, 99, 235, 0.22);
+  border-radius: 14px;
+  background: linear-gradient(180deg, #f8fbff 0%, #eef5ff 100%);
+  box-shadow: 0 4px 18px rgba(37, 99, 235, 0.08);
+}
+
+.clients-bulk-toolbar.has-selection {
+  display: flex;
+}
+
+.clients-bulk-toolbar-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.clients-bulk-toolbar-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--dark);
+}
+
+.clients-bulk-toolbar-sub {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.clients-bulk-toolbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.clients-bulk-toolbar-actions .btn {
+  font-size: 12px;
+  padding: 6px 10px;
+  height: 34px;
+  border-radius: 10px;
+}
+
+@media (min-width: 640px) {
+  .clients-bulk-toolbar {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .clients-bulk-toolbar-info {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+  }
+}
+
+/* ─── 5. Tabela de Clientes — Mobile-First com Cards ───────────────────────── */
+.clients-table-card {
+  background: var(--card);
+  border: 1px solid rgba(203, 213, 225, 0.6);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+/* Modo card (mobile < 768px) */
+.clients-card-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.clients-card-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(203, 213, 225, 0.4);
+  cursor: pointer;
+  transition: background 0.15s ease;
+  text-decoration: none;
+  color: inherit;
+}
+
+.clients-card-item:last-child {
+  border-bottom: none;
+}
+
+.clients-card-item:hover {
+  background: rgba(26, 86, 219, 0.03);
+}
+
+.clients-card-item:active {
+  background: rgba(26, 86, 219, 0.06);
+}
+
+.clients-card-check {
+  padding-top: 2px;
+  flex-shrink: 0;
+}
+
+.clients-card-check input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--primary);
+}
+
+.clients-card-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--primary-light);
+  color: var(--primary);
+  font-size: 15px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  text-transform: uppercase;
+}
+
+.clients-card-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.clients-card-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--dark);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.clients-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+  align-items: center;
+}
+
+.clients-card-meta-item {
+  font-size: 11px;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.clients-card-progress-wrap {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.clients-card-progress-bar {
+  flex: 1;
+  height: 4px;
+  background: rgba(203, 213, 225, 0.5);
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.clients-card-progress-fill {
+  height: 100%;
+  background: var(--primary);
+  border-radius: 99px;
+  transition: width 0.4s ease;
+}
+
+.clients-card-progress-pct {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.clients-card-foot {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  flex-direction: column;
+}
+
+/* Modo tabela (desktop >= 768px) */
+@media (min-width: 768px) {
+  .clients-card-list {
+    display: none;
+  }
+
+  .clients-table-wrap {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .clients-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+
+  .clients-table th {
+    padding: 12px 14px;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    background: rgba(241, 245, 249, 0.7);
+    border-bottom: 1px solid rgba(203, 213, 225, 0.5);
+    white-space: nowrap;
+    position: sticky;
+    top: 0;
+  }
+
+  .clients-table td {
+    padding: 12px 14px;
+    border-bottom: 1px solid rgba(203, 213, 225, 0.35);
+    vertical-align: middle;
+    color: var(--text);
+  }
+
+  .clients-table tr:last-child td {
+    border-bottom: none;
+  }
+
+  .clients-table tr:hover td {
+    background: rgba(26, 86, 219, 0.025);
+  }
+
+  .clients-table tr.is-selected td {
+    background: rgba(26, 86, 219, 0.05);
+  }
+
+  .clients-table .col-check {
+    width: 44px;
+    text-align: center;
+  }
+
+  .clients-table .col-actions {
+    width: 180px;
+    text-align: right;
+  }
+
+  .clients-table .col-progress {
+    min-width: 140px;
+  }
+
+  .clients-table .col-status {
+    min-width: 110px;
+  }
+
+  .clients-table .col-activity {
+    min-width: 130px;
+    color: var(--text-muted);
+    font-size: 12px;
+  }
+
+  /* Ocultar colunas menos importantes em telas médias */
+  @media (max-width: 1024px) {
+    .clients-table .col-msgs,
+    .clients-table .col-tasks {
+      display: none;
+    }
+  }
+}
+
+/* Ocultar tabela em mobile */
+@media (max-width: 767px) {
+  .clients-table-wrap {
+    display: none;
+  }
+  .clients-card-list {
+    display: flex;
+  }
+}
+
+/* ─── 6. Nome do cliente com avatar inline ──────────────────────────────────── */
+.clients-name-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.clients-name-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--primary-light);
+  color: var(--primary);
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  text-transform: uppercase;
+}
+
+.clients-name-text {
+  font-weight: 600;
+  color: var(--dark);
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+}
+
+.clients-name-email {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+}
+
+/* ─── 7. Badges de Status ───────────────────────────────────────────────────── */
+.clients-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.clients-badge::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.clients-badge.status-em_andamento {
+  background: rgba(26, 86, 219, 0.1);
+  color: var(--primary);
+}
+.clients-badge.status-em_andamento::before { background: var(--primary); }
+
+.clients-badge.status-concluido {
+  background: rgba(5, 150, 105, 0.1);
+  color: var(--success);
+}
+.clients-badge.status-concluido::before { background: var(--success); }
+
+.clients-badge.status-nao_iniciado {
+  background: rgba(203, 213, 225, 0.4);
+  color: var(--text-muted);
+}
+.clients-badge.status-nao_iniciado::before { background: #94a3b8; }
+
+.clients-badge.status-arquivado {
+  background: rgba(217, 119, 6, 0.1);
+  color: var(--warning);
+}
+.clients-badge.status-arquivado::before { background: var(--warning); }
+
+/* ─── 8. Barra de Progresso na Tabela ──────────────────────────────────────── */
+.clients-progress-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.clients-progress-bar {
+  flex: 1;
+  height: 5px;
+  background: rgba(203, 213, 225, 0.5);
+  border-radius: 99px;
+  overflow: hidden;
+  min-width: 60px;
+}
+
+.clients-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary) 0%, #3b82f6 100%);
+  border-radius: 99px;
+  transition: width 0.4s ease;
+}
+
+.clients-progress-pct {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  white-space: nowrap;
+  min-width: 30px;
+  text-align: right;
+}
+
+/* ─── 9. Ações da Linha ─────────────────────────────────────────────────────── */
+.clients-row-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
+.clients-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1.5px solid rgba(203, 213, 225, 0.5);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.clients-action-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: var(--primary-light);
+}
+
+.clients-action-btn.danger:hover {
+  border-color: var(--error);
+  color: var(--error);
+  background: var(--error-light);
+}
+
+/* ─── 10. Paginação — Mobile First ─────────────────────────────────────────── */
+.clients-pagination {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px;
+  border-top: 1px solid rgba(203, 213, 225, 0.4);
+  align-items: center;
+}
+
+.clients-pagination-info {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.clients-pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.clients-pagination-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  padding: 0 14px;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  background: var(--card);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.clients-pagination-btn:hover:not(:disabled) {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: var(--primary-light);
+}
+
+.clients-pagination-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.clients-page-indicator {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.clients-page-size-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.clients-page-size-label {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.clients-page-size-select {
+  height: 34px;
+  padding: 0 8px;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--dark);
+  background: var(--card);
+  cursor: pointer;
+  outline: none;
+}
+
+@media (min-width: 640px) {
+  .clients-pagination {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .clients-pagination-info {
+    text-align: left;
+  }
+  .clients-pagination-controls {
+    justify-content: flex-end;
+  }
+}
+
+/* ─── 11. Empty State ───────────────────────────────────────────────────────── */
+.clients-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  text-align: center;
+  gap: 12px;
+}
+
+.clients-empty-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  background: var(--primary-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--primary);
+}
+
+.clients-empty-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--dark);
+}
+
+.clients-empty-sub {
+  font-size: 13px;
+  color: var(--text-muted);
+  max-width: 280px;
+  line-height: 1.5;
+}
+
+/* ─── 12. Sobrescrever estilos legados ──────────────────────────────────────── */
+
+/* Remove o grid de módulos de contexto (Chamados, Mensagens, Tarefas, Documentos) */
+.admin-clients-module-grid {
+  display: none !important;
+}
+
+/* Remove o botão de Filtros legado */
+.admin-clients-filter-btn {
+  display: none !important;
+}
+
+/* Limpa o section-header legado dentro de sec-clients */
+#sec-clients .section-header {
+  display: none !important;
+}
+
+/* Limpa o stats-grid legado dentro de sec-clients */
+#sec-clients .stats-grid {
+  display: none !important;
+}
+
+/* Limpa o admin-bulk-toolbar legado dentro de sec-clients */
+#sec-clients .admin-bulk-toolbar {
+  display: none !important;
+}
+
+/* Limpa o portal-card legado dentro de sec-clients */
+#sec-clients > .portal-card {
+  display: none !important;
+}
+
+/* ─── 13. Animações ─────────────────────────────────────────────────────────── */
+@keyframes clients-fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.clients-module-shell {
+  animation: clients-fade-in 0.25s ease both;
+}
+
+/* ─── 14. Acessibilidade ────────────────────────────────────────────────────── */
+.clients-search-input:focus-visible,
+.clients-btn-new:focus-visible,
+.clients-pagination-btn:focus-visible,
+.clients-action-btn:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* ─── 15. Print ─────────────────────────────────────────────────────────────── */
+@media print {
+  .clients-header-actions,
+  .clients-bulk-toolbar,
+  .clients-pagination,
+  .clients-card-foot,
+  .clients-row-actions {
+    display: none !important;
+  }
+}
