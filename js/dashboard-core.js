@@ -49,6 +49,7 @@ function showSection(name, clickedEl) {
   if (name === 'jornadas')    loadClientJourneys();
   if (name === 'notas-fiscais') {
     if (typeof initFiscalNotes === 'function') {
+      if (!window._fnInitialized) { window._fnInitialized = true; initFiscalNotes(); }
       else { if (typeof loadFiscalNotes === 'function') loadFiscalNotes(); if (typeof loadFiscalStats === 'function') loadFiscalStats(); }
     }
   }

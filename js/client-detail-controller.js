@@ -304,6 +304,13 @@
     if (tab === 'data') {
       window.REClientDetailDataTab.render({ body: body, user: user, onboarding: onboarding });
     }
+    if (tab === 'notas-fiscais-cliente') {
+      if (typeof window.REAdminFiscalNotes?.renderClientTab === 'function') {
+        window.REAdminFiscalNotes.renderClientTab({ body: body, clientId: detailState.currentClientId, user: user });
+      } else {
+        body.innerHTML = '<div class="acdd-empty-copy" style="padding:2rem">Módulo de Notas Fiscais carregando...</div>';
+      }
+    }
   }
 
   async function initClientPage() {

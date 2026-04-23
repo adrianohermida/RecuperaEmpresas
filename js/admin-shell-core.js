@@ -166,6 +166,12 @@ function showSection(name, el) {
       initBusinessPlanModule();
     }
   }
+  if (name === 'notasFiscais') {
+    if (typeof initAdminFiscalNotes === 'function') {
+      if (!window._adminFnInitialized) { window._adminFnInitialized = true; initAdminFiscalNotes(); }
+      else { if (typeof loadAdminFiscalNotes === 'function') loadAdminFiscalNotes(); }
+    }
+  }
   var href = name === 'clients' ? '/admin' : '/admin?section=' + encodeURIComponent(name);
   if (history.replaceState) history.replaceState(null, '', href);
   window.REShared?.syncSidebarActive?.(href);
@@ -632,7 +638,7 @@ window.consumeAdminFlashToast = consumeAdminFlashToast;
 console.info('[RE:admin-shell-core] loaded');
 
 (function initAdminSectionRouting() {
-  var validSections = ['clients', 'agenda', 'financeiro', 'formularios', 'jornadas', 'logs', 'adminInvoices', 'adminMarketplace', 'auditlog', 'businessPlan'];
+  var validSections = ['clients', 'agenda', 'financeiro', 'formularios', 'jornadas', 'logs', 'adminInvoices', 'adminMarketplace', 'auditlog', 'businessPlan', 'notasFiscais'];
 
   function applyRequestedSection() {
     var params = new URLSearchParams(window.location.search);
