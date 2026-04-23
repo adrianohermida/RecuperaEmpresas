@@ -34,9 +34,9 @@
   }
 
   function applyAvatarToUI(src) {
-    const avatarEl = document.getElementById('userAvatar');
-    const displayEl = document.getElementById('profileAvatarDisplay');
-    const fallback = getUserInitial(currentUser);
+    var avatarEl = document.getElementById('userAvatar');
+    var displayEl = document.getElementById('profileAvatarDisplay');
+    var fallback = getUserInitial(currentUser);
 
     window.REAccountData.renderAvatar(avatarEl, src, fallback);
     window.REAccountData.renderAvatar(displayEl, src, fallback);
@@ -44,8 +44,8 @@
   }
 
   function syncHeader() {
-    const displayName = getDisplayName(currentUser);
-    const avatarSrc = pendingAvatarDataUrl || currentProfile?.avatar_data_url || '';
+    var displayName = getDisplayName(currentUser);
+    var avatarSrc = pendingAvatarDataUrl || currentProfile?.avatar_data_url || '';
 
     document.getElementById('userName').textContent = displayName;
     document.getElementById('dropupUserName').textContent = displayName;
@@ -62,11 +62,11 @@
   }
 
   function renderTenantSummary() {
-    const container = document.getElementById('tenantSummaryPanel');
+    var container = document.getElementById('tenantSummaryPanel');
     if (!container) return;
-    const tenantId = currentUser?.company_id || currentUser?.id || '';
-    const memberCount = Array.isArray(tenantMembers) ? tenantMembers.length : 0;
-    const tenantLinks = currentProfile?.tenant_links || [];
+    var tenantId = currentUser?.company_id || currentUser?.id || '';
+    var memberCount = Array.isArray(tenantMembers) ? tenantMembers.length : 0;
+    var tenantLinks = currentProfile?.tenant_links || [];
     document.getElementById('profileTenantCount').textContent = String(Math.max(tenantLinks.length || 0, tenantId ? 1 : 0));
 
     if (currentUser?.isAdmin) {
@@ -74,7 +74,7 @@
       return;
     }
 
-    const cards = [
+    var cards = [
       '<div class="account-note-card">',
       '  <div class="account-note-title">Tenant principal</div>',
       '  <div class="account-note-line"><strong>ID:</strong> ' + (tenantId || 'não disponível') + '</div>',
@@ -95,8 +95,8 @@
   }
 
   function renderMetrics() {
-    const competencies = currentProfile?.competencies || [];
-    const score = [currentProfile?.bio, currentProfile?.qualifications, currentProfile?.signature_html, competencies.length]
+    var competencies = currentProfile?.competencies || [];
+    var score = [currentProfile?.bio, currentProfile?.qualifications, currentProfile?.signature_html, competencies.length]
       .filter(Boolean).length;
     document.getElementById('profileCompetencyCount').textContent = String(competencies.length);
     document.getElementById('profileCompletionLabel').textContent = score >= 4 ? 'Completo' : score >= 2 ? 'Em evolução' : 'Base';
@@ -122,7 +122,7 @@
   }
 
   window.handleAvatarUpload = async function (input) {
-    const file = input.files?.[0];
+    var file = input.files?.[0];
     if (!file) return;
     if (file.size > 2 * 1024 * 1024) {
       showToast('A foto deve ter no máximo 2 MB.', 'error');
@@ -148,17 +148,17 @@
 
   window.saveProfile = async function (event) {
     event.preventDefault();
-    const name = document.getElementById('profileName')?.value.trim();
+    var name = document.getElementById('profileName')?.value.trim();
     if (!name) {
       showToast('Informe seu nome.', 'error');
       return;
     }
 
-    const button = document.getElementById('saveProfileBtn');
+    var button = document.getElementById('saveProfileBtn');
     if (button) button.disabled = true;
 
     try {
-      const payload = {
+      var payload = {
         name: name,
         profile: {
           phone: document.getElementById('profilePhone')?.value.trim(),
@@ -169,15 +169,15 @@
             linkedin: document.getElementById('socialLinkedin')?.value.trim(),
             instagram: document.getElementById('socialInstagram')?.value.trim(),
             website: document.getElementById('socialWebsite')?.value.trim(),
-            whatsapp: document.getElementById('socialWhatsapp')?.value.trim(),
+            whatsapp: document.getElementById('socialWhatsapp')?.value.trim()
           },
           signature_html: document.getElementById('profileSignatureEditor')?.innerHTML || '',
           avatar_data_url: pendingAvatarDataUrl || currentProfile?.avatar_data_url || '',
-          tenant_links: currentProfile?.tenant_links || [],
-        },
+          tenant_links: currentProfile?.tenant_links || []
+        }
       };
 
-      const data = await window.REAccountData.saveProfileState(payload);
+      var data = await window.REAccountData.saveProfileState(payload);
       currentUser = Object.assign({}, currentUser || {}, data.user || {}, { name: name });
       currentProfile = data.profile || payload.profile;
       currentPreferences = data.preferences || currentPreferences;
@@ -194,9 +194,9 @@
 
   window.savePassword = async function (event) {
     event.preventDefault();
-    const current = document.getElementById('currentPassword')?.value;
-    const next = document.getElementById('newPassword')?.value;
-    const confirm = document.getElementById('confirmPassword')?.value;
+    var current = document.getElementById('currentPassword')?.value;
+    var next = document.getElementById('newPassword')?.value;
+    var confirm = document.getElementById('confirmPassword')?.value;
 
     if (!current || !next) {
       showToast('Preencha todos os campos.', 'error');
@@ -211,16 +211,16 @@
       return;
     }
 
-    const button = document.getElementById('savePasswordBtn');
+    var button = document.getElementById('savePasswordBtn');
     if (button) button.disabled = true;
 
     try {
-      const response = await fetch('/api/auth/change-password', {
+      var response = await fetch('/api/auth/change-password', {
         method: 'POST',
         headers: authH(),
-        body: JSON.stringify({ currentPassword: current, newPassword: next }),
+        body: JSON.stringify({ currentPassword: current, newPassword: next })
       });
-      const data = await response.json().catch(function () { return {}; });
+      var data = await response.json().catch(function () { return {}; });
       if (!response.ok) throw new Error(data.error || 'response not ok');
 
       document.getElementById('currentPassword').value = '';
@@ -235,7 +235,7 @@
   };
 
   async function initPerfil() {
-    const session = await window.REShared.verifySession({ timeoutMs: 55000 }).catch(function () {
+    var session = await window.REShared.verifySession({ timeoutMs: 55000 }).catch(function () {
       return { ok: false, status: 0 };
     });
 
@@ -246,10 +246,11 @@
 
     currentUser = session.user;
     window.REShared.applyPortalAccountShell(currentUser, { section: 'home' });
+    window.REShared.renderPortalSidebar({ containerId: 'portalSidebarNav', user: currentUser, activeHref: '/perfil' });
     window.REAccountData.ensureSignatureEditor('profileSignatureEditor', 'signatureToolbar');
 
     try {
-      const profileState = await window.REAccountData.fetchProfileState();
+      var profileState = await window.REAccountData.fetchProfileState();
       currentUser = Object.assign({}, currentUser || {}, profileState.user || {});
       currentProfile = profileState.profile || {};
       currentPreferences = profileState.preferences || {};
@@ -265,7 +266,6 @@
     }
 
     document.getElementById('profileCompetencies')?.addEventListener('input', renderCompetencyPreview);
-
     document.getElementById('authGuard')?.remove();
   }
 

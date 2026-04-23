@@ -16,7 +16,7 @@
   }
 
   function syncHeader() {
-    const displayName = currentUser?.name || currentUser?.company || currentUser?.email || 'Usuário';
+    var displayName = currentUser?.name || currentUser?.company || currentUser?.email || 'Usuário';
     document.getElementById('userName').textContent = displayName;
     document.getElementById('dropupUserName').textContent = displayName;
     document.getElementById('dropupUserEmail').textContent = currentUser?.email || 'Sem e-mail';
@@ -35,15 +35,15 @@
 
   function applyPrefsToUI(prefs) {
     ['notifMessages', 'notifNewClients', 'notifSteps', 'prefCompactTable', 'prefShowProgress', 'prefOpenKanbanByDefault', 'prefCollapseFiltersOnMobile'].forEach(function (id) {
-      const element = document.getElementById(id);
+      var element = document.getElementById(id);
       if (!element) return;
       element.checked = !!prefs[id];
     });
   }
 
   function renderMembers() {
-    const container = document.getElementById('tenantMembersList');
-    const openInviteButton = document.getElementById('openInviteMemberBtn');
+    var container = document.getElementById('tenantMembersList');
+    var openInviteButton = document.getElementById('openInviteMemberBtn');
     if (!container) return;
 
     document.getElementById('settingsMembersCount').textContent = String(tenantMembers.length || 0);
@@ -90,11 +90,11 @@
   }
 
   window.saveSetting = async function (key, value) {
-    const previous = Object.assign({}, currentPreferences);
+    var previous = Object.assign({}, currentPreferences);
     currentPreferences[key] = value;
     applyPrefsToUI(currentPreferences);
     try {
-      const data = await window.REAccountData.saveProfileState({ preferences: { [key]: value } });
+      var data = await window.REAccountData.saveProfileState({ preferences: { [key]: value } });
       currentPreferences = Object.assign({}, currentPreferences, data.preferences || {});
       showToast('Preferência salva.', 'success', 1500);
     } catch (error) {
@@ -110,14 +110,14 @@
       if (window.REShared?.logoutSession) {
         await window.REShared.logoutSession({ global: true });
       } else {
-        const response = await fetch('/api/auth/revoke-sessions', {
+        var response = await fetch('/api/auth/revoke-sessions', {
           method: 'POST',
-          headers: authH(),
+          headers: authH()
         });
         if (!response.ok) throw new Error('response not ok');
       }
       window.REShared.redirectToRoute('login');
-    } catch (error) {
+    } catch (_error) {
       showToast('Erro ao encerrar sessões.', 'error');
     }
   };
@@ -182,7 +182,7 @@
             name: form.querySelector('#memberNameInput').value.trim(),
             email: form.querySelector('#memberEmailInput').value.trim(),
             role: form.querySelector('#memberRoleInput').value,
-            password: password,
+            password: password
           });
           await reloadMembers();
           showToast('Membro convidado.', 'success');
@@ -208,7 +208,7 @@
           await window.REAccountData.updateCompanyMember(memberId, {
             name: form.querySelector('#memberNameInput').value.trim(),
             role: form.querySelector('#memberRoleInput').value,
-            active: form.querySelector('#memberActiveInput').value === 'true',
+            active: form.querySelector('#memberActiveInput').value === 'true'
           });
           await reloadMembers();
           showToast('Membro atualizado.', 'success');
@@ -257,7 +257,7 @@
   };
 
   async function initConfiguracoes() {
-    const session = await window.REShared.verifySession({ timeoutMs: 55000 }).catch(function () {
+    var session = await window.REShared.verifySession({ timeoutMs: 55000 }).catch(function () {
       return { ok: false, status: 0 };
     });
 
@@ -268,9 +268,10 @@
 
     currentUser = session.user;
     window.REShared.applyPortalAccountShell(currentUser, { section: 'home' });
+    window.REShared.renderPortalSidebar({ containerId: 'portalSidebarNav', user: currentUser, activeHref: '/configuracoes' });
 
     try {
-      const profileState = await window.REAccountData.fetchProfileState();
+      var profileState = await window.REAccountData.fetchProfileState();
       currentUser = Object.assign({}, currentUser || {}, profileState.user || {});
       currentProfile = profileState.profile || {};
       currentPreferences = profileState.preferences || {};
