@@ -11,7 +11,7 @@ import { handleDepartments } from './routes/departments.mjs';
 import { handleDocumentRequests } from './routes/document-requests.mjs';
 import { handleEmployees } from './routes/employees.mjs';
 import { handleMessages } from './routes/messages.mjs';
-import { handlePlan } from './routes/plan.mjs';
+import { handlePlan, handleAdminPlan } from './routes/plan.mjs';
 import { handleTasks } from './routes/tasks.mjs';
 import { handleNotifications } from './routes/notifications.mjs';
 import { handleRecuperaChat } from './routes/recuperachat.mjs';
@@ -101,7 +101,7 @@ async function routeAdmin(request, env, pathname, executionCtx) {
   params = match(pathname, /^\/api\/admin\/client\/(?<clientId>[^/]+)\/members$/);
   if (params) return handleAdminReadModels(request, { ...auth, env, executionCtx, params, scope: 'admin' });
 
-  params = match(pathname, /^\/api\/admin\/client\/(?<clientId>[^/]+)\/suppliers$/);
+  params = match(pathname, /^\/api\/admin\/client\/(?<clientId>[^/]+)\/suppliers(?:\/(?<supplierId>[^/]+))?$/);
   if (params) return handleAdminReadModels(request, { ...auth, env, executionCtx, params, scope: 'admin' });
 
   params = match(pathname, /^\/api\/admin\/client\/(?<clientId>[^/]+)\/financial$/);
@@ -135,6 +135,9 @@ async function routeAdmin(request, env, pathname, executionCtx) {
   if (params) return handleAdminReadModels(request, { ...auth, env, executionCtx, params, scope: 'admin' });
 
   params = match(pathname, /^\/api\/admin\/agenda\/camila-availability$/);
+  if (params) return handleAdminReadModels(request, { ...auth, env, executionCtx, params, scope: 'admin' });
+
+  params = match(pathname, /^\/api\/admin\/agenda\/book-for-client$/);
   if (params) return handleAdminReadModels(request, { ...auth, env, executionCtx, params, scope: 'admin' });
 
   params = match(pathname, /^\/api\/admin\/impersonate\/(?<clientId>[^/]+)$/);
@@ -179,11 +182,24 @@ async function routeAdmin(request, env, pathname, executionCtx) {
   params = match(pathname, /^\/api\/admin\/client\/(?<clientId>[^/]+)\/document-requests\/(?<reqId>[^/]+)$/);
   if (params) return handleDocumentRequests(request, { ...auth, env, executionCtx, params, scope: 'admin' });
 
+  params = match(pathname, /^\/api\/admin\/client\/(?<clientId>[^/]+)\/entity-documents\/(?<entityType>[^/]+)\/(?<entityId>[^/]+)$/);
+  if (params) return handleAdminReadModels(request, { ...auth, env, executionCtx, params, scope: 'admin' });
+
   params = match(pathname, /^\/api\/admin\/(?<resource>logs|stats)$/);
   if (params) return handleAdminSystem(request, { ...auth, env, executionCtx, params, scope: 'admin' });
 
   params = match(pathname, /^\/api\/admin\/(?<resource>freshchat)\/(?<action>identity)$/);
   if (params) return handleAdminSystem(request, { ...auth, env, executionCtx, params, scope: 'admin' });
+
+  // Business Plan Admin
+  params = match(pathname, /^\/api\/admin\/plan\/(?<clientId>[^/]+)$/);
+  if (params) return handleAdminPlan(request, { ...auth, env, executionCtx, params, scope: 'admin' });
+
+  params = match(pathname, /^\/api\/admin\/plan\/(?<clientId>[^/]+)\/chapter\/(?<chapterId>[^/]+)$/);
+  if (params) return handleAdminPlan(request, { ...auth, env, executionCtx, params, scope: 'admin' });
+
+  params = match(pathname, /^\/api\/admin\/plan\/(?<clientId>[^/]+)\/chapter\/(?<chapterId>[^/]+)\/(?<action>publish|comment|upload)$/);
+  if (params) return handleAdminPlan(request, { ...auth, env, executionCtx, params, scope: 'admin' });
 
   // RecuperaChat Admin — conversas, tickets e integração com IA
   params = match(pathname, /^\/api\/admin\/chat\/(?<resource>conversations|tickets)(?:\/(?<id>[^/]+)(?:\/(?<action>[^/]+))?)?$/);

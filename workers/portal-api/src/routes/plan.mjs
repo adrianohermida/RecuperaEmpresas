@@ -1,19 +1,5 @@
-import { json, readJson } from '../lib/http.mjs';
-
-// BP-WK-03: Fetch chapter titles from database instead of hardcoding
-async function getChapterTitles(sb) {
-  const { data, error } = await sb.from('re_plan_chapters')
-    .select('chapter_id, title')
-    .limit(8);
-  
-  if (error || !data) return null;
-  
-  const titleMap = {};
-  data.forEach(row => {
-    titleMap[row.chapter_id] = row.title;
-  });
-  return titleMap;
-}
+import { json, methodNotAllowed, notFound, readJson } from '../lib/http.mjs';
+import { auditLog, queueSideEffect } from '../lib/effects.mjs';
 
 // BP-WK-02: Check chapter permissions before returning content
 async function checkChapterPermission(sb, userId, chapterId, permissionType = 'view') {
@@ -43,6 +29,46 @@ async function getChapterComments(sb, userId, chapterId) {
   return data;
 }
 
+// BP-WK-03: Centralized chapter titles to avoid hardcoding inconsistencies
+const DEFAULT_PLAN_CHAPTERS = [
+  { id: 1, title: 'Sumário Executivo' },
+  { id: 2, title: 'Perfil da Empresa' },
+  { id: 3, title: 'Análise do Setor e Mercado' },
+  { id: 4, title: 'Diagnóstico Financeiro' },
+  { id: 5, title: 'Análise de Endividamento' },
+  { id: 6, title: 'Plano de Reestruturação Operacional' },
+  { id: 7, title: 'Plano Financeiro e Projeções' },
+  { id: 8, title: 'Cronograma e Gestão de Riscos' },
+];
+
+// Lê todos os capítulos de um cliente sem filtro de permissão (uso interno/admin)
+async function readPlanRaw(sb, userId) {
+  const { data: rows, error } = await sb.from('re_plan_chapters')
+    .select('*')
+    .eq('user_id', userId)
+    .order('chapter_id');
+
+  if (error || !rows || rows.length === 0) {
+    return { chapters: DEFAULT_PLAN_CHAPTERS.map(c => ({ ...c, status: 'pendente', visibility: 'private', comments: [], attachments: [] })) };
+  }
+
+  const chapters = [];
+  for (const row of rows) {
+    const comments = await getChapterComments(sb, userId, row.chapter_id);
+    chapters.push({
+      id: row.chapter_id,
+      title: row.title,
+      status: row.status,
+      visibility: row.visibility || 'private',
+      content: row.content || '',
+      comments,
+      attachments: row.attachments || [],
+      updatedAt: row.updated_at || null,
+    });
+  }
+  return { chapters };
+}
+
 async function readPlan(sb, userId) {
   const { data: rows, error } = await sb.from('re_plan_chapters')
     .select('*')
@@ -50,7 +76,7 @@ async function readPlan(sb, userId) {
     .order('chapter_id');
 
   if (error || !rows || rows.length === 0) {
-    return { chapters: [], error: 'Nenhum plano encontrado' };
+    return { chapters: [] };
   }
 
   // BP-WK-02: Filter chapters by visibility and permissions
@@ -118,10 +144,31 @@ export async function handlePlan(request, context) {
     }
   }
 
-  // Update chapter status if clientAction is provided
+  // BP-BE-01: Validate state transition for client actions
   if (clientAction) {
+    const validActions = ['aprovado', 'revisao_solicitada'];
+    if (!validActions.includes(clientAction)) {
+      return json({ error: 'Ação do cliente inválida.' }, { status: 400 });
+    }
+
+    if (chapter.status !== 'published') {
+      return json({ error: 'Apenas capítulos publicados podem ser aprovados ou revisados.' }, { status: 400 });
+    }
+
+    const newStatus = clientAction === 'aprovado' ? 'approved' : 'revision_requested';
+    const updatePayload = { 
+      status: newStatus, 
+      updated_at: new Date().toISOString() 
+    };
+
+    if (clientAction === 'aprovado') {
+      updatePayload.approved_at = new Date().toISOString();
+    } else {
+      updatePayload.revision_requested_at = new Date().toISOString();
+    }
+
     const { error: updateError } = await context.sb.from('re_plan_chapters')
-      .update({ client_action: clientAction, updated_at: new Date().toISOString() })
+      .update(updatePayload)
       .eq('user_id', context.user.id)
       .eq('chapter_id', chapterId);
     
@@ -131,4 +178,175 @@ export async function handlePlan(request, context) {
   }
 
   return json({ success: true });
+}
+
+// ─── Handler admin ────────────────────────────────────────────────────────────
+// Rotas cobertas:
+//   GET  /api/admin/plan/:clientId                                  → carregar plano completo
+//   PUT  /api/admin/plan/:clientId/chapter/:chapterId               → salvar conteúdo
+//   POST /api/admin/plan/:clientId/chapter/:chapterId/publish       → publicar capítulo
+//   POST /api/admin/plan/:clientId/chapter/:chapterId/comment       → comentário do consultor
+//   POST /api/admin/plan/:clientId/chapter/:chapterId/upload        → registrar anexo
+
+export async function handleAdminPlan(request, context) {
+  const { sb, user, params } = context;
+  const { clientId, chapterId, action } = params;
+
+  if (!clientId) return notFound();
+
+  // GET /api/admin/plan/:clientId
+  if (request.method === 'GET' && !chapterId) {
+    const plan = await readPlanRaw(sb, clientId);
+    return json(plan);
+  }
+
+  if (!chapterId) return notFound();
+
+  const chapterIdNum = Number(chapterId);
+
+  // PUT /api/admin/plan/:clientId/chapter/:chapterId — salvar conteúdo
+  if (request.method === 'PUT' && !action) {
+    const body = await readJson(request);
+    const { content } = body;
+
+    if (content === undefined) {
+      return json({ error: 'Campo "content" obrigatório.' }, { status: 400 });
+    }
+
+    const { error } = await sb.from('re_plan_chapters')
+      .update({ content, updated_at: new Date().toISOString() })
+      .eq('user_id', clientId)
+      .eq('chapter_id', chapterIdNum);
+
+    if (error) {
+      return json({ error: 'Erro ao salvar capítulo: ' + error.message }, { status: 500 });
+    }
+
+    // BP-BE-04: Audit log for chapter edit
+    queueSideEffect(context, () => auditLog(sb, {
+      actorId: user.id,
+      actorEmail: user.email,
+      actorRole: 'consultor',
+      entityType: 're_plan_chapters',
+      entityId: `${clientId}:${chapterIdNum}`,
+      action: 'edit',
+      notes: 'Capítulo editado pelo consultor no painel admin.'
+    }), 'audit-plan-edit');
+
+    return json({ success: true });
+  }
+
+  // POST /api/admin/plan/:clientId/chapter/:chapterId/publish
+  if (request.method === 'POST' && action === 'publish') {
+    const { error } = await sb.from('re_plan_chapters')
+      .update({ 
+        status: 'published', 
+        visibility: 'public', 
+        published_at: new Date().toISOString(),
+        updated_at: new Date().toISOString() 
+      })
+      .eq('user_id', clientId)
+      .eq('chapter_id', chapterIdNum);
+
+    if (error) {
+      return json({ error: 'Erro ao publicar capítulo: ' + error.message }, { status: 500 });
+    }
+
+    // BP-BE-04: Audit log for chapter publish
+    queueSideEffect(context, () => auditLog(sb, {
+      actorId: user.id,
+      actorEmail: user.email,
+      actorRole: 'consultor',
+      entityType: 're_plan_chapters',
+      entityId: `${clientId}:${chapterIdNum}`,
+      action: 'publish',
+      notes: 'Capítulo publicado para o cliente.'
+    }), 'audit-plan-publish');
+
+    return json({ success: true });
+  }
+
+  // POST /api/admin/plan/:clientId/chapter/:chapterId/comment
+  if (request.method === 'POST' && action === 'comment') {
+    const body = await readJson(request);
+    const text = String(body.text || '').trim();
+
+    if (!text) {
+      return json({ error: 'Texto do comentário não pode ser vazio.' }, { status: 400 });
+    }
+
+    const { error: commentError } = await sb.from('re_plan_comments').insert({
+      user_id: clientId,
+      chapter_id: chapterIdNum,
+      author_id: user.id,
+      author_name: user.name || user.email,
+      author_role: 'consultor',
+      content: text,
+      created_at: new Date().toISOString(),
+    });
+
+    if (commentError) {
+      return json({ error: 'Erro ao salvar comentário: ' + commentError.message }, { status: 500 });
+    }
+
+    return json({ success: true });
+  }
+
+  // POST /api/admin/plan/:clientId/chapter/:chapterId/upload
+  if (request.method === 'POST' && action === 'upload') {
+    let fileName = null;
+    let fileSize = 0;
+    let mimeType = null;
+
+    try {
+      const form = await request.formData();
+      const file = form.get('file');
+      if (file && typeof file !== 'string') {
+        fileName = file.name || 'arquivo';
+        fileSize = Number(file.size || 0);
+        mimeType = file.type || null;
+      }
+    } catch {
+      return json({ error: 'Erro ao processar o arquivo enviado.' }, { status: 400 });
+    }
+
+    if (!fileName) {
+      return json({ error: 'Nenhum arquivo enviado.' }, { status: 400 });
+    }
+
+    const { data: chapterRow, error: fetchError } = await sb.from('re_plan_chapters')
+      .select('attachments')
+      .eq('user_id', clientId)
+      .eq('chapter_id', chapterIdNum)
+      .single();
+
+    if (fetchError || !chapterRow) {
+      return json({ error: 'Capítulo não encontrado.' }, { status: 404 });
+    }
+
+    const attachments = Array.isArray(chapterRow.attachments) ? chapterRow.attachments : [];
+    const newAttachment = {
+      id: crypto.randomUUID(),
+      name: fileName,
+      size: fileSize,
+      mime_type: mimeType,
+      uploaded_at: new Date().toISOString(),
+      uploaded_by: user.id,
+      file_path: null,
+    };
+    attachments.push(newAttachment);
+
+    const { error: updateError } = await sb.from('re_plan_chapters')
+      .update({ attachments, updated_at: new Date().toISOString() })
+      .eq('user_id', clientId)
+      .eq('chapter_id', chapterIdNum);
+
+    if (updateError) {
+      return json({ error: 'Erro ao registrar anexo: ' + updateError.message }, { status: 500 });
+    }
+
+    return json({ success: true, attachment: newAttachment });
+  }
+
+  return notFound();
 }

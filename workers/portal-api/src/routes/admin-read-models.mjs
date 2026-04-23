@@ -413,24 +413,86 @@ async function handleClientMembers(request, context) {
 }
 
 async function handleClientSuppliers(request, context) {
-  if (request.method !== 'GET') return methodNotAllowed();
-  const [suppliers, contracts] = await Promise.all([
-    listSafe(
-      context.sb
-        .from('re_suppliers')
-        .select('*')
-        .eq('company_id', context.params.clientId)
-        .order('name', { ascending: true })
-    ),
-    listSafe(
-      context.sb
-        .from('re_supplier_contracts')
-        .select('*,re_suppliers(id,name)')
-        .eq('company_id', context.params.clientId)
-        .order('created_at', { ascending: false })
-    ),
-  ]);
-  return json({ suppliers, contracts });
+  const { clientId, supplierId } = context.params;
+
+  if (request.method === 'GET') {
+    const [suppliers, contracts] = await Promise.all([
+      listSafe(
+        context.sb
+          .from('re_suppliers')
+          .select('*')
+          .eq('company_id', clientId)
+          .order('name', { ascending: true })
+      ),
+      listSafe(
+        context.sb
+          .from('re_supplier_contracts')
+          .select('*,re_suppliers(id,name)')
+          .eq('company_id', clientId)
+          .order('created_at', { ascending: false })
+      ),
+    ]);
+    return json({ suppliers, contracts });
+  }
+
+  if (request.method === 'POST') {
+    const body = await readJson(request);
+    const { name, document, category, email, phone, status, notes } = body;
+    if (!name) return json({ error: 'Nome é obrigatório.' }, { status: 400 });
+
+    const supplier = await maybeSingle(
+      context.sb.from('re_suppliers').insert({
+        company_id: clientId,
+        name,
+        document,
+        category,
+        email,
+        phone,
+        status: status || 'active',
+        notes,
+        created_at: new Date().toISOString(),
+      }).select()
+    );
+
+    if (!supplier) return json({ error: 'Erro ao criar fornecedor.' }, { status: 500 });
+    return json({ success: true, supplier });
+  }
+
+  if (request.method === 'PUT') {
+    if (!supplierId) return notFound();
+    const body = await readJson(request);
+    const { name, document, category, email, phone, status, notes } = body;
+
+    const { error } = await context.sb.from('re_suppliers')
+      .update({
+        name,
+        document,
+        category,
+        email,
+        phone,
+        status,
+        notes,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', supplierId)
+      .eq('company_id', clientId);
+
+    if (error) return json({ error: 'Erro ao atualizar fornecedor.' }, { status: 500 });
+    return json({ success: true });
+  }
+
+  if (request.method === 'DELETE') {
+    if (!supplierId) return notFound();
+    const { error } = await context.sb.from('re_suppliers')
+      .delete()
+      .eq('id', supplierId)
+      .eq('company_id', clientId);
+
+    if (error) return json({ error: 'Erro ao excluir fornecedor.' }, { status: 500 });
+    return json({ success: true });
+  }
+
+  return methodNotAllowed();
 }
 
 async function handleClientFinancial(request, context) {
@@ -1685,6 +1747,136 @@ async function handleCamilaAvailability(request, context) {
   }
 }
 
+async function handleAdminBookForClient(request, context) {
+  if (request.method !== 'POST') return methodNotAllowed();
+  const body = await readJson(request);
+  const { slot_id, user_id, notes, external_contact } = body;
+
+  if (!slot_id) return json({ error: 'Slot ID é obrigatório.' }, { status: 400 });
+
+  const slot = await maybeSingle(
+    context.sb
+      .from('re_agenda_slots')
+      .select('id,starts_at,ends_at,title,credits_cost')
+      .eq('id', slot_id)
+  );
+  if (!slot) return json({ error: 'Horário não encontrado.' }, { status: 404 });
+
+  const bookingData = {
+    slot_id,
+    user_id: user_id || null,
+    notes: notes || null,
+    external_contact: external_contact || null,
+    status: 'confirmed',
+    confirmed_at: new Date().toISOString(),
+    credits_spent: slot.credits_cost || 0,
+  };
+
+  const booking = await maybeSingle(
+    context.sb.from('re_bookings').insert(bookingData).select()
+  );
+
+  if (!booking) {
+    return json({ error: 'Erro ao criar agendamento no banco de dados.' }, { status: 500 });
+  }
+
+  queueSideEffect(context, () => auditLog(context.sb, {
+    action: 'agenda:book_for_client',
+    entityType: 're_bookings',
+    entityId: booking.id,
+    notes: JSON.stringify({ slot_id, user_id, external_contact }),
+  }), 'audit-book-for-client');
+
+  if (user_id) {
+    queueSideEffect(context, () => pushNotification(
+      context.sb,
+      user_id,
+      'agenda',
+      'Novo agendamento confirmado',
+      `Um novo compromisso foi agendado para você: ${slot.title}`,
+      're_bookings',
+      booking.id
+    ), 'notify-book-for-client');
+  }
+
+  return json({ success: true, booking });
+}
+
+async function handleEntityDocuments(request, context) {
+  const { clientId, entityType, entityId } = context.params;
+  const ALLOWED_ENTITY_TYPES = ['employee', 'supplier', 'creditor', 'department', 'partner'];
+
+  if (!ALLOWED_ENTITY_TYPES.includes(entityType)) {
+    return json({ error: 'Tipo de entidade inválido.' }, { status: 400 });
+  }
+
+  if (request.method === 'GET') {
+    const documents = await listSafe(
+      context.sb
+        .from('re_entity_documents')
+        .select('*')
+        .eq('company_id', clientId)
+        .eq('entity_type', entityType)
+        .eq('entity_id', entityId)
+        .order('created_at', { ascending: false })
+    );
+    return json({ documents });
+  }
+
+  if (request.method === 'POST') {
+    let fileName = null;
+    let originalName = null;
+    let fileSize = 0;
+    let mimeType = null;
+    let name = null;
+    let docType = 'outros';
+    let description = null;
+
+    try {
+      const form = await request.formData();
+      const file = form.get('file');
+      name = String(form.get('name') || '').trim();
+      docType = String(form.get('doc_type') || 'outros').trim();
+      description = String(form.get('description') || '').trim() || null;
+
+      if (file && typeof file !== 'string') {
+        originalName = file.name || 'arquivo';
+        fileName = originalName; 
+        fileSize = Number(file.size || 0);
+        mimeType = file.type || null;
+      }
+    } catch (e) {
+      return json({ error: 'Erro ao processar o formulário: ' + e.message }, { status: 400 });
+    }
+
+    if (!fileName) return json({ error: 'Arquivo não enviado.' }, { status: 400 });
+
+    const docName = (name || originalName).slice(0, 120);
+
+    const document = await maybeSingle(
+      context.sb.from('re_entity_documents').insert({
+        company_id: clientId,
+        entity_type: entityType,
+        entity_id: entityId,
+        name: docName,
+        original_name: originalName,
+        file_path: null, 
+        file_size: fileSize,
+        mime_type: mimeType,
+        doc_type: docType,
+        description: description,
+        uploaded_by: context.user.id,
+        created_at: new Date().toISOString(),
+      }).select()
+    );
+
+    if (!document) return json({ error: 'Erro ao registrar documento.' }, { status: 500 });
+    return json({ success: true, document });
+  }
+
+  return methodNotAllowed();
+}
+
 async function handleAgendaSlots(request, context) {
   if (request.method !== 'GET') return methodNotAllowed();
   const url = new URL(request.url);
@@ -1760,6 +1952,8 @@ export async function handleAdminReadModels(request, context) {
   if (/^\/api\/admin\/journeys(?:\/.*)?$/.test(pathname)) return handleJourneys(request, context);
   if (pathname === '/api/admin/agenda/slots') return handleAgendaSlots(request, context);
   if (pathname === '/api/admin/agenda/camila-availability') return handleCamilaAvailability(request, context);
+  if (pathname === '/api/admin/agenda/book-for-client') return handleAdminBookForClient(request, context);
+  if (/^\/api\/admin\/client\/[^/]+\/entity-documents\/[^/]+\/[^/]+$/.test(pathname)) return handleEntityDocuments(request, context);
 
   return null;
 }
