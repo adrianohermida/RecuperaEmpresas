@@ -101,7 +101,7 @@ async function routeAdmin(request, env, pathname, executionCtx) {
   params = match(pathname, /^\/api\/admin\/client\/(?<clientId>[^/]+)\/members$/);
   if (params) return handleAdminReadModels(request, { ...auth, env, executionCtx, params, scope: 'admin' });
 
-  params = match(pathname, /^\/api\/admin\/client\/(?<clientId>[^/]+)\/suppliers$/);
+  params = match(pathname, /^\/api\/admin\/client\/(?<clientId>[^/]+)\/suppliers(?:\/(?<supplierId>[^/]+))?$/);
   if (params) return handleAdminReadModels(request, { ...auth, env, executionCtx, params, scope: 'admin' });
 
   params = match(pathname, /^\/api\/admin\/client\/(?<clientId>[^/]+)\/financial$/);
@@ -135,6 +135,9 @@ async function routeAdmin(request, env, pathname, executionCtx) {
   if (params) return handleAdminReadModels(request, { ...auth, env, executionCtx, params, scope: 'admin' });
 
   params = match(pathname, /^\/api\/admin\/agenda\/camila-availability$/);
+  if (params) return handleAdminReadModels(request, { ...auth, env, executionCtx, params, scope: 'admin' });
+
+  params = match(pathname, /^\/api\/admin\/agenda\/book-for-client$/);
   if (params) return handleAdminReadModels(request, { ...auth, env, executionCtx, params, scope: 'admin' });
 
   params = match(pathname, /^\/api\/admin\/impersonate\/(?<clientId>[^/]+)$/);
@@ -178,6 +181,9 @@ async function routeAdmin(request, env, pathname, executionCtx) {
 
   params = match(pathname, /^\/api\/admin\/client\/(?<clientId>[^/]+)\/document-requests\/(?<reqId>[^/]+)$/);
   if (params) return handleDocumentRequests(request, { ...auth, env, executionCtx, params, scope: 'admin' });
+
+  params = match(pathname, /^\/api\/admin\/client\/(?<clientId>[^/]+)\/entity-documents\/(?<entityType>[^/]+)\/(?<entityId>[^/]+)$/);
+  if (params) return handleAdminReadModels(request, { ...auth, env, executionCtx, params, scope: 'admin' });
 
   params = match(pathname, /^\/api\/admin\/(?<resource>logs|stats)$/);
   if (params) return handleAdminSystem(request, { ...auth, env, executionCtx, params, scope: 'admin' });
