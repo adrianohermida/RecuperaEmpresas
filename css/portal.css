@@ -7300,6 +7300,22 @@ body {
   gap: 10px;
 }
 
+.account-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin: 14px 0 16px;
+}
+
+.account-toolbar-search {
+  flex: 1 1 280px;
+}
+
+.account-toolbar-inline {
+  flex: 0 0 220px;
+}
+
 .account-help-item,
 .account-note-card,
 .account-empty-state {
@@ -7371,6 +7387,16 @@ body {
   color: #1d4ed8;
   font-size: 12px;
   font-weight: 600;
+}
+
+.account-chip-link {
+  text-decoration: none;
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+
+.account-chip-link:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px rgba(37, 99, 235, 0.16);
 }
 
 .account-content-stack {
@@ -7547,6 +7573,10 @@ body {
   gap: 8px;
 }
 
+.tenant-member-chip-row {
+  margin-top: 10px;
+}
+
 .btn-sm {
   padding: 7px 12px;
   font-size: 12px;
@@ -7695,7 +7725,9 @@ body.portal-ui-surface-open {
 
   .tenant-member-actions,
   .account-form-actions,
-  .account-section-actions {
+  .account-section-actions,
+  .account-toolbar-search,
+  .account-toolbar-inline {
     width: 100%;
     justify-content: stretch;
   }

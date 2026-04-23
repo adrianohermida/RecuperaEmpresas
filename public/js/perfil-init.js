@@ -61,6 +61,46 @@
     applyAvatarToUI(avatarSrc);
   }
 
+  function renderChannelPreview() {
+    var container = document.getElementById('profileChannelPreview');
+    if (!container) return;
+    var links = currentProfile?.social_links || {};
+    var items = [
+      links.linkedin ? { label: 'LinkedIn', href: links.linkedin } : null,
+      links.instagram ? { label: 'Instagram', href: links.instagram } : null,
+      links.website ? { label: 'Site', href: links.website } : null,
+      links.whatsapp ? { label: 'WhatsApp', href: 'https://wa.me/' + String(links.whatsapp).replace(/\D/g, '') } : null
+    ].filter(Boolean);
+    if (!items.length) {
+      container.innerHTML = '<span class="account-chip account-chip-muted">Nenhum canal público cadastrado</span>';
+      return;
+    }
+    container.innerHTML = items.map(function (item) {
+      return '<a class="account-chip account-chip-link" href="' + item.href + '" target="_blank" rel="noreferrer">' + item.label + '</a>';
+    }).join('');
+  }
+
+  function renderFocusLine() {
+    var line = document.getElementById('profileFocusLine');
+    if (!line) return;
+    var qualifications = currentProfile?.qualifications || '';
+    var bio = currentProfile?.bio || '';
+    var competencies = currentProfile?.competencies || [];
+    if (qualifications) {
+      line.textContent = qualifications;
+      return;
+    }
+    if (bio) {
+      line.textContent = bio.length > 140 ? bio.slice(0, 137) + '...' : bio;
+      return;
+    }
+    if (competencies.length) {
+      line.textContent = 'Especialidades em ' + competencies.slice(0, 4).join(', ') + '.';
+      return;
+    }
+    line.textContent = 'Adicione qualificações, bio e especialidades para reforçar sua presença no portal.';
+  }
+
   function renderTenantSummary() {
     var container = document.getElementById('tenantSummaryPanel');
     if (!container) return;
@@ -119,6 +159,8 @@
     renderMetrics();
     renderTenantSummary();
     renderCompetencyPreview();
+    renderChannelPreview();
+    renderFocusLine();
   }
 
   window.handleAvatarUpload = async function (input) {
@@ -265,7 +307,15 @@
       showToast('Não foi possível carregar o perfil completo.', 'error');
     }
 
-    document.getElementById('profileCompetencies')?.addEventListener('input', renderCompetencyPreview);
+    document.getElementById('profileCompetencies')?.addEventListener('input', function () {
+      renderCompetencyPreview();
+      renderFocusLine();
+    });
+    document.getElementById('profileQualifications')?.addEventListener('input', renderFocusLine);
+    document.getElementById('profileBio')?.addEventListener('input', renderFocusLine);
+    ['socialLinkedin', 'socialInstagram', 'socialWebsite', 'socialWhatsapp'].forEach(function (id) {
+      document.getElementById(id)?.addEventListener('input', renderChannelPreview);
+    });
     document.getElementById('authGuard')?.remove();
   }
 

@@ -6,11 +6,11 @@
   <meta name="robots" content="noindex, nofollow"/>
   <title>Configurações — Recupera Empresas</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
-  <link rel="stylesheet" href="/css/portal.css?v=20260423a"/>
+  <link rel="stylesheet" href="/css/portal.css?v=20260423c"/>
   <script src="/js/config.js?v=20260420a"></script>
   <script src="/js/runtime-diagnostics.js?v=20260421t"></script>
   <script src="/js/api-base.js?v=20260421t"></script>
-  <script src="/js/shared-utils.js?v=20260423a"></script>
+  <script src="/js/shared-utils.js?v=20260423c"></script>
   <script src="/js/portal-ui.js?v=20260423b"></script>
   <script src="/js/account-data.js?v=20260421h"></script>
   <script src="/js/portal-header.js?v=20260423a" defer></script>
@@ -84,6 +84,10 @@
           <div class="account-help-stack">
             <div class="account-help-item">As preferências abaixo persistem no backend e acompanham sua sessão em qualquer dispositivo.</div>
             <div class="account-help-item">A gestão da equipe respeita o papel do tenant: titular edita, membro visualiza.</div>
+          </div>
+          <div class="account-note-card">
+            <div class="account-note-title">Resumo operacional</div>
+            <div class="account-note-line" id="settingsSummaryLine">Carregando permissões e contexto do tenant...</div>
           </div>
         </aside>
 
@@ -181,6 +185,19 @@
             <div class="account-section-actions">
               <button class="btn btn-secondary" type="button" id="openInviteMemberBtn" onclick="openInviteMemberDrawer()">Adicionar membro</button>
             </div>
+            <div class="account-toolbar">
+              <div class="account-toolbar-search">
+                <input class="form-input" type="search" id="memberSearchInput" placeholder="Buscar por nome, e-mail ou função"/>
+              </div>
+              <div class="account-toolbar-inline">
+                <select class="form-input" id="memberStatusFilter">
+                  <option value="all">Todos os status</option>
+                  <option value="active">Ativos</option>
+                  <option value="inactive">Suspensos</option>
+                </select>
+              </div>
+            </div>
+            <div class="account-chip-list" id="memberStatusChips"></div>
             <div class="tenant-team-list" id="tenantMembersList"></div>
           </section>
 
@@ -206,6 +223,6 @@
 
 <script src="/js/admin-shell-core.js?v=20260421q"></script>
 <script src="/js/admin-notifications.js?v=20260421r"></script>
-<script src="/js/configuracoes-init.js?v=20260423a"></script>
+<script src="/js/configuracoes-init.js?v=20260423c"></script>
 </body>
 </html>
