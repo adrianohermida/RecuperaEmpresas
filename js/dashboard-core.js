@@ -47,6 +47,11 @@ function showSection(name, clickedEl) {
   if (name === 'marketplace') loadMarketplace();
   if (name === 'formularios') loadClientForms();
   if (name === 'jornadas')    loadClientJourneys();
+  if (name === 'notas-fiscais') {
+    if (typeof initFiscalNotes === 'function') {
+      else { if (typeof loadFiscalNotes === 'function') loadFiscalNotes(); if (typeof loadFiscalStats === 'function') loadFiscalStats(); }
+    }
+  }
   if (name === 'messages') { loadMessages(); startMsgPolling(); } else { stopMsgPolling(); }
   if (typeof closeSidebar === 'function') closeSidebar();
 }
