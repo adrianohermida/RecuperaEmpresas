@@ -6,45 +6,38 @@
   <meta name="robots" content="noindex, nofollow"/>
   <title>Suporte Admin — Recupera Empresas</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
-  <link rel="stylesheet" href="./css/portal.css?v=20260421v"/>
-  <link rel="stylesheet" href="./css/recuperachat.css?v=20260422a"/>
-  <script src="./js/config.js?v=20260420a"></script>
-  <script src="./js/runtime-diagnostics.js?v=20260421t"></script>
-  <script src="./js/api-base.js?v=20260421t"></script>
-  <script src="./js/shared-utils.js?v=20260421g"></script>
-  <script src="./js/account-data.js?v=20260421g"></script>
-  <script src="./js/portal-ui.js?v=20260421h"></script>
-  <script src="./js/portal-header.js?v=20260421r" defer></script>
+  <link rel="stylesheet" href="/css/portal.css?v=20260423b"/>
+  <link rel="stylesheet" href="/css/recuperachat.css?v=20260422a"/>
+  <script src="/js/config.js?v=20260420a"></script>
+  <script src="/js/runtime-diagnostics.js?v=20260421t"></script>
+  <script src="/js/api-base.js?v=20260421t"></script>
+  <script src="/js/shared-utils.js?v=20260423a"></script>
+  <script src="/js/account-data.js?v=20260421g"></script>
+  <script src="/js/portal-ui.js?v=20260421h"></script>
+  <script src="/js/portal-header.js?v=20260423a" defer></script>
 </head>
 <body data-admin-workspace="support">
 <div id="authGuard" class="auth-guard"><div class="auth-guard-content"><div class="auth-guard-message">Verificando acesso...</div></div></div>
-<div data-shell-header data-home-href="/admin" data-logo-label="Abrir painel do consultor" data-logo-sub="Operação Admin" data-page-kicker="Operação" data-page-title="Suporte" data-mobile-title="Suporte" data-badge="Admin" data-notification-variant="admin" data-user-role="Consultor Admin" data-account-kicker="Conta do consultor" data-profile-href="/perfil" data-settings-href="/configuracoes"></div>
+<div data-shell-header data-home-href="/admin" data-logo-label="Abrir painel do consultor" data-logo-sub="Painel do Consultor" data-page-kicker="Operação" data-page-title="Suporte" data-mobile-title="Suporte" data-badge="Admin" data-notification-variant="admin" data-user-role="Consultor Admin" data-account-kicker="Conta do consultor" data-profile-href="/perfil" data-settings-href="/configuracoes"></div>
 <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="closeSidebar()"></div>
 <div class="portal-layout">
   <nav class="sidebar" id="appSidebar">
-    <div class="sidebar-nav">
-      <div class="sidebar-section">
-        <div class="sidebar-label">Operação</div>
-        <a href="/admin" class="sidebar-link"><span>Clientes</span></a>
-        <a href="/suporte-admin" class="sidebar-link active"><span>Suporte</span></a>
-        <a href="/tarefas-admin" class="sidebar-link"><span>Tarefas</span></a>
-        <a href="/documentos-admin" class="sidebar-link"><span>Documentos</span></a>
-      </div>
-      <div class="sidebar-section">
-        <div class="sidebar-label">Conta</div>
-        <a href="/perfil" class="sidebar-link"><span>Meu Perfil</span></a>
-        <a href="/configuracoes" class="sidebar-link"><span>Configurações</span></a>
-      </div>
-    </div>
+    <div class="sidebar-nav" id="portalSidebarNav"></div>
   </nav>
   <main class="portal-main">
     <div class="page-shell-wide ops-page-shell">
-      <div class="section-header"><div><div class="section-title" id="opsPageTitle">Suporte</div><div class="section-sub" id="opsPageSub">Console de mensagens e contexto de atendimento.</div></div><a href="/admin" class="btn btn-secondary">Voltar ao painel</a></div>
+      <div class="section-header">
+        <div>
+          <div class="section-title" id="opsPageTitle">Suporte</div>
+          <div class="section-sub" id="opsPageSub">Console de mensagens e contexto de atendimento.</div>
+        </div>
+        <a href="/admin" class="btn btn-secondary">Voltar ao painel</a>
+      </div>
       <div class="rc-admin-workspace">
         <aside class="rc-admin-conv-sidebar">
           <div class="rc-admin-conv-sidebar-head">
             Conversas
-            <button class="rc-filter-btn" onclick="window.RCAdmin.loadConversations()">🔄</button>
+            <button class="rc-filter-btn" onclick="window.RCAdmin.loadConversations()">↻</button>
           </div>
           <div class="rc-status-filters">
             <button class="rc-filter-btn rc-active" onclick="window.RCAdmin.loadConversations('open')">Abertas</button>
@@ -65,22 +58,21 @@
   </main>
 </div>
 <div class="toast" id="toast"></div>
-<script src="./js/admin-shell-core.js?v=20260421p"></script>
-<script src="./js/admin-notifications.js?v=20260421r"></script>
+<script src="/js/admin-shell-core.js?v=20260421q"></script>
+<script src="/js/admin-notifications.js?v=20260421r"></script>
 <script src="/vendor/supabase/supabase.js"></script>
-<script src="./js/admin-ops-pages.js?v=20260421p"></script>
-<script src="./js/admin-recuperachat.js?v=20260422a"></script>
+<script src="/js/admin-ops-pages.js?v=20260423b"></script>
+<script src="/js/admin-recuperachat.js?v=20260422a"></script>
 <script>
-  // Inicializa o RecuperaChat Admin após o login verificado pelo admin-shell-core
-  window.addEventListener('load', () => {
-    const checkAuth = setInterval(() => {
-      const user = window.REShared && window.REShared.getStoredUser();
+  window.addEventListener('load', function () {
+    var checkAuth = setInterval(function () {
+      var user = window.REShared && window.REShared.getStoredUser();
       if (user && user.isAdmin) {
         clearInterval(checkAuth);
         window.RCAdmin.init(user);
       }
     }, 100);
-    setTimeout(() => clearInterval(checkAuth), 5000);
+    setTimeout(function () { clearInterval(checkAuth); }, 5000);
   });
 </script>
 </body>

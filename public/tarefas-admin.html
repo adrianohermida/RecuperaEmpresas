@@ -6,22 +6,51 @@
   <meta name="robots" content="noindex, nofollow"/>
   <title>Tarefas Admin — Recupera Empresas</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
-  <link rel="stylesheet" href="./css/portal.css?v=20260421v"/>
-  <script src="./js/config.js?v=20260420a"></script>
-  <script src="./js/runtime-diagnostics.js?v=20260421t"></script>
-  <script src="./js/api-base.js?v=20260421t"></script>
-  <script src="./js/shared-utils.js?v=20260421g"></script>
-  <script src="./js/portal-ui.js?v=20260421h"></script>
-  <script src="./js/portal-header.js?v=20260421r" defer></script>
+  <link rel="stylesheet" href="/css/portal.css?v=20260423b"/>
+  <script src="/js/config.js?v=20260420a"></script>
+  <script src="/js/runtime-diagnostics.js?v=20260421t"></script>
+  <script src="/js/api-base.js?v=20260421t"></script>
+  <script src="/js/shared-utils.js?v=20260423a"></script>
+  <script src="/js/portal-ui.js?v=20260421h"></script>
+  <script src="/js/portal-header.js?v=20260423a" defer></script>
 </head>
 <body data-admin-workspace="tasks">
 <div id="authGuard" class="auth-guard"><div class="auth-guard-content"><div class="auth-guard-message">Verificando acesso...</div></div></div>
-<div data-shell-header data-home-href="/admin" data-logo-label="Abrir painel do consultor" data-logo-sub="Operação Admin" data-page-kicker="Operação" data-page-title="Tarefas" data-mobile-title="Tarefas" data-badge="Admin" data-notification-variant="admin" data-user-role="Consultor Admin" data-account-kicker="Conta do consultor" data-profile-href="/perfil" data-settings-href="/configuracoes"></div>
+<div data-shell-header data-home-href="/admin" data-logo-label="Abrir painel do consultor" data-logo-sub="Painel do Consultor" data-page-kicker="Operação" data-page-title="Tarefas" data-mobile-title="Tarefas" data-badge="Admin" data-notification-variant="admin" data-user-role="Consultor Admin" data-account-kicker="Conta do consultor" data-profile-href="/perfil" data-settings-href="/configuracoes"></div>
 <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="closeSidebar()"></div>
-<div class="portal-layout"><nav class="sidebar" id="appSidebar"><div class="sidebar-nav"><div class="sidebar-section"><div class="sidebar-label">Operação</div><a href="/admin" class="sidebar-link"><span>Clientes</span></a><a href="/suporte-admin" class="sidebar-link"><span>Suporte</span></a><a href="/tarefas-admin" class="sidebar-link active"><span>Tarefas</span></a><a href="/documentos-admin" class="sidebar-link"><span>Documentos</span></a></div><div class="sidebar-section"><div class="sidebar-label">Conta</div><a href="/perfil" class="sidebar-link"><span>Meu Perfil</span></a><a href="/configuracoes" class="sidebar-link"><span>Configurações</span></a></div></div></nav><main class="portal-main"><div class="page-shell-wide ops-page-shell"><div class="section-header"><div><div class="section-title" id="opsPageTitle">Tarefas</div><div class="section-sub" id="opsPageSub">Fila operacional por cliente com criação rápida.</div></div><a href="/admin" class="btn btn-secondary">Voltar ao painel</a></div><div class="ops-workspace"><aside class="ops-client-rail card-surface"><div class="ops-client-rail-head"><div class="page-section-title">Clientes</div><div class="page-section-sub" id="opsRailSummary">Carregando...</div></div><div class="search-wrap ops-client-search"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input class="search-input" id="opsClientSearch" type="search" placeholder="Buscar cliente"/></div><div class="ops-client-list" id="opsClientList"></div></aside><section class="ops-main-panel card-surface" id="opsMainPanel"></section></div></div></main></div>
+<div class="portal-layout">
+  <nav class="sidebar" id="appSidebar">
+    <div class="sidebar-nav" id="portalSidebarNav"></div>
+  </nav>
+  <main class="portal-main">
+    <div class="page-shell-wide ops-page-shell">
+      <div class="section-header">
+        <div>
+          <div class="section-title" id="opsPageTitle">Tarefas</div>
+          <div class="section-sub" id="opsPageSub">Fila operacional por cliente com criação rápida.</div>
+        </div>
+        <a href="/admin" class="btn btn-secondary">Voltar ao painel</a>
+      </div>
+      <div class="ops-workspace">
+        <aside class="ops-client-rail card-surface">
+          <div class="ops-client-rail-head">
+            <div class="page-section-title">Clientes</div>
+            <div class="page-section-sub" id="opsRailSummary">Carregando...</div>
+          </div>
+          <div class="search-wrap ops-client-search">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input class="search-input" id="opsClientSearch" type="search" placeholder="Buscar cliente"/>
+          </div>
+          <div class="ops-client-list" id="opsClientList"></div>
+        </aside>
+        <section class="ops-main-panel card-surface" id="opsMainPanel"></section>
+      </div>
+    </div>
+  </main>
+</div>
 <div class="toast" id="toast"></div>
-<script src="./js/admin-shell-core.js?v=20260421p"></script>
-<script src="./js/admin-notifications.js?v=20260421r"></script>
-<script src="./js/admin-ops-pages.js?v=20260421p"></script>
+<script src="/js/admin-shell-core.js?v=20260421q"></script>
+<script src="/js/admin-notifications.js?v=20260421r"></script>
+<script src="/js/admin-ops-pages.js?v=20260423b"></script>
 </body>
 </html>

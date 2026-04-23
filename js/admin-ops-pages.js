@@ -47,6 +47,15 @@
     document.getElementById('userAvatar').textContent = displayName.charAt(0).toUpperCase();
     document.getElementById('dropupUserName').textContent = displayName;
     document.getElementById('dropupUserEmail').textContent = state.user?.email || 'Sem e-mail';
+    window.REShared?.renderPortalSidebar?.({
+      containerId: 'portalSidebarNav',
+      user: state.user,
+      activeHref: pageMode === 'support'
+        ? '/suporte-admin'
+        : pageMode === 'tasks'
+          ? '/tarefas-admin'
+          : '/documentos-admin'
+    });
     var copy = modeCopy();
     document.getElementById('opsPageTitle').textContent = copy.title;
     document.getElementById('opsPageSub').textContent = copy.subtitle;
