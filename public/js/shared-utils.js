@@ -269,7 +269,8 @@
         {
           label: 'Operação',
           items: [
-            { href: '/suporte-admin', label: 'Suporte', icon: SIDEBAR_ICONS.suporte },
+            { href: '/suporte-admin', label: 'Chamados', icon: SIDEBAR_ICONS.suporte },
+            { href: '/suporte-admin?view=messages', label: 'Mensagens', icon: SIDEBAR_ICONS.suporte },
             { href: '/tarefas-admin', label: 'Tarefas', icon: SIDEBAR_ICONS.tarefas },
             { href: '/documentos-admin', label: 'Documentos', icon: SIDEBAR_ICONS.documentos },
             { href: '/admin?section=adminInvoices', label: 'Cobranças', icon: SIDEBAR_ICONS.cobrancas },

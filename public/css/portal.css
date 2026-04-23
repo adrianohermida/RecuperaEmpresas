@@ -8011,6 +8011,37 @@ body.portal-ui-surface-open {
   gap: 12px;
 }
 
+.ops-switcher {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0 0 18px;
+}
+
+.ops-switch-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  background: rgba(255, 255, 255, 0.9);
+  color: #334155;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 700;
+  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+}
+
+.ops-switch-chip:hover,
+.ops-switch-chip.active {
+  transform: translateY(-1px);
+  border-color: rgba(37, 99, 235, 0.36);
+  box-shadow: 0 12px 28px rgba(37, 99, 235, 0.12);
+  color: #1d4ed8;
+}
+
 .ops-client-card {
   display: block;
   width: 100%;
@@ -8027,6 +8058,10 @@ body.portal-ui-surface-open {
   box-shadow: 0 18px 30px rgba(37, 99, 235, 0.08);
 }
 
+.ops-client-chip-row {
+  margin-top: 10px;
+}
+
 .ops-client-card-top,
 .ops-document-head {
   display: flex;
@@ -8037,6 +8072,41 @@ body.portal-ui-surface-open {
 
 .ops-main-panel {
   padding: 22px;
+}
+
+.ops-hero-card {
+  min-height: 124px;
+}
+
+.ops-banner-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 18px 20px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 20px;
+  background: linear-gradient(135deg, rgba(239,246,255,0.86) 0%, rgba(255,255,255,0.96) 100%);
+}
+
+.ops-banner-title {
+  font-size: 15px;
+  font-weight: 800;
+  color: #0f172a;
+  margin-bottom: 4px;
+}
+
+.ops-banner-sub {
+  font-size: 13px;
+  line-height: 1.6;
+  color: #475569;
+}
+
+.ops-banner-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
 }
 
 .ops-hero-grid {
@@ -8053,6 +8123,11 @@ body.portal-ui-surface-open {
   background: rgba(255, 255, 255, 0.94);
 }
 
+.ops-message-card.is-admin {
+  border-color: rgba(37, 99, 235, 0.2);
+  background: linear-gradient(180deg, rgba(239,246,255,0.82) 0%, rgba(255,255,255,0.96) 100%);
+}
+
 .ops-message-head {
   justify-content: space-between;
   margin-bottom: 8px;
@@ -8062,6 +8137,15 @@ body.portal-ui-surface-open {
   .admin-clients-module-grid,
   .ops-hero-grid {
     grid-template-columns: 1fr;
+  }
+
+  .ops-banner-card {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .ops-banner-actions {
+    justify-content: flex-start;
   }
 
   .admin-table-pagination,

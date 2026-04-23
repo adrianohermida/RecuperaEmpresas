@@ -246,6 +246,53 @@
     }
   }
 
+  function upgradeOperationsNavigation() {
+    document.querySelectorAll('.sidebar-label').forEach(function (label) {
+      if (label.textContent.indexOf('Opera') !== -1) {
+        label.textContent = 'Operação';
+      }
+    });
+
+    document.querySelectorAll('.sidebar-link, .admin-clients-module-card').forEach(function (node) {
+      if (!node) return;
+      var titleEl = node.querySelector('.admin-clients-module-title');
+      var subEl = node.querySelector('.admin-clients-module-sub');
+      var href = node.getAttribute('href') || '';
+
+      if (href === '/suporte-admin') {
+        if (titleEl) titleEl.textContent = 'Chamados';
+        if (subEl) subEl.textContent = 'Atendimento, histórico e contexto do cliente em um workspace único.';
+        if (!titleEl && node.textContent.indexOf('Suporte') !== -1) {
+          node.lastChild.textContent = 'Chamados';
+        }
+      }
+    });
+
+    var supportLink = Array.from(document.querySelectorAll('.sidebar-link')).find(function (link) {
+      return (link.getAttribute('href') || '') === '/suporte-admin';
+    });
+    if (supportLink && !document.querySelector('.sidebar-link[href="/suporte-admin?view=messages"]')) {
+      var messagesLink = supportLink.cloneNode(true);
+      messagesLink.setAttribute('href', '/suporte-admin?view=messages');
+      messagesLink.classList.remove('active');
+      messagesLink.lastChild.textContent = 'Mensagens';
+      supportLink.insertAdjacentElement('afterend', messagesLink);
+    }
+
+    var supportCard = Array.from(document.querySelectorAll('.admin-clients-module-card')).find(function (card) {
+      return (card.getAttribute('href') || '') === '/suporte-admin';
+    });
+    if (supportCard && !document.querySelector('.admin-clients-module-card[href="/suporte-admin?view=messages"]')) {
+      var messagesCard = supportCard.cloneNode(true);
+      messagesCard.setAttribute('href', '/suporte-admin?view=messages');
+      var cardTitle = messagesCard.querySelector('.admin-clients-module-title');
+      var cardSub = messagesCard.querySelector('.admin-clients-module-sub');
+      if (cardTitle) cardTitle.textContent = 'Mensagens';
+      if (cardSub) cardSub.textContent = 'Caixa de conversas para respostas rápidas e triagem do consultor.';
+      supportCard.insertAdjacentElement('afterend', messagesCard);
+    }
+  }
+
   function bootstrap() {
     window.getFilteredClients = getFilteredClientsEnhanced;
     window.refreshClientsView = refreshClientsViewEnhanced;
@@ -255,6 +302,7 @@
     window.changeClientPage = changeClientPage;
     window.openClientFilters = openClientFiltersEnhanced;
     patchVisibleStrings();
+    upgradeOperationsNavigation();
     if (document.getElementById('sec-clients')) {
       refreshClientsViewEnhanced();
     }

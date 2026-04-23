@@ -4,21 +4,21 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <meta name="robots" content="noindex, nofollow"/>
-  <title>Suporte Admin — Recupera Empresas</title>
+  <title>Chamados — Recupera Empresas</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
-  <link rel="stylesheet" href="/css/portal.css?v=20260423b"/>
+  <link rel="stylesheet" href="/css/portal.css?v=20260423d"/>
   <link rel="stylesheet" href="/css/recuperachat.css?v=20260422a"/>
   <script src="/js/config.js?v=20260420a"></script>
   <script src="/js/runtime-diagnostics.js?v=20260421t"></script>
   <script src="/js/api-base.js?v=20260421t"></script>
-  <script src="/js/shared-utils.js?v=20260423a"></script>
+  <script src="/js/shared-utils.js?v=20260423d"></script>
   <script src="/js/account-data.js?v=20260421g"></script>
   <script src="/js/portal-ui.js?v=20260423b"></script>
   <script src="/js/portal-header.js?v=20260423a" defer></script>
 </head>
 <body data-admin-workspace="support">
 <div id="authGuard" class="auth-guard"><div class="auth-guard-content"><div class="auth-guard-message">Verificando acesso...</div></div></div>
-<div data-shell-header data-home-href="/admin" data-logo-label="Abrir painel do consultor" data-logo-sub="Painel do Consultor" data-page-kicker="Operação" data-page-title="Suporte" data-mobile-title="Suporte" data-badge="Admin" data-notification-variant="admin" data-user-role="Consultor Admin" data-account-kicker="Conta do consultor" data-profile-href="/perfil" data-settings-href="/configuracoes"></div>
+<div data-shell-header data-home-href="/admin" data-logo-label="Abrir painel do consultor" data-logo-sub="Painel do Consultor" data-page-kicker="Operação" data-page-title="Chamados" data-mobile-title="Chamados" data-badge="Admin" data-notification-variant="admin" data-user-role="Consultor Admin" data-account-kicker="Conta do consultor" data-profile-href="/perfil" data-settings-href="/configuracoes"></div>
 <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="closeSidebar()"></div>
 <div class="portal-layout">
   <nav class="sidebar" id="appSidebar">
@@ -28,31 +28,25 @@
     <div class="page-shell-wide ops-page-shell">
       <div class="section-header">
         <div>
-          <div class="section-title" id="opsPageTitle">Suporte</div>
-          <div class="section-sub" id="opsPageSub">Console de mensagens e contexto de atendimento.</div>
+          <div class="section-title" id="opsPageTitle">Chamados</div>
+          <div class="section-sub" id="opsPageSub">Central de atendimento com contexto do cliente e histórico de conversa.</div>
         </div>
         <a href="/admin" class="btn btn-secondary">Voltar ao painel</a>
       </div>
-      <div class="rc-admin-workspace">
-        <aside class="rc-admin-conv-sidebar">
-          <div class="rc-admin-conv-sidebar-head">
-            Conversas
-            <button class="rc-filter-btn" onclick="window.RCAdmin.loadConversations()">↻</button>
+      <div class="ops-switcher" id="opsWorkspaceSwitcher"></div>
+      <div class="ops-workspace">
+        <aside class="ops-client-rail card-surface">
+          <div class="ops-client-rail-head">
+            <div class="page-section-title" id="opsRailTitle">Clientes com atendimento</div>
+            <div class="page-section-sub" id="opsRailSummary">Carregando...</div>
           </div>
-          <div class="rc-status-filters">
-            <button class="rc-filter-btn rc-active" onclick="window.RCAdmin.loadConversations('open')">Abertas</button>
-            <button class="rc-filter-btn" onclick="window.RCAdmin.loadConversations('resolved')">Resolvidas</button>
+          <div class="search-wrap ops-client-search">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input class="search-input" id="opsClientSearch" type="search" placeholder="Buscar cliente"/>
           </div>
-          <div class="rc-admin-conv-list" id="rc-admin-conv-list">
-            <div class="rc-admin-empty">Carregando conversas...</div>
-          </div>
+          <div class="ops-client-list" id="opsClientList"></div>
         </aside>
-        <section class="rc-admin-chat-panel" id="rc-admin-chat-panel">
-          <div class="rc-admin-placeholder">
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity: 0.2; margin-bottom: 16px;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-            Selecione uma conversa para iniciar o atendimento.
-          </div>
-        </section>
+        <section class="ops-main-panel card-surface" id="opsMainPanel"></section>
       </div>
     </div>
   </main>
@@ -61,19 +55,6 @@
 <script src="/js/admin-shell-core.js?v=20260421q"></script>
 <script src="/js/admin-notifications.js?v=20260421r"></script>
 <script src="/vendor/supabase/supabase.js"></script>
-<script src="/js/admin-ops-pages.js?v=20260423b"></script>
-<script src="/js/admin-recuperachat.js?v=20260422a"></script>
-<script>
-  window.addEventListener('load', function () {
-    var checkAuth = setInterval(function () {
-      var user = window.REShared && window.REShared.getStoredUser();
-      if (user && user.isAdmin) {
-        clearInterval(checkAuth);
-        window.RCAdmin.init(user);
-      }
-    }, 100);
-    setTimeout(function () { clearInterval(checkAuth); }, 5000);
-  });
-</script>
+<script src="/js/admin-ops-pages.js?v=20260423d"></script>
 </body>
 </html>
