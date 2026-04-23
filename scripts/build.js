@@ -123,6 +123,7 @@ createHtmlRouteAlias('formulario.html', path.join('formulario', 'index.html'));
 createHtmlRouteAlias('perfil.html', path.join('perfil', 'index.html'));
 createHtmlRouteAlias('configuracoes.html', path.join('configuracoes', 'index.html'));
 createHtmlRouteAlias('cliente.html', path.join('cliente', 'index.html'));
+createHtmlRouteAlias('integracoes.html', path.join('integracoes', 'index.html'));
 createHtmlRouteAlias('suporte-admin.html', path.join('suporte-admin', 'index.html'));
 createHtmlRouteAlias('tarefas-admin.html', path.join('tarefas-admin', 'index.html'));
 createHtmlRouteAlias('documentos-admin.html', path.join('documentos-admin', 'index.html'));

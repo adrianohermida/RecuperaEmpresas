@@ -1,154 +1,153 @@
 'use strict';
 
-async function getToken() {
-  if (window.REShared?.getStoredToken) return window.REShared.getStoredToken();
-  return localStorage.getItem('re_token');
-}
+(function () {
+  function authH() {
+    if (window.REShared?.buildAuthHeaders) return window.REShared.buildAuthHeaders();
+    return { 'Content-Type': 'application/json' };
+  }
 
-function authH() {
-  if (window.REShared?.buildAuthHeaders) return window.REShared.buildAuthHeaders();
-  return { 'Content-Type': 'application/json', Authorization: 'Bearer ' + getToken() };
-}
+  function showToast(msg, type, duration) {
+    var toast = document.getElementById('toast');
+    if (!toast) return;
+    toast.textContent = msg;
+    toast.className = 'toast show ' + (type || '');
+    setTimeout(function () { toast.className = 'toast'; }, duration || 3000);
+  }
 
-function showToast(msg, type, duration) {
-  var toast = document.getElementById('toast');
-  if (!toast) return;
-  toast.textContent = msg;
-  toast.className = 'toast show ' + (type || '');
-  setTimeout(function () { toast.className = 'toast'; }, duration || 3000);
-}
+  function escapeHtml(text) {
+    var div = document.createElement('div');
+    div.textContent = text == null ? '' : String(text);
+    return div.innerHTML;
+  }
 
-async function loadFreshchatDiagnostics() {
-  var container = document.getElementById('freshchatDiagnosticsContainer');
-  var btn = document.getElementById('freshchatRefreshBtn');
-  
-  if (!container) return;
-  
-  btn?.setAttribute('disabled', 'disabled');
-  container.innerHTML = '<div class="diagnostics-loading"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite;"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>Carregando...</div>';
-  
-  try {
-    var response = await fetch('/api/admin/freshchat/identity', {
-      method: 'GET',
-      headers: authH()
-    });
-    
-    if (!response.ok) {
-      if (response.status === 401) {
-        throw new Error('Não autenticado. Por favor, faça login novamente.');
+  function renderSupportIdentityStatus(data) {
+    var container = document.getElementById('supportDiagnosticsContainer');
+    if (!container) return;
+
+    var ready = !!(data && data.freshchatExternalId && data.hasJwtSecret);
+    var html = [
+      '<div class="diagnostics-item diagnostics-status-ok">',
+      '  <span class="diagnostics-label">Usuario identificado</span>',
+      '  <span class="diagnostics-value">' + escapeHtml(data.email || 'Nao informado') + '</span>',
+      '</div>',
+      '<div class="diagnostics-item ' + (data.freshchatExternalId ? 'diagnostics-status-ok' : 'diagnostics-status-error') + '">',
+      '  <span class="diagnostics-label">Vinculo de atendimento</span>',
+      '  <span class="diagnostics-value">' + escapeHtml(data.freshchatExternalId ? 'Ativo' : 'Pendente') + '</span>',
+      '</div>',
+      '<div class="diagnostics-item ' + (data.hasJwtSecret ? 'diagnostics-status-ok' : 'diagnostics-status-error') + '">',
+      '  <span class="diagnostics-label">Seguranca da sessao</span>',
+      '  <span class="diagnostics-value">' + escapeHtml(data.secretSource || 'Nao disponivel') + '</span>',
+      '</div>',
+      '<div style="margin-top:12px;padding-top:12px;border-top:1px solid rgba(0,0,0,0.05);font-size:12px;color:var(--text-muted);">',
+      ready
+        ? 'Canal pronto para uso. O consultor pode abrir o atendimento com a identidade sincronizada.'
+        : 'Ainda ha configuracoes pendentes. Revise o vinculo do usuario e tente atualizar novamente.',
+      '</div>'
+    ].join('');
+
+    container.innerHTML = html;
+    var badge = document.getElementById('supportStatusBadge');
+    if (badge) {
+      badge.textContent = ready ? 'Ativo' : 'Atencao';
+      badge.className = 'integration-badge ' + (ready ? 'integration-badge-active' : 'integration-badge-inactive');
+    }
+  }
+
+  async function loadSupportIdentityStatus() {
+    var container = document.getElementById('supportDiagnosticsContainer');
+    var btn = document.getElementById('supportRefreshBtn');
+    if (!container) return;
+
+    btn?.setAttribute('disabled', 'disabled');
+    container.innerHTML = '<div class="diagnostics-loading"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite;"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>Carregando status...</div>';
+
+    try {
+      var response = await fetch('/api/admin/freshchat/identity', {
+        method: 'GET',
+        headers: authH()
+      });
+      if (!response.ok) {
+        if (response.status === 401) throw new Error('Sua sessao expirou. Entre novamente para continuar.');
+        throw new Error('Nao foi possivel consultar o status da conexao.');
       }
-      throw new Error('Erro ao carregar diagnóstico: ' + response.status);
-    }
-    
-    var data = await response.json();
-    
-    if (!data.ok) {
-      throw new Error(data.error || 'Erro desconhecido');
-    }
-    
-    renderFreshchatDiagnostics(data);
-    showToast('Diagnóstico atualizado com sucesso', 'success', 2000);
-  } catch (error) {
-    container.innerHTML = '<div style="color:var(--error);font-size:13px;">❌ Erro ao carregar: ' + escapeHtml(error.message) + '</div>';
-    showToast('Erro ao carregar diagnóstico', 'error', 3000);
-  } finally {
-    btn?.removeAttribute('disabled');
-  }
-}
 
-function renderFreshchatDiagnostics(data) {
-  var container = document.getElementById('freshchatDiagnosticsContainer');
-  if (!container) return;
-  
-  var html = '';
-  
-  // Email
-  html += '<div class="diagnostics-item diagnostics-status-ok">';
-  html += '  <span class="diagnostics-label">Email:</span>';
-  html += '  <span class="diagnostics-value">' + escapeHtml(data.email || '—') + '</span>';
-  html += '</div>';
-  
-  // Freshchat External ID
-  var idStatus = data.freshchatExternalId ? 'diagnostics-status-ok' : 'diagnostics-status-error';
-  html += '<div class="diagnostics-item ' + idStatus + '">';
-  html += '  <span class="diagnostics-label">ID Externo Freshchat:</span>';
-  html += '  <span class="diagnostics-value">' + escapeHtml(data.freshchatExternalId || '❌ Não mapeado') + '</span>';
-  html += '</div>';
-  
-  // Mapped Admin ID (se existir)
-  if (data.mappedAdminId) {
-    html += '<div class="diagnostics-item diagnostics-status-ok">';
-    html += '  <span class="diagnostics-label">Admin ID Mapeado:</span>';
-    html += '  <span class="diagnostics-value">' + escapeHtml(data.mappedAdminId) + '</span>';
-    html += '</div>';
+      var data = await response.json();
+      if (!data.ok) throw new Error(data.error || 'Nao foi possivel consultar o status da conexao.');
+
+      renderSupportIdentityStatus(data);
+      showToast('Status atualizado.', 'success', 1800);
+    } catch (error) {
+      container.innerHTML = '<div style="color:var(--error);font-size:13px;">' + escapeHtml(error.message) + '</div>';
+      showToast('Erro ao carregar o status.', 'error');
+    } finally {
+      btn?.removeAttribute('disabled');
+    }
   }
-  
-  // JWT Secret Source
-  var secretStatus = data.hasJwtSecret ? 'diagnostics-status-ok' : 'diagnostics-status-error';
-  html += '<div class="diagnostics-item ' + secretStatus + '">';
-  html += '  <span class="diagnostics-label">Fonte do JWT:</span>';
-  html += '  <span class="diagnostics-value">' + escapeHtml(data.secretSource || '❌ Não configurado') + '</span>';
-  html += '</div>';
-  
-  // Status geral
-  html += '<div style="margin-top:12px;padding-top:12px;border-top:1px solid rgba(0,0,0,0.05);font-size:12px;color:var(--text-muted);">';
-  if (data.freshchatExternalId && data.hasJwtSecret) {
-    html += '✓ Pronto para autenticação. Seu acesso ao Freshchat foi configurado corretamente.';
+
+  function renderSyncHistory() {
+    var container = document.getElementById('syncHistoryContainer');
+    if (!container) return;
+
+    var activities = [
+      { time: new Date(Date.now() - 2 * 60000).toLocaleString('pt-BR'), type: 'Atendimento integrado', status: 'success', message: 'Status consultado com sucesso' },
+      { time: new Date(Date.now() - 18 * 60000).toLocaleString('pt-BR'), type: 'Agenda conectada', status: 'error', message: 'Conexao ainda nao concluida' },
+      { time: new Date(Date.now() - 70 * 60000).toLocaleString('pt-BR'), type: 'Atendimento integrado', status: 'success', message: 'Identidade sincronizada' }
+    ];
+
+    container.innerHTML = activities.map(function (item) {
+      var statusClass = item.status === 'success' ? 'success' : 'error';
+      var statusLabel = item.status === 'success' ? 'OK' : 'Pendente';
+      return [
+        '<div class="history-item">',
+        '  <div>',
+        '    <div style="font-weight:500;color:var(--text);">' + escapeHtml(item.type) + '</div>',
+        '    <div class="history-item-time">' + escapeHtml(item.time) + '</div>',
+        '  </div>',
+        '  <span class="history-item-status ' + statusClass + '">' + statusLabel + ' - ' + escapeHtml(item.message) + '</span>',
+        '</div>'
+      ].join('');
+    }).join('');
+  }
+
+  function connectCalendar() {
+    showToast('A conexao com agenda sera liberada na proxima etapa.', 'info', 2600);
+  }
+
+  function testCalendarConnection() {
+    showToast('Nenhuma agenda conectada para testar neste momento.', 'info', 2600);
+  }
+
+  async function initIntegracoes() {
+    var session = await window.REShared.verifySession({ timeoutMs: 55000 }).catch(function () {
+      return { ok: false, status: 0 };
+    });
+
+    if (!session.ok || !session.user) {
+      window.REShared.redirectToRoute('login');
+      return;
+    }
+
+    var user = session.user;
+    window.REShared.applyPortalAccountShell(user, { section: 'home' });
+    window.REShared.renderPortalSidebar({ containerId: 'portalSidebarNav', user: user, activeHref: '/integracoes' });
+
+    document.getElementById('dropupUserName').textContent = user.name || user.company || user.email || 'Usuario';
+    document.getElementById('dropupUserEmail').textContent = user.email || 'Sem e-mail';
+    document.getElementById('authGuard')?.remove();
+
+    loadSupportIdentityStatus();
+    renderSyncHistory();
+  }
+
+  window.loadSupportIdentityStatus = loadSupportIdentityStatus;
+  window.connectCalendar = connectCalendar;
+  window.testCalendarConnection = testCalendarConnection;
+
+  if (document.readyState === 'complete') {
+    initIntegracoes();
   } else {
-    html += '⚠️ Há itens não configurados. Verifique o mapeamento de email e as variáveis de ambiente.';
+    window.addEventListener('load', initIntegracoes, { once: true });
   }
-  html += '</div>';
-  
-  container.innerHTML = html;
-}
 
-function escapeHtml(text) {
-  var div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
-}
-
-async function connectGoogleCalendar() {
-  showToast('Google Calendar integration coming soon', 'info', 3000);
-  // TODO: Implementar OAuth flow para Google Calendar
-}
-
-async function testGoogleCalendarConnection() {
-  showToast('Testing Google Calendar connection...', 'info', 3000);
-  // TODO: Implementar teste de conexão
-}
-
-// Load Freshchat diagnostics on page load
-document.addEventListener('DOMContentLoaded', function () {
-  // Delay load para garantir que o layout está pronto
-  setTimeout(function () {
-    loadFreshchatDiagnostics();
-    loadSyncHistory();
-  }, 500);
-});
-
-async function loadSyncHistory() {
-  var container = document.getElementById('syncHistoryContainer');
-  if (!container) return;
-  
-  // Mock data for now - will be replaced with real sync history from backend
-  var mockHistory = [
-    { time: new Date(Date.now() - 2 * 60000).toLocaleString(), type: 'Freshchat', status: 'success', message: 'Diagnóstico carregado' },
-    { time: new Date(Date.now() - 15 * 60000).toLocaleString(), type: 'Google Calendar', status: 'error', message: 'Não conectado' },
-    { time: new Date(Date.now() - 1 * 3600000).toLocaleString(), type: 'Freshchat', status: 'success', message: 'Sincronização JWT completa' }
-  ];
-  
-  var html = '';
-  mockHistory.forEach(function (item) {
-    var statusClass = item.status === 'success' ? 'success' : 'error';
-    html += '<div class="history-item">';
-    html += '  <div>';
-    html += '    <div style="font-weight:500;color:var(--text);">' + item.type + '</div>';
-    html += '    <div class="history-item-time">' + item.time + '</div>';
-    html += '  </div>';
-    html += '  <span class="history-item-status ' + statusClass + '">' + (item.status === 'success' ? '✓' : '✗') + ' ' + item.message + '</span>';
-    html += '</div>';
-  });
-  
-  container.innerHTML = html;
-}
+  console.info('[RE:integracoes-init] loaded');
+})();

@@ -4,25 +4,25 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <meta name="robots" content="noindex, nofollow"/>
-  <title>Integrações — Recupera Empresas</title>
+  <title>Integracoes - Recupera Empresas</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
-  <link rel="stylesheet" href="/css/portal.css?v=20260421v"/>
+  <link rel="stylesheet" href="/css/portal.css?v=20260423g"/>
   <script src="/js/config.js?v=20260420a"></script>
   <script src="/js/runtime-diagnostics.js?v=20260421t"></script>
   <script src="/js/api-base.js?v=20260421t"></script>
-  <script src="/js/shared-utils.js?v=20260421g"></script>
-  <script src="/js/portal-ui.js?v=20260421h"></script>
+  <script src="/js/shared-utils.js?v=20260423g"></script>
+  <script src="/js/portal-ui.js?v=20260423g"></script>
   <script src="/js/account-data.js?v=20260421h"></script>
-  <script src="/js/portal-header.js?v=20260421r" defer></script>
+  <script src="/js/portal-header.js?v=20260423g" defer></script>
 </head>
 <body>
 <div id="authGuard" class="auth-guard">
   <div class="auth-guard-content">
     <svg width="44" height="36" viewBox="0 0 44 36" fill="none" class="auth-guard-logo">
-      <rect x="0"  y="26" width="8" height="10" rx="4" fill="#4B9EFF"/>
+      <rect x="0" y="26" width="8" height="10" rx="4" fill="#4B9EFF"/>
       <rect x="12" y="18" width="8" height="18" rx="4" fill="#2B7FFF"/>
       <rect x="24" y="10" width="8" height="26" rx="4" fill="#1A56DB"/>
-      <rect x="36" y="2"  width="8" height="34" rx="4" fill="#1244AB"/>
+      <rect x="36" y="2" width="8" height="34" rx="4" fill="#1244AB"/>
     </svg>
     <div class="auth-guard-message">Verificando acesso...</div>
   </div>
@@ -34,8 +34,8 @@
   data-logo-label="Abrir painel do consultor"
   data-logo-sub="Painel do Consultor"
   data-page-kicker="Conta"
-  data-page-title="Integrações"
-  data-mobile-title="Integrações"
+  data-page-title="Integracoes"
+  data-mobile-title="Integracoes"
   data-badge="Admin"
   data-notification-variant="admin"
   data-user-role="Consultor Admin"
@@ -48,42 +48,15 @@
 
 <div class="portal-layout">
   <nav class="sidebar" id="appSidebar">
-    <div class="sidebar-nav">
-      <div class="sidebar-section">
-        <div class="sidebar-label" id="shellNavLabel">Visão Geral</div>
-        <a href="/admin" class="sidebar-link" id="shellPrimaryLinkOne">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-          <span data-shell-label>Clientes</span>
-        </a>
-        <a href="/admin?section=agenda" class="sidebar-link" id="shellPrimaryLinkTwo">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-          <span data-shell-label>Agenda</span>
-        </a>
-      </div>
-      <div class="sidebar-section">
-        <div class="sidebar-label">Conta</div>
-        <a href="/perfil" class="sidebar-link">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-          Meu Perfil
-        </a>
-        <a href="/configuracoes" class="sidebar-link">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-          Configurações
-        </a>
-        <a href="/integracoes" class="sidebar-link active">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Integrações
-        </a>
-      </div>
-    </div>
+    <div class="sidebar-nav" id="portalSidebarNav"></div>
   </nav>
 
   <main class="portal-main">
     <div class="page-shell">
       <div class="section-header">
         <div>
-          <div class="section-title">Integrações</div>
-          <div class="section-sub">Conecte e configure ferramentas externas para melhorar sua produtividade</div>
+          <div class="section-title">Integracoes</div>
+          <div class="section-sub">Centralize conexoes uteis do dia a dia e acompanhe a prontidao do seu ambiente de trabalho.</div>
         </div>
         <a href="/admin" class="btn btn-secondary" id="accountBackLink">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
@@ -92,31 +65,29 @@
       </div>
 
       <div class="account-content-stack">
-        
-        <!-- Freshchat Integration -->
         <section class="page-section card-surface">
           <div class="page-section-title">
             <div style="display:flex;gap:8px;align-items:center;">
-              <span>Freshchat</span>
-              <span class="integration-badge integration-badge-active" id="freshchatStatusBadge">Ativo</span>
+              <span>Atendimento integrado</span>
+              <span class="integration-badge integration-badge-active" id="supportStatusBadge">Ativo</span>
             </div>
           </div>
-          <div class="page-section-sub">Monitor de identidade e autenticação JWT para suporte integrado</div>
+          <div class="page-section-sub">Acompanhe se o canal de atendimento esta pronto para uso pelos consultores.</div>
 
           <div class="integration-panel">
             <div class="integration-panel-header">
-              <div class="integration-panel-title">Diagnóstico de Identidade</div>
-              <button class="btn btn-secondary btn-sm" onclick="loadFreshchatDiagnostics()" id="freshchatRefreshBtn">
+              <div class="integration-panel-title">Status da conexao</div>
+              <button class="btn btn-secondary btn-sm" onclick="loadSupportIdentityStatus()" id="supportRefreshBtn">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 4v6h6M23 20v-6h-6"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64M3.51 15A9 9 0 0 0 18.36 18.36"/></svg>
                 Atualizar
               </button>
             </div>
             <div class="integration-panel-content">
-              <div id="freshchatDiagnosticsContainer" class="integration-diagnostics">
+              <div id="supportDiagnosticsContainer" class="integration-diagnostics">
                 <div class="diagnostics-loading">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite;">
                     <circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-                  Carregando diagnóstico...
+                  Carregando status...
                 </div>
               </div>
             </div>
@@ -124,59 +95,55 @@
 
           <div class="integration-info">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--blue);flex-shrink:0;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-            <span>A identidade é resolvida automaticamente do seu email cadastrado e sincronizada com o Freshchat.</span>
+            <span>O acesso e vinculado ao usuario autenticado e fica disponivel automaticamente quando a conexao esta saudavel.</span>
           </div>
         </section>
 
-        <!-- Google Calendar Integration -->
         <section class="page-section card-surface">
           <div class="page-section-title">
             <div style="display:flex;gap:8px;align-items:center;">
-              <span>Google Agenda</span>
-              <span class="integration-badge integration-badge-inactive" id="googleCalendarStatusBadge">Não conectado</span>
+              <span>Agenda conectada</span>
+              <span class="integration-badge integration-badge-inactive" id="calendarStatusBadge">Nao conectado</span>
             </div>
           </div>
-          <div class="page-section-sub">Sincronize compromissos e bloqueie horários automaticamente</div>
+          <div class="page-section-sub">Sincronize compromissos e mantenha a disponibilidade da equipe atualizada.</div>
 
           <div class="integration-action-panel">
             <div class="integration-action-text">
-              <p>Conecte sua conta do Google para gerenciar agendamentos de forma integrada com o Recupera Empresas.</p>
+              <p>Conecte sua agenda principal para evitar conflitos, reservar pausas e acompanhar a operacao em um so lugar.</p>
               <ul style="margin-top:10px;margin-left:20px;font-size:13px;line-height:1.6;">
-                <li>✓ Visualize disponibilidade em tempo real</li>
-                <li>✓ Sincronize conflitos automaticamente</li>
-                <li>✓ Bloqueie horários de pausa</li>
-                <li>✓ Integre agendas de múltiplos consultores</li>
+                <li>Disponibilidade atualizada em tempo real</li>
+                <li>Conflitos identificados automaticamente</li>
+                <li>Bloqueio rapido de pausas e ausencias</li>
+                <li>Visao unificada de agendas da equipe</li>
               </ul>
             </div>
             <div class="integration-action-buttons">
-              <button class="btn btn-primary" onclick="connectGoogleCalendar()" id="googleConnectBtn">
+              <button class="btn btn-primary" onclick="connectCalendar()" id="calendarConnectBtn">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-                Conectar Google
+                Conectar agenda
               </button>
-              <button class="btn btn-ghost" onclick="testGoogleCalendarConnection()" id="googleTestBtn" style="display:none;">
+              <button class="btn btn-ghost" onclick="testCalendarConnection()" id="calendarTestBtn" style="display:none;">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
-                Testar conexão
+                Testar conexao
               </button>
             </div>
           </div>
 
-          <div id="googleCalendarStatus" class="integration-status-details" style="display:none;margin-top:16px;"></div>
+          <div id="calendarStatus" class="integration-status-details" style="display:none;margin-top:16px;"></div>
         </section>
 
-        <!-- Integration History -->
         <section class="page-section card-surface">
-          <div class="page-section-title">Histórico de Sincronizações</div>
-          <div class="page-section-sub">Registros das últimas operações de sincronização</div>
-          
+          <div class="page-section-title">Ultimas atividades</div>
+          <div class="page-section-sub">Acompanhe os eventos mais recentes das integracoes configuradas.</div>
           <div id="syncHistoryContainer" class="integration-history">
             <div class="history-loading">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite;">
                 <circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-              Carregando histórico...
+              Carregando atividades...
             </div>
           </div>
         </section>
-
       </div>
     </div>
   </main>
@@ -264,7 +231,7 @@
   display: flex;
   justify-content: space-between;
   padding: 8px 0;
-  border-bottom: 1px solid rgba(0,0,0,0.05);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
 }
 
 .diagnostics-item:last-child {
@@ -278,11 +245,10 @@
 
 .diagnostics-value {
   color: var(--text-muted);
-  font-family: monospace;
   font-size: 12px;
   max-width: 50%;
   text-align: right;
-  word-break: break-all;
+  word-break: break-word;
 }
 
 .diagnostics-status-ok .diagnostics-value {
@@ -351,6 +317,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
   padding: 12px 0;
   border-bottom: 1px solid var(--border);
   font-size: 13px;
@@ -373,6 +340,7 @@
   border-radius: 6px;
   font-size: 11px;
   font-weight: 600;
+  white-space: nowrap;
 }
 
 .history-item-status.success {
@@ -389,11 +357,16 @@
   .integration-action-panel {
     flex-direction: column;
   }
+
+  .history-item {
+    align-items: flex-start;
+    flex-direction: column;
+  }
 }
 </style>
 
-<script src="/js/admin-shell-core.js?v=20260421g"></script>
-<script src="/js/admin-notifications.js?v=20260421r"></script>
-<script src="/js/integracoes-init.js?v=20260421a"></script>
+<script src="/js/admin-shell-core.js?v=20260423g"></script>
+<script src="/js/admin-notifications.js?v=20260423g"></script>
+<script src="/js/integracoes-init.js?v=20260423g"></script>
 </body>
 </html>
