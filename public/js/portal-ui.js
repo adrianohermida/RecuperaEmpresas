@@ -1,6 +1,8 @@
 'use strict';
 
 (function () {
+  var openSurfaceCount = 0;
+
   function ensureHost() {
     var host = document.getElementById('portalUiHost');
     if (host) return host;
@@ -14,7 +16,12 @@
     if (node && node.parentNode) node.parentNode.removeChild(node);
   }
 
-  function renderActions(actions, close) {
+  function updateBodyLock(delta) {
+    openSurfaceCount = Math.max(0, openSurfaceCount + delta);
+    document.body.classList.toggle('portal-ui-surface-open', openSurfaceCount > 0);
+  }
+
+  function renderActions(actions) {
     return (actions || []).map(function (action, index) {
       var className = action.tone === 'primary'
         ? 'btn btn-primary'
@@ -25,43 +32,69 @@
     }).join('');
   }
 
+  function bindEscape(close) {
+    function onKeydown(event) {
+      if (event.key === 'Escape') close();
+    }
+    document.addEventListener('keydown', onKeydown);
+    return function unbindEscape() {
+      document.removeEventListener('keydown', onKeydown);
+    };
+  }
+
   function bindActions(root, actions, close) {
     root.querySelectorAll('[data-portal-action]').forEach(function (button) {
       button.addEventListener('click', function () {
         var action = actions[Number(button.getAttribute('data-portal-action'))];
         if (!action) return;
-        Promise.resolve(action.onClick && action.onClick({ close: close })).then(function (result) {
-          if (result !== false && action.closeOnClick !== false) close();
-        });
+
+        button.disabled = true;
+        button.classList.add('is-busy');
+
+        Promise.resolve(action.onClick && action.onClick({ close: close }))
+          .then(function (result) {
+            if (result !== false && action.closeOnClick !== false) close();
+          })
+          .finally(function () {
+            button.disabled = false;
+            button.classList.remove('is-busy');
+          });
       });
     });
   }
 
-  function useModal(options) {
+  function createSurface(kind, options) {
     var opts = options || {};
     var host = ensureHost();
     var overlay = document.createElement('div');
-    overlay.className = 'portal-ui-overlay';
+    var isDrawer = kind === 'drawer';
+    overlay.className = 'portal-ui-overlay' + (isDrawer ? ' portal-ui-drawer-overlay' : '');
     overlay.innerHTML = [
-      '<div class="portal-ui-modal ' + (opts.size ? 'portal-ui-modal-' + opts.size : '') + '">',
-      '  <div class="portal-ui-modal-head">',
+      isDrawer
+        ? '<aside class="portal-ui-drawer ' + (opts.side === 'left' ? 'portal-ui-drawer-left' : '') + '">'
+        : '<div class="portal-ui-modal ' + (opts.size ? 'portal-ui-modal-' + opts.size : '') + '">',
+      '  <div class="' + (isDrawer ? 'portal-ui-drawer-head' : 'portal-ui-modal-head') + '">',
       '    <div>',
       '      <div class="portal-ui-modal-title">' + (opts.title || '') + '</div>',
       (opts.subtitle ? '      <div class="portal-ui-modal-sub">' + opts.subtitle + '</div>' : ''),
       '    </div>',
       '    <button type="button" class="portal-ui-close" aria-label="Fechar">&times;</button>',
       '  </div>',
-      '  <div class="portal-ui-modal-body"></div>',
+      '  <div class="' + (isDrawer ? 'portal-ui-drawer-body' : 'portal-ui-modal-body') + '"></div>',
       (opts.actions && opts.actions.length
         ? '  <div class="portal-ui-modal-actions">' + renderActions(opts.actions) + '</div>'
         : ''),
-      '</div>'
+      isDrawer ? '</aside>' : '</div>'
     ].join('');
 
     var closed = false;
+    var unbindEscape = bindEscape(close);
+
     function close() {
       if (closed) return;
       closed = true;
+      unbindEscape();
+      updateBodyLock(-1);
       removeNode(overlay);
       opts.onClose && opts.onClose();
     }
@@ -70,49 +103,20 @@
       if (event.target === overlay && opts.closeOnBackdrop !== false) close();
     });
     overlay.querySelector('.portal-ui-close').addEventListener('click', close);
-    overlay.querySelector('.portal-ui-modal-body').append(opts.content || document.createElement('div'));
+    overlay.querySelector(isDrawer ? '.portal-ui-drawer-body' : '.portal-ui-modal-body')
+      .append(opts.content || document.createElement('div'));
     bindActions(overlay, opts.actions || [], close);
+    updateBodyLock(1);
     host.appendChild(overlay);
     return { close: close, element: overlay };
   }
 
+  function useModal(options) {
+    return createSurface('modal', options);
+  }
+
   function useDrawer(options) {
-    var opts = options || {};
-    var host = ensureHost();
-    var overlay = document.createElement('div');
-    overlay.className = 'portal-ui-overlay portal-ui-drawer-overlay';
-    overlay.innerHTML = [
-      '<aside class="portal-ui-drawer ' + (opts.side === 'left' ? 'portal-ui-drawer-left' : '') + '">',
-      '  <div class="portal-ui-drawer-head">',
-      '    <div>',
-      '      <div class="portal-ui-modal-title">' + (opts.title || '') + '</div>',
-      (opts.subtitle ? '      <div class="portal-ui-modal-sub">' + opts.subtitle + '</div>' : ''),
-      '    </div>',
-      '    <button type="button" class="portal-ui-close" aria-label="Fechar">&times;</button>',
-      '  </div>',
-      '  <div class="portal-ui-drawer-body"></div>',
-      (opts.actions && opts.actions.length
-        ? '  <div class="portal-ui-modal-actions">' + renderActions(opts.actions) + '</div>'
-        : ''),
-      '</aside>'
-    ].join('');
-
-    var closed = false;
-    function close() {
-      if (closed) return;
-      closed = true;
-      removeNode(overlay);
-      opts.onClose && opts.onClose();
-    }
-
-    overlay.addEventListener('mousedown', function (event) {
-      if (event.target === overlay && opts.closeOnBackdrop !== false) close();
-    });
-    overlay.querySelector('.portal-ui-close').addEventListener('click', close);
-    overlay.querySelector('.portal-ui-drawer-body').append(opts.content || document.createElement('div'));
-    bindActions(overlay, opts.actions || [], close);
-    host.appendChild(overlay);
-    return { close: close, element: overlay };
+    return createSurface('drawer', options);
   }
 
   function cloneState(columns) {
@@ -120,7 +124,7 @@
       return {
         id: column.id,
         title: column.title,
-        cards: (column.cards || []).map(function (card) { return { ...card }; }),
+        cards: (column.cards || []).map(function (card) { return { ...card }; })
       };
     });
   }
@@ -168,7 +172,7 @@
           cards: column.cards.filter(function (card) {
             if (card.id === cardId) movingCard = { ...card };
             return card.id !== cardId;
-          }),
+          })
         };
       });
       if (!movingCard) return getState();
@@ -187,13 +191,13 @@
       renameColumn: renameColumn,
       moveColumn: moveColumn,
       addCard: addCard,
-      moveCard: moveCard,
+      moveCard: moveCard
     };
   }
 
   window.REPortalUI = {
     useModal: useModal,
     useDrawer: useDrawer,
-    useKanban: useKanban,
+    useKanban: useKanban
   };
 })();

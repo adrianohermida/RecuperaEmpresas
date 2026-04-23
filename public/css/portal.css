@@ -7475,6 +7475,10 @@ body {
   box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.08);
 }
 
+.form-group .field-hint {
+  margin-top: 2px;
+}
+
 .form-input[readonly] {
   background: rgba(248, 250, 252, 0.92);
   color: #475569;
@@ -7533,6 +7537,7 @@ body {
   border: 1px solid rgba(148, 163, 184, 0.2);
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.05);
 }
 
 .tenant-member-actions {
@@ -7570,6 +7575,10 @@ body {
   box-shadow: 0 32px 80px rgba(15, 23, 42, 0.22);
 }
 
+body.portal-ui-surface-open {
+  overflow: hidden;
+}
+
 .portal-ui-drawer-overlay {
   justify-content: flex-end;
 }
@@ -7592,17 +7601,38 @@ body {
   gap: 12px;
   padding: 18px 22px;
   border-bottom: 1px solid rgba(148, 163, 184, 0.16);
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(10px);
+  position: sticky;
+  z-index: 2;
 }
 
 .portal-ui-modal-actions {
   justify-content: flex-end;
   border-top: 1px solid rgba(148, 163, 184, 0.16);
   border-bottom: none;
+  bottom: 0;
+}
+
+.portal-ui-modal-head,
+.portal-ui-drawer-head {
+  top: 0;
 }
 
 .portal-ui-modal-body,
 .portal-ui-drawer-body {
   padding: 20px 22px;
+  background: linear-gradient(180deg, rgba(248, 250, 252, 0.78) 0%, rgba(255, 255, 255, 0.96) 100%);
+}
+
+.portal-ui-modal-body > * + *,
+.portal-ui-drawer-body > * + * {
+  margin-top: 16px;
+}
+
+.portal-ui-modal-body .form-group,
+.portal-ui-drawer-body .form-group {
+  gap: 10px;
 }
 
 .portal-ui-modal-title {
@@ -7627,6 +7657,19 @@ body {
   font-size: 22px;
   line-height: 1;
   cursor: pointer;
+  transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+}
+
+.portal-ui-close:hover,
+.portal-ui-close:focus-visible {
+  transform: translateY(-1px);
+  border-color: rgba(96, 165, 250, 0.4);
+  box-shadow: 0 10px 24px rgba(37, 99, 235, 0.12);
+}
+
+.portal-ui-modal-actions .btn.is-busy {
+  opacity: 0.72;
+  pointer-events: none;
 }
 
 @media (max-width: 960px) {
@@ -7875,6 +7918,11 @@ body {
   grid-template-columns: minmax(280px, 340px) minmax(0, 1fr);
   gap: 24px;
   align-items: start;
+}
+
+.ops-main-panel,
+.ops-client-rail {
+  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.08);
 }
 
 .ops-client-rail,
