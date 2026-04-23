@@ -13,7 +13,7 @@
   <script src="/js/shared-utils.js?v=20260421n"></script>
   <script src="/js/re-core.js?v=20260421a"></script>
   <script src="/js/re-api.js?v=20260421a"></script>
-  <script src="/js/portal-header.js?v=20260421r" defer></script>
+  <script src="/js/portal-header.js?v=20260423a" defer></script>
   <!-- Sempre use assets absolutos /css/ e /js/ para evitar conflitos de cache e duplicidade. -->
 </head>
 <body>
@@ -83,6 +83,21 @@
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="3" y1="13" x2="21" y2="13"/><line x1="3" y1="17" x2="21" y2="17"/></svg>
           Business Plan
         </button>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-label">Operação</div>
+        <a class="sidebar-link" href="/suporte-admin">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          Suporte
+        </a>
+        <a class="sidebar-link" href="/tarefas-admin">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+          Tarefas
+        </a>
+        <a class="sidebar-link" href="/documentos-admin">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          Documentos
+        </a>
         <button class="sidebar-link" onclick="showSection('logs',this)">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
           Log de Acesso
@@ -216,6 +231,23 @@
               <tr><td colspan="9" class="admin-client-empty-cell">Carregando...</td></tr>
             </tbody>
           </table>
+        </div>
+        <div class="admin-table-pagination">
+          <div class="admin-table-pagination-copy">
+            <span id="clientPaginationSummary">Carregando paginação...</span>
+          </div>
+          <div class="admin-table-pagination-actions">
+            <label class="admin-page-size-label" for="clientPageSize">Por página</label>
+            <select id="clientPageSize" class="portal-select admin-page-size-select" onchange="setClientPageSize(this.value)">
+              <option value="10">10</option>
+              <option value="25" selected>25</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+            </select>
+            <button class="btn btn-secondary btn-sm" type="button" id="clientPagePrev" onclick="changeClientPage(-1)">Anterior</button>
+            <span class="admin-page-indicator" id="clientPageIndicator">Página 1 de 1</span>
+            <button class="btn btn-secondary btn-sm" type="button" id="clientPageNext" onclick="changeClientPage(1)">Próxima</button>
+          </div>
         </div>
       </div>
     </div>
@@ -1029,6 +1061,7 @@
 
 <script src="/js/admin-modal-manager.js?v=20260421n"></script>
 <script src="/js/admin-shell-core.js?v=20260421q"></script>
+<script src="/js/admin-clients-enhancements.js?v=20260423c"></script>
 
 <script src="/js/admin-agenda.js?v=20260421h"></script>
 <script src="/js/admin-audit-log.js?v=20260421b"></script>

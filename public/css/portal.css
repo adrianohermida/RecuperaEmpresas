@@ -7775,6 +7775,38 @@ body.portal-ui-surface-open {
   margin-bottom: 18px;
 }
 
+.admin-table-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 16px 18px 0;
+}
+
+.admin-table-pagination-copy {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.admin-table-pagination-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.admin-page-size-label,
+.admin-page-indicator {
+  font-size: 12px;
+  font-weight: 700;
+  color: #64748b;
+}
+
+.admin-page-size-select {
+  min-width: 84px;
+}
+
 .admin-clients-module-card {
   display: block;
   padding: 18px;
@@ -7998,6 +8030,12 @@ body.portal-ui-surface-open {
   .admin-clients-module-grid,
   .ops-hero-grid {
     grid-template-columns: 1fr;
+  }
+
+  .admin-table-pagination,
+  .admin-table-pagination-actions {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .ops-workspace {

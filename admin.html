@@ -232,6 +232,23 @@
             </tbody>
           </table>
         </div>
+        <div class="admin-table-pagination">
+          <div class="admin-table-pagination-copy">
+            <span id="clientPaginationSummary">Carregando paginação...</span>
+          </div>
+          <div class="admin-table-pagination-actions">
+            <label class="admin-page-size-label" for="clientPageSize">Por página</label>
+            <select id="clientPageSize" class="portal-select admin-page-size-select" onchange="setClientPageSize(this.value)">
+              <option value="10">10</option>
+              <option value="25" selected>25</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+            </select>
+            <button class="btn btn-secondary btn-sm" type="button" id="clientPagePrev" onclick="changeClientPage(-1)">Anterior</button>
+            <span class="admin-page-indicator" id="clientPageIndicator">Página 1 de 1</span>
+            <button class="btn btn-secondary btn-sm" type="button" id="clientPageNext" onclick="changeClientPage(1)">Próxima</button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -1044,6 +1061,7 @@
 
 <script src="/js/admin-modal-manager.js?v=20260421n"></script>
 <script src="/js/admin-shell-core.js?v=20260421q"></script>
+<script src="/js/admin-clients-enhancements.js?v=20260423c"></script>
 
 <script src="/js/admin-agenda.js?v=20260421h"></script>
 <script src="/js/admin-audit-log.js?v=20260421b"></script>

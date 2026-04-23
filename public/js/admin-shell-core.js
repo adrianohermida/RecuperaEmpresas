@@ -156,6 +156,10 @@ function showSection(name, el) {
 var _allClients = [];
 var _clientSelection = new Set();
 var _openClientActionMenuId = null;
+var _clientPageState = {
+  page: 1,
+  pageSize: 25,
+};
 var _clientFilters = {
   query: '',
   status: 'all',
@@ -226,6 +230,18 @@ function getFilteredClients() {
     var matchesUnread = !_clientFilters.hasUnread || Number(_unreadMsgs[client.id] || 0) > 0;
     return matchesQuery && matchesStatus && matchesStep && matchesTasks && matchesUnread;
   });
+}
+
+function getTotalClientPages(filteredClients) {
+  var safePageSize = Math.max(1, Number(_clientPageState.pageSize) || 25);
+  return Math.max(1, Math.ceil(filteredClients.length / safePageSize));
+}
+
+function getPagedClients(filteredClients) {
+  var totalPages = getTotalClientPages(filteredClients);
+  _clientPageState.page = Math.min(Math.max(1, _clientPageState.page), totalPages);
+  var startIndex = (_clientPageState.page - 1) * _clientPageState.pageSize;
+  return filteredClients.slice(startIndex, startIndex + _clientPageState.pageSize);
 }
 
 function updateClientSelectAllState(visibleClients) {
