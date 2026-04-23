@@ -1752,15 +1752,53 @@ async function handleAdminBookForClient(request, context) {
   const body = await readJson(request);
   const { slot_id, user_id, notes, external_contact } = body;
 
-  if (!slot_id) return json({ error: 'Slot ID é obrigatório.' }, { status: 400 });
+  if (!slot_id) return json({ error: 'Slot ID e obrigatorio.' }, { status: 400 });
 
   const slot = await maybeSingle(
     context.sb
       .from('re_agenda_slots')
-      .select('id,starts_at,ends_at,title,credits_cost')
+      .select('id,starts_at,ends_at,title,credits_cost,max_bookings')
       .eq('id', slot_id)
   );
-  if (!slot) return json({ error: 'Horário não encontrado.' }, { status: 404 });
+  if (!slot) return json({ error: 'Horario nao encontrado.' }, { status: 404 });
+  if (new Date(slot.starts_at) < new Date()) {
+    return json({ error: 'Nao e possivel agendar um horario que ja passou.' }, { status: 400 });
+  }
+  if (!user_id && !external_contact) {
+    return json({ error: 'Informe um cliente existente ou um contato externo.' }, { status: 400 });
+  }
+
+  if (user_id) {
+    const targetUser = await maybeSingle(
+      context.sb
+        .from('re_users')
+        .select('id,name,email,company')
+        .eq('id', user_id)
+        .eq('is_admin', false)
+    );
+    if (!targetUser) return json({ error: 'Cliente nao encontrado.' }, { status: 404 });
+
+    const duplicateBooking = await maybeSingle(
+      context.sb
+        .from('re_bookings')
+        .select('id')
+        .eq('slot_id', slot_id)
+        .eq('user_id', user_id)
+        .in('status', ['pending', 'confirmed', 'pending_reschedule'])
+    );
+    if (duplicateBooking) {
+      return json({ error: 'Este cliente ja possui reserva neste horario.' }, { status: 409 });
+    }
+  }
+
+  const bookingCount = await context.sb
+    .from('re_bookings')
+    .select('id', { count: 'exact', head: true })
+    .eq('slot_id', slot_id)
+    .in('status', ['pending', 'confirmed', 'pending_reschedule']);
+  if ((bookingCount.count || 0) >= Number(slot.max_bookings || 1)) {
+    return json({ error: 'Horario lotado.' }, { status: 409 });
+  }
 
   const bookingData = {
     slot_id,
@@ -1772,9 +1810,14 @@ async function handleAdminBookForClient(request, context) {
     credits_spent: slot.credits_cost || 0,
   };
 
-  const booking = await maybeSingle(
-    context.sb.from('re_bookings').insert(bookingData).select()
-  );
+  let booking;
+  try {
+    booking = await maybeSingle(
+      context.sb.from('re_bookings').insert(bookingData).select()
+    );
+  } catch (error) {
+    return json({ error: error.message || 'Erro ao criar agendamento.' }, { status: 500 });
+  }
 
   if (!booking) {
     return json({ error: 'Erro ao criar agendamento no banco de dados.' }, { status: 500 });
@@ -1793,13 +1836,210 @@ async function handleAdminBookForClient(request, context) {
       user_id,
       'agenda',
       'Novo agendamento confirmado',
-      `Um novo compromisso foi agendado para você: ${slot.title}`,
+                        `Um novo compromisso foi agendado para voce: ${slot.title}`,
       're_bookings',
       booking.id
     ), 'notify-book-for-client');
   }
 
   return json({ success: true, booking });
+}
+
+async function handleAgendaBookings(request, context) {
+  const pathname = new URL(request.url).pathname;
+  const url = new URL(request.url);
+  const matchResult = pathname.match(/^\/api\/admin\/agenda\/bookings(?:\/(?<bookingId>[^/]+)(?:\/(?<action>confirm|cancel|no-show|approve-reschedule|reject-reschedule|reschedule))?)?$/);
+  const bookingId = matchResult?.groups?.bookingId || null;
+  const action = matchResult?.groups?.action || null;
+
+  if (!bookingId && request.method === 'GET') {
+    const statusFilter = String(url.searchParams.get('status') || '').trim();
+    let bookings = await listSafe(
+      context.sb
+        .from('re_bookings_full')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(200),
+      []
+    );
+    if (!bookings.length) {
+      bookings = await listSafe(
+        context.sb
+          .from('re_bookings')
+          .select('id,slot_id,user_id,member_id,booker_name,booker_email,status,credits_spent,confirmed_at,cancel_reason,cancelled_by,reschedule_reason,rescheduled_to_slot_id,reschedule_requested_slot_id,reschedule_requested_at,reschedule_rejected_at,reschedule_reject_reason,no_show,no_show_at,external_contact,notes,created_at,re_users(id,name,email,company),re_agenda_slots(id,starts_at,ends_at,title,location,meet_link,duration_min,credits_cost,max_bookings)')
+          .order('created_at', { ascending: false })
+          .limit(200),
+        []
+      );
+    }
+
+    if (statusFilter) {
+      bookings = bookings.filter((booking) => String(booking.status || '') === statusFilter);
+    }
+
+    return json({
+      bookings: bookings.map((booking) => ({
+        ...booking,
+        slot: booking.slot || (booking.re_agenda_slots ? {
+          id: booking.re_agenda_slots.id,
+          starts_at: booking.re_agenda_slots.starts_at,
+          ends_at: booking.re_agenda_slots.ends_at,
+          title: booking.re_agenda_slots.title,
+          location: booking.re_agenda_slots.location,
+          meet_link: booking.re_agenda_slots.meet_link,
+          duration_min: booking.re_agenda_slots.duration_min,
+          credits_cost: booking.re_agenda_slots.credits_cost,
+          max_bookings: booking.re_agenda_slots.max_bookings,
+        } : null),
+      })),
+    });
+  }
+
+  if (!bookingId || !action) return methodNotAllowed();
+
+  const booking = await maybeSingle(
+    context.sb
+      .from('re_bookings')
+      .select('*,re_agenda_slots(id,starts_at,ends_at,title,max_bookings),re_users(id,name,email,company)')
+      .eq('id', bookingId)
+  );
+  if (!booking) return json({ error: 'Reserva nao encontrada.' }, { status: 404 });
+
+  const body = ['PUT', 'PATCH', 'POST', 'DELETE'].includes(request.method) ? await readJson(request).catch(() => ({})) : {};
+  const now = new Date().toISOString();
+
+  if (action === 'confirm' && request.method === 'PUT') {
+    const { error } = await context.sb.from('re_bookings').update({
+      status: 'confirmed',
+      confirmed_at: now,
+      last_status_change: now,
+      no_show: false,
+      no_show_at: null,
+    }).eq('id', bookingId);
+    if (error) return json({ error: error.message }, { status: 500 });
+    return json({ success: true });
+  }
+
+  if (action === 'cancel' && request.method === 'PUT') {
+    const reason = String(body.reason || '').trim();
+    if (!reason) return json({ error: 'Motivo obrigatorio.' }, { status: 400 });
+    const { error } = await context.sb.from('re_bookings').update({
+      status: 'cancelled',
+      cancel_reason: reason,
+      cancelled_by: 'admin',
+      last_status_change: now,
+    }).eq('id', bookingId);
+    if (error) return json({ error: error.message }, { status: 500 });
+    return json({ success: true });
+  }
+
+  if (action === 'no-show' && request.method === 'PUT') {
+    const { error } = await context.sb.from('re_bookings').update({
+      status: 'no_show',
+      no_show: true,
+      no_show_at: now,
+      last_status_change: now,
+    }).eq('id', bookingId);
+    if (error) return json({ error: error.message }, { status: 500 });
+    return json({ success: true });
+  }
+
+  if (action === 'reschedule' && request.method === 'PUT') {
+    const newSlotId = String(body.new_slot_id || '').trim();
+    const reason = String(body.reason || '').trim();
+    if (!newSlotId || !reason) return json({ error: 'Novo horario e motivo sao obrigatorios.' }, { status: 400 });
+    if (newSlotId === booking.slot_id) return json({ error: 'Escolha um horario diferente do atual.' }, { status: 400 });
+
+    const newSlot = await maybeSingle(
+      context.sb.from('re_agenda_slots').select('id,starts_at,max_bookings,title').eq('id', newSlotId)
+    );
+    if (!newSlot) return json({ error: 'Novo horario nao encontrado.' }, { status: 404 });
+    if (new Date(newSlot.starts_at) < new Date()) return json({ error: 'Nao e possivel remarcar para um horario passado.' }, { status: 400 });
+
+    const newSlotCount = await context.sb
+      .from('re_bookings')
+      .select('id', { count: 'exact', head: true })
+      .eq('slot_id', newSlotId)
+      .in('status', ['pending', 'confirmed', 'pending_reschedule']);
+    if ((newSlotCount.count || 0) >= Number(newSlot.max_bookings || 1)) {
+      return json({ error: 'O novo horario ja esta lotado.' }, { status: 409 });
+    }
+
+    const { data: created, error: insertError } = await context.sb.from('re_bookings').insert({
+      slot_id: newSlotId,
+      user_id: booking.user_id || null,
+      member_id: booking.member_id || null,
+      booker_name: booking.booker_name || null,
+      booker_email: booking.booker_email || null,
+      external_contact: booking.external_contact || null,
+      notes: booking.notes || null,
+      status: 'confirmed',
+      confirmed_at: now,
+      credits_spent: booking.credits_spent || 0,
+      reschedule_reason: reason,
+      created_at: now,
+      last_status_change: now,
+    }).select().single();
+    if (insertError) return json({ error: insertError.message }, { status: 500 });
+
+    const { error: updateError } = await context.sb.from('re_bookings').update({
+      status: 'rescheduled',
+      reschedule_reason: reason,
+      rescheduled_to_slot_id: newSlotId,
+      last_status_change: now,
+    }).eq('id', bookingId);
+    if (updateError) return json({ error: updateError.message }, { status: 500 });
+
+    return json({ success: true, booking: created });
+  }
+
+  if (action === 'approve-reschedule' && request.method === 'PUT') {
+    const requestedSlotId = booking.reschedule_requested_slot_id;
+    if (!requestedSlotId) return json({ error: 'Nao ha pedido de remarcacao pendente.' }, { status: 400 });
+
+    const requestedSlot = await maybeSingle(
+      context.sb.from('re_agenda_slots').select('id,starts_at,max_bookings,title').eq('id', requestedSlotId)
+    );
+    if (!requestedSlot) return json({ error: 'Horario solicitado nao encontrado.' }, { status: 404 });
+
+    const requestedCount = await context.sb
+      .from('re_bookings')
+      .select('id', { count: 'exact', head: true })
+      .eq('slot_id', requestedSlotId)
+      .in('status', ['pending', 'confirmed', 'pending_reschedule']);
+    if ((requestedCount.count || 0) >= Number(requestedSlot.max_bookings || 1)) {
+      return json({ error: 'Horario solicitado esta lotado.' }, { status: 409 });
+    }
+
+    const { error } = await context.sb.from('re_bookings').update({
+      slot_id: requestedSlotId,
+      status: 'confirmed',
+      confirmed_at: now,
+      rescheduled_to_slot_id: requestedSlotId,
+      reschedule_requested_slot_id: null,
+      reschedule_requested_at: null,
+      reschedule_rejected_at: null,
+      reschedule_reject_reason: null,
+      last_status_change: now,
+    }).eq('id', bookingId);
+    if (error) return json({ error: error.message }, { status: 500 });
+    return json({ success: true });
+  }
+
+  if (action === 'reject-reschedule' && request.method === 'PUT') {
+    const reason = String(body.reason || '').trim();
+    if (!reason) return json({ error: 'Motivo obrigatorio.' }, { status: 400 });
+    const { error } = await context.sb.from('re_bookings').update({
+      status: 'confirmed',
+      reschedule_rejected_at: now,
+      reschedule_reject_reason: reason,
+      last_status_change: now,
+    }).eq('id', bookingId);
+    if (error) return json({ error: error.message }, { status: 500 });
+    return json({ success: true });
+  }
+
+  return methodNotAllowed();
 }
 
 async function handleEntityDocuments(request, context) {
@@ -1878,6 +2118,57 @@ async function handleEntityDocuments(request, context) {
 }
 
 async function handleAgendaSlots(request, context) {
+  const pathname = new URL(request.url).pathname;
+  const slotMatch = pathname.match(/^\/api\/admin\/agenda\/slots(?:\/(?<slotId>[^/]+))?$/);
+  const slotId = slotMatch?.groups?.slotId || null;
+
+  if (request.method === 'POST' && !slotId) {
+    const body = await readJson(request);
+    const startsAt = body.starts_at ? new Date(body.starts_at) : null;
+    const endsAt = body.ends_at ? new Date(body.ends_at) : null;
+    if (!startsAt || !endsAt || Number.isNaN(startsAt.getTime()) || Number.isNaN(endsAt.getTime())) {
+      return json({ error: 'Informe data e hora validas para inicio e fim.' }, { status: 400 });
+    }
+    if (endsAt <= startsAt) return json({ error: 'O horario de termino deve ser posterior ao inicio.' }, { status: 400 });
+
+    const insertPayload = {
+      starts_at: startsAt.toISOString(),
+      ends_at: endsAt.toISOString(),
+      title: String(body.title || 'Consultoria').trim() || 'Consultoria',
+      credits_cost: Math.max(0, Number(body.credits_cost || 0)),
+      max_bookings: Math.max(1, Number(body.max_bookings || 1)),
+      duration_min: Math.max(15, Number(body.duration_min || 60)),
+      location: String(body.location || 'online').trim() || 'online',
+      meet_link: body.meet_link || body.meeting_link || null,
+      description: String(body.description || '').trim() || null,
+      created_at: new Date().toISOString(),
+    };
+
+    const { data, error } = await context.sb.from('re_agenda_slots').insert(insertPayload).select().single();
+    if (error) return json({ error: error.message }, { status: 500 });
+    return json({ success: true, slot: data });
+  }
+
+  if (request.method === 'DELETE' && slotId) {
+    const slot = await maybeSingle(context.sb.from('re_agenda_slots').select('id,title').eq('id', slotId));
+    if (!slot) return json({ error: 'Horario nao encontrado.' }, { status: 404 });
+
+    await context.sb
+      .from('re_bookings')
+      .update({
+        status: 'cancelled',
+        cancelled_by: 'admin',
+        cancel_reason: 'Horario removido pelo consultor',
+        last_status_change: new Date().toISOString(),
+      })
+      .eq('slot_id', slotId)
+      .in('status', ['pending', 'confirmed', 'pending_reschedule']);
+
+    const { error } = await context.sb.from('re_agenda_slots').delete().eq('id', slotId);
+    if (error) return json({ error: error.message }, { status: 500 });
+    return json({ success: true });
+  }
+
   if (request.method !== 'GET') return methodNotAllowed();
   const url = new URL(request.url);
   const from = url.searchParams.get('from') || new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
@@ -1886,7 +2177,7 @@ async function handleAgendaSlots(request, context) {
   let slots = await listSafe(
     context.sb
       .from('re_agenda_slots')
-      .select('id,starts_at,ends_at,title,credits_cost,max_bookings,duration_min,location,meeting_link,description,created_at')
+      .select('id,starts_at,ends_at,title,credits_cost,max_bookings,duration_min,location,meet_link,description,created_at')
       .gte('starts_at', from)
       .order('starts_at', { ascending: true })
       .limit(100)
@@ -1908,7 +2199,7 @@ async function handleAgendaSlots(request, context) {
   let bookings = await listSafe(
     context.sb
       .from('re_bookings')
-      .select('id,slot_id,user_id,status,credits_spent,confirmed_at,cancel_reason,cancelled_by,reschedule_reason,rescheduled_to_slot_id,external_contact,notes,created_at,re_users(id,name,email,company)')
+      .select('id,slot_id,user_id,member_id,booker_name,booker_email,status,credits_spent,confirmed_at,cancel_reason,cancelled_by,reschedule_reason,rescheduled_to_slot_id,reschedule_requested_slot_id,reschedule_requested_at,reschedule_rejected_at,reschedule_reject_reason,no_show,no_show_at,external_contact,notes,created_at,re_users(id,name,email,company)')
       .in('slot_id', slotIds)
       .order('created_at', { ascending: true })
   );
@@ -1916,7 +2207,7 @@ async function handleAgendaSlots(request, context) {
     bookings = await listSafe(
       context.sb
         .from('re_bookings')
-        .select('id,slot_id,user_id,status,credits_spent,confirmed_at,cancel_reason,cancelled_by,reschedule_reason,rescheduled_to_slot_id,external_contact,notes,created_at')
+        .select('id,slot_id,user_id,member_id,booker_name,booker_email,status,credits_spent,confirmed_at,cancel_reason,cancelled_by,reschedule_reason,rescheduled_to_slot_id,reschedule_requested_slot_id,reschedule_requested_at,reschedule_rejected_at,reschedule_reject_reason,no_show,no_show_at,external_contact,notes,created_at')
         .in('slot_id', slotIds)
         .order('created_at', { ascending: true })
     );
@@ -1950,7 +2241,9 @@ export async function handleAdminReadModels(request, context) {
   if (/^\/api\/admin\/service-orders(?:\/[^/]+)?$/.test(pathname)) return handleServiceOrders(request, context);
   if (/^\/api\/admin\/forms(?:\/.*)?$/.test(pathname)) return handleForms(request, context);
   if (/^\/api\/admin\/journeys(?:\/.*)?$/.test(pathname)) return handleJourneys(request, context);
+  if (/^\/api\/admin\/agenda\/bookings(?:\/[^/]+(?:\/[^/]+)?)?$/.test(pathname)) return handleAgendaBookings(request, context);
   if (pathname === '/api/admin/agenda/slots') return handleAgendaSlots(request, context);
+  if (/^\/api\/admin\/agenda\/slots\/[^/]+$/.test(pathname)) return handleAgendaSlots(request, context);
   if (pathname === '/api/admin/agenda/camila-availability') return handleCamilaAvailability(request, context);
   if (pathname === '/api/admin/agenda/book-for-client') return handleAdminBookForClient(request, context);
   if (/^\/api\/admin\/client\/[^/]+\/entity-documents\/[^/]+\/[^/]+$/.test(pathname)) return handleEntityDocuments(request, context);

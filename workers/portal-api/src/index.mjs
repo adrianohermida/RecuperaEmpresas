@@ -131,7 +131,10 @@ async function routeAdmin(request, env, pathname, executionCtx) {
   params = match(pathname, /^\/api\/admin\/journeys(?:\/(?<rest>.*))?$/);
   if (params) return handleAdminReadModels(request, { ...auth, env, executionCtx, params, scope: 'admin' });
 
-  params = match(pathname, /^\/api\/admin\/agenda\/slots$/);
+  params = match(pathname, /^\/api\/admin\/agenda\/slots(?:\/(?<slotId>[^/]+))?$/);
+  if (params) return handleAdminReadModels(request, { ...auth, env, executionCtx, params, scope: 'admin' });
+
+  params = match(pathname, /^\/api\/admin\/agenda\/bookings(?:\/(?<bookingId>[^/]+)(?:\/(?<action>confirm|cancel|no-show|approve-reschedule|reject-reschedule|reschedule))?)?$/);
   if (params) return handleAdminReadModels(request, { ...auth, env, executionCtx, params, scope: 'admin' });
 
   params = match(pathname, /^\/api\/admin\/agenda\/camila-availability$/);
