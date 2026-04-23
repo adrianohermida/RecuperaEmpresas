@@ -170,29 +170,150 @@
     return '<div class="account-stat-card ops-hero-card' + (tone ? ' ' + tone : '') + '"><span class="account-stat-label">' + escHtml(label) + '</span><strong>' + escHtml(value) + '</strong><div class="tenant-member-meta">' + escHtml(meta) + '</div></div>';
   }
 
+  function buildWorkspaceAside(detail, options) {
+    var opts = options || {};
+    var user = detail.user || {};
+    var chips = (opts.chips || []).map(function (chip) {
+      return '<span class="account-chip' + (chip.muted ? ' account-chip-muted' : '') + '">' + escHtml(chip.label) + '</span>';
+    }).join('');
+    var actions = (opts.actions || []).map(function (action) {
+      return '<a class="btn ' + (action.secondary ? 'btn-secondary' : 'btn-primary') + ' btn-sm" href="' + escHtml(action.href) + '">' + escHtml(action.label) + '</a>';
+    }).join('');
+
+    return [
+      '<aside class="ops-context-rail">',
+      '  <section class="ops-context-card">',
+      '    <div class="ops-context-kicker">Cliente em foco</div>',
+      '    <div class="ops-context-title">' + escHtml(user.company || user.name || 'Cliente') + '</div>',
+      '    <div class="ops-context-meta">' + escHtml(user.email || 'Sem e-mail cadastrado') + '</div>',
+      '    <div class="account-chip-list ops-context-chip-list">' + chips + '</div>',
+      '  </section>',
+      '  <section class="ops-context-card">',
+      '    <div class="ops-context-kicker">Atalhos</div>',
+      '    <div class="ops-context-actions">' + actions + '</div>',
+      '  </section>',
+      opts.extra || '',
+      '</aside>'
+    ].join('');
+  }
+
+  function buildBoardColumn(column) {
+    return [
+      '<section class="ops-board-column">',
+      '  <div class="ops-board-column-head">',
+      '    <div class="ops-board-column-title">' + escHtml(column.title) + '</div>',
+      '    <span class="ops-board-column-count">' + Number(column.cards.length || 0) + '</span>',
+      '  </div>',
+      '  <div class="ops-board-column-body">',
+      column.cards.length ? column.cards.join('') : '<div class="ops-board-empty">Nada por aqui neste momento.</div>',
+      '  </div>',
+      '</section>'
+    ].join('');
+  }
+
+  function groupTasks(tasks) {
+    var columns = {
+      pending: { title: 'Pendentes', cards: [] },
+      doing: { title: 'Em andamento', cards: [] },
+      done: { title: 'Concluídas', cards: [] }
+    };
+
+    tasks.forEach(function (task) {
+      var dueDate = task.dueDate ? new Date(task.dueDate).toLocaleDateString('pt-BR') : 'Sem prazo';
+      var target = task.status === 'concluido' ? 'done' : task.status === 'em_andamento' ? 'doing' : 'pending';
+      columns[target].cards.push([
+        '<article class="ops-board-card">',
+        '  <div class="ops-board-card-title">' + escHtml(task.title || 'Tarefa') + '</div>',
+        '  <div class="ops-board-card-sub">' + escHtml(task.description || 'Sem descrição registrada.') + '</div>',
+        '  <div class="ops-board-card-meta"><span>' + escHtml(dueDate) + '</span><span>' + escHtml(task.assigneeName || 'Equipe interna') + '</span></div>',
+        '</article>'
+      ].join(''));
+    });
+
+    return [columns.pending, columns.doing, columns.done];
+  }
+
+  function groupDocuments(documents) {
+    var columns = {
+      pending: { title: 'Pendentes', cards: [] },
+      review: { title: 'Em análise', cards: [] },
+      approved: { title: 'Aprovados', cards: [] },
+      returned: { title: 'Ajuste solicitado', cards: [] }
+    };
+
+    documents.forEach(function (doc) {
+      var createdAt = doc.createdAt ? new Date(doc.createdAt).toLocaleDateString('pt-BR') : 'Sem data';
+      var target = doc.status === 'aprovado'
+        ? 'approved'
+        : doc.status === 'em_analise'
+          ? 'review'
+          : doc.status === 'ajuste_solicitado'
+            ? 'returned'
+            : 'pending';
+      columns[target].cards.push([
+        '<article class="ops-board-card">',
+        '  <div class="ops-board-card-title">' + escHtml(doc.name || 'Documento') + '</div>',
+        '  <div class="ops-board-card-sub">' + escHtml(doc.docType || 'Documento enviado pelo cliente') + '</div>',
+        '  <div class="ops-board-card-meta"><span>' + escHtml(createdAt) + '</span><span>' + escHtml(doc.status || 'pendente') + '</span></div>',
+        '</article>'
+      ].join(''));
+    });
+
+    return [columns.pending, columns.review, columns.approved, columns.returned];
+  }
+
   function supportPanel(detail) {
     var user = detail.user || {};
     var messages = detail.messages || [];
     var resolved = messages.filter(function (message) { return message.resolved; }).length;
-    return '<div class="ops-panel-stack">'
-      + '<section class="ops-hero-grid">'
-      + buildHeroCard('Cliente', user.company || user.name || 'Cliente', user.email || 'Sem e-mail', 'blue')
-      + buildHeroCard('Chamados ativos', String(Math.max(messages.length - resolved, 0)), 'Itens aguardando retorno ou ação da equipe', 'amber')
-      + buildHeroCard('Último contato', messages[0]?.ts ? new Date(messages[0].ts).toLocaleDateString('pt-BR') : 'Sem registro', 'Linha do tempo do atendimento', 'green')
-      + '</section>'
-      + '<section class="ops-banner-card">'
-      + '  <div><div class="ops-banner-title">Atendimento contextual</div><div class="ops-banner-sub">Responda rápido, acompanhe o histórico e vá ao detalhe completo do cliente quando precisar aprofundar.</div></div>'
-      + '  <div class="ops-banner-actions"><a class="btn btn-secondary" href="/cliente?id=' + user.id + '&tab=messages">Abrir detalhe do cliente</a></div>'
-      + '</section>'
-      + '<section class="page-section"><div class="page-section-title">Nova resposta</div><div class="page-section-sub">Mantenha o cliente informado sem sair do fluxo operacional.</div><div class="ops-compose-box"><textarea id="opsSupportMessage" class="form-input account-textarea" placeholder="Escreva a atualização, solicitação ou retorno para o cliente."></textarea><div class="account-form-actions"><button class="btn btn-primary" type="button" onclick="sendOpsSupportMessage()">Enviar resposta</button></div></div></section>'
-      + '<section class="page-section"><div class="page-section-title">Linha do tempo</div><div class="page-section-sub">Histórico do atendimento com ordem cronológica e autoria.</div><div class="ops-message-list">'
-      + (!messages.length ? '<div class="account-empty-state">Nenhum atendimento registrado ainda para este cliente.</div>' : messages.map(function (message) {
-          var author = (message.fromRole || message.from) === 'admin' ? 'Equipe Recupera Empresas' : (message.fromName || 'Cliente');
-          var toneClass = (message.fromRole || message.from) === 'admin' ? 'ops-message-card is-admin' : 'ops-message-card';
-          return '<article class="' + toneClass + '"><div class="ops-message-head"><strong>' + escHtml(author) + '</strong><span>' + new Date(message.ts).toLocaleString('pt-BR') + '</span></div><div>' + escHtml(message.text) + '</div></article>';
-        }).join(''))
-      + '</div></section>'
-      + '</div>';
+    return [
+      '<div class="ops-panel-stack">',
+      '  <section class="ops-hero-grid">',
+      buildHeroCard('Cliente', user.company || user.name || 'Cliente', user.email || 'Sem e-mail', 'blue'),
+      buildHeroCard('Chamados ativos', String(Math.max(messages.length - resolved, 0)), 'Conversas aguardando retorno da equipe', 'amber'),
+      buildHeroCard('Último contato', messages[0]?.ts ? new Date(messages[0].ts).toLocaleDateString('pt-BR') : 'Sem registro', 'Linha do tempo do atendimento', 'green'),
+      '  </section>',
+      '  <section class="ops-banner-card">',
+      '    <div><div class="ops-banner-title">Central de atendimento com contexto</div><div class="ops-banner-sub">Acompanhe a conversa, responda rápido e preserve o histórico do cliente sem sair do fluxo operacional.</div></div>',
+      '    <div class="ops-banner-actions"><a class="btn btn-secondary" href="/cliente?id=' + user.id + '&tab=messages">Abrir detalhe completo</a></div>',
+      '  </section>',
+      '  <div class="ops-panel-grid">',
+      '    <div class="ops-panel-main">',
+      '      <section class="page-section">',
+      '        <div class="page-section-title">Nova resposta</div>',
+      '        <div class="page-section-sub">Registre uma atualização, pedido de retorno ou orientação imediata.</div>',
+      '        <div class="ops-compose-box">',
+      '          <textarea id="opsSupportMessage" class="form-input account-textarea" placeholder="Escreva a atualização, solicitação ou retorno para o cliente."></textarea>',
+      '          <div class="account-form-actions"><button class="btn btn-primary" type="button" onclick="sendOpsSupportMessage()">Enviar resposta</button></div>',
+      '        </div>',
+      '      </section>',
+      '      <section class="page-section">',
+      '        <div class="page-section-title">Linha do tempo</div>',
+      '        <div class="page-section-sub">Histórico completo do atendimento em ordem cronológica.</div>',
+      '        <div class="ops-message-list">',
+      !messages.length ? '<div class="account-empty-state">Nenhum atendimento registrado ainda para este cliente.</div>' : messages.map(function (message) {
+        var author = (message.fromRole || message.from) === 'admin' ? 'Equipe Recupera Empresas' : (message.fromName || 'Cliente');
+        var toneClass = (message.fromRole || message.from) === 'admin' ? 'ops-message-card is-admin' : 'ops-message-card';
+        return '<article class="' + toneClass + '"><div class="ops-message-head"><strong>' + escHtml(author) + '</strong><span>' + new Date(message.ts).toLocaleString('pt-BR') + '</span></div><div>' + escHtml(message.text) + '</div></article>';
+      }).join(''),
+      '        </div>',
+      '      </section>',
+      '    </div>',
+      buildWorkspaceAside(detail, {
+        chips: [
+          { label: 'Etapa ' + Number(user.step || 0) },
+          { label: (user.status || 'nao_iniciado').replaceAll('_', ' ') },
+          { label: (user.pendingTasks || 0) + ' tarefa(s) pendentes', muted: !Number(user.pendingTasks || 0) }
+        ],
+        actions: [
+          { href: '/cliente?id=' + user.id + '&tab=overview', label: 'Abrir cliente', secondary: true },
+          { href: '/tarefas-admin?ids=' + user.id, label: 'Abrir tarefas' }
+        ],
+        extra: '<section class="ops-context-card"><div class="ops-context-kicker">Resumo do atendimento</div><ul class="ops-context-list"><li><strong>' + Number(messages.length || 0) + '</strong><span>interações registradas</span></li><li><strong>' + Math.max(messages.length - resolved, 0) + '</strong><span>itens em aberto</span></li></ul></section>'
+      }),
+      '  </div>',
+      '</div>'
+    ].join('');
   }
 
   function messagesPanel(detail) {
@@ -201,24 +322,45 @@
     var clientMessages = messages.filter(function (message) {
       return (message.fromRole || message.from) !== 'admin';
     });
-    return '<div class="ops-panel-stack">'
-      + '<section class="ops-hero-grid">'
-      + buildHeroCard('Cliente', user.company || user.name || 'Cliente', user.email || 'Sem e-mail', 'blue')
-      + buildHeroCard('Mensagens recebidas', String(clientMessages.length), 'Volume vindo do cliente', 'purple')
-      + buildHeroCard('Total da conversa', String(messages.length), 'Inclui respostas da equipe', 'green')
-      + '</section>'
-      + '<section class="ops-banner-card">'
-      + '  <div><div class="ops-banner-title">Caixa de mensagens</div><div class="ops-banner-sub">Use este workspace para triagem rápida e encaminhamento para o detalhe completo quando a conversa exigir contexto adicional.</div></div>'
-      + '  <div class="ops-banner-actions"><a class="btn btn-secondary" href="/cliente?id=' + user.id + '&tab=messages">Abrir conversa completa</a></div>'
-      + '</section>'
-      + '<section class="page-section"><div class="page-section-title">Mensagens recentes</div><div class="page-section-sub">Entradas mais recentes do cliente e da equipe.</div><div class="ops-message-list">'
-      + (!messages.length ? '<div class="account-empty-state">Nenhuma mensagem encontrada para este cliente.</div>' : messages.map(function (message) {
-          var author = (message.fromRole || message.from) === 'admin' ? 'Equipe Recupera Empresas' : (message.fromName || 'Cliente');
-          var toneClass = (message.fromRole || message.from) === 'admin' ? 'ops-message-card is-admin' : 'ops-message-card';
-          return '<article class="' + toneClass + '"><div class="ops-message-head"><strong>' + escHtml(author) + '</strong><span>' + new Date(message.ts).toLocaleString('pt-BR') + '</span></div><div>' + escHtml(message.text) + '</div></article>';
-        }).join(''))
-      + '</div></section>'
-      + '</div>';
+    return [
+      '<div class="ops-panel-stack">',
+      '  <section class="ops-hero-grid">',
+      buildHeroCard('Cliente', user.company || user.name || 'Cliente', user.email || 'Sem e-mail', 'blue'),
+      buildHeroCard('Mensagens recebidas', String(clientMessages.length), 'Volume vindo do cliente', 'purple'),
+      buildHeroCard('Total da conversa', String(messages.length), 'Inclui mensagens da equipe', 'green'),
+      '  </section>',
+      '  <section class="ops-banner-card">',
+      '    <div><div class="ops-banner-title">Triagem de mensagens</div><div class="ops-banner-sub">Use esta visão para destravar dúvidas rápidas e puxar contexto quando a conversa exigir aprofundamento.</div></div>',
+      '    <div class="ops-banner-actions"><a class="btn btn-secondary" href="/cliente?id=' + user.id + '&tab=messages">Abrir conversa completa</a></div>',
+      '  </section>',
+      '  <div class="ops-panel-grid">',
+      '    <div class="ops-panel-main">',
+      '      <section class="page-section">',
+      '        <div class="page-section-title">Mensagens recentes</div>',
+      '        <div class="page-section-sub">Entradas do cliente e respostas da equipe em uma mesma fila.</div>',
+      '        <div class="ops-message-list">',
+      !messages.length ? '<div class="account-empty-state">Nenhuma mensagem encontrada para este cliente.</div>' : messages.map(function (message) {
+        var author = (message.fromRole || message.from) === 'admin' ? 'Equipe Recupera Empresas' : (message.fromName || 'Cliente');
+        var toneClass = (message.fromRole || message.from) === 'admin' ? 'ops-message-card is-admin' : 'ops-message-card';
+        return '<article class="' + toneClass + '"><div class="ops-message-head"><strong>' + escHtml(author) + '</strong><span>' + new Date(message.ts).toLocaleString('pt-BR') + '</span></div><div>' + escHtml(message.text) + '</div></article>';
+      }).join(''),
+      '        </div>',
+      '      </section>',
+      '    </div>',
+      buildWorkspaceAside(detail, {
+        chips: [
+          { label: clientMessages.length + ' recebida(s)' },
+          { label: messages.length + ' no histórico', muted: !messages.length },
+          { label: 'Canal consultor' }
+        ],
+        actions: [
+          { href: '/suporte-admin?ids=' + user.id, label: 'Ir para chamados', secondary: true },
+          { href: '/cliente?id=' + user.id + '&tab=messages', label: 'Abrir cliente' }
+        ]
+      }),
+      '  </div>',
+      '</div>'
+    ].join('');
   }
 
   function tasksPanel(detail) {
@@ -226,24 +368,50 @@
     var tasks = detail.tasks || [];
     var completed = tasks.filter(function (task) { return task.status === 'concluido'; }).length;
     var pending = tasks.filter(function (task) { return task.status !== 'concluido'; }).length;
-    return '<div class="ops-panel-stack">'
-      + '<section class="ops-hero-grid">'
-      + buildHeroCard('Cliente', user.company || user.name || 'Cliente', user.email || 'Sem e-mail', 'blue')
-      + buildHeroCard('Pendentes', String(pending), 'Demandas ainda em aberto', 'amber')
-      + buildHeroCard('Concluídas', String(completed), 'Itens já finalizados', 'green')
-      + '</section>'
-      + '<section class="ops-banner-card">'
-      + '  <div><div class="ops-banner-title">Execução por cliente</div><div class="ops-banner-sub">Crie tarefas rápidas, acompanhe o backlog e mantenha as prioridades visíveis para a operação.</div></div>'
-      + '</section>'
-      + '<section class="page-section"><div class="page-section-title">Nova tarefa</div><div class="page-section-sub">Crie uma tarefa operacional diretamente do workspace.</div><div class="page-field-row full"><div class="form-group"><label class="form-label" for="opsTaskTitle">Título</label><input class="form-input" id="opsTaskTitle" type="text" placeholder="Título da tarefa"/></div></div><div class="page-field-row full"><div class="form-group"><label class="form-label" for="opsTaskDescription">Descrição</label><textarea class="form-input account-textarea" id="opsTaskDescription" placeholder="Detalhes e contexto"></textarea></div></div><div class="page-field-row full"><div class="form-group"><label class="form-label" for="opsTaskDueDate">Prazo</label><input class="form-input" id="opsTaskDueDate" type="date"/></div></div><div class="account-form-actions"><button class="btn btn-primary" type="button" onclick="createOpsTask()">Criar tarefa</button></div></section>'
-      + '<section class="page-section"><div class="page-section-title">Fila do cliente</div><div class="page-section-sub">Resumo das tarefas já atribuídas.</div><div class="tenant-team-list">'
-      + (!tasks.length ? '<div class="account-empty-state">Nenhuma tarefa atribuída a este cliente.</div>' : tasks.map(function (task) {
-          var pendingTask = task.status !== 'concluido';
-          var dueDate = task.dueDate ? new Date(task.dueDate).toLocaleDateString('pt-BR') : 'Sem prazo';
-          return '<article class="tenant-member-card"><div><div class="tenant-member-name">' + escHtml(task.title) + '</div><div class="tenant-member-meta">' + escHtml(task.description || 'Sem descrição') + '</div><div class="account-chip-list tenant-member-chip-row"><span class="account-chip' + (pendingTask ? '' : ' account-chip-muted') + '">' + (pendingTask ? 'Pendente' : 'Concluída') + '</span><span class="account-chip account-chip-muted">' + escHtml(dueDate) + '</span></div></div></article>';
-        }).join(''))
-      + '</div></section>'
-      + '</div>';
+    var columns = groupTasks(tasks);
+    return [
+      '<div class="ops-panel-stack">',
+      '  <section class="ops-hero-grid">',
+      buildHeroCard('Cliente', user.company || user.name || 'Cliente', user.email || 'Sem e-mail', 'blue'),
+      buildHeroCard('Pendentes', String(pending), 'Demandas ainda em aberto', 'amber'),
+      buildHeroCard('Concluídas', String(completed), 'Itens já finalizados', 'green'),
+      '  </section>',
+      '  <section class="ops-banner-card">',
+      '    <div><div class="ops-banner-title">Execução por cliente</div><div class="ops-banner-sub">Organize entregas em colunas, preserve o backlog e registre contexto operacional sem sair da carteira.</div></div>',
+      '  </section>',
+      '  <div class="ops-panel-grid">',
+      '    <div class="ops-panel-main">',
+      '      <section class="page-section">',
+      '        <div class="page-section-title">Nova tarefa</div>',
+      '        <div class="page-section-sub">Crie uma entrega rápida e encaminhe o próximo passo da operação.</div>',
+      '        <div class="page-field-row full"><div class="form-group"><label class="form-label" for="opsTaskTitle">Título</label><input class="form-input" id="opsTaskTitle" type="text" placeholder="Título da tarefa"/></div></div>',
+      '        <div class="page-field-row full"><div class="form-group"><label class="form-label" for="opsTaskDescription">Descrição</label><textarea class="form-input account-textarea" id="opsTaskDescription" placeholder="Detalhes e contexto"></textarea></div></div>',
+      '        <div class="page-field-row full"><div class="form-group"><label class="form-label" for="opsTaskDueDate">Prazo</label><input class="form-input" id="opsTaskDueDate" type="date"/></div></div>',
+      '        <div class="account-form-actions"><button class="btn btn-primary" type="button" onclick="createOpsTask()">Criar tarefa</button></div>',
+      '      </section>',
+      '      <section class="page-section">',
+      '        <div class="page-section-title">Quadro operacional</div>',
+      '        <div class="page-section-sub">Visão rápida das tarefas por etapa do fluxo.</div>',
+      '        <div class="ops-board-grid">',
+      columns.map(buildBoardColumn).join(''),
+      '        </div>',
+      '      </section>',
+      '    </div>',
+      buildWorkspaceAside(detail, {
+        chips: [
+          { label: pending + ' pendente(s)', muted: !pending },
+          { label: completed + ' concluída(s)', muted: !completed },
+          { label: 'Etapa ' + Number(user.step || 0) }
+        ],
+        actions: [
+          { href: '/cliente?id=' + user.id + '&tab=tasks', label: 'Abrir cliente', secondary: true },
+          { href: '/suporte-admin?ids=' + user.id, label: 'Abrir chamados' }
+        ],
+        extra: '<section class="ops-context-card"><div class="ops-context-kicker">Ritmo de execução</div><ul class="ops-context-list"><li><strong>' + String(tasks.length) + '</strong><span>tarefas registradas</span></li><li><strong>' + String(pending) + '</strong><span>prioridades abertas</span></li></ul></section>'
+      }),
+      '  </div>',
+      '</div>'
+    ].join('');
   }
 
   function documentsPanel(detail) {
@@ -252,22 +420,54 @@
     var approved = documents.filter(function (doc) { return doc.status === 'aprovado'; }).length;
     var review = documents.filter(function (doc) { return doc.status === 'em_analise'; }).length;
     var pending = documents.filter(function (doc) { return doc.status !== 'aprovado'; }).length;
-    return '<div class="ops-panel-stack">'
-      + '<section class="ops-hero-grid">'
-      + buildHeroCard('Cliente', user.company || user.name || 'Cliente', user.email || 'Sem e-mail', 'blue')
-      + buildHeroCard('Em análise', String(review), 'Itens aguardando decisão da equipe', 'amber')
-      + buildHeroCard('Aprovados', String(approved), 'Documentos validados', 'green')
-      + buildHeroCard('Pendências', String(pending), 'Itens que ainda precisam de ação', 'purple')
-      + '</section>'
-      + '<section class="ops-banner-card">'
-      + '  <div><div class="ops-banner-title">Mesa de documentos</div><div class="ops-banner-sub">Revise, comente e ajuste o status de cada envio com acesso rápido ao arquivo original.</div></div>'
-      + '</section>'
-      + '<section class="page-section"><div class="page-section-title">Documentos enviados</div><div class="page-section-sub">Atualize status e registre orientações diretamente no workspace.</div><div class="tenant-team-list">'
-      + (!documents.length ? '<div class="account-empty-state">Este cliente ainda não enviou documentos.</div>' : documents.map(function (doc) {
-          return '<article class="ops-document-card"><div class="ops-document-head"><div><div class="tenant-member-name">' + escHtml(doc.name) + '</div><div class="tenant-member-meta">' + escHtml(doc.docType || 'Documento') + ' · ' + new Date(doc.createdAt).toLocaleDateString('pt-BR') + '</div></div><span class="badge ' + ({pendente:'badge-gray', em_analise:'badge-blue', aprovado:'badge-green', reprovado:'badge-red', ajuste_solicitado:'badge-amber'}[doc.status] || 'badge-gray') + '">' + escHtml(doc.status || 'pendente') + '</span></div><div class="page-field-row"><div class="form-group"><label class="form-label" for="opsDocStatus_' + doc.id + '">Status</label><select class="form-input" id="opsDocStatus_' + doc.id + '"><option value="pendente">Pendente</option><option value="em_analise">Em análise</option><option value="aprovado">Aprovado</option><option value="reprovado">Reprovado</option><option value="ajuste_solicitado">Ajuste solicitado</option></select></div><div class="form-group"><label class="form-label" for="opsDocComment_' + doc.id + '">Comentário</label><input class="form-input" id="opsDocComment_' + doc.id + '" type="text" placeholder="Orientação opcional para o cliente"/></div></div><div class="tenant-member-actions"><a class="btn btn-secondary btn-sm" href="/api/documents/' + doc.id + '/file?token=' + encodeURIComponent(localStorage.getItem('re_token') || '') + '" target="_blank">Abrir arquivo</a><button class="btn btn-primary btn-sm" type="button" onclick="saveOpsDocumentStatus(\'' + doc.id + '\')">Salvar status</button></div></article>';
-        }).join(''))
-      + '</div></section>'
-      + '</div>';
+    var spotlight = documents[0] || null;
+    return [
+      '<div class="ops-panel-stack">',
+      '  <section class="ops-hero-grid">',
+      buildHeroCard('Cliente', user.company || user.name || 'Cliente', user.email || 'Sem e-mail', 'blue'),
+      buildHeroCard('Em análise', String(review), 'Itens aguardando decisão da equipe', 'amber'),
+      buildHeroCard('Aprovados', String(approved), 'Documentos validados', 'green'),
+      buildHeroCard('Pendências', String(pending), 'Itens que ainda precisam de ação', 'purple'),
+      '  </section>',
+      '  <section class="ops-banner-card">',
+      '    <div><div class="ops-banner-title">Mesa de documentos</div><div class="ops-banner-sub">Visualize a fila, mude o status e registre orientação sem perder o contexto do cliente.</div></div>',
+      '  </section>',
+      '  <div class="ops-panel-grid">',
+      '    <div class="ops-panel-main">',
+      '      <section class="page-section">',
+      '        <div class="page-section-title">Pipeline documental</div>',
+      '        <div class="page-section-sub">Visão por estágio para acelerar triagem, revisão e aprovação.</div>',
+      '        <div class="ops-board-grid">',
+      groupDocuments(documents).map(buildBoardColumn).join(''),
+      '        </div>',
+      '      </section>',
+      '      <section class="page-section">',
+      '        <div class="page-section-title">Ajustar documentos</div>',
+      '        <div class="page-section-sub">Atualize status e deixe orientações objetivas para o cliente.</div>',
+      '        <div class="tenant-team-list">',
+      !documents.length ? '<div class="account-empty-state">Este cliente ainda não enviou documentos.</div>' : documents.map(function (doc) {
+        return '<article class="ops-document-card"><div class="ops-document-head"><div><div class="tenant-member-name">' + escHtml(doc.name) + '</div><div class="tenant-member-meta">' + escHtml(doc.docType || 'Documento') + ' · ' + new Date(doc.createdAt).toLocaleDateString('pt-BR') + '</div></div><span class="badge ' + ({pendente:'badge-gray', em_analise:'badge-blue', aprovado:'badge-green', reprovado:'badge-red', ajuste_solicitado:'badge-amber'}[doc.status] || 'badge-gray') + '">' + escHtml(doc.status || 'pendente') + '</span></div><div class="page-field-row"><div class="form-group"><label class="form-label" for="opsDocStatus_' + doc.id + '">Status</label><select class="form-input" id="opsDocStatus_' + doc.id + '"><option value="pendente">Pendente</option><option value="em_analise">Em análise</option><option value="aprovado">Aprovado</option><option value="reprovado">Reprovado</option><option value="ajuste_solicitado">Ajuste solicitado</option></select></div><div class="form-group"><label class="form-label" for="opsDocComment_' + doc.id + '">Comentário</label><input class="form-input" id="opsDocComment_' + doc.id + '" type="text" placeholder="Orientação opcional para o cliente"/></div></div><div class="tenant-member-actions"><a class="btn btn-secondary btn-sm" href="/api/documents/' + doc.id + '/file?token=' + encodeURIComponent(localStorage.getItem('re_token') || '') + '" target="_blank">Abrir arquivo</a><button class="btn btn-primary btn-sm" type="button" onclick="saveOpsDocumentStatus(\'' + doc.id + '\')">Salvar status</button></div></article>';
+      }).join(''),
+      '        </div>',
+      '      </section>',
+      '    </div>',
+      buildWorkspaceAside(detail, {
+        chips: [
+          { label: pending + ' com ação pendente', muted: !pending },
+          { label: review + ' em análise', muted: !review },
+          { label: approved + ' aprovados', muted: !approved }
+        ],
+        actions: spotlight ? [
+          { href: '/api/documents/' + spotlight.id + '/file?token=' + encodeURIComponent(localStorage.getItem('re_token') || ''), label: 'Abrir destaque', secondary: true },
+          { href: '/cliente?id=' + user.id + '&tab=docs', label: 'Abrir cliente' }
+        ] : [
+          { href: '/cliente?id=' + user.id + '&tab=docs', label: 'Abrir cliente' }
+        ],
+        extra: spotlight ? '<section class="ops-context-card"><div class="ops-context-kicker">Documento em destaque</div><div class="ops-context-title">' + escHtml(spotlight.name || 'Documento') + '</div><div class="ops-context-meta">' + escHtml(spotlight.docType || 'Arquivo do cliente') + '</div><div class="ops-document-preview"><div class="ops-document-preview-line">Status atual: ' + escHtml(spotlight.status || 'pendente') + '</div><div class="ops-document-preview-line">Enviado em ' + new Date(spotlight.createdAt).toLocaleDateString('pt-BR') + '</div></div></section>' : ''
+      }),
+      '  </div>',
+      '</div>'
+    ].join('');
   }
 
   async function renderSelectedClient() {

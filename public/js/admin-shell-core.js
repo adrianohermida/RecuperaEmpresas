@@ -166,6 +166,9 @@ function showSection(name, el) {
       initBusinessPlanModule();
     }
   }
+  var href = name === 'clients' ? '/admin' : '/admin?section=' + encodeURIComponent(name);
+  if (history.replaceState) history.replaceState(null, '', href);
+  window.REShared?.syncSidebarActive?.(href);
   closeSidebar();
   window.scrollTo({ top: 0, behavior: 'instant' });
 }
@@ -629,7 +632,7 @@ window.consumeAdminFlashToast = consumeAdminFlashToast;
 console.info('[RE:admin-shell-core] loaded');
 
 (function initAdminSectionRouting() {
-  var validSections = ['clients', 'agenda', 'financeiro', 'formularios', 'jornadas', 'logs', 'adminInvoices', 'adminMarketplace', 'auditlog'];
+  var validSections = ['clients', 'agenda', 'financeiro', 'formularios', 'jornadas', 'logs', 'adminInvoices', 'adminMarketplace', 'auditlog', 'businessPlan'];
 
   function applyRequestedSection() {
     var params = new URLSearchParams(window.location.search);

@@ -75,14 +75,16 @@
         : '<div class="portal-ui-modal ' + (opts.size ? 'portal-ui-modal-' + opts.size : '') + '">',
       '  <div class="' + (isDrawer ? 'portal-ui-drawer-head' : 'portal-ui-modal-head') + '">',
       '    <div>',
+      (opts.eyebrow ? '      <div class="portal-ui-modal-eyebrow">' + opts.eyebrow + '</div>' : ''),
       '      <div class="portal-ui-modal-title">' + (opts.title || '') + '</div>',
       (opts.subtitle ? '      <div class="portal-ui-modal-sub">' + opts.subtitle + '</div>' : ''),
       '    </div>',
       '    <button type="button" class="portal-ui-close" aria-label="Fechar">&times;</button>',
       '  </div>',
-      '  <div class="' + (isDrawer ? 'portal-ui-drawer-body' : 'portal-ui-modal-body') + '"></div>',
+      '  <div class="' + (isDrawer ? 'portal-ui-drawer-body' : 'portal-ui-modal-body') + (opts.bodyClass ? ' ' + opts.bodyClass : '') + '"></div>',
+      (opts.note ? '  <div class="portal-ui-modal-note">' + opts.note + '</div>' : ''),
       (opts.actions && opts.actions.length
-        ? '  <div class="portal-ui-modal-actions">' + renderActions(opts.actions) + '</div>'
+        ? '  <div class="portal-ui-modal-actions' + (opts.actionsClass ? ' ' + opts.actionsClass : '') + '">' + renderActions(opts.actions) + '</div>'
         : ''),
       isDrawer ? '</aside>' : '</div>'
     ].join('');

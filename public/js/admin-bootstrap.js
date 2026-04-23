@@ -220,6 +220,11 @@
     if (userAvatar) userAvatar.textContent = (user.name || user.email || '?')[0].toUpperCase();
     if (dropupUserName) dropupUserName.textContent = user.name || user.email;
     if (dropupUserEmail) dropupUserEmail.textContent = user.email || '';
+    window.REShared?.renderPortalSidebar?.({
+      containerId: 'portalSidebarNav',
+      user: user,
+      activeHref: window.location.pathname + window.location.search
+    });
     document.body.dataset.reAdminAuthReady = '1';
     document.getElementById('authGuard')?.remove();
     window.REAdminModal?.sanitizeShellOverlays?.('auth-ready');

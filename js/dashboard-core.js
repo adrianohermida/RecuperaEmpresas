@@ -32,8 +32,9 @@ function showSection(name, clickedEl) {
     });
   }
   window.scrollTo({ top: 0, behavior: 'instant' });
-  // Update URL hash so browser back/forward works and deep links are shareable
-  if (history.replaceState) history.replaceState(null, '', '#' + name);
+  const nextHref = name === 'dashboard' ? '/dashboard' : '/dashboard?section=' + encodeURIComponent(name);
+  if (history.replaceState) history.replaceState(null, '', nextHref);
+  window.REShared?.syncSidebarActive?.(nextHref);
 
   // Section-specific data loaders (refresh on every navigation)
   if (name === 'tasks')       loadTasks();

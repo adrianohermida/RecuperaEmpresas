@@ -14,8 +14,12 @@
     resetPassword: '/reset-password',
     dashboard: '/dashboard',
     admin: '/admin',
+    chamados: '/suporte-admin',
+    tarefas: '/tarefas-admin',
+    documentos: '/documentos-admin',
     perfil: '/perfil',
     configuracoes: '/configuracoes',
+    integracoes: '/integracoes',
     cliente: '/cliente',
     onboarding: '/index.html'
   };
@@ -256,7 +260,7 @@
     if (view === 'admin') {
       return [
         {
-          label: 'Visão Geral',
+          label: 'Consultoria',
           items: [
             { href: '/admin', label: 'Clientes', icon: SIDEBAR_ICONS.clients },
             { href: '/admin?section=agenda', label: 'Agenda', icon: SIDEBAR_ICONS.agenda },
@@ -275,6 +279,7 @@
             { href: '/documentos-admin', label: 'Documentos', icon: SIDEBAR_ICONS.documentos },
             { href: '/admin?section=adminInvoices', label: 'Cobranças', icon: SIDEBAR_ICONS.cobrancas },
             { href: '/admin?section=adminMarketplace', label: 'Marketplace', icon: SIDEBAR_ICONS.marketplace },
+            { href: '/integracoes', label: 'Integrações', icon: SIDEBAR_ICONS.configuracoes },
             { href: '/admin?section=auditlog', label: 'Auditoria', icon: SIDEBAR_ICONS.auditoria }
           ]
         },
@@ -293,11 +298,18 @@
         label: 'Meu Portal',
         items: [
           { href: '/dashboard', label: 'Dashboard', icon: SIDEBAR_ICONS.dashboard },
-          { href: '/dashboard?section=agenda', label: 'Agenda', icon: SIDEBAR_ICONS.agenda },
-          { href: '/dashboard?section=docs', label: 'Documentos', icon: SIDEBAR_ICONS.documentos },
-          { href: '/dashboard?section=forms', label: 'Formulários', icon: SIDEBAR_ICONS.formularios },
+          { href: '/dashboard?section=onboarding', label: 'Onboarding', icon: SIDEBAR_ICONS.formularios },
+          { href: '/dashboard?section=plan', label: 'Business Plan', icon: SIDEBAR_ICONS.businessPlan },
+          { href: '/dashboard?section=tasks', label: 'Tarefas', icon: SIDEBAR_ICONS.tarefas },
+          { href: '/dashboard?section=messages', label: 'Mensagens', icon: SIDEBAR_ICONS.suporte },
           { href: '/dashboard?section=support', label: 'Chamados', icon: SIDEBAR_ICONS.suporte },
-          { href: '/dashboard?section=financeiro', label: 'Financeiro', icon: SIDEBAR_ICONS.financeiro }
+          { href: '/dashboard?section=agenda', label: 'Agenda', icon: SIDEBAR_ICONS.agenda },
+          { href: '/dashboard?section=financeiro', label: 'Financeiro', icon: SIDEBAR_ICONS.financeiro },
+          { href: '/dashboard?section=marketplace', label: 'Marketplace', icon: SIDEBAR_ICONS.marketplace },
+          { href: '/dashboard?section=documentos', label: 'Documentos', icon: SIDEBAR_ICONS.documentos },
+          { href: '/dashboard?section=formularios', label: 'Formulários', icon: SIDEBAR_ICONS.formularios },
+          { href: '/dashboard?section=jornadas', label: 'Jornadas', icon: SIDEBAR_ICONS.jornadas },
+          { href: '/dashboard?section=equipe', label: 'Equipe', icon: SIDEBAR_ICONS.clients }
         ]
       },
       {
@@ -325,7 +337,7 @@
         section.items.map(function (item) {
           var activeClass = isSidebarItemActive(item.href, activeHref) ? ' active' : '';
           return [
-            '<a href="' + escapeHtml(item.href) + '" class="sidebar-link' + activeClass + '">',
+            '<a href="' + escapeHtml(item.href) + '" class="sidebar-link' + activeClass + '" onclick="return window.REShared.handleSidebarNavigation(event)"' + (activeClass ? ' aria-current="page"' : '') + '>',
             item.icon || '',
             '<span>' + escapeHtml(item.label) + '</span>',
             '</a>'
@@ -334,6 +346,43 @@
         '</div>'
       ].join('');
     }).join('');
+  }
+
+  function syncSidebarActive(activeHref) {
+    var normalizedActiveHref = getSidebarActiveHref(activeHref);
+    document.querySelectorAll('#portalSidebarNav .sidebar-link').forEach(function (link) {
+      var isActive = isSidebarItemActive(link.getAttribute('href') || '', normalizedActiveHref);
+      link.classList.toggle('active', isActive);
+      if (isActive) link.setAttribute('aria-current', 'page');
+      else link.removeAttribute('aria-current');
+    });
+  }
+
+  function handleSidebarNavigation(event) {
+    var anchor = event && event.currentTarget;
+    if (!anchor) return true;
+
+    var href = anchor.getAttribute('href') || '';
+    if (!href) return true;
+
+    try {
+      var currentUrl = new URL(window.location.href);
+      var nextUrl = new URL(href, window.location.origin);
+      var samePage = currentUrl.pathname === nextUrl.pathname;
+      var section = nextUrl.searchParams.get('section') || nextUrl.hash.replace('#', '').trim();
+
+      if (!samePage || typeof window.showSection !== 'function') return true;
+
+      event.preventDefault();
+      var fallbackSection = nextUrl.pathname === ROUTES.admin ? 'clients' : 'dashboard';
+      var targetSection = section || fallbackSection;
+      if (history.replaceState) history.replaceState(null, '', nextUrl.pathname + nextUrl.search + nextUrl.hash);
+      window.showSection(targetSection, null);
+      syncSidebarActive(nextUrl.pathname + nextUrl.search + nextUrl.hash);
+      return false;
+    } catch (_error) {
+      return true;
+    }
   }
 
   async function verifySession(options) {
@@ -492,12 +541,14 @@
     getRoute: getRoute,
     getStoredToken: getStoredToken,
     getStoredUser: getStoredUser,
+    handleSidebarNavigation: handleSidebarNavigation,
     storeAuthToken: storeAuthToken,
     logoutSession: logoutSession,
     readResponse: readResponse,
     renderPortalSidebar: renderPortalSidebar,
     redirectToRoute: redirectToRoute,
     redirectToUserHome: redirectToUserHome,
+    syncSidebarActive: syncSidebarActive,
     storeAuthUser: storeAuthUser,
     verifySession: verifySession,
   };
