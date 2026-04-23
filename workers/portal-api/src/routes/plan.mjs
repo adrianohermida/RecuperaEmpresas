@@ -1,4 +1,5 @@
-import { json, readJson, notFound, methodNotAllowed } from '../lib/http.mjs';
+import { json, methodNotAllowed, notFound, readJson } from '../lib/http.mjs';
+import { auditLog, queueSideEffect } from '../lib/effects.mjs';
 
 // BP-WK-02: Check chapter permissions before returning content
 async function checkChapterPermission(sb, userId, chapterId, permissionType = 'view') {
@@ -221,19 +222,46 @@ export async function handleAdminPlan(request, context) {
       return json({ error: 'Erro ao salvar capítulo: ' + error.message }, { status: 500 });
     }
 
+    // BP-BE-04: Audit log for chapter edit
+    queueSideEffect(context, () => auditLog(sb, {
+      actorId: user.id,
+      actorEmail: user.email,
+      actorRole: 'consultor',
+      entityType: 're_plan_chapters',
+      entityId: `${clientId}:${chapterIdNum}`,
+      action: 'edit',
+      notes: 'Capítulo editado pelo consultor no painel admin.'
+    }), 'audit-plan-edit');
+
     return json({ success: true });
   }
 
   // POST /api/admin/plan/:clientId/chapter/:chapterId/publish
   if (request.method === 'POST' && action === 'publish') {
     const { error } = await sb.from('re_plan_chapters')
-      .update({ status: 'published', visibility: 'public', updated_at: new Date().toISOString() })
+      .update({ 
+        status: 'published', 
+        visibility: 'public', 
+        published_at: new Date().toISOString(),
+        updated_at: new Date().toISOString() 
+      })
       .eq('user_id', clientId)
       .eq('chapter_id', chapterIdNum);
 
     if (error) {
       return json({ error: 'Erro ao publicar capítulo: ' + error.message }, { status: 500 });
     }
+
+    // BP-BE-04: Audit log for chapter publish
+    queueSideEffect(context, () => auditLog(sb, {
+      actorId: user.id,
+      actorEmail: user.email,
+      actorRole: 'consultor',
+      entityType: 're_plan_chapters',
+      entityId: `${clientId}:${chapterIdNum}`,
+      action: 'publish',
+      notes: 'Capítulo publicado para o cliente.'
+    }), 'audit-plan-publish');
 
     return json({ success: true });
   }

@@ -1780,19 +1780,23 @@ async function handleAdminBookForClient(request, context) {
     return json({ error: 'Erro ao criar agendamento no banco de dados.' }, { status: 500 });
   }
 
-  queueSideEffect(context, () => auditLog(context, {
+  queueSideEffect(context, () => auditLog(context.sb, {
     action: 'agenda:book_for_client',
-    resource: 're_bookings',
-    resource_id: booking.id,
-    details: { slot_id, user_id, external_contact },
+    entityType: 're_bookings',
+    entityId: booking.id,
+    notes: JSON.stringify({ slot_id, user_id, external_contact }),
   }), 'audit-book-for-client');
 
   if (user_id) {
-    queueSideEffect(context, () => pushNotification(context, user_id, {
-      title: 'Novo agendamento confirmado',
-      body: `Um novo compromisso foi agendado para você: ${slot.title}`,
-      data: { type: 'agenda', booking_id: booking.id },
-    }), 'notify-book-for-client');
+    queueSideEffect(context, () => pushNotification(
+      context.sb,
+      user_id,
+      'agenda',
+      'Novo agendamento confirmado',
+      `Um novo compromisso foi agendado para você: ${slot.title}`,
+      're_bookings',
+      booking.id
+    ), 'notify-book-for-client');
   }
 
   return json({ success: true, booking });
