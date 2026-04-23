@@ -196,13 +196,38 @@
       // Carregar conteúdo no editor
       if (quillEditor) {
         try {
-          // Tentar parsear como Delta (Quill) ou HTML
-          const content = chapter.content ? JSON.parse(chapter.content) : { ops: [] };
+          let content;
+          if (!chapter.content) {
+            content = { ops: [{ insert: '\n' }] };
+          } else if (typeof chapter.content === 'string' && chapter.content.trim().startsWith('{')) {
+            content = JSON.parse(chapter.content);
+          } else {
+            content = chapter.content;
+          }
           quillEditor.setContents(content);
         } catch (e) {
-          // Fallback para texto puro/HTML se não for JSON
-          quillEditor.setText(chapter.content || '');
+          console.warn('[BusinessPlan] Fallback para HTML/Texto:', e);
+          quillEditor.root.innerHTML = chapter.content || '';
         }
+
+        const isLocked = ['approved', 'revision_requested'].includes(chapter.status);
+        quillEditor.enable(!isLocked);
+
+        const editorContainer = document.getElementById('businessPlanEditor');
+        if (editorContainer) {
+          editorContainer.classList.toggle('editor-locked', isLocked);
+        }
+
+        const lockWarning = document.getElementById('editorLockWarning');
+        if (lockWarning) {
+          lockWarning.style.display = isLocked ? 'block' : 'none';
+          lockWarning.textContent = chapter.status === 'approved'
+            ? 'Este capítulo foi aprovado pelo cliente e não pode ser editado.'
+            : 'Este capítulo está em revisão e não pode ser editado no momento.';
+        }
+
+        const saveBtn = document.getElementById('saveChapterBtn');
+        if (saveBtn) saveBtn.disabled = isLocked;
       }
       
       // Renderizar comentários e anexos
@@ -252,7 +277,34 @@
       const div = document.createElement('div');
       div.className = 'business-plan-attachment';
       div.innerHTML = `<span>📎 ${a.name}</span><small>${formatFileSize(a.size)}</small>`;
-      div.onclick = () => window.open(a.url, '_blank');
+      div.onclick = async () => {
+        try {
+          showToast('Preparando download...', 'info');
+          const response = await fetch(a.url, { headers: authH() });
+
+          if (response.redirected) {
+            window.open(response.url, '_blank');
+            return;
+          }
+
+          if (!response.ok) {
+            throw new Error('Erro ao baixar arquivo.');
+          }
+
+          const blob = await response.blob();
+          const url = window.URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = a.name;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          window.URL.revokeObjectURL(url);
+        } catch (err) {
+          console.error('[BusinessPlan] Erro no download:', err);
+          showToast('Erro ao baixar arquivo.', 'error');
+        }
+      };
       container.appendChild(div);
     });
   }
