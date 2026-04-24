@@ -8,6 +8,8 @@
   <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
   <link rel="stylesheet" href="/css/portal.css?v=20260423f"/>
   <link rel="stylesheet" href="/css/dashboard-plan-approval.css?v=20260422a"/>
+  <link rel="stylesheet" href="/css/ux-improvements.css?v=20260423a"/>
+  <link rel="stylesheet" href="/css/fiscal-notes.css?v=20260423a"/>
   <script src="/js/config.js?v=20260421s"></script>
   <script src="/js/runtime-diagnostics.js?v=20260421s"></script>
   <script src="/js/api-base.js?v=20260421s"></script>
@@ -90,6 +92,10 @@
       <button class="sidebar-link" onclick="showSection('agenda',this)">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
         Agenda
+      </button>
+      <button class="sidebar-link" id="fiscalNotesSideLink" onclick="showSection('notas-fiscais',this)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        Notas Fiscais
       </button>
       <button class="sidebar-link" onclick="showSection('financeiro',this)">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
@@ -699,6 +705,11 @@
       </div>
     </div><!-- /sec-jornadas -->
 
+    <!-- NOTAS FISCAIS -->
+    <div id="sec-notas-fiscais" class="tab-content">
+      <!-- Conteúdo renderizado dinamicamente por dashboard-fiscal-notes.js -->
+    </div><!-- /sec-notas-fiscais -->
+
   </main>
 </div>
 
@@ -738,6 +749,7 @@
 <script src="/js/dashboard-agenda.js?v=20260421t"></script>
 <script src="/js/dashboard-notifications.js?v=20260421s"></script>
 <script src="/js/dashboard-marketplace.js?v=20260421s"></script>
+<script src="/js/dashboard-fiscal-notes.js?v=20260423a"></script>
 
 <script>
 'use strict';
@@ -927,7 +939,7 @@ async function initFreshchat(user) {
   // Hash-based deep link routing — must run after loadData so sections are populated
   (function handleDeepLink() {
     const VALID_SECTIONS = ['dashboard','onboarding','plan','tasks','messages','support','agenda',
-                            'financeiro','marketplace','documentos','formularios','jornadas','equipe'];
+                            'financeiro','marketplace','documentos','formularios','jornadas','equipe','notas-fiscais'];
     const hash = location.hash.replace('#', '').trim();
     if (hash && VALID_SECTIONS.includes(hash)) {
       showSection(hash, null);

@@ -7,6 +7,7 @@
   <title>Painel do Consultor — Recupera Empresas</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
   <link rel="stylesheet" href="/css/portal.css?v=20260423f"/>
+  <link rel="stylesheet" href="/css/ux-improvements.css?v=20260423a"/>
   <script src="/js/config.js?v=20260421u"></script>
   <script src="/js/runtime-diagnostics.js?v=20260421u"></script>
   <script src="/js/api-base.js?v=20260421u"></script>
@@ -84,6 +85,10 @@
         <button class="sidebar-link" onclick="showSection('jornadas',this)">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
           Jornadas
+        </button>
+        <button class="sidebar-link" onclick="showSection('notasFiscais',this)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          Notas Fiscais
         </button>
         <button class="sidebar-link" onclick="showSection('businessPlan',this)">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="3" y1="13" x2="21" y2="13"/><line x1="3" y1="17" x2="21" y2="17"/></svg>
@@ -1068,6 +1073,12 @@
       </div>
     </div>
 
+
+    <!-- NOTAS FISCAIS ADMIN -->
+    <div id="sec-notasFiscais" class="tab-content">
+      <!-- Conteúdo renderizado dinamicamente por admin-fiscal-notes.js -->
+    </div><!-- /sec-notasFiscais -->
+
   </main>
 </div>
 
@@ -1108,6 +1119,8 @@
 
 <!-- Business Plan JS -->
 <script src="/js/admin-business-plan.js?v=20260422a"></script>
+<!-- Notas Fiscais Admin JS -->
+<script src="/js/admin-fiscal-notes.js?v=20260423a"></script>
 
 </body>
 </html>
