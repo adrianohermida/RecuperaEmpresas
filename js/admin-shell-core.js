@@ -166,6 +166,19 @@ function showSection(name, el) {
       initBusinessPlanModule();
     }
   }
+  if (name === 'notasFiscais') {
+    if (typeof initAdminFiscalNotes === 'function') {
+      if (!window._adminFnInitialized) { window._adminFnInitialized = true; initAdminFiscalNotes(); }
+      else { if (typeof loadAdminFiscalNotes === 'function') loadAdminFiscalNotes(); }
+    }
+  }
+  if (name === 'clients') {
+    setTimeout(function () {
+      if (typeof window.REClientsRedesign?.init === 'function') {
+        window.REClientsRedesign.init();
+      }
+    }, 80);
+  }
   var href = name === 'clients' ? '/admin' : '/admin?section=' + encodeURIComponent(name);
   if (history.replaceState) history.replaceState(null, '', href);
   window.REShared?.syncSidebarActive?.(href);
@@ -304,6 +317,10 @@ function refreshClientsView() {
       : filtered.length + ' de ' + _allClients.length + ' clientes visíveis';
   }
   updateClientBulkToolbar(filtered);
+  // Sincroniza stats e sub no redesign
+  setTimeout(function () {
+    if (typeof window.REClientsRedesign?.syncStats === 'function') window.REClientsRedesign.syncStats();
+  }, 10);
 }
 
 function filterClients() {
@@ -378,6 +395,10 @@ function renderClientTable(clients) {
     window.REShared.applyPercentClass(bar, bar.dataset.progress || 0);
   });
   updateClientBulkToolbar(clients);
+  // Sincroniza com o redesign mobile-first
+  if (typeof window.REClientsRedesign?.syncTable === 'function') {
+    setTimeout(function () { window.REClientsRedesign.syncTable(); }, 0);
+  }
 }
 
 function toggleClientSelection(clientId, checked) {
@@ -632,7 +653,7 @@ window.consumeAdminFlashToast = consumeAdminFlashToast;
 console.info('[RE:admin-shell-core] loaded');
 
 (function initAdminSectionRouting() {
-  var validSections = ['clients', 'agenda', 'financeiro', 'formularios', 'jornadas', 'logs', 'adminInvoices', 'adminMarketplace', 'auditlog', 'businessPlan'];
+  var validSections = ['clients', 'agenda', 'financeiro', 'formularios', 'jornadas', 'logs', 'adminInvoices', 'adminMarketplace', 'auditlog', 'businessPlan', 'notasFiscais'];
 
   function applyRequestedSection() {
     var params = new URLSearchParams(window.location.search);
