@@ -357,6 +357,12 @@
     workspace.appendChild(main);
     main.appendChild(card);
 
+    // O painel lateral "Filtros e contexto" está desabilitado da exibição.
+    // O componente é preservado no repositório para uso futuro.
+    // Para reativar, remova o bloco de retorno antecipado abaixo.
+    return;
+
+    /* eslint-disable no-unreachable */
     var aside = document.createElement('aside');
     aside.className = 'admin-clients-aside card-surface';
     aside.id = 'clientFiltersPanel';
