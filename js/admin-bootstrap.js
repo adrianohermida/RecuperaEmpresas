@@ -206,8 +206,8 @@
       return;
     }
 
-    if (!user.isAdmin) {
-      console.warn('[RE:admin-bootstrap] user is not admin → redirect dashboard');
+    if (!user.isAdmin && !user.isMember) {
+      console.warn('[RE:admin-bootstrap] user is not admin or member → redirect dashboard');
       window.REShared.redirectToRoute('dashboard');
       return;
     }
