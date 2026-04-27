@@ -12,7 +12,7 @@ enabled = true
 
 [vars]
 ALLOWED_ORIGINS = "https://portal.recuperaempresas.com.br"
-ADMIN_EMAILS = "contato@recuperaempresas.com.br,camilagbhmaia@gmail.com,adrianohermida@gmail.com"
+ADMIN_EMAILS = "contato@recuperaempresas.com.br,camilaghmaia@gmail.com,adrianohermida@gmail.com"
 BASE_URL = "https://portal.recuperaempresas.com.br"
 EMAIL_FROM = "Recupera Empresas <contato@recuperaempresas.com.br>"
 EMAIL_TO = "contato@recuperaempresas.com.br"
