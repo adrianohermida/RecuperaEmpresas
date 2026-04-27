@@ -136,7 +136,7 @@
   }
 
   function redirectToUserHome(user, options) {
-    if (user && (user.isAdmin || user.isMember) && !(options && options.allowImpersonation)) {
+    if (user && user.isAdmin && !(options && options.allowImpersonation)) {
       redirectToRoute('admin');
       return;
     }
@@ -144,7 +144,7 @@
   }
 
   function getPortalView(user, options) {
-    if (user && (user.isAdmin || user.isMember) && !(options && options.allowImpersonation)) {
+    if (user && user.isAdmin && !(options && options.allowImpersonation)) {
       return 'admin';
     }
     return 'client';
